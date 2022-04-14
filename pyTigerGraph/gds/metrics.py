@@ -1,0 +1,148 @@
+from numpy import ndarray
+
+__all__ = ["Accumulator", "Accuracy", "Precision", "Recall"]
+
+
+class Accumulator:
+    """Object that stores running sum and count.
+
+    Usage:
+    - Call the update function to add a value.
+    - Get running average by accessing the mean proporty, running sum by the total property, and
+    number of values by the count property.
+    """
+
+    def __init__(self) -> None:
+        self._cumsum: float = 0.0
+        self._count: int = 0
+
+    def update(self, value: float, count: int = 1) -> None:
+        """Add a value to the running sum.
+
+        Args:
+            value (float): 
+                The value to be added.
+            length (int, optional): 
+                The input value is by default treated as a single value.
+                If it is a sum of multiple values, the number of values can be specified by this
+                length argument, so that the running average can be calculated correctly. Defaults to 1.
+        """
+        self._cumsum += float(value)
+        self._count += int(count)
+
+    @property
+    def mean(self) -> float:
+        """Get running average."""
+        if self._count > 0:
+            return self._cumsum / self._count
+        else:
+            return 0.0
+
+    @property
+    def total(self) -> float:
+        """Get running sum."""
+        return self._cumsum
+
+    @property
+    def count(self) -> int:
+        """Get running count"""
+        return self._count
+
+
+class Accuracy(Accumulator):
+    """Object that calculates and tracks accuracy between predictions and true labels.
+
+    Accuracy = sum(preds == labels) / len(labels)
+
+    Usage:
+    - Call the update function to add predictions and labels.
+    - Get accuracy score at any point by accessing the value proporty.
+    """
+
+    def update(self, preds: ndarray, labels: ndarray) -> None:
+        """Add predictions and labels to be compared.
+
+        Args:
+            preds (ndarray): 
+                Array of predicted labels.
+            labels (ndarray): 
+                Array of true labels.
+        """
+        assert len(preds) == len(
+            labels
+        ), "The lists of predictions and labels must have same length"
+        self._cumsum += float((preds == labels).sum())
+        self._count += len(labels)
+
+    @property
+    def value(self) -> float:
+        if self._count > 0:
+            return self.mean
+        else:
+            return None
+
+
+class Recall(Accumulator):
+    """Object that calculates and tracks recall between predictions and true labels.
+
+    Recall = sum(preds * labels) / sum(labels)
+
+    Usage:
+    - Call the update function to add predictions and labels.
+    - Get recall score at any point by accessing the value proporty.
+    """
+
+    def update(self, preds: ndarray, labels: ndarray) -> None:
+        """Add predictions and labels to be compared.
+
+        Args:
+            preds (ndarray): 
+                Array of predicted labels.
+            labels (ndarray): 
+                Array of true labels.
+        """
+        assert len(preds) == len(
+            labels
+        ), "The lists of predictions and labels must have same length"
+        self._cumsum += float((preds * labels).sum())
+        self._count += labels.sum()
+
+    @property
+    def value(self) -> float:
+        if self._count > 0:
+            return self.mean
+        else:
+            return None
+
+
+class Precision(Accumulator):
+    """Object that calculates and tracks precision between predictions and true labels.
+
+    Precision = sum(preds * labels) / sum(preds)
+
+    Usage:
+    - Call the update function to add predictions and labels.
+    - Get precision score at any point by accessing the value proporty.
+    """
+
+    def update(self, preds: ndarray, labels: ndarray) -> None:
+        """Add predictions and labels to be compared.
+
+        Args:
+            preds (ndarray): 
+                Array of predicted labels.
+            labels (ndarray): 
+                Array of true labels.
+        """
+        assert len(preds) == len(
+            labels
+        ), "The lists of predictions and labels must have same length"
+        self._cumsum += float((preds * labels).sum())
+        self._count += preds.sum()
+
+    @property
+    def value(self) -> float:
+        if self._count > 0:
+            return self.mean
+        else:
+            return None
