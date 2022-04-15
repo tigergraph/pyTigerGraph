@@ -2,6 +2,7 @@ import unittest
 
 from pandas import DataFrame
 from pyTigerGraph import TigerGraphConnection
+from pyTigerGraph.gds.utilities import is_query_installed
 from pyTigerGraph.gds.dataloaders import GraphLoader
 from torch_geometric.data import Data as pygData
 
@@ -27,7 +28,7 @@ class TestGDSGraphLoader(unittest.TestCase):
             buffer_size=4,
             kafka_address="18.117.192.44:9092",
         )
-        self.assertTrue(loader._is_query_installed(loader.query_name))
+        self.assertTrue(is_query_installed(self.conn, loader.query_name))
         self.assertEqual(loader.num_batches, 11)
 
     def test_iterate_pyg(self):
@@ -106,7 +107,7 @@ class TestGDSGraphLoaderREST(unittest.TestCase):
             loader_id=None,
             buffer_size=4,
         )
-        self.assertTrue(loader._is_query_installed(loader.query_name))
+        self.assertTrue(is_query_installed(self.conn, loader.query_name))
         self.assertEqual(loader.num_batches, 11)
 
     def test_iterate_pyg(self):

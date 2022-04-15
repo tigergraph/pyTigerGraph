@@ -19,7 +19,7 @@ from kafka import KafkaAdminClient, KafkaConsumer
 from kafka.admin import NewTopic
 
 from ..pyTigerGraphException import TigerGraphException
-from .utilities import random_string
+from .utilities import install_query_file, random_string
 
 __all__ = ["VertexLoader", "EdgeLoader", "NeighborLoader"]
 __pdoc__ = {}
@@ -217,52 +217,6 @@ class BaseLoader:
         # Install the right GSQL query for the loader.
         self.query_name = ""
         raise NotImplementedError
-
-    def _is_query_installed(self, query_name: str) -> bool:
-        target = "GET /query/{}/{}".format(self._graph.graphname, query_name)
-        queries = self._graph.getInstalledQueries()
-        return target in queries
-
-    def _install_query_file(self, file_path: str, replace: dict = None):
-        # Read the first line of the file to get query name. The first line should be
-        # something like CREATE QUERY query_name (...
-        with open(file_path) as infile:
-            firstline = infile.readline()
-        try:
-            query_name = re.search("QUERY (.+?)\(", firstline).group(1).strip()
-        except:
-            raise ValueError(
-                "Cannot parse the query file. It should start with CREATE QUERY ... "
-            )
-        # If a suffix is to be added to query name
-        if replace and ("{QUERYSUFFIX}" in replace):
-            query_name = query_name.replace("{QUERYSUFFIX}", replace["{QUERYSUFFIX}"])
-        # If query is already installed, skip.
-        if self._is_query_installed(query_name):
-            return query_name
-        # Otherwise, install the query from file
-        with open(file_path) as infile:
-            query = infile.read()
-        # Replace placeholders with actual content if given
-        if replace:
-            for placeholder in replace:
-                query = query.replace(placeholder, replace[placeholder])
-        # TODO: Check if Distributed query is needed.
-        query = (
-            "USE GRAPH {}\n".format(self._graph.graphname)
-            + query
-            + "\nInstall Query {}\n".format(query_name)
-        )
-        print(
-            "Installing and optimizing queries. It might take a minute if this is the first time you use this loader."
-        )
-        resp = self._graph.gsql(query)
-        status = resp.splitlines()[-1]
-        if "Failed" in status:
-            raise ConnectionError(status)
-        else:
-            print(status)
-        return query_name
 
     @staticmethod
     def _request_kafka(
@@ -889,7 +843,7 @@ class NeighborLoader(BaseLoader):
             "dataloaders",
             "neighbor_loader.gsql",
         )
-        return self._install_query_file(query_path, query_replace)
+        return install_query_file(self._graph, query_path, query_replace)
 
     def _start(self) -> None:
         # Create task and result queues
@@ -1115,7 +1069,7 @@ class EdgeLoader(BaseLoader):
             "dataloaders",
             "edge_loader.gsql",
         )
-        return self._install_query_file(query_path)
+        return install_query_file(self._graph, query_path)
 
     def _start(self) -> None:
         # Create task and result queues
@@ -1339,7 +1293,7 @@ class VertexLoader(BaseLoader):
             "dataloaders",
             "vertex_loader.gsql",
         )
-        return self._install_query_file(query_path, query_replace)
+        return install_query_file(self._graph, query_path, query_replace)
 
     def _start(self) -> None:
         # Create task and result queues
@@ -1586,7 +1540,7 @@ class GraphLoader(BaseLoader):
             "dataloaders",
             "graph_loader.gsql",
         )
-        return self._install_query_file(query_path, query_replace)
+        return install_query_file(self._graph, query_path, query_replace)
 
     def _start(self) -> None:
         # Create task and result queues

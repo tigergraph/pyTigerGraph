@@ -3,6 +3,7 @@ import unittest
 from pandas import DataFrame
 from pyTigerGraph import TigerGraphConnection
 from pyTigerGraph.gds.dataloaders import VertexLoader
+from pyTigerGraph.gds.utilities import is_query_installed
 
 
 class TestGDSVertexLoader(unittest.TestCase):
@@ -22,7 +23,7 @@ class TestGDSVertexLoader(unittest.TestCase):
             buffer_size=4,
             kafka_address="18.117.192.44:9092",
         )
-        self.assertTrue(loader._is_query_installed(loader.query_name))
+        self.assertTrue(is_query_installed(self.conn, loader.query_name))
         self.assertEqual(loader.num_batches, 9)
 
     def test_iterate(self):
@@ -85,7 +86,7 @@ class TestGDSVertexLoaderREST(unittest.TestCase):
             loader_id=None,
             buffer_size=4,
         )
-        self.assertTrue(loader._is_query_installed(loader.query_name))
+        self.assertTrue(is_query_installed(self.conn, loader.query_name))
         self.assertEqual(loader.num_batches, 9)
 
     def test_iterate(self):
