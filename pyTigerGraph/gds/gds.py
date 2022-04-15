@@ -215,8 +215,6 @@ class GDS:
           multiple batches of data to load, it will return the loader again.
 
         Args:
-            graph (TigerGraphConnection):
-                Connection to the TigerGraph database.
             batch_size (int, optional):
                 Number of edges in each batch.
                 Defaults to None.
@@ -328,8 +326,6 @@ class GDS:
           multiple batches of data to load, it will return the loader again.
 
         Args:
-            graph (TigerGraphConnection):
-                Connection to the TigerGraph database.
             attributes (list, optional):
                 Vertex attributes to be included. Defaults to None.
             batch_size (int, optional):
@@ -446,13 +442,11 @@ class GDS:
           multiple batches of data to load, it will return the loader itself.
 
         Args:
-            graph (TigerGraphConnection):
-                Connection to the TigerGraph database.
             v_in_feats (list, optional):
                 Vertex attributes to be used as input features.
                 Only numeric and boolean attributes are allowed. The type of an attrbiute
                 is automatically determined from the database schema. Defaults to None.
-            v_out_labels (list, optional): 
+            v_out_labels (list, optional):
                 Vertex attributes to be used as labels for prediction. 
                 Only numeric and boolean attributes are allowed. Defaults to None.
             v_extra_feats (list, optional):

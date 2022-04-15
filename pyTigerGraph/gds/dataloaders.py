@@ -1,4 +1,4 @@
-"""Data Loader Classes."""
+"""Data Loaders."""
 
 import io
 import logging
@@ -734,7 +734,7 @@ class BaseLoader:
 
 
 class NeighborLoader(BaseLoader):
-    """Neighbor Loader Class as Described in GraphSAGE paper."""
+    """Neighbor Loader."""
     def __init__(
         self,
         graph: "TigerGraphConnection",
@@ -1017,7 +1017,7 @@ class NeighborLoader(BaseLoader):
 
 
 class EdgeLoader(BaseLoader):
-    """Edge Dataloader."""
+    """Edge Loader."""
     def __init__(
         self,
         graph: "TigerGraphConnection",
