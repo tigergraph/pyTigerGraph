@@ -23,7 +23,7 @@ def excepthook(type, value, traceback):
 
 
 class pyTigerGraphBase(object):
-    """pyTigerGraph basic functionality."""
+    """pyTigerGraph Base Functionality."""
 
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
             username: str = "tigergraph", password: str = "tigergraph",
