@@ -22,7 +22,7 @@ class Accumulator:
         Args:
             value (float): 
                 The value to be added.
-            length (int, optional): 
+            count (int, optional): 
                 The input value is by default treated as a single value.
                 If it is a sum of multiple values, the number of values can be specified by this
                 length argument, so that the running average can be calculated correctly. Defaults to 1.

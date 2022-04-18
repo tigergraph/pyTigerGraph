@@ -99,7 +99,7 @@ def install_query_file(
     file_path: str, 
     replace: dict = None, 
     distributed: bool = False, 
-    force: bool = False):
+    force: bool = False) -> str:
     # Read the first line of the file to get query name. The first line should be
     # something like CREATE QUERY query_name (...
     with open(file_path) as infile:

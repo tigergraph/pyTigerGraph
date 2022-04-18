@@ -53,7 +53,7 @@ class RandomVertexSplitter:
         self.timeout = timeout
         # TODO: Check if attributes exist in database. If not, raise error or create
 
-    def _validate_args(self, split_ratios):
+    def _validate_args(self, split_ratios) -> None:
         if len(split_ratios) == 0:
             raise ValueError("Need at least one partition ratio in input.")
         if len(split_ratios) > 3:
@@ -64,7 +64,7 @@ class RandomVertexSplitter:
         if sum(split_ratios.values()) > 1:
             raise ValueError("Sum of all partition ratios have to be <=1")
 
-    def run(self, **split_ratios):
+    def run(self, **split_ratios) -> None:
         """Perform the split.
 
         The split ratios set in initialization can be overridden here. For example,
