@@ -26,7 +26,7 @@ class TestGDSNeighborLoader(unittest.TestCase):
             add_self_loop=False,
             loader_id=None,
             buffer_size=4,
-            kafka_address="18.117.192.44:9092",
+            kafka_address="34.82.171.137:9092",
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
         self.assertEqual(loader.num_batches, 9)
@@ -45,7 +45,7 @@ class TestGDSNeighborLoader(unittest.TestCase):
             add_self_loop=False,
             loader_id=None,
             buffer_size=4,
-            kafka_address="18.117.192.44:9092",
+            kafka_address="34.82.171.137:9092",
         )
         num_batches = 0
         for data in loader:
@@ -74,7 +74,7 @@ class TestGDSNeighborLoader(unittest.TestCase):
             add_self_loop=False,
             loader_id=None,
             buffer_size=4,
-            kafka_address="18.117.192.44:9092",
+            kafka_address="34.82.171.137:9092",
         )
         data = loader.data
         # print(data)
@@ -183,7 +183,7 @@ class TestGDSGraphLoader(unittest.TestCase):
             add_self_loop=False,
             loader_id=None,
             buffer_size=4,
-            kafka_address="18.117.192.44:9092",
+            kafka_address="34.82.171.137:9092",
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
         self.assertEqual(loader.num_batches, 11)
@@ -200,7 +200,7 @@ class TestGDSGraphLoader(unittest.TestCase):
             add_self_loop=False,
             loader_id=None,
             buffer_size=4,
-            kafka_address="18.117.192.44:9092",
+            kafka_address="34.82.171.137:9092",
         )
         num_batches = 0
         for data in loader:
@@ -226,7 +226,7 @@ class TestGDSGraphLoader(unittest.TestCase):
             add_self_loop=False,
             loader_id=None,
             buffer_size=4,
-            kafka_address="18.117.192.44:9092",
+            kafka_address="34.82.171.137:9092",
         )
         num_batches = 0
         for data in loader:
@@ -330,7 +330,7 @@ class TestGDSVertexLoader(unittest.TestCase):
             filter_by="train_mask",
             loader_id=None,
             buffer_size=4,
-            kafka_address="18.117.192.44:9092",
+            kafka_address="34.82.171.137:9092",
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
         self.assertEqual(loader.num_batches, 9)
@@ -343,7 +343,7 @@ class TestGDSVertexLoader(unittest.TestCase):
             filter_by="train_mask",
             loader_id=None,
             buffer_size=4,
-            kafka_address="18.117.192.44:9092",
+            kafka_address="34.82.171.137:9092",
         )
         num_batches = 0
         for data in loader:
@@ -365,7 +365,7 @@ class TestGDSVertexLoader(unittest.TestCase):
             filter_by="train_mask",
             loader_id=None,
             buffer_size=4,
-            kafka_address="18.117.192.44:9092",
+            kafka_address="34.82.171.137:9092",
         )
         data = loader.data
         # print(data)
@@ -448,7 +448,7 @@ class TestGDSEdgeLoader(unittest.TestCase):
             filter_by=None,
             loader_id=None,
             buffer_size=4,
-            kafka_address="18.117.192.44:9092",
+            kafka_address="34.82.171.137:9092",
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
         self.assertEqual(loader.num_batches, 11)
@@ -460,7 +460,7 @@ class TestGDSEdgeLoader(unittest.TestCase):
             filter_by=None,
             loader_id=None,
             buffer_size=4,
-            kafka_address="18.117.192.44:9092",
+            kafka_address="34.82.171.137:9092",
         )
         num_batches = 0
         for data in loader:
@@ -476,7 +476,7 @@ class TestGDSEdgeLoader(unittest.TestCase):
             filter_by=None,
             loader_id=None,
             buffer_size=4,
-            kafka_address="18.117.192.44:9092",
+            kafka_address="34.82.171.137:9092",
         )
         data = loader.data
         # print(data)

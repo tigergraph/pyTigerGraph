@@ -27,7 +27,7 @@ class TestGDSNeighborLoader(unittest.TestCase):
             add_self_loop=False,
             loader_id=None,
             buffer_size=4,
-            kafka_address="18.117.192.44:9092",
+            kafka_address="34.82.171.137:9092",
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
         self.assertEqual(loader.num_batches, 9)
@@ -47,7 +47,7 @@ class TestGDSNeighborLoader(unittest.TestCase):
             add_self_loop=False,
             loader_id=None,
             buffer_size=4,
-            kafka_address="18.117.192.44:9092",
+            kafka_address="34.82.171.137:9092",
         )
         for epoch in range(2):
             with self.subTest(i=epoch):
@@ -79,7 +79,7 @@ class TestGDSNeighborLoader(unittest.TestCase):
             add_self_loop=False,
             loader_id=None,
             buffer_size=4,
-            kafka_address="18.117.192.44:9092",
+            kafka_address="34.82.171.137:9092",
         )
         data = loader.data
         # print(data)
