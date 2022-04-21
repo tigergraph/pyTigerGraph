@@ -21,7 +21,7 @@ from kafka import KafkaAdminClient, KafkaConsumer
 from kafka.admin import NewTopic
 
 from ..pyTigerGraphException import TigerGraphException
-from .utilities import random_string
+from .utilities import install_query_file, random_string
 
 __all__ = ["VertexLoader", "EdgeLoader", "NeighborLoader"]
 __pdoc__ = {}
@@ -927,7 +927,7 @@ class NeighborLoader(BaseLoader):
             "dataloaders",
             "neighbor_loader.gsql",
         )
-        return self._install_query_file(query_path, query_replace)
+        return install_query_file(self._graph, query_path, query_replace)
 
     def _start(self) -> None:
         # Create task and result queues
@@ -1167,7 +1167,7 @@ class EdgeLoader(BaseLoader):
             "dataloaders",
             "edge_loader.gsql",
         )
-        return self._install_query_file(query_path)
+        return install_query_file(self._graph, query_path)
 
     def _start(self) -> None:
         # Create task and result queues
@@ -1406,7 +1406,7 @@ class VertexLoader(BaseLoader):
             "dataloaders",
             "vertex_loader.gsql",
         )
-        return self._install_query_file(query_path, query_replace)
+        return install_query_file(self._graph, query_path, query_replace)
 
     def _start(self) -> None:
         # Create task and result queues
@@ -1671,7 +1671,7 @@ class GraphLoader(BaseLoader):
             "dataloaders",
             "graph_loader.gsql",
         )
-        return self._install_query_file(query_path, query_replace)
+        return install_query_file(self._graph, query_path, query_replace)
 
     def _start(self) -> None:
         # Create task and result queues

@@ -4,9 +4,9 @@ from typing import TYPE_CHECKING, Union
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
 
-from .featurizer import Featurizer
-
 from .dataloaders import EdgeLoader, GraphLoader, NeighborLoader, VertexLoader
+from .featurizer import Featurizer
+from .splitters import RandomVertexSplitter
 
 
 class GDS:
@@ -531,3 +531,33 @@ class GDS:
                 Featurizer
         """
         return Featurizer(self.conn)
+
+    def vertexSplitter(self, timeout: int = 600000, **split_ratios):
+        """Get a vertex splitter that splits vertices into at most 3 parts randomly. 
+
+        The split results are stored in the provided vertex attributes. Each boolean attribute
+        indicates which part a vertex belongs to.
+
+        Usage:
+        1. `conn = TigerGraphConnection(...)`
+           `splitter = conn.gds.vertexSplitter(timeout, attr_name=0.6)`
+           `splitter.run()`
+            A random 60% of vertices will have their attribute "attr_name" set to True, and 
+            others False. `attr_name` can be any attribute that exists in the database (same below).
+        2. `splitter = conn.gds.vertexSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2)`
+           `splitter.run()`
+            A random 60% of vertices will have their attribute "attr_name" set to True, and a 
+            random 20% of vertices will have their attribute "attr_name2" set to True. The two 
+            parts are disjoint. 
+        3. `splitter = conn.gds.vertexSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2, attr_name3=0.2)`
+           `splitter.run()`
+            A random 60% of vertices will have their attribute "attr_name" set to True, a 
+            random 20% of vertices will have their attribute "attr_name2" set to True, and 
+            another random 20% of vertices will have their attribute "attr_name3" set to True. 
+            The three parts are disjoint.
+
+        Args:
+            timeout (int, optional): 
+                Timeout value for the operation. Defaults to 600000.
+        """     
+        return RandomVertexSplitter(self.conn, timeout, **split_ratios)

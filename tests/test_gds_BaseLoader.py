@@ -17,7 +17,7 @@ class TestGDSBaseLoader(unittest.TestCase):
     def setUpClass(cls):
         conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora")
         cls.loader = BaseLoader(conn)
-        conn.gsql("drop query all")
+        # conn.gsql("drop query all")
 
     def test_get_schema(self):
         self.assertDictEqual(
@@ -40,35 +40,6 @@ class TestGDSBaseLoader(unittest.TestCase):
         self.assertListEqual(self.loader._validate_vertex_attributes({}), [])
         self.assertListEqual(
             self.loader._validate_vertex_attributes(["x ", " y"]), ["x", "y"]
-        )
-
-    def test_is_query_installed(self):
-        self.assertFalse(self.loader._is_query_installed("simple_query"))
-
-    def test_install_query_file(self):
-        resp = self.loader._install_query_file(
-            "./tests/fixtures/create_query_simple.gsql"
-        )
-        self.assertEqual(resp, "simple_query")
-        self.assertTrue(self.loader._is_query_installed("simple_query"))
-
-    def test_install_exist_query(self):
-        resp = self.loader._install_query_file(
-            "./tests/fixtures/create_query_simple.gsql"
-        )
-        self.assertEqual(resp, "simple_query")
-
-    def test_install_query_template(self):
-        replace = {
-            "{QUERYSUFFIX}": "something_special",
-            "{VERTEXATTRS}": "s.id,s.x,s.y",
-        }
-        resp = self.loader._install_query_file(
-            "./tests/fixtures/create_query_template.gsql", replace
-        )
-        self.assertEqual(resp, "simple_query_something_special")
-        self.assertTrue(
-            self.loader._is_query_installed("simple_query_something_special")
         )
 
     def test_read_vertex_bytes(self):
@@ -222,10 +193,6 @@ if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(TestGDSBaseLoader("test_get_schema"))
     suite.addTest(TestGDSBaseLoader("test_validate_vertex_attributes"))
-    suite.addTest(TestGDSBaseLoader("test_is_query_installed"))
-    suite.addTest(TestGDSBaseLoader("test_install_query_file"))
-    suite.addTest(TestGDSBaseLoader("test_install_exist_query"))
-    suite.addTest(TestGDSBaseLoader("test_install_query_template"))
     suite.addTest(TestGDSBaseLoader("test_read_vertex_bytes"))
     suite.addTest(TestGDSBaseLoader("test_read_edge_bytes"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_bytes_out_df"))
