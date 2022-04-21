@@ -13,6 +13,7 @@ class Accumulator:
     """
 
     def __init__(self) -> None:
+        '''Initialize the accumulator.'''
         self._cumsum: float = 0.0
         self._count: int = 0
 
@@ -76,6 +77,10 @@ class Accuracy(Accumulator):
 
     @property
     def value(self) -> float:
+        '''Get accuracy score.
+            Returns:
+                Accuracy score (float).
+        '''
         if self._count > 0:
             return self.mean
         else:
@@ -109,6 +114,10 @@ class Recall(Accumulator):
 
     @property
     def value(self) -> float:
+        '''Get recall score.
+            Returns:
+                Recall score (float).
+        '''
         if self._count > 0:
             return self.mean
         else:
@@ -142,6 +151,10 @@ class Precision(Accumulator):
 
     @property
     def value(self) -> float:
+        '''Get precision score.
+            Returns:
+                Precision score (float).
+        '''
         if self._count > 0:
             return self.mean
         else:
