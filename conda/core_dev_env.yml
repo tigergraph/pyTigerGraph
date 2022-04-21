@@ -1,0 +1,13 @@
+name: core_dev
+channels:
+  - conda-forge
+dependencies:
+  - python=3.9
+  - conda
+  - pip
+  - numpy
+  - scipy
+  - pandas
+  - pip:
+    - requests
+    - pyTigerDriver

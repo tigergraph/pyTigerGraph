@@ -13,12 +13,11 @@ from typing import TYPE_CHECKING, Any, Iterator, NoReturn, Union, Tuple
 
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
+    from kafka import KafkaAdminClient, KafkaConsumer
+    import torch
 
 import numpy as np
 import pandas as pd
-import torch
-from kafka import KafkaAdminClient, KafkaConsumer
-from kafka.admin import NewTopic
 
 from ..pyTigerGraphException import TigerGraphException
 from .utilities import install_query_file, random_string
@@ -127,6 +126,10 @@ class BaseLoader:
             kafkaAddressForProducer if kafkaAddressForProducer else kafkaAddress
         )
         if self.kafka_address_consumer:
+            try:
+                from kafka import KafkaAdminClient, KafkaConsumer
+            except ImportError:
+                raise ImportError("kafka-python is not installed. Please install it to use kafka streaming.")
             try:
                 self._kafka_consumer = KafkaConsumer(
                     bootstrap_servers=self.kafka_address_consumer,
@@ -286,8 +289,8 @@ class BaseLoader:
         exit_event: Event,
         tgraph: "TigerGraphConnection",
         query_name: str,
-        kafka_consumer: KafkaConsumer,
-        kafka_admin: KafkaAdminClient,
+        kafka_consumer: "KafkaConsumer",
+        kafka_admin: "KafkaAdminClient",
         kafka_topic: str,
         kafka_partitions: int = 1,
         kafka_replica: int = 1,
@@ -298,6 +301,10 @@ class BaseLoader:
         headers: dict = {},
     ) -> NoReturn:
         # Create topic if not exist
+        try:
+            from kafka.admin import NewTopic
+        except ImportError:
+            raise ImportError("kafka-python is not installed. Please install it to use kafka streaming.")
         if kafka_topic not in kafka_consumer.topics():
             new_topic = NewTopic(
                 kafka_topic,
@@ -389,7 +396,7 @@ class BaseLoader:
         read_task_q: Queue,
         num_batches: int,
         out_tuple: bool,
-        kafka_consumer: KafkaConsumer,
+        kafka_consumer: "KafkaConsumer",
     ) -> NoReturn:
         delivered_batch = 0
         buffer = {}
@@ -448,7 +455,7 @@ class BaseLoader:
     ) -> NoReturn:
         def attr_to_tensor(
             attributes: list, attr_types: dict, df: pd.DataFrame
-        ) -> torch.Tensor:
+        ) -> "torch.Tensor":
             x = []
             for col in attributes:
                 dtype = attr_types[col].lower()
@@ -506,6 +513,10 @@ class BaseLoader:
                 raise NotImplementedError
 
             if out_format.lower() == "pyg" or out_format.lower() == "dgl":
+                try:
+                    import torch
+                except ImportError:
+                    raise ImportError("PyTorch is not installed. Please install it to use PyG or DGL output.")
                 if vertices is None or edges is None:
                     raise ArgumentError(
                         "PyG or DGL format can only be used with graph output."
