@@ -1,5 +1,5 @@
 class TigerGraphException(Exception):
-    """Generic TigerGraph specific exception.
+    """Generic TigerGraph Exception.
 
     Where possible, error message and code returned by TigerGraph will be used.
     """

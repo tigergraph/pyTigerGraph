@@ -8,6 +8,7 @@ from os.path import join as pjoin
 
 
 class Featurizer:
+    """Featurizer Functions"""
     def __init__(
     self, 
     conn: "TigerGraphConnection"):
