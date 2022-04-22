@@ -5,7 +5,10 @@ import urllib
 from datetime import datetime
 from urllib.parse import urlparse
 
-import pandas as pd
+from typing import TYPE_CHECKING, Union
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 from pyTigerGraph.pyTigerGraphSchema import pyTigerGraphSchema
@@ -17,7 +20,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
 
     # TODO getQueries()  # List _all_ query names
 
-    def getInstalledQueries(self, fmt: str = "py") -> [dict, json, pd.DataFrame]:
+    def getInstalledQueries(self, fmt: str = "py") -> Union[dict, str, 'pd.DataFrame']:
         """Returns a list of installed queries.
 
         Args:
@@ -38,6 +41,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
         if fmt == "json":
             return json.dumps(ret)
         if fmt == "df":
+            try:
+                import pandas as pd
+            except ImportError:
+                raise ImportError("Pandas is required to use this function. Download pandas using 'pip install pandas'.")
             return pd.DataFrame(ret).T
         return ret
 
@@ -85,7 +92,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
                 ret += k + "=" + self._safeChar(v) + "&"
         return ret[:-1]
 
-    def runInstalledQuery(self, queryName: str, params: [str, dict] = None, timeout: int = None,
+    def runInstalledQuery(self, queryName: str, params: Union[str, dict] = None, timeout: int = None,
             sizeLimit: int = None, usePost: bool = False) -> list:
         """Runs an installed query.
 
@@ -162,7 +169,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
     # TODO getQueryResult()
     # GET /query_result/{requestid}
 
-    def runInterpretedQuery(self, queryText: str, params: [str, dict] = None) -> list:
+    def runInterpretedQuery(self, queryText: str, params: Union[str, dict] = None) -> list:
         """Runs an interpreted query.
 
         Use ``$graphname`` or ``@graphname@`` in the ``FOR GRAPH`` clause to avoid hard coding the

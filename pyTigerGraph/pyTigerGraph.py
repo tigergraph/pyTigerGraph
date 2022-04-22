@@ -10,9 +10,11 @@ from pyTigerGraph.pyTigerGraphLoading import pyTigerGraphLoading
 from pyTigerGraph.pyTigerGraphPath import pyTigerGraphPath
 from pyTigerGraph.pyTigerGraphUDT import pyTigerGraphUDT
 from pyTigerGraph.pyTigerGraphVertex import pyTigerGraphVertex
-from .gds import gds
 
-from .gds import gds
+from typing import TYPE_CHECKING, Union
+
+if TYPE_CHECKING:
+    from .gds import gds
 
 # Added pyTigerDriver Client
 
@@ -27,11 +29,15 @@ class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT
 
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
             username: str = "tigergraph", password: str = "tigergraph",
-            restppPort: [int, str] = "9000", gsPort: [int, str] = "14240", gsqlVersion: str = "",
+            restppPort: Union[int, str] = "9000", gsPort: Union[int, str] = "14240", gsqlVersion: str = "",
             version: str = "", apiToken: str = "", useCert: bool = True, certPath: str = None,
-            debug: bool = False, sslPort: [int, str] = "443", gcp: bool = False):
+            debug: bool = False, sslPort: Union[int, str] = "443", gcp: bool = False):
         super().__init__(host, graphname, username, password, restppPort
             , gsPort, gsqlVersion, version, apiToken, useCert, certPath, debug, sslPort, gcp)
-        self.gds = gds.GDS(self)
+        try:
+            from .gds import gds
+            self.gds = gds.GDS(self) # Placeholder attribute for GDS functionality
+        except:
+            self.gds = None
 
 # EOF

@@ -2,7 +2,10 @@
 
 import json
 
-import pandas as pd
+from typing import TYPE_CHECKING, Union
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 from pyTigerGraph.pyTigerGraphQuery import pyTigerGraphQuery
@@ -45,7 +48,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                 return et
         return {}
 
-    def getEdgeSourceVertexType(self, edgeType: str) -> [str, set]:
+    def getEdgeSourceVertexType(self, edgeType: str) -> Union[str, set]:
         """Returns the type(s) of the edge type's source vertex.
 
         Args:
@@ -85,7 +88,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             # 2.6.1 and earlier notation
             return "*"
 
-    def getEdgeTargetVertexType(self, edgeType: str) -> [str, set]:
+    def getEdgeTargetVertexType(self, edgeType: str) -> Union[str, set]:
         """Returns the type(s) of the edge type's target vertex.
 
         Args:
@@ -155,8 +158,8 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         return ""
         # TODO Should return some other value or raise exception?
 
-    def getEdgeCountFrom(self, sourceVertexType: str = "", sourceVertexId: [str, int] = None,
-            edgeType: str = "", targetVertexType: str = "", targetVertexId: [str, int] = None,
+    def getEdgeCountFrom(self, sourceVertexType: str = "", sourceVertexId: Union[str, int] = None,
+            edgeType: str = "", targetVertexType: str = "", targetVertexId: Union[str, int] = None,
             where: str = "") -> dict:
         """Returns the number of edges from a specific vertex.
 
@@ -378,7 +381,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         return self._post(self.restppUrl + "/graph/" + self.graphname, data=data)[0][
             "accepted_edges"]
 
-    def upsertEdgeDataFrame(self, df: pd.DataFrame, sourceVertexType: str, edgeType: str,
+    def upsertEdgeDataFrame(self, df: 'pd.DataFrame', sourceVertexType: str, edgeType: str,
             targetVertexType: str, from_id: str = "", to_id: str = "",
             attributes: dict = None) -> int:
         """Upserts edges from a Pandas DataFrame.
@@ -428,9 +431,9 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
 
     def getEdges(self, sourceVertexType: str, sourceVertexId: str, edgeType: str = "",
             targetVertexType: str = "", targetVertexId: str = "", select: str = "",
-            where: str = "", limit: [int, str] = None, sort: str = "", fmt: str = "py",
-            withId: bool = True, withType: bool = False, timeout: int = 0) -> [dict, str,
-        pd.DataFrame]:
+            where: str = "", limit: Union[int, str] = None, sort: str = "", fmt: str = "py",
+            withId: bool = True, withType: bool = False, timeout: int = 0) -> Union[dict, str,
+        'pd.DataFrame']:
         """Retrieves edges of the given edge type originating from a specific source vertex.
 
         Only `sourceVertexType` and `sourceVertexId` are required.
@@ -516,7 +519,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
 
     def getEdgesDataFrame(self, sourceVertexType: str, sourceVertexId: str, edgeType: str = "",
             targetVertexType: str = "", targetVertexId: str = "", select: str = "", where: str = "",
-            limit: str = "", sort: str = "", timeout: int = 0) -> pd.DataFrame:
+            limit: str = "", sort: str = "", timeout: int = 0) -> 'pd.DataFrame':
         """Retrieves edges of the given edge type originating from a specific source vertex.
 
         This is a shortcut to ``getEdges(..., fmt="df", withId=True, withType=False)``.
@@ -556,7 +559,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
 
     def getEdgesDataframe(self, sourceVertexType: str, sourceVertexId: str, edgeType: str = "",
             targetVertexType: str = "", targetVertexId: str = "", select: str = "", where: str = "",
-            limit: str = "", sort: str = "", timeout: int = 0) -> pd.DataFrame:
+            limit: str = "", sort: str = "", timeout: int = 0) -> 'pd.DataFrame':
         """DEPRECATED
 
         Use `getEdgesDataFrame()` instead.
@@ -567,7 +570,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             targetVertexId, select, where, limit, sort, timeout)
 
     def getEdgesByType(self, edgeType: str, fmt: str = "py", withId: bool = True,
-            withType: bool = False) -> [dict, str, pd.DataFrame]:
+            withType: bool = False) -> Union[dict, str, 'pd.DataFrame']:
         """Retrieves edges of the given edge type regardless the source vertex.
 
         Args:
@@ -627,7 +630,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
 
     # TODO getEdgesDataFrameByType
 
-    def getEdgeStats(self, edgeTypes: [str, list], skipNA: bool = False) -> dict:
+    def getEdgeStats(self, edgeTypes: Union[str, list], skipNA: bool = False) -> dict:
         """Returns edge attribute statistics.
 
         Args:
@@ -737,7 +740,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         return ret
 
     def edgeSetToDataFrame(self, edgeSet: list, withId: bool = True,
-            withType: bool = False) -> pd.DataFrame:
+            withType: bool = False) -> 'pd.DataFrame':
         """Converts an edge set to Pandas DataFrame
 
         Edge sets contain instances of the same edge type. Edge sets are not generated "naturally"
@@ -797,6 +800,11 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             ID or source and target vertices, and the edge type).
 
         """
+        try:
+            import pandas as pd
+        except ImportError:
+            raise ImportError("Pandas is required to use this function. Download pandas using 'pip install pandas'.")
+
         df = pd.DataFrame(edgeSet)
         cols = []
         if withId:
