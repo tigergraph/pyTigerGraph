@@ -46,8 +46,7 @@ setup(
     install_requires=[
         'pyTigerDriver',
         'validators',
-        'requests',
-        'pandas'],
+        'requests'],
     classifiers=[
         'Development Status :: 4 - Beta',  # 3 - Alpha, 4 - Beta or 5 - Production/Stable
         'Intended Audience :: Developers',
@@ -64,6 +63,7 @@ setup(
     ],
     extras_require={
         "gds-pyg": [
+            "pandas",
             "kafka-python",
             "numpy",
             "torch",
@@ -71,9 +71,10 @@ setup(
             "torch-scatter",
             "torch-geometric",
         ],
-        "gds-dgl": ["kafka-python", "numpy", "torch", "dgl"],
-        "gds-lite": ["kafka-python", "numpy"],
+        "gds-dgl": ["pandas", "kafka-python", "numpy", "torch", "dgl"],
+        "gds-lite": ["pandas", "kafka-python", "numpy"],
         "gds": [
+            "pandas",
             "kafka-python",
             "numpy",
             "torch",

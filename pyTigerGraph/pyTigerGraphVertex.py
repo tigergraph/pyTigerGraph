@@ -2,7 +2,9 @@
 
 import json
 
-import pandas as pd
+from typing import TYPE_CHECKING, Union
+if TYPE_CHECKING:
+    import pandas as pd
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 from pyTigerGraph.pyTigerGraphSchema import pyTigerGraphSchema
@@ -47,7 +49,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         return {}  # Vertex type was not found
         # TODO Should raise exception instead?
 
-    def getVertexCount(self, vertexType: [str, list], where: str = "") -> [int, dict]:
+    def getVertexCount(self, vertexType: Union[str, list], where: str = "") -> Union[int, dict]:
         """Returns the number of vertices of the specified type.
 
         Args:
@@ -186,7 +188,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         return self._post(self.restppUrl + "/graph/" + self.graphname, data=data)[0][
             "accepted_vertices"]
 
-    def upsertVertexDataFrame(self, df: pd.DataFrame, vertexType: str, v_id: bool = None,
+    def upsertVertexDataFrame(self, df: 'pd.DataFrame', vertexType: str, v_id: bool = None,
             attributes: dict = "") -> int:
         """Upserts vertices from a Pandas DataFrame.
 
@@ -221,8 +223,8 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         return self.upsertVertices(vertexType=vertexType, vertices=json_up)
 
     def getVertices(self, vertexType: str, select: str = "", where: str = "",
-            limit: [int, str] = None, sort: str = "", fmt: str = "py", withId: bool = True,
-            withType: bool = False, timeout: int = 0) -> [dict, str, pd.DataFrame]:
+            limit: Union[int, str] = None, sort: str = "", fmt: str = "py", withId: bool = True,
+            withType: bool = False, timeout: int = 0) -> Union[dict, str, 'pd.DataFrame']:
         """Retrieves vertices of the given vertex type.
 
         *Note*:
@@ -291,7 +293,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         return ret
 
     def getVertexDataFrame(self, vertexType: str, select: str = "", where: str = "",
-            limit: str = "", sort: str = "", timeout: int = 0) -> pd.DataFrame:
+            limit: str = "", sort: str = "", timeout: int = 0) -> 'pd.DataFrame':
         """Retrieves vertices of the given vertex type and returns them as pandas DataFrame.
 
         This is a shortcut to `getVertices(..., fmt="df", withId=True, withType=False)`.
@@ -327,7 +329,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             fmt="df", withId=True, withType=False, timeout=timeout)
 
     def getVertexDataframe(self, vertexType: str, select: str = "", where: str = "",
-            limit: str = "", sort: str = "", timeout: int = 0) -> pd.DataFrame:
+            limit: str = "", sort: str = "", timeout: int = 0) -> 'pd.DataFrame':
         """DEPRECATED
 
         Use `getVertexDataFrame()` instead.
@@ -337,9 +339,9 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         return self.getVertexDataFrame(vertexType, select=select, where=where, limit=limit,
             sort=sort, timeout=timeout)
 
-    def getVerticesById(self, vertexType: str, vertexIds: [int, str, list], select: str = "",
+    def getVerticesById(self, vertexType: str, vertexIds: Union[int, str, list], select: str = "",
             fmt: str = "py", withId: bool = True, withType: bool = False,
-            timeout: int = 0) -> [dict, str, pd.DataFrame]:
+            timeout: int = 0) -> Union[dict, str, 'pd.DataFrame']:
         """Retrieves vertices of the given vertex type, identified by their ID.
 
         Args:
@@ -393,8 +395,8 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             return self.vertexSetToDataFrame(ret, withId, withType)
         return ret
 
-    def getVertexDataFrameById(self, vertexType: str, vertexIds: [int, str, list],
-            select: str = "") -> pd.DataFrame:
+    def getVertexDataFrameById(self, vertexType: str, vertexIds: Union[int, str, list],
+            select: str = "") -> 'pd.DataFrame':
         """Retrieves vertices of the given vertex type, identified by their ID.
 
         This is a shortcut to ``getVerticesById(..., fmt="df", withId=True, withType=False)``.
@@ -413,8 +415,8 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         return self.getVerticesById(vertexType, vertexIds, select, fmt="df", withId=True,
             withType=False)
 
-    def getVertexDataframeById(self, vertexType: str, vertexIds: [int, str, list],
-            select: str = "") -> pd.DataFrame:
+    def getVertexDataframeById(self, vertexType: str, vertexIds: Union[int, str, list],
+            select: str = "") -> 'pd.DataFrame':
         """DEPRECATED
 
         Use `getVertexDataFrameById()` instead.
@@ -423,7 +425,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         """
         return self.getVertexDataFrameById(vertexType, vertexIds, select)
 
-    def getVertexStats(self, vertexTypes: [str, list], skipNA: bool = False) -> dict:
+    def getVertexStats(self, vertexTypes: Union[str, list], skipNA: bool = False) -> dict:
         """Returns vertex attribute statistics.
 
         Args:
@@ -522,7 +524,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             url += ("?" if isFirst else "&") + "timeout=" + str(timeout)
         return self._delete(url)["deleted_vertices"]
 
-    def delVerticesById(self, vertexType: str, vertexIds: [int, str, list], permanent: bool = False,
+    def delVerticesById(self, vertexType: str, vertexIds: Union[int, str, list], permanent: bool = False,
             timeout: int = 0) -> int:
         """Deletes vertices from graph identified by their ID.
 
@@ -573,7 +575,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
     # TODO GET /deleted_vertex_check/{graph_name}
 
     def vertexSetToDataFrame(self, vertexSet: list, withId: bool = True,
-            withType: bool = False) -> pd.DataFrame:
+            withType: bool = False) -> 'pd.DataFrame':
         """Converts a vertex set to Pandas DataFrame.
 
         Vertex sets are used for both the input and output of `SELECT` statements. They contain
@@ -612,6 +614,10 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             A pandas DataFrame containing the vertex attributes (and optionally the vertex primary
             ID and type).
         """
+        try:
+            import pandas as pd
+        except ImportError:
+            raise ImportError("Pandas is required to use this function. Download pandas using 'pip install pandas'.")
         df = pd.DataFrame(vertexSet)
         cols = []
         if withId:

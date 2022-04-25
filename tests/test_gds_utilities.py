@@ -8,7 +8,8 @@ class TestGDSUtilsQuery(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora")
-        cls.conn.gsql("drop query all")
+        cls.conn.gsql("drop query simple_query")
+        cls.conn.gsql("drop query simple_query_something_special")
 
     def test_is_query_installed(self):
         self.assertFalse(utils.is_query_installed(self.conn, "simple_query"))

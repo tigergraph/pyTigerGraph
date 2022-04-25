@@ -10,9 +10,11 @@ from pyTigerGraph.pyTigerGraphLoading import pyTigerGraphLoading
 from pyTigerGraph.pyTigerGraphPath import pyTigerGraphPath
 from pyTigerGraph.pyTigerGraphUDT import pyTigerGraphUDT
 from pyTigerGraph.pyTigerGraphVertex import pyTigerGraphVertex
-from .gds import gds
 
-from .gds import gds
+from typing import TYPE_CHECKING, Union
+
+if TYPE_CHECKING:
+    from .gds import gds
 
 # Added pyTigerDriver Client
 
@@ -22,16 +24,31 @@ warnings.filterwarnings("default", category=DeprecationWarning)
 # TODO Proper deprecation handling; import deprecation?
 
 class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT, pyTigerGraphAuth,
-    pyTigerGraphLoading, pyTigerGraphPath):
+    pyTigerGraphLoading, pyTigerGraphPath, object):
     """Python wrapper for TigerGraph's REST++ and GSQL APIs"""
 
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
             username: str = "tigergraph", password: str = "tigergraph",
-            restppPort: [int, str] = "9000", gsPort: [int, str] = "14240", gsqlVersion: str = "",
+            restppPort: Union[int, str] = "9000", gsPort: Union[int, str] = "14240", gsqlVersion: str = "",
             version: str = "", apiToken: str = "", useCert: bool = True, certPath: str = None,
-            debug: bool = False, sslPort: [int, str] = "443", gcp: bool = False):
+            debug: bool = False, sslPort: Union[int, str] = "443", gcp: bool = False):
         super().__init__(host, graphname, username, password, restppPort
             , gsPort, gsqlVersion, version, apiToken, useCert, certPath, debug, sslPort, gcp)
-        self.gds = gds.GDS(self)
+
+        self.gds = None
+
+    def __getattribute__(self, name):
+        if name == "gds":
+            if super().__getattribute__(name) is None:
+                try:
+                    from .gds import gds
+                    self.gds = gds.GDS(self)
+                    return super().__getattribute__(name)
+                except:
+                    raise(Exception("Please install the GDS package requirements to use the GDS functionality. Check the docs for more details."))
+            else:
+                return super().__getattribute__(name)
+        else:
+            return super().__getattribute__(name)
 
 # EOF
