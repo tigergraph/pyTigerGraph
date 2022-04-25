@@ -24,7 +24,7 @@ warnings.filterwarnings("default", category=DeprecationWarning)
 # TODO Proper deprecation handling; import deprecation?
 
 class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT, pyTigerGraphAuth,
-    pyTigerGraphLoading, pyTigerGraphPath):
+    pyTigerGraphLoading, pyTigerGraphPath, object):
     """Python wrapper for TigerGraph's REST++ and GSQL APIs"""
 
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
@@ -34,10 +34,15 @@ class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT
             debug: bool = False, sslPort: Union[int, str] = "443", gcp: bool = False):
         super().__init__(host, graphname, username, password, restppPort
             , gsPort, gsqlVersion, version, apiToken, useCert, certPath, debug, sslPort, gcp)
-        try:
-            from .gds import gds
-            self.gds = gds.GDS(self) # Placeholder attribute for GDS functionality
-        except:
-            self.gds = None
+
+    def __getattribute__(self, name):
+        if name == "gds":
+            try:
+                from .gds import gds
+                return gds.GDS(self)
+            except:
+                raise(Exception("Please install the GDS package requirements to use the GDS functionality. Check the docs for more details."))
+        else:
+            return super().__getattribute__(name)
 
 # EOF
