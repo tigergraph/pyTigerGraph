@@ -35,13 +35,19 @@ class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT
         super().__init__(host, graphname, username, password, restppPort
             , gsPort, gsqlVersion, version, apiToken, useCert, certPath, debug, sslPort, gcp)
 
+        self.gds = None
+
     def __getattribute__(self, name):
         if name == "gds":
-            try:
-                from .gds import gds
-                return gds.GDS(self)
-            except:
-                raise(Exception("Please install the GDS package requirements to use the GDS functionality. Check the docs for more details."))
+            if super().__getattribute__(name) is None:
+                try:
+                    from .gds import gds
+                    self.gds = gds.GDS(self)
+                    return super().__getattribute__(name)
+                except:
+                    raise(Exception("Please install the GDS package requirements to use the GDS functionality. Check the docs for more details."))
+            else:
+                return super().__getattribute__(name)
         else:
             return super().__getattribute__(name)
 
