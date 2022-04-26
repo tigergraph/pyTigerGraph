@@ -1,0 +1,69 @@
+CREATE QUERY random_edge_split(
+  STRING attr1, 
+  DOUBLE ratio1, 
+  STRING attr2, 
+  DOUBLE ratio2=0, 
+  STRING attr3, 
+  DOUBLE ratio3=0
+){ 
+  /*
+    This query splits vertices into at most 3 parts randomly. It does so by using a boolean attribute to
+    indicate which part a vertex belongs to.
+
+    Only `attr1` and `ratio1` are required. `attr1`, `attr2`, `attr3` have to be attributes that already
+    exist in the database. `ratio1`, `ratio2`, `ratio3` have to be numbers in [0, 1), and `ratio1+ratio2+ratio3<=1`.
+
+    Usage:
+      random_vertex_split(attr1="name", ratio1=0.6): 
+        A random 60% of vertices will have their attribute "name" set to True, and others False.
+      random_vertex_split(attr1="name", ratio1=0.6, attr2="name2", ratio2=0.2):
+        A random 60% of vertices will have their attribute "name" set to True, and a random 20% of vertices will have
+        their attribute "name2" set to True. The two parts are disjoint. 
+      random_vertex_split(attr1="name", ratio1=0.6, attr2="name2", ratio2=0.2, attr3="name3", ratio3=0.2):
+        A random 60% of vertices will have their attribute "name" set to True, a random 20% of vertices will have
+        their attribute "name2" set to True, and another random 20% of vertices will have their attribute "name3" set to True. 
+        The three parts are disjoint.
+
+    Parameters:
+      attr1  : Name of the vertex attribute for part 1. It will be set to True if the vertex is assigned to this part.
+      ratio1 : Proportion of vertices in part 1.
+      attr1  : Name of the vertex attribute for part 2. It will be set to True if the vertex is assigned to this part.
+      ratio1 : Proportion of vertices in part 2.
+      attr1  : Name of the vertex attribute for part 3. It will be set to True if the vertex is assigned to this part.
+      ratio1 : Proportion of vertices in part 3.
+    */
+  source = {Any};
+
+  res =
+    SELECT s 
+    FROM source:s -((_>|_):e)- :t
+    ACCUM
+      e.setAttr(attr1,FALSE),
+      IF attr2 IS NOT NULL THEN
+        e.setAttr(attr2,FALSE)
+      END,
+      IF attr3 IS NOT NULL THEN
+        e.setAttr(attr3,FALSE)
+      END;
+  
+  res =
+    SELECT s 
+    FROM source:s -((_>|_):e)- :t
+    ACCUM
+      DOUBLE random_value = rand(),
+      IF random_value < ratio1 THEN 
+        e.setAttr(attr1, TRUE)
+      ELSE 
+        IF attr2 IS NOT NULL THEN
+          IF random_value < ratio1 + ratio2 THEN 
+            e.setAttr(attr2, TRUE)
+          ELSE 
+            IF attr3 IS NOT NULL THEN
+              e.setAttr(attr3, TRUE) 
+            END
+          END
+        END
+      END;
+
+  PRINT "Edge split finished successfully." AS Status;
+}
