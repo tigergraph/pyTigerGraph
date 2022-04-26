@@ -9,6 +9,7 @@ import sys
 from urllib.parse import urlparse
 
 import requests
+from typing import TYPE_CHECKING, Union
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
@@ -23,13 +24,13 @@ def excepthook(type, value, traceback):
 
 
 class pyTigerGraphBase(object):
-    """pyTigerGraph Base Functionality."""
+    """pyTigerGraph Connection."""
 
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
             username: str = "tigergraph", password: str = "tigergraph",
-            restppPort: [int, str] = "9000", gsPort: [int, str] = "14240", gsqlVersion: str = "",
+            restppPort: Union[int, str] = "9000", gsPort: Union[int, str] = "14240", gsqlVersion: str = "",
             version: str = "", apiToken: str = "", useCert: bool = True, certPath: str = None,
-            debug: bool = False, sslPort: [int, str] = "443", gcp: bool = False):
+            debug: bool = False, sslPort: Union[int, str] = "443", gcp: bool = False):
         """Initiate a connection object.
 
         Args:
@@ -151,8 +152,8 @@ class pyTigerGraphBase(object):
             raise TigerGraphException(res["message"], (res["code"] if "code" in res else None))
 
     def _req(self, method: str, url: str, authMode: str = "token", headers: dict = None,
-            data: [dict, list, str] = None, resKey: str = "results", skipCheck: bool = False,
-            params: [dict, list, str] = None) -> [dict, list]:
+            data: Union[dict, list, str] = None, resKey: str = "results", skipCheck: bool = False,
+            params: Union[dict, list, str] = None) -> Union[dict, list]:
         """Generic REST++ API request.
 
         Args:
@@ -220,7 +221,7 @@ class pyTigerGraphBase(object):
         return res[resKey]
 
     def _get(self, url: str, authMode: str = "token", headers: dict = None, resKey: str = "results",
-            skipCheck: bool = False, params: [dict, list, str] = None) -> [dict, list]:
+            skipCheck: bool = False, params: Union[dict, list, str] = None) -> Union[dict, list]:
         """Generic GET method.
 
         Args:
@@ -245,8 +246,8 @@ class pyTigerGraphBase(object):
         return res
 
     def _post(self, url: str, authMode: str = "token", headers: dict = None,
-            data: [dict, list, str] = None, resKey: str = "results", skipCheck: bool = False,
-            params: [dict, list, str] = None) -> [dict, list]:
+            data: Union[dict, list, str] = None, resKey: str = "results", skipCheck: bool = False,
+            params: Union[dict, list, str] = None) -> Union[dict, list]:
         """Generic POST method.
 
         Args:
@@ -271,7 +272,7 @@ class pyTigerGraphBase(object):
         """
         return self._req("POST", url, authMode, headers, data, resKey, skipCheck, params)
 
-    def _delete(self, url: str, authMode: str = "token") -> [dict, list]:
+    def _delete(self, url: str, authMode: str = "token") -> Union[dict, list]:
         """Generic DELETE method.
 
         Args:
