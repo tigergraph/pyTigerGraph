@@ -56,6 +56,26 @@ class TestGDSEdgeLoader(unittest.TestCase):
         # print(data)
         self.assertIsInstance(data, DataFrame)
 
+    def test_iterate_attr(self):
+        loader = EdgeLoader(
+            graph=self.conn,
+            attributes=["time","is_train"],
+            batch_size=1024,
+            shuffle=True,
+            filter_by=None,
+            loader_id=None,
+            buffer_size=4,
+            kafka_address="34.82.171.137:9092",
+        )
+        num_batches = 0
+        for data in loader:
+            # print(num_batches, data.head())
+            self.assertIsInstance(data, DataFrame)
+            self.assertIn("time", data)
+            self.assertIn("is_train", data)
+            num_batches += 1
+        self.assertEqual(num_batches, 11)
+
     # TODO: test filter_by
 
 
@@ -106,6 +126,25 @@ class TestGDSEdgeLoaderREST(unittest.TestCase):
         # print(data)
         self.assertIsInstance(data, DataFrame)
 
+    def test_iterate_attr(self):
+        loader = EdgeLoader(
+            graph=self.conn,
+            attributes=["time","is_train"],
+            batch_size=1024,
+            shuffle=True,
+            filter_by=None,
+            loader_id=None,
+            buffer_size=4
+        )
+        num_batches = 0
+        for data in loader:
+            # print(num_batches, data.head())
+            self.assertIsInstance(data, DataFrame)
+            self.assertIn("time", data)
+            self.assertIn("is_train", data)
+            num_batches += 1
+        self.assertEqual(num_batches, 11)
+
     # TODO: test filter_by
 
 
@@ -114,9 +153,11 @@ if __name__ == "__main__":
     suite.addTest(TestGDSEdgeLoader("test_init"))
     suite.addTest(TestGDSEdgeLoader("test_iterate"))
     suite.addTest(TestGDSEdgeLoader("test_whole_edgelist"))
+    suite.addTest(TestGDSEdgeLoader("test_iterate_attr"))
     suite.addTest(TestGDSEdgeLoaderREST("test_init"))
     suite.addTest(TestGDSEdgeLoaderREST("test_iterate"))
     suite.addTest(TestGDSEdgeLoaderREST("test_whole_edgelist"))
+    suite.addTest(TestGDSEdgeLoaderREST("test_iterate_attr"))
 
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)

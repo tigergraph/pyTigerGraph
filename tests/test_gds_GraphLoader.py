@@ -86,6 +86,37 @@ class TestGDSGraphLoader(unittest.TestCase):
             num_batches += 1
         self.assertEqual(num_batches, 11)
 
+    def test_edge_attr(self):
+        loader = GraphLoader(
+            graph=self.conn,
+            v_in_feats=["x"],
+            v_out_labels=["y"],
+            v_extra_feats=["train_mask", "val_mask", "test_mask"],
+            e_in_feats=["time"],
+            e_extra_feats=["is_train"],
+            batch_size=1024,
+            shuffle=True,
+            filter_by=None,
+            output_format="PyG",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4,
+            kafka_address="34.82.171.137:9092",
+        )
+        num_batches = 0
+        for data in loader:
+            # print(num_batches, data)
+            self.assertIsInstance(data, pygData)
+            self.assertIn("x", data)
+            self.assertIn("y", data)
+            self.assertIn("train_mask", data)
+            self.assertIn("val_mask", data)
+            self.assertIn("test_mask", data)
+            self.assertIn("edge_feat", data)
+            self.assertIn("is_train", data)
+            num_batches += 1
+        self.assertEqual(num_batches, 11)
+
 
 class TestGDSGraphLoaderREST(unittest.TestCase):
     @classmethod
@@ -163,15 +194,47 @@ class TestGDSGraphLoaderREST(unittest.TestCase):
             num_batches += 1
         self.assertEqual(num_batches, 11)
 
+    def test_edge_attr(self):
+        loader = GraphLoader(
+            graph=self.conn,
+            v_in_feats=["x"],
+            v_out_labels=["y"],
+            v_extra_feats=["train_mask", "val_mask", "test_mask"],
+            e_in_feats=["time"],
+            e_extra_feats=["is_train"],
+            batch_size=1024,
+            shuffle=True,
+            filter_by=None,
+            output_format="PyG",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4
+        )
+        num_batches = 0
+        for data in loader:
+            # print(num_batches, data)
+            self.assertIsInstance(data, pygData)
+            self.assertIn("x", data)
+            self.assertIn("y", data)
+            self.assertIn("train_mask", data)
+            self.assertIn("val_mask", data)
+            self.assertIn("test_mask", data)
+            self.assertIn("edge_feat", data)
+            self.assertIn("is_train", data)
+            num_batches += 1
+        self.assertEqual(num_batches, 11)
+
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(TestGDSGraphLoader("test_init"))
     suite.addTest(TestGDSGraphLoader("test_iterate_pyg"))
     suite.addTest(TestGDSGraphLoader("test_iterate_df"))
+    suite.addTest(TestGDSGraphLoader("test_edge_attr"))
     suite.addTest(TestGDSGraphLoaderREST("test_init"))
     suite.addTest(TestGDSGraphLoaderREST("test_iterate_pyg"))
     suite.addTest(TestGDSGraphLoaderREST("test_iterate_df"))
+    suite.addTest(TestGDSGraphLoaderREST("test_edge_attr"))
 
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)
