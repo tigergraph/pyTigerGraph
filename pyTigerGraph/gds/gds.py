@@ -1,4 +1,7 @@
-"""Graph Data Science Functions."""
+"""Graph Data Science Functions
+The Graph Data Science Functions are a collection of functions that are used to perform various graph data science and graph machine learning tasks.
+In order to use these functions, confirm that the appropriate prerequisites are installed. Check the docs for more details.
+"""
 from typing import TYPE_CHECKING, Union
 
 if TYPE_CHECKING:

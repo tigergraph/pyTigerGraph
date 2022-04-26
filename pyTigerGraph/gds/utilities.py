@@ -1,3 +1,6 @@
+"""GDS Utilities
+Utilities for the Graph Data Science functions.
+"""
 import os
 import random
 import re

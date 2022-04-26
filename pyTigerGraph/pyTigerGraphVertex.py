@@ -1,4 +1,6 @@
-"""Vertex Functions."""
+"""Vertex Functions
+Get and upsert vertex data.
+"""
 
 import json
 

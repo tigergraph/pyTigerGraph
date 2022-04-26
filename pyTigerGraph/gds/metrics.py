@@ -1,10 +1,14 @@
+"""pyTigerGraph GDS Metrics.
+Utility for gathering metrics for GNN predictions.
+"""
+
 from numpy import ndarray
 
 __all__ = ["Accumulator", "Accuracy", "Precision", "Recall"]
 
 
 class Accumulator:
-    """Object that stores running sum and count.
+    """Base Metric Accumulator.
 
     Usage:
     - Call the update function to add a value.
@@ -51,7 +55,7 @@ class Accumulator:
 
 
 class Accuracy(Accumulator):
-    """Object that calculates and tracks accuracy between predictions and true labels.
+    """Accuracy Metric.
 
     Accuracy = sum(preds == labels) / len(labels)
 
@@ -88,7 +92,7 @@ class Accuracy(Accumulator):
 
 
 class Recall(Accumulator):
-    """Object that calculates and tracks recall between predictions and true labels.
+    """Recall Metric.
 
     Recall = sum(preds * labels) / sum(labels)
 
@@ -125,7 +129,7 @@ class Recall(Accumulator):
 
 
 class Precision(Accumulator):
-    """Object that calculates and tracks precision between predictions and true labels.
+    """Precision Metric.
 
     Precision = sum(preds * labels) / sum(preds)
 

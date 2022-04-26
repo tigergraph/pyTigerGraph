@@ -1,4 +1,6 @@
-"""Query Functions."""
+"""Query Functions
+Run installed and interpreted queries in TigerGraph.
+"""
 
 import json
 import urllib

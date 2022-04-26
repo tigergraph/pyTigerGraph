@@ -1,7 +1,10 @@
-"""Schema Functions."""
+"""Schema Functions
+Get schema information about the graph.
+"""
 
 import json
 import re
+from typing import TYPE_CHECKING, Union
 
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
@@ -77,7 +80,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
             self.schema["UDTs"] = self._getUDTs()
         return self.schema
 
-    def upsertData(self, data: [str, object]) -> dict:
+    def upsertData(self, data: Union[str, object]) -> dict:
         """Upserts data (vertices and edges) from a JSON document or equivalent object structure.
 
         Args:
