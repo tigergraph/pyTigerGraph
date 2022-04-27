@@ -301,7 +301,7 @@ class BaseLoader:
         with open(file_path) as infile:
             firstline = infile.readline()
         try:
-            query_name = re.search("QUERY (.+?)\(", firstline).group(1).strip()
+            query_name = re.search(r"QUERY (.+?)\(", firstline).group(1).strip()
         except:
             raise ValueError(
                 "Cannot parse the query file. It should start with CREATE QUERY ... "
@@ -1061,12 +1061,20 @@ class NeighborLoader(BaseLoader):
             query_replace["{EDGEATTRS}"] = query_print
         else:
             query_replace['+ "," + {EDGEATTRS}'] = ""
-        query_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "gsql",
-            "dataloaders",
-            "neighbor_loader.gsql",
-        )
+        if self.kafka_address_producer:
+            query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "dataloaders",
+                "neighbor_kloader.gsql",
+            )
+        else:
+            query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "dataloaders",
+                "neighbor_hloader.gsql",
+            )
         return install_query_file(self._graph, query_path, query_replace)
 
     def _start(self) -> None:
@@ -1313,12 +1321,20 @@ class EdgeLoader(BaseLoader):
             query_replace["{EDGEATTRS}"] = query_print
         else:
             query_replace['+ "," + {EDGEATTRS}'] = ""
-        query_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "gsql",
-            "dataloaders",
-            "edge_loader.gsql",
-        )
+        if self.kafka_address_producer:
+            query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "dataloaders",
+                "edge_kloader.gsql",
+            )
+        else:
+            query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "dataloaders",
+                "edge_hloader.gsql",
+            )
         return install_query_file(self._graph, query_path, query_replace)
 
     def _start(self) -> None:
@@ -1557,12 +1573,20 @@ class VertexLoader(BaseLoader):
             query_replace["{VERTEXATTRS}"] = query_print
         else:
             query_replace['+ "," + {VERTEXATTRS}'] = ""
-        query_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "gsql",
-            "dataloaders",
-            "vertex_loader.gsql",
-        )
+        if self.kafka_address_producer:
+            query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "dataloaders",
+                "vertex_kloader.gsql",
+            )
+        else:
+            query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "dataloaders",
+                "vertex_hloader.gsql",
+            )
         return install_query_file(self._graph, query_path, query_replace)
 
     def _start(self) -> None:
@@ -1844,12 +1868,20 @@ class GraphLoader(BaseLoader):
             query_replace["{EDGEATTRS}"] = query_print
         else:
             query_replace['+ "," + {EDGEATTRS}'] = ""
-        query_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "gsql",
-            "dataloaders",
-            "graph_loader.gsql",
-        )
+        if self.kafka_address_producer:
+            query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "dataloaders",
+                "graph_kloader.gsql",
+            )
+        else:
+            query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "dataloaders",
+                "graph_hloader.gsql",
+            )
         return install_query_file(self._graph, query_path, query_replace)
 
     def _start(self) -> None:

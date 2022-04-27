@@ -1,4 +1,4 @@
-CREATE QUERY edge_loader_{QUERYSUFFIX}(
+CREATE QUERY edge_kloader_{QUERYSUFFIX}(
     INT num_batches=1, 
     BOOL shuffle=FALSE,
     STRING filter_by,
@@ -50,13 +50,9 @@ CREATE QUERY edge_loader_{QUERYSUFFIX}(
                 ACCUM @@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {EDGEATTRS} + "\n");
         END;
         # Export batch
-        IF kafka_address IS NOT NULL THEN
-            IF write_to_kafka(kafka_address, kafka_topic, "edge_batch_" + int_to_string(batch_id), @@e_batch)!=0 THEN 
-                @@kafka_error += ("Failed sending edge batch " + int_to_string(batch_id) + "\n");
-            END;
-            PRINT @@kafka_error as kafkaError;
-        ELSE
-            PRINT @@e_batch AS edge_batch;
+        IF write_to_kafka(kafka_address, kafka_topic, "edge_batch_" + int_to_string(batch_id), @@e_batch)!=0 THEN 
+            @@kafka_error += ("Failed sending edge batch " + int_to_string(batch_id) + "\n");
         END;
+        PRINT @@kafka_error as kafkaError;
     END; 
 }
