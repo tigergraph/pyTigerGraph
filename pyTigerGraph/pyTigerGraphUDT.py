@@ -1,5 +1,3 @@
-"""User Defined Type (UDT) Functions."""
-
 from pyTigerGraph.pyTigerGraphSchema import pyTigerGraphSchema
 
 

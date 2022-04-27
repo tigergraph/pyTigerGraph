@@ -1,5 +1,3 @@
-"""Loading Job Functions."""
-
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
 

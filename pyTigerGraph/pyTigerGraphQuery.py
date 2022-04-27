@@ -1,5 +1,3 @@
-"""Query Functions."""
-
 import json
 from datetime import datetime
 

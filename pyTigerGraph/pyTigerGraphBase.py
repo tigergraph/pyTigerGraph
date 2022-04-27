@@ -1,15 +1,10 @@
-"""pyTigerGraph basic functionality.
-
-Low(est) level HTTP(S) communication used by all other modules (directly or indirectly).
-"""
-
 import base64
 import json
 import sys
+from typing import Union
 from urllib.parse import urlparse
 
 import requests
-from typing import TYPE_CHECKING, Union
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
@@ -24,13 +19,17 @@ def excepthook(type, value, traceback):
 
 
 class pyTigerGraphBase(object):
-    """pyTigerGraph Connection."""
+    """pyTigerGraph basic functionality.
+
+    Low(est) level HTTP(S) communication used by all other modules (directly or indirectly).
+    """
 
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
             username: str = "tigergraph", password: str = "tigergraph",
-            restppPort: Union[int, str] = "9000", gsPort: Union[int, str] = "14240", gsqlVersion: str = "",
-            version: str = "", apiToken: str = "", useCert: bool = True, certPath: str = None,
-            debug: bool = False, sslPort: Union[int, str] = "443", gcp: bool = False):
+            restppPort: Union[int, str] = "9000", gsPort: Union[int, str] = "14240",
+            gsqlVersion: str = "", version: str = "", apiToken: str = "", useCert: bool = True,
+            certPath: str = None, debug: bool = False, sslPort: Union[int, str] = "443",
+            gcp: bool = False):
         """Initiate a connection object.
 
         Args:

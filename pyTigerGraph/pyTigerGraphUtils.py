@@ -1,5 +1,3 @@
-"""Utility Functions."""
-
 import json
 import re
 import urllib
@@ -48,8 +46,8 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         TODO Implement POST
         """
         if usePost:
-            return self._post(self.restppUrl + "/echo/" + self.graphname, resKey="message")
-        return self._get(self.restppUrl + "/echo/" + self.graphname, resKey="message")
+            return str(self._post(self.restppUrl + "/echo/" + self.graphname, resKey="message"))
+        return str(self._get(self.restppUrl + "/echo/" + self.graphname, resKey="message"))
 
     def getVersion(self, raw: bool = False) -> [str, list]:
         """Retrieves the git versions of all components of the system.

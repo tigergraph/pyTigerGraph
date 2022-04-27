@@ -1,5 +1,3 @@
-"""Path Finding Functions."""
-
 import json
 
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
@@ -12,7 +10,8 @@ class pyTigerGraphPath(pyTigerGraphBase):
             targetVertices: [dict, tuple, list], maxLength: int = None,
             vertexFilters: [list, dict] = None, edgeFilters: [list, dict] = None,
             allShortestPaths: bool = False) -> str:
-        """Prepares the input parameters by transforming them to the format expected by the path algorithms.
+        """Prepares the input parameters by transforming them to the format expected by the path
+         algorithms.
 
         See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_input_parameters_and_output_format_for_path_finding
 
@@ -96,11 +95,9 @@ class pyTigerGraphPath(pyTigerGraphBase):
 
         # Assembling the input payload
         if not sourceVertices or not targetVertices:
-            return None
+            return ""
             # TODO Should allow returning error instead of handling missing parameters here?
-        data = {}
-        data["sources"] = parseVertices(sourceVertices)
-        data["targets"] = parseVertices(targetVertices)
+        data = {"sources": parseVertices(sourceVertices), "targets": parseVertices(targetVertices)}
         if vertexFilters:
             data["vertexFilters"] = parseFilters(vertexFilters)
         if edgeFilters:
@@ -117,7 +114,8 @@ class pyTigerGraphPath(pyTigerGraphBase):
             edgeFilters: [list, dict] = None, allShortestPaths: bool = False) -> dict:
         """Find the shortest path (or all shortest paths) between the source and target vertex sets.
 
-        A vertex set is a dict that has three top-level keys: `v_type`, `v_id`, `attributes` (a dict).
+        A vertex set is a set of dictionaries that each has three top-level keys: `v_type`, `v_id`,
+            and `attributes` (also a dictionary).
 
         Args:
             sourceVertices:
