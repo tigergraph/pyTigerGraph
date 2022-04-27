@@ -1,6 +1,7 @@
+import json
 import unittest
 
-from pyTigerGraphUnitTest import pyTigerGraphUnitTest
+from .pyTigerGraphUnitTest import pyTigerGraphUnitTest
 
 
 class test_pyTigerGraphSchema(pyTigerGraphUnitTest):
@@ -135,6 +136,224 @@ class test_pyTigerGraphSchema(pyTigerGraphUnitTest):
         self.assertEqual(2, res)
 
         res = self.conn.delVerticesById("vertex5", [5000, 5001])
+        self.assertEqual(2, res)
+
+        """
+               v4     v5       
+        7000   ⚫️———⚫️
+                 ╲ ╱
+                  ╳
+                 ╱ ╲
+        7001   ⚫️   ⚫️
+        """
+        data = {
+            "vertices": {
+                "vertex4": {
+                    "7000": {
+                        "a01": {
+                            "value": 7000
+                        }
+                    },
+                    "7001": {
+                        "a01": {
+                            "value": 7000
+                        }
+                    }
+                },
+                "vertex5": {
+                    "7000": {},
+                    "7001": {}
+                }
+            },
+            "edges": {
+                "vertex4": {
+                    "7000": {
+                        "edge2_directed": {
+                            "vertex5": {
+                                "7000": {
+                                    "a01": {
+                                        "value": 7000
+                                    }
+                                },
+                                "7001": {
+                                    "a01": {
+                                        "value": 7000
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "7001": {
+                        "edge2_directed": {
+                            "vertex5": {
+                                "7000": {
+                                    "a01": {
+                                        "value": 7000
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        res = self.conn.upsertData(data, atomic=True, ackAll=True)
+        self.assertEqual({"accepted_vertices": 4, "accepted_edges": 3}, res)
+
+        """
+               v4     v5       
+        7000   🔴️———⚫️
+                 ╲ ╱
+                  ╳
+                 ╱ ╲
+        7001   🔴️   ⚫️
+
+        7002   🟢
+        """
+        data = {
+            "vertices": {
+                "vertex4": {
+                    "7000": {
+                        "a01": {
+                            "value": 7010
+                        }
+                    },
+                    "7001": {
+                        "a01": {
+                            "value": 7010
+                        }
+                    },
+                    "7002": {
+                        "a01": {
+                            "value": 7010
+                        }
+                    }
+                }
+            }
+        }
+        exp = {
+            "accepted_vertices": 1,
+            "skipped_vertices": 2,
+            "vertices_already_exist": [
+                {"v_type": "vertex4", "v_id": "7000"},
+                {"v_type": "vertex4", "v_id": "7001"}
+            ],
+            "accepted_edges": 0
+        }
+        res = self.conn.upsertData(data, newVertexOnly=True)
+        self.assertEqual(exp, res)
+
+        """
+               v4     v5       
+        7000   ⚫️———⚫️
+                 ╲ ╱
+                  ╳
+                 ╱ ╲
+        7001   ⚫️   ⚫️
+                   ╱
+                  ╱
+                 ╱
+        7002   ⚫⋯⋯⋯🔴
+
+        7003   🔴⋯⋯⋯🔴
+        """
+        data = {
+            "edges": {
+                "vertex4": {
+                    "7002": {
+                        "edge2_directed": {
+                            "vertex5": {
+                                "7001": {
+                                    "a01": {
+                                        "value": 7000
+                                    }
+                                },
+                                "7002": {
+                                    "a01": {
+                                        "value": 7000
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "7003": {
+                        "edge2_directed": {
+                            "vertex5": {
+                                "7003": {
+                                    "a01": {
+                                        "value": 7000
+                                    }
+                                },
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        exp = {
+            "accepted_vertices": 0,
+            "accepted_edges": 1,
+            "skipped_edges": 2,
+            "edge_vertices_not_exist": [
+                {"v_type": "vertex5", "v_id": "7002"},
+                {"v_type": "vertex4", "v_id": "7003"},
+                {"v_type": "vertex5", "v_id": "7003"}
+            ]
+        }
+        res = self.conn.upsertData(data, vertexMustExist=True)
+        self.assertEqual(exp, res)
+
+        """
+               v4     v5       
+        7000   🟢️———⚫️
+                 ╲ ╱
+                  ╳
+                 ╱ ╲
+        7001   🟢️   ⚫️
+                   ╱
+                  ╱
+                 ╱
+        7002   ⚫
+
+        7003   🔴
+        """
+        data = {
+            "vertices": {
+                "vertex4": {
+                    "7000": {
+                        "a01": {
+                            "value": 7020
+                        }
+                    },
+                    "7001": {
+                        "a01": {
+                            "value": 7020
+                        }
+                    },
+                    "7003": {
+                        "a01": {
+                            "value": 7020
+                        }
+                    }
+                }
+            }
+        }
+        exp = {
+            "accepted_vertices": 2,
+            "skipped_vertices": 1,
+            "vertices_not_exist": [
+                {"v_type": "vertex4", "v_id": "7003"}
+            ],
+            "accepted_edges": 0
+        }
+        res = self.conn.upsertData(data, updateVertexOnly=True)
+        self.assertEqual(exp, res)
+
+        res = self.conn.delVertices("vertex4", where="a01>=7000,a01<8000")
+        self.assertEqual(3, res)
+
+        res = self.conn.delVerticesById("vertex5", [7000, 7001])
         self.assertEqual(2, res)
 
     def test_05_getEndpoints(self):

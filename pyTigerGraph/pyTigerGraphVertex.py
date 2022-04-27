@@ -3,6 +3,7 @@
 import json
 
 from typing import TYPE_CHECKING, Union
+
 if TYPE_CHECKING:
     import pandas as pd
 
@@ -524,8 +525,8 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             url += ("?" if isFirst else "&") + "timeout=" + str(timeout)
         return self._delete(url)["deleted_vertices"]
 
-    def delVerticesById(self, vertexType: str, vertexIds: Union[int, str, list], permanent: bool = False,
-            timeout: int = 0) -> int:
+    def delVerticesById(self, vertexType: str, vertexIds: Union[int, str, list],
+            permanent: bool = False, timeout: int = 0) -> int:
         """Deletes vertices from graph identified by their ID.
 
         Args:
@@ -617,7 +618,8 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         try:
             import pandas as pd
         except ImportError:
-            raise ImportError("Pandas is required to use this function. Download pandas using 'pip install pandas'.")
+            raise ImportError("Pandas is required to use this function. "
+                "Download pandas using 'pip install pandas'.")
         df = pd.DataFrame(vertexSet)
         cols = []
         if withId:
