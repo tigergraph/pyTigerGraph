@@ -11,7 +11,10 @@ from pyTigerGraph.pyTigerGraphUtils import pyTigerGraphUtils
 
 
 class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
-    """Vertex Functions."""
+    """Vertex Functions.
+
+        Provides functions to upsert, retrieve and delete vertices.
+    """
 
     def getVertexTypes(self, force: bool = False) -> list:
         """Returns the list of vertex type names of the graph.

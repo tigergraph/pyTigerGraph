@@ -21,7 +21,7 @@ def excepthook(type, value, traceback):
 class pyTigerGraphBase(object):
     """pyTigerGraph basic functionality.
 
-    Low(est) level HTTP(S) communication used by all other modules (directly or indirectly).
+    Offers low(est) level HTTP(S) communication used by all other modules (directly or indirectly).
     """
 
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",

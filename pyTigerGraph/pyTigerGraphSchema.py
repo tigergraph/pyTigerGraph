@@ -6,7 +6,10 @@ from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
 
 class pyTigerGraphSchema(pyTigerGraphBase):
-    """Schema Functions."""
+    """Schema Functions.
+
+    Get schema information about the graph.
+    """
 
     def _getUDTs(self) -> dict:
         """Retrieves all User Defined Types (UDTs) of the graph.

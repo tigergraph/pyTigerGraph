@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Union
 from urllib.parse import urlparse
 
 from pyTigerDriver import GSQL_Client
@@ -9,7 +10,10 @@ from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
 
 class pyTigerGraphGSQL(pyTigerGraphBase):
-    """GSQL Interface."""
+    """GSQL Interface.
+
+    Use GSQL within pyTigerGraph.
+    """
 
     def initGsql(self, certLocation: str = "~/.gsql/my-cert.txt") -> bool:
         """Initialises the GSQL support.
@@ -78,7 +82,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             print("Connection Failed check your Username/Password {}".format(e))
             self.gsqlInitiated = False
 
-    def gsql(self, query: str, graphname: str = None, options=None) -> [str, dict]:
+    def gsql(self, query: str, graphname: str = None, options=None) -> Union[str, dict]:
         """Runs a GSQL query and process the output.
 
         Args:
