@@ -26,6 +26,9 @@ class GDS:
         v_in_feats: Union[list, dict] = None,
         v_out_labels: Union[list, dict] = None,
         v_extra_feats: Union[list, dict] = None,
+        e_in_feats: Union[list, dict] = None,
+        e_out_labels: Union[list, dict] = None,
+        e_extra_feats: Union[list, dict] = None,
         batch_size: int = None,
         num_batches: int = 1,
         num_neighbors: int = 10,
@@ -88,6 +91,16 @@ class GDS:
             v_extra_feats (list, optional):
                 Other attributes to get such as indicators of
                 train/test data. All types of attributes are allowed. Defaults to None.
+            e_in_feats (list, optional):
+                Edge attributes to be used as input features.
+                Only numeric and boolean attributes are allowed. The type of an attrbiute
+                is automatically determined from the database schema. Defaults to None.
+            e_out_labels (list, optional):
+                Edge attributes to be used as labels for
+                prediction. Only numeric and boolean attributes are allowed. Defaults to None.
+            e_extra_feats (list, optional):
+                Other edge attributes to get such as indicators of
+                train/test data. All types of attributes are allowed. Defaults to None.
             batch_size (int, optional):
                 Number of vertices as seeds in each batch.
                 Defaults to None.
@@ -149,6 +162,9 @@ class GDS:
             v_in_feats,
             v_out_labels,
             v_extra_feats,
+            e_in_feats,
+            e_out_labels,
+            e_extra_feats,
             batch_size,
             num_batches,
             num_neighbors,
@@ -172,6 +188,7 @@ class GDS:
 
     def edgeLoader(
         self,
+        attributes: Union[list, dict] = None,
         batch_size: int = None,
         num_batches: int = 1,
         shuffle: bool = False,
@@ -215,6 +232,8 @@ class GDS:
           multiple batches of data to load, it will return the loader again.
 
         Args:
+            attributes (list, optional):
+                Edge attributes to be included. Defaults to None.
             batch_size (int, optional):
                 Number of edges in each batch.
                 Defaults to None.
@@ -263,6 +282,7 @@ class GDS:
         """
         return EdgeLoader(
             self.conn,
+            attributes,
             batch_size,
             num_batches,
             shuffle,
@@ -401,6 +421,9 @@ class GDS:
         v_in_feats: Union[list, dict] = None,
         v_out_labels: Union[list, dict] = None,
         v_extra_feats: Union[list, dict] = None,
+        e_in_feats: Union[list, dict] = None,
+        e_out_labels: Union[list, dict] = None,
+        e_extra_feats: Union[list, dict] = None,
         batch_size: int = None,
         num_batches: int = 1,
         shuffle: bool = False,
@@ -452,6 +475,16 @@ class GDS:
             v_extra_feats (list, optional):
                 Other attributes to get such as indicators of train/test data. 
                 All types of attributes are allowed. Defaults to None.
+            e_in_feats (list, optional):
+                Edge attributes to be used as input features.
+                Only numeric and boolean attributes are allowed. The type of an attrbiute
+                is automatically determined from the database schema. Defaults to None.
+            e_out_labels (list, optional):
+                Edge attributes to be used as labels for
+                prediction. Only numeric and boolean attributes are allowed. Defaults to None.
+            e_extra_feats (list, optional):
+                Other edge attributes to get such as indicators of
+                train/test data. All types of attributes are allowed. Defaults to None.
             batch_size (int, optional):
                 Number of edges in each batch.
                 Defaults to None.
@@ -506,6 +539,9 @@ class GDS:
             v_in_feats,
             v_out_labels,
             v_extra_feats,
+            e_in_feats,
+            e_out_labels,
+            e_extra_feats,
             batch_size,
             num_batches,
             shuffle,
