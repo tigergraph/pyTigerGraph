@@ -3,9 +3,7 @@ Run installed and interpreted queries in TigerGraph.
 """
 
 import json
-import urllib
 from datetime import datetime
-from urllib.parse import urlparse
 
 from typing import TYPE_CHECKING, Union
 
@@ -46,13 +44,22 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
             try:
                 import pandas as pd
             except ImportError:
-                raise ImportError("Pandas is required to use this function. Download pandas using 'pip install pandas'.")
+                raise ImportError("Pandas is required to use this function. "
+                    "Download pandas using 'pip install pandas'.")
             return pd.DataFrame(ret).T
         return ret
 
     # TODO getQueryMetadata()
     #   GET /gsqlserver/gsql/queryinfo
     #   https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#get-query-metadata
+
+    # TODO installQueries()
+    #   POST /gsql/queries/install
+    #   https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_install_a_query
+
+    # TODO checkQueryInstallationStatus()
+    #   GET /gsql/queries/install/{request_id}
+    #   https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_check_query_installation_status
 
     def _parseQueryParameters(self, params: dict) -> str:
         """Parse a dictionary of query parameters and convert them to query string.
@@ -83,8 +90,8 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
                             ret += k + "[" + str(i) + "]=" + self._safeChar(vv[0]) + "&" + \
                                    k + "[" + str(i) + "].type=" + vv[1] + "&"
                         else:
-                            raise TigerGraphException(
-                                "Invalid parameter value: (vertex_primary_id, vertex_type) was expected.")
+                            raise TigerGraphException("Invalid parameter value: (vertex_primary_id"
+                                ", vertex_type) was expected.")
                     else:
                         ret += k + "=" + self._safeChar(vv) + "&"
                     i += 1
@@ -94,8 +101,8 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
                 ret += k + "=" + self._safeChar(v) + "&"
         return ret[:-1]
 
-    def runInstalledQuery(self, queryName: str, params: Union[str, dict] = None, timeout: int = None,
-            sizeLimit: int = None, usePost: bool = False) -> list:
+    def runInstalledQuery(self, queryName: str, params: Union[str, dict] = None,
+            timeout: int = None, sizeLimit: int = None, usePost: bool = False) -> list:
         """Runs an installed query.
 
         The query must be already created and installed in the graph.
@@ -138,7 +145,6 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
             - For `SET<VERTEX>` (no vertex type specified) use
                 `"key": [(primary_id1, "vertex_type1"), (primary_id2, "vertex_type2"), ...]`
 
-
         Endpoints:
             - `GET /query/{graph_name}/{query_name}`
                 See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_run_an_installed_query_get
@@ -166,10 +172,12 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
                 params=params, headers=headers)
 
     # TODO checkQueryStatus()
-    # GET /query_status/{graph_name}
+    #   GET /query_status/{graph_name}
+    #   https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_check_query_status_detached_mode
 
     # TODO getQueryResult()
-    # GET /query_result/{requestid}
+    #   GET /query_result/{requestid}
+    #   https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_check_query_results_detached_mode
 
     def runInterpretedQuery(self, queryText: str, params: Union[str, dict] = None) -> list:
         """Runs an interpreted query.
@@ -228,7 +236,9 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
     # GET /showprocesslist/{graph_name}
     # https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#list-running-queries
 
-    # TODO GET /abortquery/{graph_name}
+    # TODO abortQuery()
+    #   GET /abortquery/{graph_name}
+    #   https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_abort_a_query
 
     def parseQueryOutput(self, output: list, graphOnly: bool = True) -> dict:
         """Parses query output and separates vertex and edge data (and optionally other output) for

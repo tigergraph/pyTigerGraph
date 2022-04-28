@@ -59,6 +59,6 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         Use `runLoadingJobWithFile()` instead.
         TODO Proper depreciation
         """
-        self.runLoadingJobWithFile(filePath, fileTag, jobName, sep, eol, timeout, sizeLimit)
+        return self.runLoadingJobWithFile(filePath, fileTag, jobName, sep, eol, timeout, sizeLimit)
 
     # TODO POST /restpploader/{graph_name}
