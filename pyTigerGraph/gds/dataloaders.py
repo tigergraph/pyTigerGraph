@@ -1,4 +1,7 @@
-"""Data Loaders."""
+"""Data Loaders
+Graph Machine Learning Data Loaders for pyTigerGraph. Uses either REST++ service or Kafka (Kafka is an enterprise feature).
+Requires `querywriters` user permissions for full functionality. Refer to https://docs.tigergraph.com/tigergraph-server/current/user-access/access-control-model#_built_in_roles for more information.
+"""
 
 import io
 import logging

@@ -1,4 +1,6 @@
-"""User Defined Type (UDT) Functions."""
+"""User Defined Type (UDT) Functions
+Get user defined function informations for the graph.
+"""
 
 from pyTigerGraph.pyTigerGraphSchema import pyTigerGraphSchema
 

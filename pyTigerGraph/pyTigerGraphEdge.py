@@ -1,4 +1,6 @@
-"""Edge Functions."""
+"""Edge Functions
+Get and upsert edges to TigerGraph.
+"""
 
 import json
 

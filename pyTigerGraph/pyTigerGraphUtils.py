@@ -1,4 +1,6 @@
-"""Utility Functions."""
+"""Utility Functions
+Utility functions for pyTigerGraph.
+"""
 
 import json
 import re
@@ -7,6 +9,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 import requests
+from typing import TYPE_CHECKING, Union
 
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
@@ -51,7 +54,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
             return self._post(self.restppUrl + "/echo/" + self.graphname, resKey="message")
         return self._get(self.restppUrl + "/echo/" + self.graphname, resKey="message")
 
-    def getVersion(self, raw: bool = False) -> [str, list]:
+    def getVersion(self, raw: bool = False) -> Union[str, list]:
         """Retrieves the git versions of all components of the system.
 
         Args:

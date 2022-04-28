@@ -1,4 +1,6 @@
-"""Loading Job Functions."""
+"""Loading Job Functions
+Run loading jobs on the TigerGraph server.
+"""
 
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
