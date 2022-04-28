@@ -1,0 +1,6 @@
+icecream
+matplotlib==3.5.1
+networkx
+numpy==1.22.3
+pandas==1.3.5
+torch
