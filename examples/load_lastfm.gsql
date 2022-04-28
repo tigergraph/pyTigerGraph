@@ -1,0 +1,32 @@
+DROP QUERY random_edge_split
+DROP QUERY graph_loader_x_time_test_mask
+DROP QUERY graph_loader_x_time_train_mask
+DROP QUERY graph_loader_x_time_train_mask_val_mask_test_mask
+DROP QUERY graph_loader_x_time_val_mask
+DROP JOB load_lastfm
+
+DROP GRAPH LastFM
+DROP EDGE Interact
+DROP VERTEX User
+DROP VERTEX Item
+
+
+CREATE VERTEX User (PRIMARY_ID vid INT, x LIST<INT>, y INT, train_mask BOOL, val_mask BOOL, test_mask BOOL) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true"
+CREATE VERTEX Item (PRIMARY_ID vid INT, x LIST<INT>, y INT, train_mask BOOL, val_mask BOOL, test_mask BOOL) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true"
+CREATE DIRECTED EDGE Interact (FROM User, TO Item, train_mask BOOL DEFAULT "False", val_mask BOOL DEFAULT "False", test_mask BOOL DEFAULT "False", time INT DEFAULT "2000")
+CREATE GRAPH LastFM (User, Item, Interact)
+
+USE GRAPH LastFM
+BEGIN
+CREATE LOADING JOB load_lastfm FOR GRAPH LastFM {
+    DEFINE FILENAME user_file = "/home/tigergraph/tgsandbox/gnn-recsys-sandbox/data/lastfm_users.csv";
+    DEFINE FILENAME item_file = "/home/tigergraph/tgsandbox/gnn-recsys-sandbox/data/lastfm_items.csv";
+    DEFINE FILENAME edge_file = "/home/tigergraph/tgsandbox/gnn-recsys-sandbox/data/lastfm_edges.csv";
+    
+    LOAD user_file TO VERTEX User VALUES ($"node_id", LIST(0), 0, "False", "False", "False") USING header="true", separator=",";
+    LOAD item_file TO VERTEX Item VALUES ($"node_id", LIST(0), 0, "False", "False", "False") USING header="true", separator=",";
+    LOAD edge_file TO EDGE Interact VALUES ($"user_id", $"item_id", "False", "False", "False", 2000) USING header="true", separator=",";
+}
+END
+
+RUN LOADING JOB load_lastfm
