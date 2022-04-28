@@ -33,6 +33,15 @@ class TestGDSBaseLoader(unittest.TestCase):
                 }
             },
         )
+        self.assertDictEqual(
+            self.loader._e_schema,
+            {
+                "Cite": {
+                    "time": "INT",
+                    "is_train": "BOOL"
+                }
+            },
+        )
 
     def test_validate_vertex_attributes(self):
         self.assertListEqual(self.loader._validate_vertex_attributes(None), [])
@@ -41,6 +50,22 @@ class TestGDSBaseLoader(unittest.TestCase):
         self.assertListEqual(
             self.loader._validate_vertex_attributes(["x ", " y"]), ["x", "y"]
         )
+        with self.assertRaises(ValueError):
+            self.loader._validate_vertex_attributes("x")
+        with self.assertRaises(ValueError):
+            self.loader._validate_vertex_attributes(["nonexist"])
+
+    def test_validate_edge_attributes(self):
+        self.assertListEqual(self.loader._validate_edge_attributes(None), [])
+        self.assertListEqual(self.loader._validate_edge_attributes([]), [])
+        self.assertListEqual(self.loader._validate_edge_attributes({}), [])
+        self.assertListEqual(
+            self.loader._validate_edge_attributes(["time ", "is_train"]), ["time", "is_train"]
+        )
+        with self.assertRaises(ValueError):
+            self.loader._validate_edge_attributes("time")
+        with self.assertRaises(ValueError):
+            self.loader._validate_edge_attributes(["nonexist"])
 
     def test_read_vertex_bytes(self):
         read_task_q = Queue()
@@ -74,14 +99,17 @@ class TestGDSBaseLoader(unittest.TestCase):
         read_task_q = Queue()
         data_q = Queue(4)
         exit_event = Event()
-        raw = "1,2\n2,1\n".encode("utf-8")
+        raw = "1,2,0.1,2021,1,0\n2,1,1.5,2020,0,1\n".encode("utf-8")
         read_task_q.put(raw)
         read_task_q.put(None)
         self.loader._read_data(
-            exit_event, read_task_q, data_q, "edge_bytes", "dataframe"
+            exit_event, read_task_q, data_q, "edge_bytes", "dataframe", [], [], [], {},
+            ["x", "time"], ["y"], ["is_train"], 
+            {"x": "float", "time": "int", "y": "int", "is_train": "bool"} 
         )
         data = data_q.get()
-        truth = pd.read_csv(io.BytesIO(raw), header=None, names=["source", "target"])
+        truth = pd.read_csv(io.BytesIO(raw), header=None, 
+            names=["source", "target", "x", "time", "y", "is_train"])
         assert_frame_equal(data, truth)
         data = data_q.get()
         self.assertIsNone(data)
@@ -92,7 +120,7 @@ class TestGDSBaseLoader(unittest.TestCase):
         exit_event = Event()
         raw = (
             "99,1 0 0 1 ,1,0,1\n8,1 0 0 1 ,1,1,1\n".encode("utf-8"),
-            "1,2\n2,1\n".encode("utf-8"),
+            "1,2,0.1,2021,1,0\n2,1,1.5,2020,0,1\n".encode("utf-8")
         )
         read_task_q.put(raw)
         read_task_q.put(None)
@@ -106,6 +134,8 @@ class TestGDSBaseLoader(unittest.TestCase):
             ["y"],
             ["train_mask", "is_seed"],
             {"x": "int", "y": "int", "train_mask": "bool", "is_seed": "bool"},
+            ["x", "time"], ["y"], ["is_train"], 
+            {"x": "float", "time": "int", "y": "int", "is_train": "bool"} 
         )
         data = data_q.get()
         vertices = pd.read_csv(
@@ -113,7 +143,8 @@ class TestGDSBaseLoader(unittest.TestCase):
             header=None,
             names=["vid", "x", "y", "train_mask", "is_seed"],
         )
-        edges = pd.read_csv(io.BytesIO(raw[1]), header=None, names=["source", "target"])
+        edges = pd.read_csv(io.BytesIO(raw[1]), header=None, 
+            names=["source", "target", "x", "time", "y", "is_train"])
         assert_frame_equal(data[0], vertices)
         assert_frame_equal(data[1], edges)
         data = data_q.get()
@@ -125,7 +156,7 @@ class TestGDSBaseLoader(unittest.TestCase):
         exit_event = Event()
         raw = (
             "99,1 0 0 1 ,1,0,Alex,1\n8,1 0 0 1 ,1,1,Bill,1\n".encode("utf-8"),
-            "99,8\n8,99\n".encode("utf-8"),
+            "99,8,0.1,2021,1,0\n8,99,1.5,2020,0,1\n".encode("utf-8")
         )
         read_task_q.put(raw)
         read_task_q.put(None)
@@ -145,10 +176,16 @@ class TestGDSBaseLoader(unittest.TestCase):
                 "name": "string",
                 "is_seed": "bool",
             },
+            ["x", "time"], ["y"], ["is_train"], 
+            {"x": "double", "time": "int", "y": "int", "is_train": "bool"} 
         )
         data = data_q.get()
         self.assertIsInstance(data, pygData)
         assert_close_torch(data["edge_index"], torch.tensor([[0, 1], [1, 0]]))
+        assert_close_torch(data["edge_feat"], 
+            torch.tensor([[0.1, 2021], [1.5, 2020]], dtype=torch.double))
+        assert_close_torch(data["edge_label"], torch.tensor([1, 0]))
+        assert_close_torch(data["is_train"], torch.tensor([False, True]))
         assert_close_torch(data["x"], torch.tensor([[1, 0, 0, 1], [1, 0, 0, 1]]))
         assert_close_torch(data["y"], torch.tensor([1, 1]))
         assert_close_torch(data["train_mask"], torch.tensor([False, True]))
@@ -180,6 +217,10 @@ class TestGDSBaseLoader(unittest.TestCase):
                 "name": "string",
                 "is_seed": "bool",
             },
+            [],
+            [],
+            [],
+            {}
         )
         data = data_q.get()
         self.assertIsInstance(data, pygData)
@@ -193,10 +234,11 @@ if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(TestGDSBaseLoader("test_get_schema"))
     suite.addTest(TestGDSBaseLoader("test_validate_vertex_attributes"))
+    suite.addTest(TestGDSBaseLoader("test_validate_edge_attributes"))
     suite.addTest(TestGDSBaseLoader("test_read_vertex_bytes"))
     suite.addTest(TestGDSBaseLoader("test_read_edge_bytes"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_bytes_out_df"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_bytes_out_pyg"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_bytes_no_attr"))
-    runner = unittest.TextTestRunner(verbosity=2)
+    runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)

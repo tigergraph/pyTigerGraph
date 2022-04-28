@@ -4,6 +4,7 @@ from typing import Union
 from urllib.parse import urlparse
 
 from pyTigerDriver import GSQL_Client
+from typing import TYPE_CHECKING, Union
 
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 from pyTigerGraph.pyTigerGraphException import TigerGraphException

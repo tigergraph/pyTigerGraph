@@ -5,6 +5,7 @@ from typing import Any, Union
 from urllib.parse import urlparse
 
 import requests
+from typing import TYPE_CHECKING, Union
 
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 from pyTigerGraph.pyTigerGraphException import TigerGraphException

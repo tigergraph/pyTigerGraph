@@ -1,8 +1,12 @@
+"""pyTigerGraph Authentication
+Provides functions for authenticating and managing permissions with TigerGraph.
+"""
 import json
 import time
 from datetime import datetime
 
 import requests
+from typing import TYPE_CHECKING, Union
 
 from typing import Union
 

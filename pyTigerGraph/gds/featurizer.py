@@ -1,3 +1,8 @@
+"""Featurizer
+Runs and installs Graph Data Science Algorithms. Requires `designer` user permissions for full functionality. 
+See https://docs.tigergraph.com/tigergraph-server/current/user-access/access-control-model#_built_in_roles for more information.
+"""
+
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
