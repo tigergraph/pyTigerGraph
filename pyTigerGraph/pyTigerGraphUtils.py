@@ -1,11 +1,7 @@
-"""Utility Functions
-Utility functions for pyTigerGraph.
-"""
-
 import json
 import re
 import urllib
-from typing import Any
+from typing import Any, Union
 from urllib.parse import urlparse
 
 import requests
@@ -16,7 +12,10 @@ from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
 
 class pyTigerGraphUtils(pyTigerGraphBase):
-    """Utility Functions."""
+    """Utility Functions.
+
+    Utility functions for pyTigerGraph.
+    """
 
     def _safeChar(self, inputString: Any) -> str:
         """Replace special characters in string using the %xx escape.
@@ -51,8 +50,8 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         TODO Implement POST
         """
         if usePost:
-            return self._post(self.restppUrl + "/echo/" + self.graphname, resKey="message")
-        return self._get(self.restppUrl + "/echo/" + self.graphname, resKey="message")
+            return str(self._post(self.restppUrl + "/echo/" + self.graphname, resKey="message"))
+        return str(self._get(self.restppUrl + "/echo/" + self.graphname, resKey="message"))
 
     def getVersion(self, raw: bool = False) -> Union[str, list]:
         """Retrieves the git versions of all components of the system.
