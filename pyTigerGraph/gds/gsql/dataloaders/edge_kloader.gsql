@@ -1,4 +1,4 @@
-CREATE QUERY edge_loader(
+CREATE QUERY edge_kloader_{QUERYSUFFIX}(
     INT num_batches=1, 
     BOOL shuffle=FALSE,
     STRING filter_by,
@@ -39,24 +39,20 @@ CREATE QUERY edge_loader(
         IF filter_by IS NOT NULL THEN
             res = 
                 SELECT s
-                FROM start:s-(:e)-:t
+                FROM start:s-((_>|_):e)-:t
                 WHERE e.getAttr(filter_by, "BOOL") and ((s.@tmp_id+t.@tmp_id)*(s.@tmp_id+t.@tmp_id+1)/2+t.@tmp_id)%num_batches==batch_id
-                ACCUM @@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "\n");
+                ACCUM @@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {EDGEATTRS} + "\n"); 
         ELSE
             res = 
                 SELECT s
-                FROM start:s-(:e)-:t
+                FROM start:s-((_>|_):e)-:t
                 WHERE ((s.@tmp_id+t.@tmp_id)*(s.@tmp_id+t.@tmp_id+1)/2+t.@tmp_id)%num_batches==batch_id
-                ACCUM @@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "\n");
+                ACCUM @@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {EDGEATTRS} + "\n");
         END;
         # Export batch
-        IF kafka_address IS NOT NULL THEN
-            IF write_to_kafka(kafka_address, kafka_topic, "edge_batch_" + int_to_string(batch_id), @@e_batch)!=0 THEN 
-                @@kafka_error += ("Failed sending edge batch " + int_to_string(batch_id) + "\n");
-            END;
-            PRINT @@kafka_error as kafkaError;
-        ELSE
-            PRINT @@e_batch AS edge_batch;
+        IF write_to_kafka(kafka_address, kafka_topic, "edge_batch_" + int_to_string(batch_id), @@e_batch)!=0 THEN 
+            @@kafka_error += ("Failed sending edge batch " + int_to_string(batch_id) + "\n");
         END;
+        PRINT @@kafka_error as kafkaError;
     END; 
 }

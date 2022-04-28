@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 from .dataloaders import EdgeLoader, GraphLoader, NeighborLoader, VertexLoader
 from .featurizer import Featurizer
-from .splitters import RandomVertexSplitter
+from .splitters import RandomEdgeSplitter, RandomVertexSplitter
 
 
 class GDS:
@@ -26,29 +26,32 @@ class GDS:
         self.conn = conn
 
     def neighborLoader(
-            self,
-            v_in_feats: Union[list, dict] = None,
-            v_out_labels: Union[list, dict] = None,
-            v_extra_feats: Union[list, dict] = None,
-            batch_size: int = None,
-            num_batches: int = 1,
-            num_neighbors: int = 10,
-            num_hops: int = 2,
-            shuffle: bool = False,
-            filter_by: str = None,
-            output_format: str = "PyG",
-            add_self_loop: bool = False,
-            loader_id: str = None,
-            buffer_size: int = 4,
-            kafka_address: str = None,
-            kafka_max_msg_size: int = 104857600,
-            kafka_num_partitions: int = 1,
-            kafka_replica_factor: int = 1,
-            kafka_retention_ms: int = 60000,
-            kafka_auto_del_topic: bool = True,
-            kafka_address_consumer: str = None,
-            kafka_address_producer: str = None,
-            timeout: int = 300000,
+        self,
+        v_in_feats: Union[list, dict] = None,
+        v_out_labels: Union[list, dict] = None,
+        v_extra_feats: Union[list, dict] = None,
+        e_in_feats: Union[list, dict] = None,
+        e_out_labels: Union[list, dict] = None,
+        e_extra_feats: Union[list, dict] = None,
+        batch_size: int = None,
+        num_batches: int = 1,
+        num_neighbors: int = 10,
+        num_hops: int = 2,
+        shuffle: bool = False,
+        filter_by: str = None,
+        output_format: str = "PyG",
+        add_self_loop: bool = False,
+        loader_id: str = None,
+        buffer_size: int = 4,
+        kafka_address: str = None,
+        kafka_max_msg_size: int = 104857600,
+        kafka_num_partitions: int = 1,
+        kafka_replica_factor: int = 1,
+        kafka_retention_ms: int = 60000,
+        kafka_auto_del_topic: bool = True,
+        kafka_address_consumer: str = None,
+        kafka_address_producer: str = None,
+        timeout: int = 300000,
     ) -> NeighborLoader:
         """Get a graph loader that performs neighbor sampling as introduced in the
         [Inductive Representation Learning on Large Graphs](https://arxiv.org/abs/1706.02216)
@@ -91,6 +94,16 @@ class GDS:
                 prediction. Only numeric and boolean attributes are allowed. Defaults to None.
             v_extra_feats (list, optional):
                 Other attributes to get such as indicators of
+                train/test data. All types of attributes are allowed. Defaults to None.
+            e_in_feats (list, optional):
+                Edge attributes to be used as input features.
+                Only numeric and boolean attributes are allowed. The type of an attrbiute
+                is automatically determined from the database schema. Defaults to None.
+            e_out_labels (list, optional):
+                Edge attributes to be used as labels for
+                prediction. Only numeric and boolean attributes are allowed. Defaults to None.
+            e_extra_feats (list, optional):
+                Other edge attributes to get such as indicators of
                 train/test data. All types of attributes are allowed. Defaults to None.
             batch_size (int, optional):
                 Number of vertices as seeds in each batch.
@@ -153,6 +166,9 @@ class GDS:
             v_in_feats,
             v_out_labels,
             v_extra_feats,
+            e_in_feats,
+            e_out_labels,
+            e_extra_feats,
             batch_size,
             num_batches,
             num_neighbors,
@@ -175,23 +191,24 @@ class GDS:
         )
 
     def edgeLoader(
-            self,
-            batch_size: int = None,
-            num_batches: int = 1,
-            shuffle: bool = False,
-            filter_by: str = None,
-            output_format: str = "dataframe",
-            loader_id: str = None,
-            buffer_size: int = 4,
-            kafka_address: str = None,
-            kafka_max_msg_size: int = 104857600,
-            kafka_num_partitions: int = 1,
-            kafka_replica_factor: int = 1,
-            kafka_retention_ms: int = 60000,
-            kafka_auto_del_topic: bool = True,
-            kafka_address_consumer: str = None,
-            kafka_address_producer: str = None,
-            timeout: int = 300000,
+        self,
+        attributes: Union[list, dict] = None,
+        batch_size: int = None,
+        num_batches: int = 1,
+        shuffle: bool = False,
+        filter_by: str = None,
+        output_format: str = "dataframe",
+        loader_id: str = None,
+        buffer_size: int = 4,
+        kafka_address: str = None,
+        kafka_max_msg_size: int = 104857600,
+        kafka_num_partitions: int = 1,
+        kafka_replica_factor: int = 1,
+        kafka_retention_ms: int = 60000,
+        kafka_auto_del_topic: bool = True,
+        kafka_address_consumer: str = None,
+        kafka_address_producer: str = None,
+        timeout: int = 300000,
     ) -> EdgeLoader:
         """Get a graph loader that pulls batches of edges from database.
         Edge attributes are not supported.
@@ -219,6 +236,8 @@ class GDS:
           multiple batches of data to load, it will return the loader again.
 
         Args:
+            attributes (list, optional):
+                Edge attributes to be included. Defaults to None.
             batch_size (int, optional):
                 Number of edges in each batch.
                 Defaults to None.
@@ -267,6 +286,7 @@ class GDS:
         """
         return EdgeLoader(
             self.conn,
+            attributes,
             batch_size,
             num_batches,
             shuffle,
@@ -401,27 +421,30 @@ class GDS:
         )
 
     def graphLoader(
-            self,
-            v_in_feats: Union[list, dict] = None,
-            v_out_labels: Union[list, dict] = None,
-            v_extra_feats: Union[list, dict] = None,
-            batch_size: int = None,
-            num_batches: int = 1,
-            shuffle: bool = False,
-            filter_by: str = None,
-            output_format: str = "PyG",
-            add_self_loop: bool = False,
-            loader_id: str = None,
-            buffer_size: int = 4,
-            kafka_address: str = None,
-            kafka_max_msg_size: int = 104857600,
-            kafka_num_partitions: int = 1,
-            kafka_replica_factor: int = 1,
-            kafka_retention_ms: int = 60000,
-            kafka_auto_del_topic: bool = True,
-            kafka_address_consumer: str = None,
-            kafka_address_producer: str = None,
-            timeout: int = 300000,
+        self,
+        v_in_feats: Union[list, dict] = None,
+        v_out_labels: Union[list, dict] = None,
+        v_extra_feats: Union[list, dict] = None,
+        e_in_feats: Union[list, dict] = None,
+        e_out_labels: Union[list, dict] = None,
+        e_extra_feats: Union[list, dict] = None,
+        batch_size: int = None,
+        num_batches: int = 1,
+        shuffle: bool = False,
+        filter_by: str = None,
+        output_format: str = "PyG",
+        add_self_loop: bool = False,
+        loader_id: str = None,
+        buffer_size: int = 4,
+        kafka_address: str = None,
+        kafka_max_msg_size: int = 104857600,
+        kafka_num_partitions: int = 1,
+        kafka_replica_factor: int = 1,
+        kafka_retention_ms: int = 60000,
+        kafka_auto_del_topic: bool = True,
+        kafka_address_consumer: str = None,
+        kafka_address_producer: str = None,
+        timeout: int = 300000,
     ) -> GraphLoader:
         """Get a data loader that pulls batches of vertices and edges from database.
 
@@ -456,6 +479,16 @@ class GDS:
             v_extra_feats (list, optional):
                 Other attributes to get such as indicators of train/test data.
                 All types of attributes are allowed. Defaults to None.
+            e_in_feats (list, optional):
+                Edge attributes to be used as input features.
+                Only numeric and boolean attributes are allowed. The type of an attrbiute
+                is automatically determined from the database schema. Defaults to None.
+            e_out_labels (list, optional):
+                Edge attributes to be used as labels for
+                prediction. Only numeric and boolean attributes are allowed. Defaults to None.
+            e_extra_feats (list, optional):
+                Other edge attributes to get such as indicators of
+                train/test data. All types of attributes are allowed. Defaults to None.
             batch_size (int, optional):
                 Number of edges in each batch.
                 Defaults to None.
@@ -510,6 +543,9 @@ class GDS:
             v_in_feats,
             v_out_labels,
             v_extra_feats,
+            e_in_feats,
+            e_out_labels,
+            e_extra_feats,
             batch_size,
             num_batches,
             shuffle,
@@ -565,3 +601,33 @@ class GDS:
                 Timeout value for the operation. Defaults to 600000.
         """
         return RandomVertexSplitter(self.conn, timeout, **split_ratios)
+
+    def edgeSplitter(self, timeout: int = 600000, **split_ratios):
+        """Get an edge splitter that splits edges into at most 3 parts randomly. 
+
+        The split results are stored in the provided edge attributes. Each boolean attribute
+        indicates which part an edge belongs to.
+
+        Usage:
+        1. `conn = TigerGraphConnection(...)`
+           `splitter = conn.gds.edgeSplitter(timeout, attr_name=0.6)`
+           `splitter.run()`
+            A random 60% of edges will have their attribute "attr_name" set to True, and 
+            others False. `attr_name` can be any attribute that exists in the database (same below).
+        2. `splitter = conn.gds.edgeSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2)`
+           `splitter.run()`
+            A random 60% of edges will have their attribute "attr_name" set to True, and a 
+            random 20% of edges will have their attribute "attr_name2" set to True. The two 
+            parts are disjoint. 
+        3. `splitter = conn.gds.edgeSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2, attr_name3=0.2)`
+           `splitter.run()`
+            A random 60% of edges will have their attribute "attr_name" set to True, a 
+            random 20% of edges will have their attribute "attr_name2" set to True, and 
+            another random 20% of edges will have their attribute "attr_name3" set to True. 
+            The three parts are disjoint.
+
+        Args:
+            timeout (int, optional): 
+                Timeout value for the operation. Defaults to 600000.
+        """     
+        return RandomEdgeSplitter(self.conn, timeout, **split_ratios)

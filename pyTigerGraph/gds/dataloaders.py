@@ -8,7 +8,6 @@ import logging
 import math
 import os
 import re
-from argparse import ArgumentError
 from queue import Empty, Queue
 from threading import Event, Thread
 from time import sleep
@@ -108,7 +107,7 @@ class BaseLoader:
         """
         # Get graph info
         self._graph = graph
-        self._v_schema, _ = self._get_schema()
+        self._v_schema, self._e_schema = self._get_schema()
         # Initialize basic params
         if not loaderID:
             self.loader_id = random_string(6)
@@ -179,6 +178,7 @@ class BaseLoader:
         v_schema = {}
         e_schema = {}
         schema = self._graph.getSchema()
+        # Get vertex schema
         for vtype in schema["VertexTypes"]:
             v = vtype["Name"]
             v_schema[v] = {}
@@ -193,6 +193,17 @@ class BaseLoader:
                 v_schema[v][vtype["PrimaryId"]["AttributeName"]] = vtype["PrimaryId"][
                     "AttributeType"
                 ]["Name"]
+        # Get edge schema
+        for etype in schema["EdgeTypes"]:
+            e = etype["Name"]
+            e_schema[e] = {}
+            for attr in etype["Attributes"]:
+                if "ValueTypeName" in attr["AttributeType"]:
+                    e_schema[e][attr["AttributeName"]] = attr["AttributeType"][
+                        "ValueTypeName"
+                    ]
+                else:
+                    e_schema[e][attr["AttributeName"]] = attr["AttributeType"]["Name"]
         return v_schema, e_schema
 
     def _validate_vertex_attributes(
@@ -201,7 +212,7 @@ class BaseLoader:
         if not attributes:
             return []
         if isinstance(attributes, str):
-            raise ArgumentError(
+            raise ValueError(
                 "The old string way of specifying attributes is deprecated to better support heterogeneous graphs. Please use the new format."
             )
         if isinstance(attributes, list):
@@ -211,7 +222,7 @@ class BaseLoader:
             for vtype in self._v_schema:
                 allowlist = set(self._v_schema[vtype].keys())
                 if attr_set - allowlist:
-                    raise ArgumentError(
+                    raise ValueError(
                         "Not all attributes are available for vertex type {}.".format(
                             vtype
                         )
@@ -220,7 +231,7 @@ class BaseLoader:
             # Wait for the heterogeneous graph support
             for vtype in attributes:
                 if vtype not in self._v_schema:
-                    raise ArgumentError(
+                    raise ValueError(
                         "Vertex type {} is not available in the database.".format(vtype)
                     )
                 for i in range(len(attributes[vtype])):
@@ -228,9 +239,50 @@ class BaseLoader:
                 attr_set = set(attributes[vtype])
                 allowlist = set(self._v_schema[vtype].keys())
                 if attr_set - allowlist:
-                    raise ArgumentError(
+                    raise ValueError(
                         "Not all attributes are available for vertex type {}.".format(
                             vtype
+                        )
+                    )
+            raise NotImplementedError
+        return attributes
+
+    def _validate_edge_attributes(
+        self, attributes: Union[list, dict]
+    ) -> Union[list, dict]:
+        if not attributes:
+            return []
+        if isinstance(attributes, str):
+            raise ValueError(
+                "The old string way of specifying attributes is deprecated to better support heterogeneous graphs. Please use the new format."
+            )
+        if isinstance(attributes, list):
+            for i in range(len(attributes)):
+                attributes[i] = attributes[i].strip()
+            attr_set = set(attributes)
+            for etype in self._e_schema:
+                allowlist = set(self._e_schema[etype].keys())
+                if attr_set - allowlist:
+                    raise ValueError(
+                        "Not all attributes are available for edge type {}.".format(
+                            etype
+                        )
+                    )
+        elif isinstance(attributes, dict):
+            # Wait for the heterogeneous graph support
+            for etype in attributes:
+                if etype not in self._e_schema:
+                    raise ValueError(
+                        "Edge type {} is not available in the database.".format(etype)
+                    )
+                for i in range(len(attributes[etype])):
+                    attributes[etype][i] = attributes[etype][i].strip()
+                attr_set = set(attributes[etype])
+                allowlist = set(self._v_schema[etype].keys())
+                if attr_set - allowlist:
+                    raise ValueError(
+                        "Not all attributes are available for edge type {}.".format(
+                            etype
                         )
                     )
             raise NotImplementedError
@@ -252,7 +304,7 @@ class BaseLoader:
         with open(file_path) as infile:
             firstline = infile.readline()
         try:
-            query_name = re.search("QUERY (.+?)\(", firstline).group(1).strip()
+            query_name = re.search(r"QUERY (.+?)\(", firstline).group(1).strip()
         except:
             raise ValueError(
                 "Cannot parse the query file. It should start with CREATE QUERY ... "
@@ -473,7 +525,7 @@ class BaseLoader:
             return torch.tensor(np.hstack(x).squeeze())
 
         v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
-        e_attributes = ["source", "target"]
+        e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
 
         while not exit_event.is_set():
             raw = in_q.get()
@@ -521,7 +573,7 @@ class BaseLoader:
                 except ImportError:
                     raise ImportError("PyTorch is not installed. Please install it to use PyG or DGL output.")
                 if vertices is None or edges is None:
-                    raise ArgumentError(
+                    raise ValueError(
                         "PyG or DGL format can only be used with graph output."
                     )
                 if out_format.lower() == "dgl":
@@ -555,18 +607,69 @@ class BaseLoader:
                     edges.drop(columns=["source", "vid"], inplace=True)
                     edges = edges.merge(id_map, left_on="target", right_on="vid")
                     edges.drop(columns=["target", "vid"], inplace=True)
-                    edges = edges[["tmp_id_x", "tmp_id_y"]]
+                    edgelist = edges[["tmp_id_x", "tmp_id_y"]]
+                else:
+                    edgelist = edges[["source", "target"]]
+                edgelist = torch.tensor(edgelist.to_numpy().T, dtype=torch.long)
                 if mode == "dgl":
-                    edges = torch.tensor(edges.to_numpy().T, dtype=torch.long)
-                    data = dgl.graph(data=(edges[0], edges[1]))
+                    data = dgl.graph(data=(edgelist[0], edgelist[1]))
                     if add_self_loop:
                         data = dgl.add_self_loop(data)
                 elif mode == "pyg":
                     data = pygData()
-                    edges = torch.tensor(edges.to_numpy().T, dtype=torch.long)
                     if add_self_loop:
-                        edges = add_self_loops(edges)[0]
-                    data["edge_index"] = edges
+                        edgelist = add_self_loops(edgelist)[0]
+                    data["edge_index"] = edgelist
+                del edgelist
+                # Deal with edge attributes
+                if e_in_feats:
+                    if mode == "dgl":
+                        data.edata["feat"] = attr_to_tensor(
+                            e_in_feats, e_attr_types, edges
+                        )
+                    elif mode == "pyg":
+                        data["edge_feat"] = attr_to_tensor(e_in_feats, e_attr_types, edges)
+                if e_out_labels:
+                    if mode == "dgl":
+                        data.edata["label"] = attr_to_tensor(
+                            e_out_labels, e_attr_types, edges
+                        )
+                    elif mode == "pyg":
+                        data["edge_label"] = attr_to_tensor(e_out_labels, e_attr_types, edges)
+                if e_extra_feats:
+                    if mode == "dgl":
+                        data.extra_data = {}
+                    for col in e_extra_feats:
+                        dtype = e_attr_types[col].lower()
+                        if dtype.startswith("str"):
+                            if mode == "dgl":
+                                data.extra_data[col] = edges[col].to_list()
+                            elif mode == "pyg":
+                                data[col] = edges[col].to_list()
+                        elif edges[col].dtype == "object":
+                            if mode == "dgl":
+                                data.edata[col] = torch.tensor(
+                                    edges[col]
+                                    .str.split(expand=True)
+                                    .to_numpy()
+                                    .astype(dtype)
+                                )
+                            elif mode == "pyg":
+                                data[col] = torch.tensor(
+                                    edges[col]
+                                    .str.split(expand=True)
+                                    .to_numpy()
+                                    .astype(dtype)
+                                )
+                        else:
+                            if mode == "dgl":
+                                data.edata[col] = torch.tensor(
+                                    edges[col].to_numpy().astype(dtype)
+                                )
+                            elif mode == "pyg":
+                                data[col] = torch.tensor(
+                                    edges[col].to_numpy().astype(dtype)
+                                )
                 del edges
                 # Deal with vertex attributes next
                 if v_in_feats:
@@ -755,6 +858,9 @@ class NeighborLoader(BaseLoader):
         v_in_feats: Union[list, dict] = None,
         v_out_labels: Union[list, dict] = None,
         v_extra_feats: Union[list, dict] = None,
+        e_in_feats: Union[list, dict] = None,
+        e_out_labels: Union[list, dict] = None,
+        e_extra_feats: Union[list, dict] = None,
         batch_size: int = None,
         num_batches: int = 1,
         num_neighbors: int = 10,
@@ -816,6 +922,16 @@ class NeighborLoader(BaseLoader):
                 prediction. Only numeric and boolean attributes are allowed. Defaults to None.
             v_extra_feats (list, optional):
                 Other attributes to get such as indicators of
+                train/test data. All types of attributes are allowed. Defaults to None.
+            e_in_feats (list, optional):
+                Edge attributes to be used as input features.
+                Only numeric and boolean attributes are allowed. The type of an attrbiute
+                is automatically determined from the database schema. Defaults to None.
+            e_out_labels (list, optional):
+                Edge attributes to be used as labels for
+                prediction. Only numeric and boolean attributes are allowed. Defaults to None.
+            e_extra_feats (list, optional):
+                Other edge attributes to get such as indicators of
                 train/test data. All types of attributes are allowed. Defaults to None.
             batch_size (int, optional):
                 Number of vertices as seeds in each batch.
@@ -892,6 +1008,9 @@ class NeighborLoader(BaseLoader):
         self.v_in_feats = self._validate_vertex_attributes(v_in_feats)
         self.v_out_labels = self._validate_vertex_attributes(v_out_labels)
         self.v_extra_feats = self._validate_vertex_attributes(v_extra_feats)
+        self.e_in_feats = self._validate_edge_attributes(e_in_feats)
+        self.e_out_labels = self._validate_edge_attributes(e_out_labels)
+        self.e_extra_feats = self._validate_edge_attributes(e_extra_feats)
         # Initialize parameters for the query
         self._payload = {}
         if batch_size:
@@ -925,22 +1044,40 @@ class NeighborLoader(BaseLoader):
     def _install_query(self):
         # Install the right GSQL query for the loader.
         v_attr_names = self.v_in_feats + self.v_out_labels + self.v_extra_feats
-        query_replace = {"{QUERYSUFFIX}": "_".join(v_attr_names)}
-        attr_types = next(iter(self._v_schema.values()))
+        e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
+        query_replace = {"{QUERYSUFFIX}": "_".join(v_attr_names+e_attr_names)}
+        v_attr_types = next(iter(self._v_schema.values()))
+        e_attr_types = next(iter(self._e_schema.values()))
         if v_attr_names:
             query_print = '+","+'.join(
-                "{}(s.{})".format(_udf_funcs[attr_types[attr]], attr)
+                "{}(s.{})".format(_udf_funcs[v_attr_types[attr]], attr)
                 for attr in v_attr_names
             )
             query_replace["{VERTEXATTRS}"] = query_print
         else:
             query_replace['+ "," + {VERTEXATTRS}'] = ""
-        query_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "gsql",
-            "dataloaders",
-            "neighbor_loader.gsql",
-        )
+        if e_attr_names:
+            query_print = '+","+'.join(
+                "{}(e.{})".format(_udf_funcs[e_attr_types[attr]], attr)
+                for attr in e_attr_names
+            )
+            query_replace["{EDGEATTRS}"] = query_print
+        else:
+            query_replace['+ "," + {EDGEATTRS}'] = ""
+        if self.kafka_address_producer:
+            query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "dataloaders",
+                "neighbor_kloader.gsql",
+            )
+        else:
+            query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "dataloaders",
+                "neighbor_hloader.gsql",
+            )
         return install_query_file(self._graph, query_path, query_replace)
 
     def _start(self) -> None:
@@ -1003,6 +1140,7 @@ class NeighborLoader(BaseLoader):
         # Start reading thread.
         v_attr_types = next(iter(self._v_schema.values()))
         v_attr_types["is_seed"] = "bool"
+        e_attr_types = next(iter(self._e_schema.values()))
         if self.kafka_address_consumer:
             raw_format = "graph_bytes"
         else:
@@ -1019,10 +1157,10 @@ class NeighborLoader(BaseLoader):
                 self.v_out_labels,
                 self.v_extra_feats + ["is_seed"],
                 v_attr_types,
-                [],
-                [],
-                [],
-                {},
+                self.e_in_feats,
+                self.e_out_labels,
+                self.e_extra_feats,
+                e_attr_types,
                 self.add_self_loop,
                 True,
             ),
@@ -1035,6 +1173,7 @@ class EdgeLoader(BaseLoader):
     def __init__(
         self,
         graph: "TigerGraphConnection",
+        attributes: Union[list, dict] = None,
         batch_size: int = None,
         num_batches: int = 1,
         shuffle: bool = False,
@@ -1053,7 +1192,6 @@ class EdgeLoader(BaseLoader):
         timeout: int = 300000,
     ) -> None:
         """Data loader that pulls batches of edges from database.
-        Edge attributes are not supported.
 
         Specifically, it divides edges into `num_batches` and returns each batch separately.
         The boolean attribute provided to `filter_by` indicates which edges are included.
@@ -1080,6 +1218,8 @@ class EdgeLoader(BaseLoader):
         Args:
             graph (TigerGraphConnection):
                 Connection to the TigerGraph database.
+            attributes (list, optional):
+                Edge attributes to be included. Defaults to None.
             batch_size (int, optional): 
                 Number of edges in each batch.
                 Defaults to None.
@@ -1143,17 +1283,15 @@ class EdgeLoader(BaseLoader):
             kafka_address_producer,
             timeout,
         )
+        # Resolve attributes
+        self.attributes = self._validate_edge_attributes(attributes)
         # Initialize parameters for the query
         self._payload = {}
         if batch_size:
             # If batch_size is given, calculate the number of batches
             num_edges_by_type = self._graph.getEdgeCount("*")
             if filter_by:
-                # TODO: use getEdgeCountFrom
-                num_edges = sum(
-                    self._graph.getEdgeCount(k, where="{}!=0".format(filter_by))
-                    for k in num_edges_by_type
-                )
+                # TODO: get edge count with filter
                 raise NotImplementedError
             else:
                 num_edges = sum(num_edges_by_type.values())
@@ -1175,13 +1313,32 @@ class EdgeLoader(BaseLoader):
 
     def _install_query(self):
         # Install the right GSQL query for the loader.
-        query_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "gsql",
-            "dataloaders",
-            "edge_loader.gsql",
-        )
-        return install_query_file(self._graph, query_path)
+        e_attr_names = self.attributes
+        query_replace = {"{QUERYSUFFIX}": "_".join(e_attr_names)}
+        attr_types = next(iter(self._e_schema.values()))
+        if e_attr_names:
+            query_print = '+","+'.join(
+                "{}(e.{})".format(_udf_funcs[attr_types[attr]], attr)
+                for attr in e_attr_names
+            )
+            query_replace["{EDGEATTRS}"] = query_print
+        else:
+            query_replace['+ "," + {EDGEATTRS}'] = ""
+        if self.kafka_address_producer:
+            query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "dataloaders",
+                "edge_kloader.gsql",
+            )
+        else:
+            query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "dataloaders",
+                "edge_hloader.gsql",
+            )
+        return install_query_file(self._graph, query_path, query_replace)
 
     def _start(self) -> None:
         # Create task and result queues
@@ -1241,6 +1398,7 @@ class EdgeLoader(BaseLoader):
             self._downloader.start()
 
         # Start reading thread.
+        e_attr_types = next(iter(self._e_schema.values()))
         if self.kafka_address_consumer:
             raw_format = "edge_bytes"
         else:
@@ -1253,6 +1411,10 @@ class EdgeLoader(BaseLoader):
                 self._data_q,
                 raw_format,
                 self.output_format,
+                [], [], [], {},
+                self.attributes,
+                [],[],
+                e_attr_types
             ),
         )
         self._reader.start()
@@ -1414,12 +1576,20 @@ class VertexLoader(BaseLoader):
             query_replace["{VERTEXATTRS}"] = query_print
         else:
             query_replace['+ "," + {VERTEXATTRS}'] = ""
-        query_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "gsql",
-            "dataloaders",
-            "vertex_loader.gsql",
-        )
+        if self.kafka_address_producer:
+            query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "dataloaders",
+                "vertex_kloader.gsql",
+            )
+        else:
+            query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "dataloaders",
+                "vertex_hloader.gsql",
+            )
         return install_query_file(self._graph, query_path, query_replace)
 
     def _start(self) -> None:
@@ -1514,6 +1684,9 @@ class GraphLoader(BaseLoader):
         v_in_feats: Union[list, dict] = None,
         v_out_labels: Union[list, dict] = None,
         v_extra_feats: Union[list, dict] = None,
+        e_in_feats: Union[list, dict] = None,
+        e_out_labels: Union[list, dict] = None,
+        e_extra_feats: Union[list, dict] = None,
         batch_size: int = None,
         num_batches: int = 1,
         shuffle: bool = False,
@@ -1566,6 +1739,16 @@ class GraphLoader(BaseLoader):
                 prediction. Only numeric and boolean attributes are allowed. Defaults to None.
             v_extra_feats (list, optional):
                 Other attributes to get such as indicators of
+                train/test data. All types of attributes are allowed. Defaults to None.
+            e_in_feats (list, optional):
+                Edge attributes to be used as input features.
+                Only numeric and boolean attributes are allowed. The type of an attrbiute
+                is automatically determined from the database schema. Defaults to None.
+            e_out_labels (list, optional):
+                Edge attributes to be used as labels for
+                prediction. Only numeric and boolean attributes are allowed. Defaults to None.
+            e_extra_feats (list, optional):
+                Other edge attributes to get such as indicators of
                 train/test data. All types of attributes are allowed. Defaults to None.
             batch_size (int, optional): 
                 Number of edges in each batch.
@@ -1636,17 +1819,16 @@ class GraphLoader(BaseLoader):
         self.v_in_feats = self._validate_vertex_attributes(v_in_feats)
         self.v_out_labels = self._validate_vertex_attributes(v_out_labels)
         self.v_extra_feats = self._validate_vertex_attributes(v_extra_feats)
+        self.e_in_feats = self._validate_edge_attributes(e_in_feats)
+        self.e_out_labels = self._validate_edge_attributes(e_out_labels)
+        self.e_extra_feats = self._validate_edge_attributes(e_extra_feats)
         # Initialize parameters for the query
         self._payload = {}
         if batch_size:
             # If batch_size is given, calculate the number of batches
             num_edges_by_type = self._graph.getEdgeCount("*")
             if filter_by:
-                # TODO: use getEdgeCountFrom
-                num_edges = sum(
-                    self._graph.getEdgeCount(k, where="{}!=0".format(filter_by))
-                    for k in num_edges_by_type
-                )
+                # TODO: get edge count with filter
                 raise NotImplementedError
             else:
                 num_edges = sum(num_edges_by_type.values())
@@ -1669,22 +1851,40 @@ class GraphLoader(BaseLoader):
     def _install_query(self) -> str:
         # Install the right GSQL query for the loader.
         v_attr_names = self.v_in_feats + self.v_out_labels + self.v_extra_feats
-        query_replace = {"{QUERYSUFFIX}": "_".join(v_attr_names)}
-        attr_types = next(iter(self._v_schema.values()))
+        e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
+        query_replace = {"{QUERYSUFFIX}": "_".join(v_attr_names+e_attr_names)}
+        v_attr_types = next(iter(self._v_schema.values()))
+        e_attr_types = next(iter(self._e_schema.values()))
         if v_attr_names:
             query_print = '+","+'.join(
-                "{}(s.{})".format(_udf_funcs[attr_types[attr]], attr)
+                "{}(s.{})".format(_udf_funcs[v_attr_types[attr]], attr)
                 for attr in v_attr_names
             )
             query_replace["{VERTEXATTRS}"] = query_print
         else:
             query_replace['+ "," + {VERTEXATTRS}'] = ""
-        query_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "gsql",
-            "dataloaders",
-            "graph_loader.gsql",
-        )
+        if e_attr_names:
+            query_print = '+","+'.join(
+                "{}(e.{})".format(_udf_funcs[e_attr_types[attr]], attr)
+                for attr in e_attr_names
+            )
+            query_replace["{EDGEATTRS}"] = query_print
+        else:
+            query_replace['+ "," + {EDGEATTRS}'] = ""
+        if self.kafka_address_producer:
+            query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "dataloaders",
+                "graph_kloader.gsql",
+            )
+        else:
+            query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "dataloaders",
+                "graph_hloader.gsql",
+            )
         return install_query_file(self._graph, query_path, query_replace)
 
     def _start(self) -> None:
@@ -1746,6 +1946,7 @@ class GraphLoader(BaseLoader):
 
         # Start reading thread.
         v_attr_types = next(iter(self._v_schema.values()))
+        e_attr_types = next(iter(self._e_schema.values()))
         if self.kafka_address_consumer:
             raw_format = "graph_bytes"
         else:
@@ -1762,10 +1963,10 @@ class GraphLoader(BaseLoader):
                 self.v_out_labels,
                 self.v_extra_feats,
                 v_attr_types,
-                [],
-                [],
-                [],
-                {},
+                self.e_in_feats,
+                self.e_out_labels,
+                self.e_extra_feats,
+                e_attr_types,
                 self.add_self_loop,
                 True,
             ),

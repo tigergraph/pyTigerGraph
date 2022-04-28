@@ -11,48 +11,19 @@ if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
 
 
-class RandomVertexSplitter:
-    """Split vertices into at most 3 parts randomly.
-
-    The split results are stored in the provided vertex attributes. Each boolean attribute
-    indicates which part a vertex belongs to.
-
-    Usage:
-    1. `splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6);`
-       `splitter.run()`
-        A random 60% of vertices will have their attribute "attr_name" set to True, and
-        others False. `attr_name` can be any attribute that exists in the database (same below).
-    2. `splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2);`
-       `splitter.run()`
-        A random 60% of vertices will have their attribute "attr_name" set to True, and a
-        random 20% of vertices will have their attribute "attr_name2" set to True. The two
-        parts are disjoint.
-    3. `splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2, attr_name3=0.2);`
-       `splitter.run()`
-        A random 60% of vertices will have their attribute "attr_name" set to True, a
-        random 20% of vertices will have their attribute "attr_name2" set to True, and
-        another random 20% of vertices will have their attribute "attr_name3" set to True.
-        The three parts are disjoint.
-
-    Args:
-        conn (TigerGraphConnection):
-            Connection to TigerGraph database.
-        timeout (int, optional):
-            Timeout value for the operation. Defaults to 600000.
-    """
+class BaseRandomSplitter:
+    """Base Random Splitter"""
 
     def __init__(
-        self, conn: "TigerGraphConnection", timeout: int = 600000, **split_ratios
-    ):
+        self,
+        conn: "TigerGraphConnection",
+        query_path,
+        timeout: int = 600000,
+        **split_ratios
+    ) -> None:
         self._validate_args(split_ratios)
         self.split_ratios = split_ratios
         self._graph = conn
-        query_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "gsql",
-            "splitters",
-            "random_vertex_split.gsql",
-        )
         self.query_name = install_query_file(self._graph, query_path)
         self.timeout = timeout
         # TODO: Check if attributes exist in database. If not, raise error or create
@@ -84,8 +55,115 @@ class RandomVertexSplitter:
         for i, key in enumerate(split_ratios):
             payload["attr{}".format(i + 1)] = key
             payload["ratio{}".format(i + 1)] = split_ratios[key]
-        print("Splitting vertices...")
         resp = self._graph.runInstalledQuery(
             self.query_name, params=payload, timeout=self.timeout, usePost=True
         )
+        return resp
+
+
+class RandomVertexSplitter(BaseRandomSplitter):
+    """Split vertices into at most 3 parts randomly.
+
+    The split results are stored in the provided vertex attributes. Each boolean attribute
+    indicates which part a vertex belongs to.
+
+    Usage:
+    1. `splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6);`
+       `splitter.run()`
+        A random 60% of vertices will have their attribute "attr_name" set to True, and
+        others False. `attr_name` can be any attribute that exists in the database (same below).
+    2. `splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2);`
+       `splitter.run()`
+        A random 60% of vertices will have their attribute "attr_name" set to True, and a
+        random 20% of vertices will have their attribute "attr_name2" set to True. The two
+        parts are disjoint.
+    3. `splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2, attr_name3=0.2);`
+       `splitter.run()`
+        A random 60% of vertices will have their attribute "attr_name" set to True, a
+        random 20% of vertices will have their attribute "attr_name2" set to True, and
+        another random 20% of vertices will have their attribute "attr_name3" set to True.
+        The three parts are disjoint.
+
+    Args:
+        conn (TigerGraphConnection):
+            Connection to TigerGraph database.
+        timeout (int, optional):
+            Timeout value for the operation. Defaults to 600000.
+    """
+
+    def __init__(
+        self, conn: "TigerGraphConnection", timeout: int = 600000, **split_ratios
+    ) -> None:
+        query_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "gsql",
+            "splitters",
+            "random_vertex_split.gsql",
+        )
+        super().__init__(conn, query_path, timeout, **split_ratios)
+
+    def run(self, **split_ratios) -> None:
+        """Perform the split.
+
+        The split ratios set in initialization can be overridden here. For example,
+        `splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6); splitter.run(attr_name=0.3)`
+        will use the ratio 0.3 instead of 0.6.
+
+        """
+        print("Splitting vertices...")
+        resp = super().run(**split_ratios)
+        print(resp[0]["Status"])
+
+
+class RandomEdgeSplitter(BaseRandomSplitter):
+    """Split edges into at most 3 parts randomly.
+
+    The split results are stored in the provided edge attributes. Each boolean attribute
+    indicates which part an edge belongs to.
+
+    Usage:
+    1. `splitter = RandomEdgeSplitter(conn, timeout, attr_name=0.6);`
+       `splitter.run()`
+        A random 60% of edges will have their attribute "attr_name" set to True, and
+        others False. `attr_name` can be any attribute that exists in the database (same below).
+    2. `splitter = RandomEdgeSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2);`
+       `splitter.run()`
+        A random 60% of edges will have their attribute "attr_name" set to True, and a
+        random 20% of edges will have their attribute "attr_name2" set to True. The two
+        parts are disjoint.
+    3. `splitter = RandomEdgeSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2, attr_name3=0.2);`
+       `splitter.run()`
+        A random 60% of edges will have their attribute "attr_name" set to True, a
+        random 20% of edges will have their attribute "attr_name2" set to True, and
+        another random 20% of edges will have their attribute "attr_name3" set to True.
+        The three parts are disjoint.
+
+    Args:
+        conn (TigerGraphConnection):
+            Connection to TigerGraph database.
+        timeout (int, optional):
+            Timeout value for the operation. Defaults to 600000.
+    """
+
+    def __init__(
+        self, conn: "TigerGraphConnection", timeout: int = 600000, **split_ratios
+    ) -> None:
+        query_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "gsql",
+            "splitters",
+            "random_edge_split.gsql",
+        )
+        super().__init__(conn, query_path, timeout, **split_ratios)
+
+    def run(self, **split_ratios) -> None:
+        """Perform the split.
+
+        The split ratios set in initialization can be overridden here. For example,
+        `splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6); splitter.run(attr_name=0.3)`
+        will use the ratio 0.3 instead of 0.6.
+
+        """
+        print("Splitting edges...")
+        resp = super().run(**split_ratios)
         print(resp[0]["Status"])
