@@ -1,3 +1,7 @@
+"""Data Splitting Functions
+This class contains functions for data splitting.
+"""
+
 import os.path
 from typing import TYPE_CHECKING
 

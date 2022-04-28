@@ -1,7 +1,10 @@
-"""Schema Functions."""
+"""Schema Functions
+Get schema information about the graph.
+"""
 
 import json
 import re
+from typing import TYPE_CHECKING, Union
 
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
@@ -77,23 +80,55 @@ class pyTigerGraphSchema(pyTigerGraphBase):
             self.schema["UDTs"] = self._getUDTs()
         return self.schema
 
-    def upsertData(self, data: [str, object]) -> dict:
+    def upsertData(self, data: Union[str, object], atomic: bool = False, ackAll: bool = False,
+            newVertexOnly: bool = False, vertexMustExist: bool = False,
+            updateVertexOnly: bool = False) -> dict:
         """Upserts data (vertices and edges) from a JSON document or equivalent object structure.
 
         Args:
             data:
                 The data of vertex and edge instances, in a specific format.
+            atomic:
+                The request is an atomic transaction. An atomic transaction means that updates to
+                the database contained in the request are all-or-nothing: either all changes are
+                successful, or none is successful.
+            ackAll:
+                If `True`, the request will return after all GPE instances have acknowledged the
+                POST. Otherwise, request will return immediately after RESTPP processed the POST.
+            newVertexOnly:
+                If `True`, the request will only insert new vertices and not update existing ones.
+            vertexMustExist:
+                If `True`, the request will only insert an edge if both the `FROM` and `TO` vertices
+                of the edge already exist. If the value is false, the request will always insert new
+                edges, and create the necessary vertices with default values for their attributes.
+                Note that this parameter does not affect vertices.
+            updateVertexOnly:
+                If `True`, the request will only update existing vertices and not insert new
+                vertices.
 
         Returns:
             The result of upsert (number of vertices and edges accepted/upserted).
 
         Endpoint:
-            - `POST /graph`
+            - `POST /graph/{graph_name}`
                 See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_upsert_data_to_graph
         """
         if not isinstance(data, str):
             data = json.dumps(data)
-        return self._post(self.restppUrl + "/graph/" + self.graphname, data=data)[0]
+        headers = {}
+        if atomic:
+            headers["gsql-atomic-level"] = "atomic"
+        params = {}
+        if ackAll:
+            params["ack"] = "all"
+        if newVertexOnly:
+            params["new_vertex_only"] = True
+        if vertexMustExist:
+            params["vertex_must_exist"] = True
+        if updateVertexOnly:
+            params["update_vertex_only"] = True
+        return self._post(self.restppUrl + "/graph/" + self.graphname, headers=headers, data=data,
+            params=params)[0]
 
     def getEndpoints(self, builtin: bool = False, dynamic: bool = False,
             static: bool = False) -> dict:

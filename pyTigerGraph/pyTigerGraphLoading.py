@@ -1,4 +1,6 @@
-"""Loading Job Functions."""
+"""Loading Job Functions
+Run loading jobs on the TigerGraph server.
+"""
 
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
@@ -57,6 +59,6 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         Use `runLoadingJobWithFile()` instead.
         TODO Proper depreciation
         """
-        self.runLoadingJobWithFile(filePath, fileTag, jobName, sep, eol, timeout, sizeLimit)
+        return self.runLoadingJobWithFile(filePath, fileTag, jobName, sep, eol, timeout, sizeLimit)
 
     # TODO POST /restpploader/{graph_name}

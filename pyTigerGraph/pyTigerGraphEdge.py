@@ -1,4 +1,6 @@
-"""Edge Functions."""
+"""Edge Functions
+Get and upsert edges to TigerGraph.
+"""
 
 import json
 
@@ -430,10 +432,9 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         )
 
     def getEdges(self, sourceVertexType: str, sourceVertexId: str, edgeType: str = "",
-            targetVertexType: str = "", targetVertexId: str = "", select: str = "",
-            where: str = "", limit: Union[int, str] = None, sort: str = "", fmt: str = "py",
-            withId: bool = True, withType: bool = False, timeout: int = 0) -> Union[dict, str,
-        'pd.DataFrame']:
+            targetVertexType: str = "", targetVertexId: str = "", select: str = "", where: str = "",
+            limit: Union[int, str] = None, sort: str = "", fmt: str = "py", withId: bool = True,
+            withType: bool = False, timeout: int = 0) -> Union[dict, str, 'pd.DataFrame']:
         """Retrieves edges of the given edge type originating from a specific source vertex.
 
         Only `sourceVertexType` and `sourceVertexId` are required.
@@ -803,7 +804,8 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         try:
             import pandas as pd
         except ImportError:
-            raise ImportError("Pandas is required to use this function. Download pandas using 'pip install pandas'.")
+            raise ImportError("Pandas is required to use this function. "
+                              "Download pandas using 'pip install pandas'.")
 
         df = pd.DataFrame(edgeSet)
         cols = []
