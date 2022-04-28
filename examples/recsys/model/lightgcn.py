@@ -29,9 +29,7 @@ class LGCN(torch.nn.Module):
         self.sigmoid = torch.sigmoid
 
     def forward(self):
-        raise NotImplementedError(
-            "forward() has not been implemented for the GNN class. Do not use"
-        )
+        raise NotImplementedError("forward() has not been implemented for the GNN class. Do not use")
 
     def gnn_propagation(self, edge_index_mp: torch.Tensor) -> torch.Tensor:
         """Embedding propagation instead of `forward` function
@@ -83,9 +81,11 @@ class LGCN(torch.nn.Module):
         """
         # Perform GNN propagation on message passing edges to get final embeddings
         node_embs = self.gnn_propagation(data_mp.edge_index)
+        # iprint(node_embs)
         # Get edge prediction scores for all positive and negative evaluation edges
         pos_scores = self.predict_scores(data_pos.edge_index, node_embs)
         neg_scores = self.predict_scores(data_neg.edge_index, node_embs)
+        # iprint(pos_scores, neg_scores)
         
         loss = -torch.log(self.sigmoid(pos_scores - neg_scores)).mean()
         return loss
@@ -101,25 +101,17 @@ class LGCN(torch.nn.Module):
         final_embs = self.gnn_propagation(data_mp.edge_index)
         
         # Get embeddings of all unique customers in the batch of evaluation edges
-        unique_customers = torch.unique_consecutive(data_pos.edge_index[0, :])
-        customer_emb = final_embs[
-            unique_customers, :
-        ]  # has shape [number of customers in batch, 64]
-
-        # Get embeddings of ALL articles in dataset
-        article_emb = final_embs[
-            self.num_customers :, :
-        ]  # has shape [total number of articles in dataset, 64]
-
-        ratings = self.sigmoid(torch.matmul(customer_emb, article_emb.t())).cpu()
+        unique_users = torch.unique_consecutive(data_pos.edge_index[0, :])
+        user_emb = final_embs[unique_users, :]  # has shape [number of customers in batch, 64]
+        item_emb = final_embs[self.num_customers :, :]  # has shape [total number of articles in dataset, 64]
+        ratings = self.sigmoid(torch.matmul(user_emb, item_emb.t())).cpu()
         # iprint(ratings)
         result = recall_at_k(
             ratings,
             k,
             self.num_customers,
             data_pos.edge_index.cpu(),
-            unique_customers.cpu(),
-            data_mp.edge_index.cpu(),
+            unique_users.cpu(),
         )  # Calculate recall@k
         return result
 

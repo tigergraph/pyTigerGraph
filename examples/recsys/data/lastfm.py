@@ -4,10 +4,10 @@ import pandas as pd
 import networkx as nx
 import torch
 from torch_geometric.data import Data, Dataset
-from torch_geometric.transforms import RandomLinkSplit
+from torch_geometric.transforms import RandomLinkSplit, ToUndirected
 from torch_geometric_temporal.signal import DynamicGraphTemporalSignal
 from torch_geometric_temporal.signal import temporal_signal_split
-import inspect
+from icecream import ic as iprint
 
 
 def add_complementary_edges(data: Data):
@@ -15,16 +15,16 @@ def add_complementary_edges(data: Data):
     :param data:
     :return:
     """
+    # iprint(data)
     transform = RandomLinkSplit(is_undirected=True,
                                 add_negative_train_samples=False,
                                 num_val=0,
                                 num_test=0,
                                 neg_sampling_ratio=0)
     rand_data, _, _ = transform(data)
-    # print(rand_data.edge_index)
-    # print(d1.edge_index)
-    # print(d2.edge_index)
-    
+    # transform = ToUndirected()
+    # rand_data = transform(data)
+    # iprint(rand_data)
     return rand_data
 
 
@@ -37,7 +37,6 @@ def load_snapshots(input_csv, num_snapshots):
     df = pd.read_csv(input_csv)
     num_user_ids = df["user_id"].unique().size
     num_item_ids = df["item_id"].unique().size
-    # num_all_ids = num_user_ids + num_item_ids
     
     num_rows, num_feats = df.shape
     rows_per_snapshot = num_rows // num_snapshots
@@ -52,8 +51,6 @@ def load_snapshots(input_csv, num_snapshots):
     for i in range(num_snapshots):
         sub_df = df.iloc[start_index[i]:start_index[i+1]]
         data, _, _ = load_dataset(sub_df)
-        # data = add_complementary_edges(data)
-        # edge_label_index_t.append(data.edge_label_index)
         edge_index_t.append(data.edge_index)
         edge_weight_t.append(data.edge_attr)
         node_feats_t.append(data.x)
@@ -102,8 +99,6 @@ def load_dataset(df, device="cpu"):
     lastfm_data = Data(x=deg_feats, edge_index=edges_index, edge_attr=None, y=None).to(
         device, non_blocking=True
     )
-    # print(inspect.currentframe())
-    # print("edge_index:", lastfm_data.edge_index)
 
     return lastfm_data, num_user_ids, num_item_ids
 

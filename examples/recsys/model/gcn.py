@@ -76,7 +76,6 @@ class GCN(torch.nn.Module):
             self.num_customers,
             data_pos.edge_index.cpu(),
             unique_customers.cpu(),
-            data_mp.edge_index.cpu(),
         )  # Calculate recall@k
         return result
 

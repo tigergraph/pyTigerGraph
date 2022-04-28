@@ -24,11 +24,11 @@ class EGCN(torch.nn.Module):
         for _ in range(self.num_layers):
             self.layers.append(EvolveGCNH(num_nodes, embedding_dim))
         self.sigmoid = torch.sigmoid
+        # iprint(self.embeddings.weight.shape)
+        # iprint(num_nodes, embedding_dim)
 
     def forward(self):
-        raise NotImplementedError(
-            "forward() has not been implemented for the GNN class. Do not use"
-        )
+        raise NotImplementedError("forward() has not been implemented for the GNN class. Do not use")
 
     def _propagation_node_emb(self, edge_index_mp: torch.Tensor) -> torch.Tensor:
         h = self.embeddings.weight  # layer-0 embeddings
@@ -47,11 +47,13 @@ class EGCN(torch.nn.Module):
         """
         The main training step.
         """
+        # print(data_mp.edge_index)
         # Perform GNN propagation on message passing edges to get final embeddings
-        final_embs = self._propagation_node_emb(data_mp.edge_index)
+        final_node_embs = self._propagation_node_emb(data_mp.edge_index)
+        # iprint(final_node_embs)
         # Get edge prediction scores for all positive and negative evaluation edges
-        pos_scores = self.predict_scores(data_pos.edge_index, final_embs)
-        neg_scores = self.predict_scores(data_neg.edge_index, final_embs)
+        pos_scores = self.predict_scores(data_pos.edge_index, final_node_embs)
+        neg_scores = self.predict_scores(data_neg.edge_index, final_node_embs)
         # iprint(pos_scores)
         loss = -torch.log(self.sigmoid(pos_scores - neg_scores)).mean()
         return loss
@@ -62,17 +64,17 @@ class EGCN(torch.nn.Module):
         """
         final_embs = self._propagation_node_emb(data_mp.edge_index)
         unique_users = torch.unique_consecutive(data_pos.edge_index[0, :])
-        user_emb = final_embs[unique_users, :]
-        item_emb = final_embs[self.num_users:, :]
+        user_emb = final_embs[unique_users, :]  # User ID, embeddings
+        item_emb = final_embs[self.num_users:, :]  # Item ID, embeddings
+        # iprint(user_emb.shape, item_emb.shape)
         ratings = self.sigmoid(torch.matmul(user_emb, item_emb.t())).cpu()
         # iprint(ratings)
         result = recall_at_k(
-            ratings,
-            k,
-            self.num_users,
-            data_pos.edge_index.cpu(),
-            unique_users.cpu(),
-            data_mp.edge_index.cpu(),
+            all_ratings=ratings,
+            k=k,
+            num_users=self.num_users,
+            ground_truth=data_pos.edge_index.cpu(),
+            unique_users=unique_users.cpu(),
         )  # Calculate recall@k
         return result
 
