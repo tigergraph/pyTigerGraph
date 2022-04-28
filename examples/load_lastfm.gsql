@@ -19,9 +19,9 @@ CREATE GRAPH LastFM (User, Item, Interact)
 USE GRAPH LastFM
 BEGIN
 CREATE LOADING JOB load_lastfm FOR GRAPH LastFM {
-    DEFINE FILENAME user_file = "/home/tigergraph/tgsandbox/gnn-recsys-sandbox/data/lastfm_users.csv";
-    DEFINE FILENAME item_file = "/home/tigergraph/tgsandbox/gnn-recsys-sandbox/data/lastfm_items.csv";
-    DEFINE FILENAME edge_file = "/home/tigergraph/tgsandbox/gnn-recsys-sandbox/data/lastfm_edges.csv";
+    DEFINE FILENAME user_file = "./lastfm_users.csv";
+    DEFINE FILENAME item_file = "./lastfm_items.csv";
+    DEFINE FILENAME edge_file = "./lastfm_edges.csv";
     
     LOAD user_file TO VERTEX User VALUES ($"node_id", LIST(0), 0, "False", "False", "False") USING header="true", separator=",";
     LOAD item_file TO VERTEX Item VALUES ($"node_id", LIST(0), 0, "False", "False", "False") USING header="true", separator=",";
