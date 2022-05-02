@@ -16,7 +16,7 @@ from pyTigerGraph.pyTigerGraphException import TigerGraphException
 class pyTigerGraphGSQL(pyTigerGraphBase):
     """GSQL Interface."""
 
-    def initGsql(self, certLocation: str = "~/.gsql/my-cert.txt") -> bool:
+    def _initGsql(self, certLocation: str = "~/.gsql/my-cert.txt") -> bool:
         """Initialises the GSQL support.
 
         Args:
@@ -103,7 +103,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
         if str(graphname).upper() == "GLOBAL" or str(graphname).upper() == "":
             graphname = ""
         if not self.gsqlInitiated:
-            self.gsqlInitiated = self.initGsql()
+            self.gsqlInitiated = self._initGsql()
         if self.gsqlInitiated:
             if "\n" not in query:
                 res = self.Client.query(query, graph=graphname)
