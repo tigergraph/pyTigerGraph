@@ -579,22 +579,30 @@ class GDS:
         indicates which part a vertex belongs to.
 
         Usage:
-        1. `conn = TigerGraphConnection(...)`
-           `splitter = conn.gds.vertexSplitter(timeout, attr_name=0.6)`
-           `splitter.run()`
-            A random 60% of vertices will have their attribute "attr_name" set to True, and
-            others False. `attr_name` can be any attribute that exists in the database (same below).
-        2. `splitter = conn.gds.vertexSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2)`
-           `splitter.run()`
-            A random 60% of vertices will have their attribute "attr_name" set to True, and a
-            random 20% of vertices will have their attribute "attr_name2" set to True. The two
-            parts are disjoint.
-        3. `splitter = conn.gds.vertexSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2, attr_name3=0.2)`
-           `splitter.run()`
-            A random 60% of vertices will have their attribute "attr_name" set to True, a
-            random 20% of vertices will have their attribute "attr_name2" set to True, and
-            another random 20% of vertices will have their attribute "attr_name3" set to True.
-            The three parts are disjoint.
+                1)  A random 60% of vertices will have their attribute "attr_name" set to True, and
+                others False. `attr_name` can be any attribute that exists in the database (same below).
+                Example:
+                [source,python]
+                conn = TigerGraphConnection(...)
+                splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6)
+                splitter.run()
+            
+                2) A random 60% of vertices will have their attribute "attr_name" set to True, and a
+                random 20% of vertices will have their attribute "attr_name2" set to True. The two
+                parts are disjoint. Example:
+                [source,python]
+                conn = TigerGraphConnection(...)
+                splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2)
+                splitter.run()
+
+                3)  A random 60% of vertices will have their attribute "attr_name" set to True, a
+                random 20% of vertices will have their attribute "attr_name2" set to True, and
+                another random 20% of vertices will have their attribute "attr_name3" set to True.
+                The three parts are disjoint. Example:
+                [source,python]
+                conn = TigerGraphConnection(...)
+                splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2, attr_name3=0.2)
+                splitter.run()
 
         Args:
             timeout (int, optional):
@@ -609,22 +617,30 @@ class GDS:
         indicates which part an edge belongs to.
 
         Usage:
-        1. `conn = TigerGraphConnection(...)`
-           `splitter = conn.gds.edgeSplitter(timeout, attr_name=0.6)`
-           `splitter.run()`
-            A random 60% of edges will have their attribute "attr_name" set to True, and 
+            1) A random 60% of edges will have their attribute "attr_name" set to True, and 
             others False. `attr_name` can be any attribute that exists in the database (same below).
-        2. `splitter = conn.gds.edgeSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2)`
-           `splitter.run()`
-            A random 60% of edges will have their attribute "attr_name" set to True, and a 
+            Example:
+            [source,python]
+            conn = TigerGraphConnection(...)
+            splitter = conn.gds.edgeSplitter(timeout, attr_name=0.6)
+            splitter.run()
+
+            2) A random 60% of edges will have their attribute "attr_name" set to True, and a 
             random 20% of edges will have their attribute "attr_name2" set to True. The two 
-            parts are disjoint. 
-        3. `splitter = conn.gds.edgeSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2, attr_name3=0.2)`
-           `splitter.run()`
-            A random 60% of edges will have their attribute "attr_name" set to True, a 
+            parts are disjoint. Example:
+            [source,python]
+            conn = TigerGraphConnection(...)
+            splitter = conn.gds.edgeSplitter(timeout, attr_name=0.6, attr_name2=0.2)
+            splitter.run()
+
+            3) A random 60% of edges will have their attribute "attr_name" set to True, a 
             random 20% of edges will have their attribute "attr_name2" set to True, and 
             another random 20% of edges will have their attribute "attr_name3" set to True. 
-            The three parts are disjoint.
+            The three parts are disjoint. Example:
+            [source,python]
+            conn = TigerGraphConnection(...)
+            splitter = conn.gds.edgeSplitter(timeout, attr_name=0.6, attr_name2=0.2, attr_name3=0.2)
+            splitter.run()
 
         Args:
             timeout (int, optional): 
