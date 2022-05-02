@@ -34,7 +34,9 @@ class pyTigerGraphBase(object):
 
         Args:
             host:
-                The host name or IP address of the TigerGraph server.
+                The host name or IP address of the TigerGraph server. Make sure to include the
+                protocol (http:// or https://). If `certPath` is None and the protocol is https,
+                a self-signed certificate will be used.
             graphname:
                 The default graph for running queries.
             username:
