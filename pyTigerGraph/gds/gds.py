@@ -85,7 +85,7 @@ class GDS:
           multiple batches of data to load, it will return the loader itself.
 
         See the following documentation for more details about the Neighbor Loader arguments:
-        xref:dataloaders.adoc#_neighbor_loader
+        xref:dataloaders.adoc#_neighbor_loader[Neighbor Loader Documentation]
         """
         return NeighborLoader(
             self.conn,
@@ -162,7 +162,7 @@ class GDS:
           multiple batches of data to load, it will return the loader again.
 
         See the following documentation for more details about the Edge Loader arguments:
-        xref:dataloaders.adoc#_edge_loader
+        xref:dataloaders.adoc#_edge_loader[Edge Loader Documentation]
         """
         return EdgeLoader(
             self.conn,
@@ -230,7 +230,7 @@ class GDS:
           multiple batches of data to load, it will return the loader again.
 
         See the following documentation for more details about the Vertex Loader arguments:
-        xref:dataloaders.adoc#_vertex_loader
+        xref:dataloaders.adoc#_vertex_loader[Vertex Loader Documentation]
         """
         return VertexLoader(
             self.conn,
@@ -302,7 +302,7 @@ class GDS:
           multiple batches of data to load, it will return the loader itself.
 
         See the following documentation for more details about the Graph Loader arguments:
-        xref:dataloaders.adoc#_graph_loader
+        xref:dataloaders.adoc#_graph_loader[Graph Loader Documentation]
         """
         return GraphLoader(
             self.conn,
