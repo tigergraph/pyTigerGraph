@@ -1,7 +1,3 @@
-"""Query Functions
-Run installed and interpreted queries in TigerGraph.
-"""
-
 import json
 from datetime import datetime
 
@@ -16,7 +12,10 @@ from pyTigerGraph.pyTigerGraphUtils import pyTigerGraphUtils
 
 
 class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
-    """Query Functions."""
+    """Query Functions.
+
+    Run installed and interpreted queries in TigerGraph.
+    """
 
     # TODO getQueries()  # List _all_ query names
 

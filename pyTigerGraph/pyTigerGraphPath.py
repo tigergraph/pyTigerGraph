@@ -1,21 +1,21 @@
-"""Path Finding Functions
-Find paths between vertices within the graph.
-"""
-
 import json
-from typing import TYPE_CHECKING, Union
+from typing import Union
 
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
 
 class pyTigerGraphPath(pyTigerGraphBase):
-    """Path Finding Functions."""
+    """Path Finding Functions.
+
+    Find paths between vertices within the graph.
+    """
 
     def _preparePathParams(self, sourceVertices: Union[dict, tuple, list],
             targetVertices: Union[dict, tuple, list], maxLength: int = None,
             vertexFilters: Union[list, dict] = None, edgeFilters: Union[list, dict] = None,
             allShortestPaths: bool = False) -> str:
-        """Prepares the input parameters by transforming them to the format expected by the path algorithms.
+        """Prepares the input parameters by transforming them to the format expected by the path
+         algorithms.
 
         See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_input_parameters_and_output_format_for_path_finding
 
@@ -99,11 +99,9 @@ class pyTigerGraphPath(pyTigerGraphBase):
 
         # Assembling the input payload
         if not sourceVertices or not targetVertices:
-            return None
+            return ""
             # TODO Should allow returning error instead of handling missing parameters here?
-        data = {}
-        data["sources"] = parseVertices(sourceVertices)
-        data["targets"] = parseVertices(targetVertices)
+        data = {"sources": parseVertices(sourceVertices), "targets": parseVertices(targetVertices)}
         if vertexFilters:
             data["vertexFilters"] = parseFilters(vertexFilters)
         if edgeFilters:
@@ -115,12 +113,14 @@ class pyTigerGraphPath(pyTigerGraphBase):
 
         return json.dumps(data)
 
-    def shortestPath(self, sourceVertices: Union[dict, tuple, list], targetVertices: Union[dict, tuple, list],
-            maxLength: int = None, vertexFilters: Union[list, dict] = None,
-            edgeFilters: Union[list, dict] = None, allShortestPaths: bool = False) -> dict:
+    def shortestPath(self, sourceVertices: Union[dict, tuple, list],
+            targetVertices: Union[dict, tuple, list], maxLength: int = None,
+            vertexFilters: Union[list, dict] = None, edgeFilters: Union[list, dict] = None,
+            allShortestPaths: bool = False) -> dict:
         """Find the shortest path (or all shortest paths) between the source and target vertex sets.
 
-        A vertex set is a dict that has three top-level keys: `v_type`, `v_id`, `attributes` (a dict).
+        A vertex set is a set of dictionaries that each has three top-level keys: `v_type`, `v_id`,
+            and `attributes` (also a dictionary).
 
         Args:
             sourceVertices:
@@ -162,9 +162,9 @@ class pyTigerGraphPath(pyTigerGraphBase):
             edgeFilters, allShortestPaths)
         return self._post(self.restppUrl + "/shortestpath/" + self.graphname, data=data)
 
-    def allPaths(self, sourceVertices: Union[dict, tuple, list], targetVertices: Union[dict, tuple, list],
-            maxLength: int, vertexFilters: Union[list, dict] = None,
-            edgeFilters: Union[list, dict] = None) -> dict:
+    def allPaths(self, sourceVertices: Union[dict, tuple, list],
+            targetVertices: Union[dict, tuple, list], maxLength: int,
+            vertexFilters: Union[list, dict] = None, edgeFilters: Union[list, dict] = None) -> dict:
         """Find all possible paths up to a given maximum path length between the source and target
         vertex sets.
 
