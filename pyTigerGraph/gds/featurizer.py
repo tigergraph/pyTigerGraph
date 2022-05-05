@@ -108,9 +108,9 @@ class Featurizer:
                 The class of the algorithms, if it is None the entire list will be printed out.
         '''
         if category!=None:
-            print("The list of algorithms for category", category,"in the GDS (https://github.com/tigergraph/gsql-graph-algorithms):")
+            print("Available algorithms for category", category,"in the GDS (https://github.com/tigergraph/gsql-graph-algorithms):")
         else:
-            print("The list of algorithms in the GDS (https://github.com/tigergraph/gsql-graph-algorithms):")
+            print("Available algorithms in the GDS (https://github.com/tigergraph/gsql-graph-algorithms):")
         self._print_dict(d=self.algo_dict,category=category)
 
     def _is_query_installed(self, query_name: str) -> bool:
@@ -138,7 +138,7 @@ class Featurizer:
                 query = requests.get(query_url).text
         if query == "":
             self.listAlgorithms()
-            raise ValueError("The query name is not included in the list of queries ")
+            raise ValueError("The query name is not included in the list of queries.")
         return query
 
     def _get_query_url(self,query_name:str):
@@ -156,7 +156,7 @@ class Featurizer:
                 return "https://github.com/tigergraph/gsql-graph-algorithms/blob/master"+query_url.split('master')[1]
         if not flag: 
             self.listAlgorithms()
-            raise ValueError("The query name is not included in the list of queries ")
+            raise ValueError("The query name is not included in the list of queries.")
         
 
     def _install_query_file(self, query_name: str, replace: dict = None):
@@ -164,7 +164,7 @@ class Featurizer:
         Reads the first line of the query file to get the query name, e.g, CREATE QUERY query_name ...
         Args:
             query_name (str): 
-                The namme of the query
+                The name of the query
             replace (dict): 
                 If the suffix name needs to be replaced 
         '''
@@ -245,7 +245,6 @@ class Featurizer:
                 tasks.append("ALTER {} {} ADD ATTRIBUTE ({} {});\n".format(
                         schema_type, t, attr_name, attr_type))
         # If attribute already exists for schema type t, nothing to do
-        print(tasks)
         if not tasks:
             return "Attribute already exists"
         # Create schema change job 
@@ -303,7 +302,7 @@ class Featurizer:
         If the query accepts input parameters and the parameters have not been provided, they will be initialized by parsing the query.
         If the initialized parameters contain any None value, the function will raise the ValueError.
         Args:
-            name_of_query (str):
+            query_name (str):
                 The name of the query to be executed.
             params (dict):
                 Query parameters. a dictionary.
