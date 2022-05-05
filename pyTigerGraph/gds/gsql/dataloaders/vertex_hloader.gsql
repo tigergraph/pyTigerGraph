@@ -3,7 +3,7 @@ CREATE QUERY vertex_hloader_{QUERYSUFFIX}(
     INT num_batches=1, 
     BOOL shuffle=FALSE,
     STRING filter_by
-){
+) SYNTAX V2 {
     /*
     This query generates batches of vertices. If `input_vertices` is given, it will generate 
     a batches of those vertices. Otherwise, it will divide all vertices into `num_batches`, 

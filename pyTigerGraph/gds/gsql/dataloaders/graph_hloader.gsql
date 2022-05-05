@@ -2,7 +2,7 @@ CREATE QUERY graph_hloader_{QUERYSUFFIX}(
     INT num_batches=1, 
     BOOL shuffle=FALSE,
     STRING filter_by
-){ 
+) SYNTAX V2 { 
     /*
     This query generates the batches of edges and vertices attached to those edges.
 

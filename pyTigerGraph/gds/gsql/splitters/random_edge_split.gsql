@@ -5,7 +5,7 @@ CREATE QUERY random_edge_split(
   DOUBLE ratio2=0, 
   STRING attr3, 
   DOUBLE ratio3=0
-){ 
+) SYNTAX V2 { 
   /*
     This query splits vertices into at most 3 parts randomly. It does so by using a boolean attribute to
     indicate which part a vertex belongs to.
