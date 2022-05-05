@@ -11,7 +11,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000) -> dict:
         """Execute a loading job with the referenced file.
 
-        The file will first be uploaded to the tigergraph server and the value of the appropriate
+        The file will first be uploaded to the TigerGraph server and the value of the appropriate
         FILENAME definition will be updated to point to the freshly uploaded file.
 
         Args:
@@ -23,18 +23,18 @@ class pyTigerGraphLoading(pyTigerGraphBase):
                 The name of the loading job.
             sep:
                 Data value separator. If your data is JSON, you do not need to specify this
-                parameter. The default separator is a comma (,).
+                parameter. The default separator is a comma `,`.
             eol:
                 End-of-line character. Only one or two characters are allowed, except for the
-                special case "\\r\\n". The default value is "\\n"
+                special case `\\r\\n`. The default value is `\\n`
             timeout:
-                Timeout in seconds. If set to 0, use the system-wide endpoint timeout setting.
+                Timeout in seconds. If set to `0`, use the system-wide endpoint timeout setting.
             sizeLimit:
                 Maximum size for input file in bytes.
 
         Endpoint:
             - `POST /ddl/{graph_name}`
-                See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_run_a_loading_job
+                See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_a_loading_job[Run a loading job]
         """
         try:
             data = open(filePath, 'rb').read()
