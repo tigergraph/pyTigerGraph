@@ -192,9 +192,7 @@ class Featurizer:
 
     def installAlgorithm(self,query_name:str):
         '''
-        Checks if the query is already installed, if not it will install the query and change the schema if an attribute needs to be added.
-        It can change 
-        
+        Checks if the query is already installed, if not it will install the query and change the schema if an attribute needs to be added.        
         Args:
             query_name (str): 
                 The name of query to be installed
