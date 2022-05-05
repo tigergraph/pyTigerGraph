@@ -5,7 +5,7 @@ CREATE QUERY neighbor_hloader_{QUERYSUFFIX}(
     INT num_hops=2, 
     BOOL shuffle=FALSE,
     STRING filter_by
-){ 
+) SYNTAX V1 { 
     /*
     This query generates the neighborhood subgraphs of given seed vertices (i.e., `input_vertices`).
     If seed vertices are not given, then it will divide all vertices into `num_batches`, and use each 
@@ -63,46 +63,46 @@ CREATE QUERY neighbor_hloader_{QUERYSUFFIX}(
         # Get neighbors of seeeds
         FOREACH i IN RANGE[1, num_hops] DO
             seeds = SELECT t
-                    FROM seeds:s -((_>|_):e)- :t 
+                    FROM seeds:s -(:e)- :t 
                     SAMPLE num_neighbors EDGE WHEN s.outdegree() >= 1
                     ACCUM @@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {EDGEATTRS} + "\n");
             attr = SELECT s
-                    FROM seeds:s 
-                    POST-ACCUM 
-                        IF NOT @@v_batch.containsKey(s) THEN
-                            @@v_batch += (s -> (int_to_string(getvid(s)) + "," + {VERTEXATTRS} + ",0\n"))
-                        END;
+                   FROM seeds:s 
+                   POST-ACCUM 
+                       IF NOT @@v_batch.containsKey(s) THEN
+                           @@v_batch += (s -> (int_to_string(getvid(s)) + "," + {VERTEXATTRS} + ",0\n"))
+                       END;
         END;
         # Now redo everything in the other direction
-        IF input_vertices.size()==0 THEN
-            start = {ANY};
-            IF filter_by IS NOT NULL THEN
-                seeds = SELECT s 
-                        FROM start:s 
-                        WHERE s.getAttr(filter_by, "BOOL") and s.@tmp_id % num_batches == batch_id;
-            ELSE
-                seeds = SELECT s 
-                        FROM start:s 
-                        WHERE s.@tmp_id % num_batches == batch_id;
-            END;
-        ELSE
-            start = input_vertices;
-            seeds = SELECT s 
-                    FROM start:s;
-        END;
-        # Get neighbors of seeeds
-        FOREACH i IN RANGE[1, num_hops] DO
-            seeds = SELECT t
-                    FROM seeds:s -(<_:e)- :t 
-                    SAMPLE num_neighbors EDGE WHEN s.outdegree() >= 1
-                    ACCUM @@e_batch += (int_to_string(getvid(t)) + "," + int_to_string(getvid(s)) + "," + {EDGEATTRS} + "\n");
-            attr = SELECT s
-                    FROM seeds:s 
-                    POST-ACCUM 
-                        IF NOT @@v_batch.containsKey(s) THEN
-                            @@v_batch += (s -> (int_to_string(getvid(s)) + "," + {VERTEXATTRS} + ",0\n"))
-                        END;
-        END;
+        // IF input_vertices.size()==0 THEN
+        //     start = {ANY};
+        //     IF filter_by IS NOT NULL THEN
+        //         seeds = SELECT s 
+        //                 FROM start:s 
+        //                 WHERE s.getAttr(filter_by, "BOOL") and s.@tmp_id % num_batches == batch_id;
+        //     ELSE
+        //         seeds = SELECT s 
+        //                 FROM start:s 
+        //                 WHERE s.@tmp_id % num_batches == batch_id;
+        //     END;
+        // ELSE
+        //     start = input_vertices;
+        //     seeds = SELECT s 
+        //             FROM start:s;
+        // END;
+        // # Get neighbors of seeeds
+        // FOREACH i IN RANGE[1, num_hops] DO
+        //     seeds = SELECT t
+        //             FROM seeds:s -(<_:e)- :t 
+        //             SAMPLE num_neighbors EDGE WHEN s.outdegree() >= 1
+        //             ACCUM @@e_batch += (int_to_string(getvid(t)) + "," + int_to_string(getvid(s)) + "," + {EDGEATTRS} + "\n");
+        //     attr = SELECT s
+        //             FROM seeds:s 
+        //             POST-ACCUM 
+        //                 IF NOT @@v_batch.containsKey(s) THEN
+        //                     @@v_batch += (s -> (int_to_string(getvid(s)) + "," + {VERTEXATTRS} + ",0\n"))
+        //                 END;
+        // END;
         # Add to response
         PRINT @@v_batch AS vertex_batch, @@e_batch AS edge_batch;                            
     END;
