@@ -175,7 +175,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
                     (3, {"name": "Dwalin", "points": (7, "+"), "bestScore": (35, "max")})
                 ]
                 ----
-                
+
                 For valid values of `<operator>` see xref:tigergraph-server:API:built-in-endpoints.adoc#_operation_codes[Operation codes].
 
         Returns:

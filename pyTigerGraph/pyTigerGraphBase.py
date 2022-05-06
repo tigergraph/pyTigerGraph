@@ -35,7 +35,7 @@ class pyTigerGraphBase(object):
         Args:
             host:
                 The host name or IP address of the TigerGraph server. Make sure to include the
-                protocol (http:// or https://). If `certPath` is None and the protocol is https,
+                protocol (http:// or https://). If `certPath` is `None` and the protocol is https,
                 a self-signed certificate will be used.
             graphname:
                 The default graph for running queries.
@@ -55,7 +55,7 @@ class pyTigerGraphBase(object):
             apiToken:
                 DEPRECATED; use `getToken()` with a secret to get a session token.
             useCert:
-                DEPRECATED; the need for CA certificate is now determined by URL scheme.
+                DEPRECATED; the need for a CA certificate is now determined by URL scheme.
             certPath:
                 The filesystem path to the CA certificate. Required in case of https connections.
             debug:
@@ -138,7 +138,7 @@ class pyTigerGraphBase(object):
         self.Client = None
 
     def _errorCheck(self, res: dict):
-        """Checks if the JSON document returned by an endpoint has contains ``error: true``. If so,
+        """Checks if the JSON document returned by an endpoint has contains `error: true`. If so,
             it raises an exception.
 
         Args:
@@ -159,20 +159,20 @@ class pyTigerGraphBase(object):
 
         Args:
             method:
-                HTTP method, currently one of GET, POST or DELETE.
+                HTTP method, currently one of `GET`, `POST` or `DELETE`.
             url:
                 Complete REST++ API URL including path and parameters.
             authMode:
-                Authentication mode, one of "token" (default) or "pwd".
+                Authentication mode, either `"token"` (default) or `"pwd"`.
             headers:
                 Standard HTTP request headers.
             data:
                 Request payload, typically a JSON document.
             resKey:
-                The JSON subdocument to be returned, default is "result".
+                The JSON subdocument to be returned, default is `"result"`.
             skipCheck:
-                Skip error checking? Some endpoints return error to indicate that the requested
-                action is not applicable; a problem, but not really an error.
+                Some endpoints return an error to indicate that the requested
+                action is not applicable. This argument skips error checking.
             params:
                 Request URL parameters.
 
@@ -229,14 +229,14 @@ class pyTigerGraphBase(object):
             url:
                 Complete REST++ API URL including path and parameters.
             authMode:
-                Authentication mode, one of "token" (default) or "pwd".
+                Authentication mode, either `"token"` (default) or `"pwd"`.
             headers:
                 Standard HTTP request headers.
             resKey:
-                The JSON subdocument to be returned, default is "result".
+                The JSON subdocument to be returned, default is `"result"`.
             skipCheck:
-                Skip error checking? Some endpoints return error to indicate that the requested
-                action is not applicable; a problem, but not really an error.
+                Some endpoints return an error to indicate that the requested
+                action is not applicable. This argument skips error checking.
             params:
                 Request URL parameters.
 
@@ -255,16 +255,16 @@ class pyTigerGraphBase(object):
             url:
                 Complete REST++ API URL including path and parameters.
             authMode:
-                Authentication mode, one of "token" (default) or "pwd".
+                Authentication mode, either `"token"` (default) or `"pwd"`.
             headers:
                 Standard HTTP request headers.
             data:
                 Request payload, typically a JSON document.
             resKey:
-                The JSON subdocument to be returned, default is "result".
+                The JSON subdocument to be returned, default is `"result"`.
             skipCheck:
-                Skip error checking? Some endpoints return error to indicate that the requested
-                action is not applicable; a problem, but not really an error.
+                Some endpoints return an error to indicate that the requested
+                action is not applicable. This argument skips error checking.
             params:
                 Request URL parameters.
 
@@ -280,7 +280,7 @@ class pyTigerGraphBase(object):
             url:
                 Complete REST++ API URL including path and parameters.
             authMode:
-                Authentication mode, one of "token" (default) or "pwd".
+                Authentication mode, either `"token"` (default) or `"pwd"`.
 
         Returns:
             The response from the request (as a dictionary).
