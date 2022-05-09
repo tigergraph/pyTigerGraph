@@ -4,7 +4,7 @@ CREATE QUERY edge_kloader_{QUERYSUFFIX}(
     STRING filter_by,
     STRING kafka_address,
     STRING kafka_topic
-){ 
+) SYNTAX V2 { 
     /*
     This query generates batches of edges.
 
