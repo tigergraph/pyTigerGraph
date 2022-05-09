@@ -36,7 +36,7 @@ _udf_funcs = {
 
 
 class BaseLoader:
-    """Base Dataloader Class."""
+    """NO DOC: Base Dataloader Class."""
     def __init__(
         self,
         graph: "TigerGraphConnection",
