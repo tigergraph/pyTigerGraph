@@ -8,7 +8,7 @@ __all__ = ["Accumulator", "Accuracy", "Precision", "Recall"]
 
 
 class Accumulator:
-    """Base Metric Accumulator.
+    """NO DOC: Base Metric Accumulator.
 
     Usage:
     - Call the update function to add a value.
@@ -97,8 +97,8 @@ class Recall(Accumulator):
     Recall = sum(preds * labels) / sum(labels)
 
     Usage:
-    - Call the update function to add predictions and labels.
-    - Get recall score at any point by accessing the value proporty.
+        Call the update function to add predictions and labels.
+        Get recall score at any point by accessing the value proporty.
     """
 
     def update(self, preds: ndarray, labels: ndarray) -> None:
@@ -134,8 +134,8 @@ class Precision(Accumulator):
     Precision = sum(preds * labels) / sum(preds)
 
     Usage:
-    - Call the update function to add predictions and labels.
-    - Get precision score at any point by accessing the value proporty.
+        Call the update function to add predictions and labels.
+        Get precision score at any point by accessing the value proporty.
     """
 
     def update(self, preds: ndarray, labels: ndarray) -> None:
