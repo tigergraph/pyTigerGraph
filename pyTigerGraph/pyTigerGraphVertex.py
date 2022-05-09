@@ -1,3 +1,7 @@
+"""Vertex Functions.
+
+    Provides functions to upsert, retrieve and delete vertices.
+"""
 import json
 
 from typing import TYPE_CHECKING, Union
@@ -11,11 +15,6 @@ from pyTigerGraph.pyTigerGraphUtils import pyTigerGraphUtils
 
 
 class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
-    """Vertex Functions.
-
-        Provides functions to upsert, retrieve and delete vertices.
-    """
-
     def getVertexTypes(self, force: bool = False) -> list:
         """Returns the list of vertex type names of the graph.
 

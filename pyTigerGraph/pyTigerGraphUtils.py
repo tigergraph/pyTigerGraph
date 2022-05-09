@@ -1,3 +1,7 @@
+"""Utility Functions.
+
+Utility functions for pyTigerGraph.
+"""
 import json
 import re
 import urllib
@@ -12,11 +16,6 @@ from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
 
 class pyTigerGraphUtils(pyTigerGraphBase):
-    """Utility Functions.
-
-    Utility functions for pyTigerGraph.
-    """
-
     def _safeChar(self, inputString: Any) -> str:
         """Replace special characters in string using the %xx escape.
 

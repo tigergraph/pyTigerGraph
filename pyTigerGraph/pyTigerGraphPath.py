@@ -1,3 +1,8 @@
+"""Path Finding Functions.
+
+Find paths between vertices within the graph.
+"""
+
 import json
 from typing import Union
 
@@ -5,11 +10,6 @@ from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
 
 class pyTigerGraphPath(pyTigerGraphBase):
-    """Path Finding Functions.
-
-    Find paths between vertices within the graph.
-    """
-
     def _preparePathParams(self, sourceVertices: Union[dict, tuple, list],
             targetVertices: Union[dict, tuple, list], maxLength: int = None,
             vertexFilters: Union[list, dict] = None, edgeFilters: Union[list, dict] = None,

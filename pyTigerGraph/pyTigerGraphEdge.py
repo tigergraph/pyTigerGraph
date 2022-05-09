@@ -1,3 +1,7 @@
+"""Edge Functions.
+
+Provides functions to upsert, retrieve and delete edges.
+"""
 import json
 
 from typing import TYPE_CHECKING, Union
@@ -10,11 +14,6 @@ from pyTigerGraph.pyTigerGraphQuery import pyTigerGraphQuery
 
 
 class pyTigerGraphEdge(pyTigerGraphQuery):
-    """Edge Functions.
-
-    Provides functions to upsert, retrieve and delete edges.
-    """
-
     def getEdgeTypes(self, force: bool = False) -> list:
         """Returns the list of edge type names of the graph.
 

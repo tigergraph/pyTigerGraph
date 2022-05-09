@@ -1,3 +1,7 @@
+"""pyTigerGraph basic functionality.
+
+Offers low(est) level HTTP(S) communication used by all other modules (directly or indirectly).
+"""
 import base64
 import json
 import sys
@@ -19,11 +23,6 @@ def excepthook(type, value, traceback):
 
 
 class pyTigerGraphBase(object):
-    """pyTigerGraph basic functionality.
-
-    Offers low(est) level HTTP(S) communication used by all other modules (directly or indirectly).
-    """
-
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
             username: str = "tigergraph", password: str = "tigergraph",
             restppPort: Union[int, str] = "9000", gsPort: Union[int, str] = "14240",

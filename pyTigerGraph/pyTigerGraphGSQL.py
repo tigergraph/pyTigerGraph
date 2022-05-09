@@ -1,3 +1,7 @@
+"""GSQL Interface.
+
+Use GSQL within pyTigerGraph.
+"""
 import os
 import sys
 from typing import Union
@@ -11,11 +15,6 @@ from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
 
 class pyTigerGraphGSQL(pyTigerGraphBase):
-    """GSQL Interface.
-
-    Use GSQL within pyTigerGraph.
-    """
-
     def _initGsql(self, certLocation: str = "~/.gsql/my-cert.txt") -> bool:
         """Initialises the GSQL support.
 
