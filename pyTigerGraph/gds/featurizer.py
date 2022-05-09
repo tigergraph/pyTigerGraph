@@ -85,7 +85,7 @@ class Featurizer:
             else:
                 if value != "":
                     value = "https://github.com/tigergraph/gsql-graph-algorithms/blob/master"+value.split('master')[1]
-                print(' ' * (indent+1) + str(value)+": ")
+                print(' ' * (indent+1) + str(value)+". ")
     
     def _get_values(self,d):
         '''
@@ -110,7 +110,7 @@ class Featurizer:
         if category!=None:
             print("Available algorithms for category", category,"in the GDS (https://github.com/tigergraph/gsql-graph-algorithms):")
         else:
-            print("Available algorithms in the GDS (https://github.com/tigergraph/gsql-graph-algorithms):")
+            print("The list of the categories for available algorithms in the GDS (https://github.com/tigergraph/gsql-graph-algorithms):")
         self._print_dict(d=self.algo_dict,category=category)
 
     def _is_query_installed(self, query_name: str) -> bool:
