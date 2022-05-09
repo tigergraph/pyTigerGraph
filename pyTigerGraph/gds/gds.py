@@ -14,7 +14,7 @@ from .splitters import RandomEdgeSplitter, RandomVertexSplitter
 
 class GDS:
     def __init__(self, conn: "TigerGraphConnection") -> None:
-        """Initiate a GDS object.
+        """NO DOC: Initiate a GDS object.
             Args:
                 conn (TigerGraphConnection):
                     Accept a TigerGraphConnection to run queries with

@@ -61,7 +61,7 @@ class Accuracy(Accumulator):
 
     Usage:
     - Call the update function to add predictions and labels.
-    - Get accuracy score at any point by accessing the value proporty.
+    - Get accuracy score at any point by accessing the value property.
     """
 
     def update(self, preds: ndarray, labels: ndarray) -> None:
@@ -98,7 +98,7 @@ class Recall(Accumulator):
 
     Usage:
         Call the update function to add predictions and labels.
-        Get recall score at any point by accessing the value proporty.
+        Get recall score at any point by accessing the value property.
     """
 
     def update(self, preds: ndarray, labels: ndarray) -> None:
@@ -135,7 +135,7 @@ class Precision(Accumulator):
 
     Usage:
         Call the update function to add predictions and labels.
-        Get precision score at any point by accessing the value proporty.
+        Get precision score at any point by accessing the value property.
     """
 
     def update(self, preds: ndarray, labels: ndarray) -> None:
