@@ -1,6 +1,5 @@
 """Vertex Functions.
-
-    Provides functions to upsert, retrieve and delete vertices.
+Provides functions to upsert, retrieve and delete vertices.
 """
 import json
 
