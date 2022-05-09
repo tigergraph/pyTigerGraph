@@ -242,6 +242,32 @@ class TestGDSNeighborLoaderREST(unittest.TestCase):
                     num_batches += 1
                 self.assertEqual(num_batches, 9)
 
+    def test_fetch(self):
+        loader = NeighborLoader(
+            graph=self.conn,
+            v_in_feats=["x"],
+            v_out_labels=["y"],
+            v_extra_feats=["train_mask", "val_mask", "test_mask"],
+            batch_size=16,
+            num_neighbors=10,
+            num_hops=2,
+            shuffle=True,
+            filter_by="train_mask",
+            output_format="PyG",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4,
+        )
+        data = loader.fetch([
+            {"primary_id": "100", "type": "Paper"},
+            {"primary_id": "55", "type": "Paper"}])
+        self.assertIn("primary_id", data)
+        for i,d in enumerate(data["primary_id"]):
+            if d=="100" or d=="55":
+                self.assertTrue(data["is_seed"][i].item())
+            else:
+                self.assertFalse(data["is_seed"][i].item())
+
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
@@ -253,6 +279,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSNeighborLoaderREST("test_iterate_pyg"))
     suite.addTest(TestGDSNeighborLoaderREST("test_whole_graph_pyg"))
     suite.addTest(TestGDSNeighborLoaderREST("test_edge_attr"))
+    suite.addTest(TestGDSNeighborLoaderREST("test_fetch"))
 
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)
