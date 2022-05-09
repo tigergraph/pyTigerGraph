@@ -24,16 +24,18 @@ CREATE QUERY neighbor_hloader_{QUERYSUFFIX}(
     SumAccum<INT> @tmp_id;
 
     # Shuffle vertex ID if needed
-    start = {ANY};
-    IF shuffle THEN
-        num_vertices = start.size();
-        res = SELECT s 
-              FROM start:s
-              POST-ACCUM s.@tmp_id = floor(rand()*num_vertices);
-    ELSE
-        res = SELECT s 
-              FROM start:s
-              POST-ACCUM s.@tmp_id = getvid(s);
+    IF input_vertices.size()==0 THEN
+        start = {ANY};
+        IF shuffle THEN
+            num_vertices = start.size();
+            res = SELECT s 
+                FROM start:s
+                POST-ACCUM s.@tmp_id = floor(rand()*num_vertices);
+        ELSE
+            res = SELECT s 
+                FROM start:s
+                POST-ACCUM s.@tmp_id = getvid(s);
+        END;
     END;
 
     # Generate subgraphs
