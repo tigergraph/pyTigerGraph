@@ -61,14 +61,9 @@ class Accuracy(Accumulator):
     Accuracy = sum(preds == labels) / len(labels)
 
     Usage:
-<<<<<<< HEAD
 
     * Call the update function to add predictions and labels.
     * Get accuracy score at any point by accessing the value proporty.
-=======
-    - Call the update function to add predictions and labels.
-    - Get accuracy score at any point by accessing the value property.
->>>>>>> f8c316a4eae0a37cc18fcf91dd666569a8d01f78
     """
 
     def update(self, preds: ndarray, labels: ndarray) -> None:
@@ -104,14 +99,9 @@ class Recall(Accumulator):
     Recall = stem:[\frac{\sum(preds * labels)}{\sum(labels)}]
 
     Usage:
-<<<<<<< HEAD
 
     * Call the update function to add predictions and labels.
     * Get recall score at any point by accessing the value proporty.
-=======
-        Call the update function to add predictions and labels.
-        Get recall score at any point by accessing the value property.
->>>>>>> f8c316a4eae0a37cc18fcf91dd666569a8d01f78
     """
 
     def update(self, preds: ndarray, labels: ndarray) -> None:
@@ -147,14 +137,9 @@ class Precision(Accumulator):
     Precision = stem:[\frac{\sum(preds * labels)}{\sum(preds)}]
 
     Usage:
-<<<<<<< HEAD
 
     * Call the update function to add predictions and labels.
     * Get precision score at any point by accessing the value proporty.
-=======
-        Call the update function to add predictions and labels.
-        Get precision score at any point by accessing the value property.
->>>>>>> f8c316a4eae0a37cc18fcf91dd666569a8d01f78
     """
 
     def update(self, preds: ndarray, labels: ndarray) -> None:

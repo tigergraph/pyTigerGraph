@@ -1,6 +1,31 @@
-"""Graph Data Science Functions
-The Graph Data Science Functions are a collection of functions that are used to perform various graph data science and graph machine learning tasks.
-In order to use these functions, confirm that the appropriate prerequisites are installed.
+"""Factory Functions
+Factory Functions are a special collection of functions that return an instance of a class.
+
+All factory functions are methods of the `GDS` class. 
+You can call a factory function after instantiating a TigerGraph Connection. 
+For example:
+
+[,python]
+----
+conn = TigerGraphConnection(
+    host="http://127.0.0.1", 
+    graphname="Cora",
+    username="tigergraph",
+    password="tigergraph",
+    useCert=False
+)
+edge_loader = conn.gds.edgeLoader(
+    num_batches=1,
+    attributes=["time", "is_train"])
+----
+
+The object returned has access to instance methods of the class. 
+You can find the reference for those classes on the following pages:
+
+* link:https://docs.tigergraph.com/pytigergraph/current/gds/dataloaders[Data loaders]
+* link:https://docs.tigergraph.com/pytigergraph/current/gds/featurizer[Featurizer]
+* link:https://docs.tigergraph.com/pytigergraph/current/gds/metrics[Metrics]
+* link:https://docs.tigergraph.com/pytigergraph/current/gds/dataloaders[Splitters]
 """
 from typing import TYPE_CHECKING, Union
 

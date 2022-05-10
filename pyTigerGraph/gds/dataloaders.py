@@ -1,6 +1,10 @@
 """Data Loaders
-Graph Machine Learning Data Loaders for pyTigerGraph. Uses either REST++ service or Kafka (Kafka is an enterprise feature).
-Requires `querywriters` user permissions for full functionality. Refer to https://docs.tigergraph.com/tigergraph-server/current/user-access/access-control-model#_built_in_roles for more information.
+:description: Data loader classes in the pyTigerGraph GDS module. 
+
+Data loaders are classes in the pyTigerGraph Graph Data Science (GDS) module. 
+You can define an instance of each data loader class through a link:https://docs.tigergraph.com/pytigergraph/current/gds/factory-functions[factory function].
+
+Requires `querywriters` user permissions for full functionality. 
 """
 
 import io
@@ -851,7 +855,35 @@ class BaseLoader:
 
 
 class NeighborLoader(BaseLoader):
-    """NeighborLoader"""
+    """NeighborLoader
+    
+    A data loader that performs neighbor sampling.
+    See more details about the specific sampling method in 
+    link:https://arxiv.org/abs/1706.02216[Inductive Representation Learning on Large Graphs].
+
+    It first chooses `batch_size` number of vertices as seeds,
+    then picks `num_neighbors` number of neighbors of each seed at random,
+    then `num_neighbors` neighbors of each neighbor, and repeat for `num_hops`.
+    This generates one subgraph. As you loop through this data loader, every
+    vertex will at some point be chosen as a seed and you will get the subgraph
+    expanded from the seed. If you want to limit seeds to certain vertices, the boolean
+    attribute provided to `filter_by` will be used to indicate which vertices can be
+    included as seeds.
+
+
+    There are two ways to use the data loader:
+
+    * It can be used as an iterable, which means you can loop through
+        it to get every batch of data. If you load all data at once (`num_batches=1`),
+        there will be only one batch (of all the data) in the iterator.
+    * You can access the `data` property of the class directly. If there is
+        only one batch of data to load, it will give you the batch directly instead
+        of an iterator, which might make more sense in that case. If there are
+        multiple batches of data to load, it will return the loader itself.
+
+    See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_neighborloader.ipynb[the ML Workbench tutorial notebook]
+        for examples.
+    """
     def __init__(
         self,
         graph: "TigerGraphConnection",
@@ -881,117 +913,8 @@ class NeighborLoader(BaseLoader):
         kafka_address_producer: str = None,
         timeout: int = 300000,
     ) -> None:
-        """A data loader that performs neighbor sampling.
-        See more details about the specific sampling method in 
-        link:https://arxiv.org/abs/1706.02216[Inductive Representation Learning on Large Graphs] paper.
-
-        It first chooses `batch_size` number of vertices as seeds,
-        then picks `num_neighbors` number of neighbors of each seed at random,
-        then `num_neighbors` neighbors of each neighbor, and repeat for `num_hops`.
-        This generates one subgraph. As you loop through this data loader, every
-        vertex will at some point be chosen as a seed and you will get the subgraph
-        expanded from the seed. If you want to limit seeds to certain vertices, the boolean
-        attribute provided to `filter_by` will be used to indicate which vertices can be
-        included as seeds.
-
-        NOTE: When you initialize the loader on a graph for the first time,
-        the initialization might take a minute as it installs the corresponding
-        query to the database. However, the query installation only
-        needs to be done once, so it will take no time when you initialize the loader
-        on the same graph again.
-
-
-        There are two ways to use the data loader:
-
-        * First, it can be used as an iterable, which means you can loop through
-          it to get every batch of data. If you load all data at once (`num_batches=1`),
-          there will be only one batch (of all the data) in the iterator.
-        * Second, you can access the `data` property of the class directly. If there is
-          only one batch of data to load, it will give you the batch directly instead
-          of an iterator, which might make more sense in that case. If there are
-          multiple batches of data to load, it will return the loader itself.
-
-        See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_neighborloader.ipynb[the ML Workbench tutorial notebook]
-        for examples.
-
-        Args:
-            graph (TigerGraphConnection):
-                Connection to the TigerGraph database.
-            v_in_feats (list, optional):
-                Vertex attributes to be used as input features.
-                Only numeric and boolean attributes are allowed. The type of an attrbiute
-                is automatically determined from the database schema. Defaults to None.
-            v_out_labels (list, optional):
-                Vertex attributes to be used as labels for
-                prediction. Only numeric and boolean attributes are allowed. Defaults to None.
-            v_extra_feats (list, optional):
-                Other attributes to get such as indicators of
-                train/test data. All types of attributes are allowed. Defaults to None.
-            e_in_feats (list, optional):
-                Edge attributes to be used as input features.
-                Only numeric and boolean attributes are allowed. The type of an attrbiute
-                is automatically determined from the database schema. Defaults to None.
-            e_out_labels (list, optional):
-                Edge attributes to be used as labels for
-                prediction. Only numeric and boolean attributes are allowed. Defaults to None.
-            e_extra_feats (list, optional):
-                Other edge attributes to get such as indicators of
-                train/test data. All types of attributes are allowed. Defaults to None.
-            batch_size (int, optional):
-                Number of vertices as seeds in each batch.
-                Defaults to None.
-            num_batches (int, optional):
-                Number of batches to split the vertices into as seeds.
-                Defaults to 1.
-            num_neighbors (int, optional):
-                Number of neighbors to sample for each vertex.
-                Defaults to 10.
-            num_hops (int, optional):
-                Number of hops to traverse when sampling neighbors.
-                Defaults to 2.
-            shuffle (bool, optional):
-                Whether to shuffle the vertices before loading data.
-                Defaults to False.
-            filter_by (str, optional):
-                A boolean attribute used to indicate which vertices
-                can be included as seeds. Defaults to None.
-            output_format (str, optional):
-                Format of the output data of the loader. Only
-                "PyG", "DGL" and "dataframe" are supported. Defaults to "PyG".
-            add_self_loop (bool, optional):
-                Whether to add self-loops to the graph. Defaults to False.
-            loader_id (str, optional):
-                An identifier of the loader which can be any string. It is
-                also used as the Kafka topic name. If `None`, a random string will be generated
-                for it. Defaults to None.
-            buffer_size (int, optional):
-                Number of data batches to prefetch and store in memory. Defaults to 4.
-            kafka_address (str, optional):
-                Address of the kafka broker. Defaults to None.
-            kafka_max_msg_size (int, optional):
-                Maximum size of a Kafka message in bytes.
-                Defaults to 104857600.
-            kafka_num_partitions (int, optional):
-                Number of partitions for the topic created by this loader.
-                Defaults to 1.
-            kafka_replica_factor (int, optional):
-                Number of replications for the topic created by this
-                loader. Defaults to 1.
-            kafka_auto_del_topic (bool, optional):
-                Whether to delete the Kafka topic once the 
-                loader finishes pulling data. Defaults to True.
-            kafka_retention_ms (int, optional):
-                Retention time for messages in the topic created by this
-                loader in milliseconds. Defaults to 60000.
-            kafka_address_consumer (str, optional):
-                Address of the kafka broker that a consumer
-                should use. Defaults to be the same as `kafkaAddress`.
-            kafka_address_producer (str, optional):
-                Address of the kafka broker that a producer
-                should use. Defaults to be the same as `kafkaAddress`.
-            timeout (int, optional):
-                Timeout value for GSQL queries, in ms. Defaults to 300000.
-        """
+        """NO DOC"""
+  
         super().__init__(
             graph,
             loader_id,
@@ -1178,7 +1101,27 @@ class NeighborLoader(BaseLoader):
 
 
 class EdgeLoader(BaseLoader):
-    """Edge Loader."""
+    """Edge Loader.
+    
+    Data loader that pulls batches of edges from database.
+
+    It divides edges into `num_batches` and returns each batch separately.
+        The boolean attribute provided to `filter_by` indicates which edges are included.
+        If you need random batches, set `shuffle` to True.
+
+    There are two ways to use the data loader.
+
+    * It can be used as an iterable, which means you can loop through
+          it to get every batch of data. If you load all edges at once (`num_batches=1`),
+          there will be only one batch (of all the edges) in the iterator.
+    * You can access the `data` property of the class directly. If there is
+          only one batch of data to load, it will give you the batch directly instead
+          of an iterator, which might make more sense in that case. If there are
+          multiple batches of data to load, it will return the loader again.
+
+    See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_edgeloader.ipynb[the ML Workbench edge loader tutorial notebook]
+        for examples.
+    """
     def __init__(
         self,
         graph: "TigerGraphConnection",
@@ -1200,82 +1143,8 @@ class EdgeLoader(BaseLoader):
         kafka_address_producer: str = None,
         timeout: int = 300000,
     ) -> None:
-        """Data loader that pulls batches of edges from database.
-
-        It divides edges into `num_batches` and returns each batch separately.
-        The boolean attribute provided to `filter_by` indicates which edges are included.
-        If you need random batches, set `shuffle` to True.
-
-        NOTE: When you initialize the loader on a graph for the first time,
-        the initialization might take a minute as it installs the corresponding
-        query to the database. However, the query installation only
-        needs to be done once, so it will take no time when you initialize the loader
-        on the same graph again.
-
-        There are two ways to use the data loader.
-
-        * It can be used as an iterable, which means you can loop through
-          it to get every batch of data. If you load all edges at once (`num_batches=1`),
-          there will be only one batch (of all the edges) in the iterator.
-        * You can access the `data` property of the class directly. If there is
-          only one batch of data to load, it will give you the batch directly instead
-          of an iterator, which might make more sense in that case. If there are
-          multiple batches of data to load, it will return the loader again.
-
-        See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_edgeloader.ipynb[the ML Workbench edge loader tutorial notebook]
-        for examples.
-
-        Args:
-            graph (TigerGraphConnection):
-                Connection to the TigerGraph database.
-            attributes (list, optional):
-                Edge attributes to be included. Defaults to None.
-            batch_size (int, optional): 
-                Number of edges in each batch.
-                Defaults to None.
-            num_batches (int, optional):
-                Number of batches to split the edges.
-                Defaults to 1.
-            shuffle (bool, optional):
-                Whether to shuffle the edges before loading data.
-                Defaults to False.
-            filter_by (str, optional):
-                A boolean attribute used to indicate which edges
-                are included. Defaults to None.
-            output_format (str, optional):
-                Format of the output data of the loader. Only
-                "dataframe" is supported. Defaults to "dataframe".
-            loader_id (str, optional):
-                An identifier of the loader which can be any string. It is
-                also used as the Kafka topic name. If `None`, a random string will be generated
-                for it. Defaults to None.
-            buffer_size (int, optional):
-                Number of data batches to prefetch and store in memory. Defaults to 4.
-            kafka_address (str, optional):
-                Address of the kafka broker. Defaults to None.
-            kafka_max_msg_size (int, optional):
-                Maximum size of a Kafka message in bytes.
-                Defaults to 104857600.
-            kafka_num_partitions (int, optional):
-                Number of partitions for the topic created by this loader.
-                Defaults to 1.
-            kafka_replica_factor (int, optional):
-                Number of replications for the topic created by this
-                loader. Defaults to 1.
-            kafka_retention_ms (int, optional):
-                Retention time for messages in the topic created by this
-                loader in milliseconds. Defaults to 60000.
-            kafka_auto_del_topic (bool, optional):
-                Whether to delete the Kafka topic once the 
-                loader finishes pulling data. Defaults to True.
-            kafka_address_consumer (str, optional):
-                Address of the kafka broker that a consumer
-                should use. Defaults to be the same as `kafkaAddress`.
-            kafka_address_producer (str, optional):
-                Address of the kafka broker that a producer
-                should use. Defaults to be the same as `kafkaAddress`.
-            timeout (int, optional):
-                Timeout value for GSQL queries, in ms. Defaults to 300000.
+        """
+        NO DOC.
         """
         super().__init__(
             graph,
@@ -1436,7 +1305,27 @@ class EdgeLoader(BaseLoader):
 
 
 class VertexLoader(BaseLoader):
-    """Vertex Loader."""
+    """Vertex Loader.
+    
+    Data loader that pulls batches of vertices from database.
+
+    It divides vertices into `num_batches` and returns each batch separately.
+        The boolean attribute provided to `filter_by` indicates which vertices are included.
+        If you need random batches, set `shuffle` to True.
+
+    There are two ways to use the data loader:
+
+    * First, it can be used as an iterable, which means you can loop through
+          it to get every batch of data. If you load all vertices at once (`num_batches=1`),
+          there will be only one batch (of all the vertices) in the iterator.
+    * Second, you can access the `data` property of the class directly. If there is
+          only one batch of data to load, it will give you the batch directly instead
+          of an iterator, which might make more sense in that case. If there are
+          multiple batches of data to load, it will return the loader again.
+
+    See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_vertexloader.ipynb[the ML Workbench tutorial notebook]
+        for examples.
+    """
     def __init__(
         self,
         graph: "TigerGraphConnection",
@@ -1458,82 +1347,8 @@ class VertexLoader(BaseLoader):
         kafka_address_producer: str = None,
         timeout: int = 300000,
     ) -> None:
-        """Data loader that pulls batches of vertices from database.
-
-        It divides vertices into `num_batches` and returns each batch separately.
-        The boolean attribute provided to `filter_by` indicates which vertices are included.
-        If you need random batches, set `shuffle` to True.
-
-        NOTE: When you initialize the loader on a graph for the first time,
-        the initialization might take a minute as it installs the corresponding
-        query to the database. However, the query installation only
-        needs to be done once, so it will take no time when you initialize the loader
-        on the same graph again.
-
-        There are two ways to use the data loader:
-
-        * First, it can be used as an iterable, which means you can loop through
-          it to get every batch of data. If you load all vertices at once (`num_batches=1`),
-          there will be only one batch (of all the vertices) in the iterator.
-        * Second, you can access the `data` property of the class directly. If there is
-          only one batch of data to load, it will give you the batch directly instead
-          of an iterator, which might make more sense in that case. If there are
-          multiple batches of data to load, it will return the loader again.
-
-        See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_vertexloader.ipynb[the ML Workbench tutorial notebook]
-        for examples.
-
-        Args:
-            graph (TigerGraphConnection):
-                Connection to the TigerGraph database.
-            attributes (list, optional):
-                Vertex attributes to be included. Defaults to None.
-            batch_size (int, optional):
-                Number of vertices in each batch.
-                Defaults to None.
-            num_batches (int, optional):
-                Number of batches to split the vertices.
-                Defaults to 1.
-            shuffle (bool, optional):
-                Whether to shuffle the vertices before loading data.
-                Defaults to False.
-            filter_by (str, optional):
-                A boolean attribute used to indicate which vertices
-                can be included. Defaults to None.
-            output_format (str, optional):
-                Format of the output data of the loader. Only
-                "dataframe" is supported. Defaults to "dataframe".
-            loader_id (str, optional):
-                An identifier of the loader which can be any string. It is
-                also used as the Kafka topic name. If `None`, a random string will be generated
-                for it. Defaults to None.
-            buffer_size (int, optional):
-                Number of data batches to prefetch and store in memory. Defaults to 4.
-            kafka_address (str, optional):
-                Address of the kafka broker. Defaults to None.
-            kafka_max_msg_size (int, optional):
-                Maximum size of a Kafka message in bytes.
-                Defaults to 104857600.
-            kafka_num_partitions (int, optional):
-                Number of partitions for the topic created by this loader.
-                Defaults to 1.
-            kafka_replica_factor (int, optional):
-                Number of replications for the topic created by this
-                loader. Defaults to 1.
-            kafka_retention_ms (int, optional):
-                Retention time for messages in the topic created by this
-                loader in milliseconds. Defaults to 60000.
-            kafka_auto_del_topic (bool, optional):
-                Whether to delete the Kafka topic once the 
-                loader finishes pulling data. Defaults to True.
-            kafka_address_consumer (str, optional):
-                Address of the kafka broker that a consumer
-                should use. Defaults to be the same as `kafkaAddress`.
-            kafka_address_producer (str, optional):
-                Address of the kafka broker that a producer
-                should use. Defaults to be the same as `kafkaAddress`.
-            timeout (int, optional):
-                Timeout value for GSQL queries, in ms. Defaults to 300000.
+        """
+        NO DOC
         """
         super().__init__(
             graph,
@@ -1698,7 +1513,26 @@ class VertexLoader(BaseLoader):
 
 
 class GraphLoader(BaseLoader):
-    """Graph Loader."""
+    """Graph Loader.
+    
+    Data loader that pulls batches of vertices and edges from database.
+
+    Different from NeighborLoader which produces connected subgraphs, this loader
+        generates (random) batches of edges and vertices attached to those edges.
+
+    There are two ways to use the data loader:
+
+    * It can be used as an iterable, which means you can loop through
+          it to get every batch of data. If you load all data at once (`num_batches=1`),
+          there will be only one batch (of all the data) in the iterator.
+    * You can access the `data` property of the class directly. If there is
+          only one batch of data to load, it will give you the batch directly instead
+          of an iterator, which might make more sense in that case. If there are
+          multiple batches of data to load, it will return the loader itself.
+
+    See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_graphloader.ipynb[the ML Workbench tutorial notebook for graph loaders]
+         for examples.
+    """
     def __init__(
         self,
         graph: "TigerGraphConnection",
@@ -1726,101 +1560,8 @@ class GraphLoader(BaseLoader):
         kafka_address_producer: str = None,
         timeout: int = 300000,
     ) -> None:
-        """Data loader that pulls batches of vertices and edges from database.
-
-        Different from NeighborLoader which produces connected subgraphs, this loader
-        generates (random) batches of edges and vertices attached to those edges.
-
-        NOTE: When you initialize the loader on a graph for the first time,
-        the initialization might take a minute as it installs the corresponding
-        query to the database. However, the query installation only
-        needs to be done once, so it will take no time when you initialize the loader
-        on the same graph again.
-
-        There are two ways to use the data loader:
-
-        * It can be used as an iterable, which means you can loop through
-          it to get every batch of data. If you load all data at once (`num_batches=1`),
-          there will be only one batch (of all the data) in the iterator.
-        * You can access the `data` property of the class directly. If there is
-          only one batch of data to load, it will give you the batch directly instead
-          of an iterator, which might make more sense in that case. If there are
-          multiple batches of data to load, it will return the loader itself.
-
-        See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_graphloader.ipynb[the ML Workbench tutorial notebook for graph loaders]
-         for examples.
-
-        Args:
-            graph (TigerGraphConnection):
-                Connection to the TigerGraph database.
-            v_in_feats (list, optional):
-                Vertex attributes to be used as input features.
-                Only numeric and boolean attributes are allowed. The type of an attrbiute
-                is automatically determined from the database schema. Defaults to None.
-            v_out_labels (list, optional):
-                Vertex attributes to be used as labels for
-                prediction. Only numeric and boolean attributes are allowed. Defaults to None.
-            v_extra_feats (list, optional):
-                Other attributes to get such as indicators of
-                train/test data. All types of attributes are allowed. Defaults to None.
-            e_in_feats (list, optional):
-                Edge attributes to be used as input features.
-                Only numeric and boolean attributes are allowed. The type of an attrbiute
-                is automatically determined from the database schema. Defaults to None.
-            e_out_labels (list, optional):
-                Edge attributes to be used as labels for
-                prediction. Only numeric and boolean attributes are allowed. Defaults to None.
-            e_extra_feats (list, optional):
-                Other edge attributes to get such as indicators of
-                train/test data. All types of attributes are allowed. Defaults to None.
-            batch_size (int, optional): 
-                Number of edges in each batch.
-                Defaults to None.
-            num_batches (int, optional):
-                Number of batches to split the edges.
-                Defaults to 1.
-            shuffle (bool, optional):
-                Whether to shuffle the data before loading.
-                Defaults to False.
-            filter_by (str, optional):  
-                A boolean attribute used to indicate which edges
-                can be included. Defaults to None.
-            output_format (str, optional):
-                Format of the output data of the loader. Only
-                "PyG", "DGL" and "dataframe" are supported. Defaults to "dataframe".
-            add_self_loop (bool, optional):
-                Whether to add self-loops to the graph. Defaults to False.
-            loader_id (str, optional):
-                An identifier of the loader which can be any string. It is
-                also used as the Kafka topic name. If `None`, a random string will be generated
-                for it. Defaults to None.
-            buffer_size (int, optional):
-                Number of data batches to prefetch and store in memory. Defaults to 4.
-            kafka_address (str, optional):
-                Address of the kafka broker. Defaults to None.
-            kafka_max_msg_size (int, optional):
-                Maximum size of a Kafka message in bytes.
-                Defaults to 104857600.
-            kafka_num_partitions (int, optional):
-                Number of partitions for the topic created by this loader.
-                Defaults to 1.
-            kafka_replica_factor (int, optional):
-                Number of replications for the topic created by this loader.
-                Defaults to 1.
-            kafka_retention_ms (int, optional):
-                Retention time for messages in the topic created by this
-                loader in milliseconds. Defaults to 60000.
-            kafka_auto_del_topic (bool, optional):
-                Whether to delete the Kafka topic once the 
-                loader finishes pulling data. Defaults to True.
-            kafka_address_consumer (str, optional): 
-                Address of the kafka broker that a consumer
-                should use. Defaults to be the same as `kafkaAddress`.
-            kafka_address_producer (str, optional):
-                Address of the kafka broker that a producer
-                should use. Defaults to be the same as `kafkaAddress`.
-            timeout (int, optional):
-                Timeout value for GSQL queries, in ms. Defaults to 300000.
+        """
+        NO DOC
         """
         super().__init__(
             graph,
