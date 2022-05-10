@@ -11,8 +11,9 @@ class Accumulator:
     """Base Metric Accumulator.
 
     Usage:
-    - Call the update function to add a value.
-    - Get running average by accessing the mean proporty, running sum by the total property, and
+
+    * Call the update function to add a value.
+    * Get running average by accessing the mean proporty, running sum by the total property, and
     number of values by the count property.
     """
 
@@ -60,8 +61,9 @@ class Accuracy(Accumulator):
     Accuracy = sum(preds == labels) / len(labels)
 
     Usage:
-    - Call the update function to add predictions and labels.
-    - Get accuracy score at any point by accessing the value proporty.
+
+    * Call the update function to add predictions and labels.
+    * Get accuracy score at any point by accessing the value proporty.
     """
 
     def update(self, preds: ndarray, labels: ndarray) -> None:
@@ -94,11 +96,12 @@ class Accuracy(Accumulator):
 class Recall(Accumulator):
     """Recall Metric.
 
-    Recall = sum(preds * labels) / sum(labels)
+    Recall = stem:[\frac{\sum(preds * labels)}{\sum(labels)}]
 
     Usage:
-    - Call the update function to add predictions and labels.
-    - Get recall score at any point by accessing the value proporty.
+
+    * Call the update function to add predictions and labels.
+    * Get recall score at any point by accessing the value proporty.
     """
 
     def update(self, preds: ndarray, labels: ndarray) -> None:
@@ -131,11 +134,12 @@ class Recall(Accumulator):
 class Precision(Accumulator):
     """Precision Metric.
 
-    Precision = sum(preds * labels) / sum(preds)
+    Precision = stem:[\frac{\sum(preds * labels)}{\sum(preds)}]
 
     Usage:
-    - Call the update function to add predictions and labels.
-    - Get precision score at any point by accessing the value proporty.
+
+    * Call the update function to add predictions and labels.
+    * Get precision score at any point by accessing the value proporty.
     """
 
     def update(self, preds: ndarray, labels: ndarray) -> None:

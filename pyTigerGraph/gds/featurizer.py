@@ -1,6 +1,5 @@
 """Featurizer
-Runs and installs Graph Data Science Algorithms. Requires `designer` user permissions for full functionality. 
-See https://docs.tigergraph.com/tigergraph-server/current/user-access/access-control-model#_built_in_roles for more information.
+Runs and installs Graph Data Science Algorithms. Requires the authenticated user to have all `designer` privileges for full functionality. 
 """
 
 from typing import TYPE_CHECKING
@@ -19,9 +18,10 @@ class Featurizer:
     conn: "TigerGraphConnection"):
     
         """Class for Feature Extraction.
-        The job of a feature extracter is to install and run the current algorithms in graph data science libarary.
-        Currently, a set of graph algorithms are moved to the gsql folder and have been saved into a dictionary along with their output type.
-        To add a specific algorithm, it should be added both to the gsql folder and class variable dictionary. 
+        The job of a feature extracter is to install and run algorithms in graph data science libarary.
+        Currently, a set of graph algorithms are moved to the `gsql` folder, which you can find in the same directory as this file,
+         and have been saved into a dictionary along with their output type.
+        To add a specific algorithm, it should be added both to the `gsql` folder and class variable dictionary. 
         Args:
             conn (TigerGraphConnection): Connection to the TigerGraph database.
         """
@@ -72,8 +72,8 @@ class Featurizer:
 
     def installAlgorithm(self,query_name:str,schema_type:str="VERTEX",attr_name:str=None):
         '''
-        Checks if the query is already installed, if not it will install the query and change the schema if an attribute needs to be added.
-        It can change 
+        Checks if the query is already installed. If the query is not installed,
+         it installs the query and changes the schema if an attribute needs to be added.
         
         Args:
             query_name (str): 
@@ -162,7 +162,7 @@ class Featurizer:
     def runAlgorithm(self,name_of_query:str,params:dict = None, timeout:int=2147480,sizeLimit:int=None):
         '''
         Runs an installed query.
-        The query must be already created and installed in the graph.
+        The query must already be installed in the graph.
         If the query accepts input parameters and the parammeters have not been provided, they will be initialized by parsing the query.
         Args:
             name_of_query:
@@ -170,11 +170,9 @@ class Featurizer:
             params:
                 Query parameters. a dictionary.
             timeout:
-                Maximum duration for successful query execution (in milliseconds).
-                See https://docs.tigergraph.com/tigergraph-server/current/api/#_gsql_query_timeout
+                Timeout limit for successful query execution in milliseconds.
             sizeLimit:
-                Maximum size of response (in bytes).
-                See https://docs.tigergraph.com/tigergraph-server/current/api/#_response_size
+                Maximum size of response in bytes.
 
         Returns:
             The output of the query, a list of output elements (vertex sets, edge sets, variables,

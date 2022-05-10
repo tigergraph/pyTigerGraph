@@ -1,6 +1,6 @@
 """Graph Data Science Functions
 The Graph Data Science Functions are a collection of functions that are used to perform various graph data science and graph machine learning tasks.
-In order to use these functions, confirm that the appropriate prerequisites are installed. Check the docs for more details.
+In order to use these functions, confirm that the appropriate prerequisites are installed.
 """
 from typing import TYPE_CHECKING, Union
 
@@ -20,6 +20,7 @@ class GDS:
             Args:
                 conn (TigerGraphConnection):
                     Accept a TigerGraphConnection to run queries with
+                    
             Returns:
                 None
         """
@@ -53,11 +54,11 @@ class GDS:
         kafka_address_producer: str = None,
         timeout: int = 300000,
     ) -> NeighborLoader:
-        """Get a graph loader that performs neighbor sampling as introduced in the
-        Inductive Representation Learning on Large Graphs (https://arxiv.org/abs/1706.02216)
-        paper.
+        """A data loader that performs neighbor sampling.
+        See more details about the specific sampling method in 
+        link:https://arxiv.org/abs/1706.02216[Inductive Representation Learning on Large Graphs].
 
-        Specifically, the loader first chooses `batch_size` number of vertices as seeds,
+        It first chooses `batch_size` number of vertices as seeds,
         then picks `num_neighbors` number of neighbors of each seed at random,
         then `num_neighbors` neighbors of each neighbor, and repeat for `num_hops`.
         This generates one subgraph. As you loop through this data loader, every
@@ -66,15 +67,14 @@ class GDS:
         attribute provided to `filter_by` will be used to indicate which vertices can be
         included as seeds.
 
-        **Note**: For the first time you initialize the loader on a graph in TigerGraph,
+        NOTE: When you initialize the loader on a graph for the first time,
         the initialization might take a minute as it installs the corresponding
-        query to the database and optimizes it. However, the query installation only
+        query to the database. However, the query installation only
         needs to be done once, so it will take no time when you initialize the loader
-        on the same TG graph again.
+        on the same graph again.
 
-        There are two ways to use the data loader. See
-        https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/main/tutorials/basics/2_dataloaders.ipynb
-        for examples.
+
+        There are two ways to use the data loader:
 
         * First, it can be used as an iterable, which means you can loop through
           it to get every batch of data. If you load all data at once (`num_batches=1`),
@@ -84,7 +84,10 @@ class GDS:
           of an iterator, which might make more sense in that case. If there are
           multiple batches of data to load, it will return the loader itself.
 
-        See the following documentation for more details about the Neighbor Loader arguments:
+        See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_neighborloader.ipynb[the ML Workbench tutorial notebook]
+        for examples.
+
+        See the following documentation for more details about `NeighborLoader` arguments:
         xref:dataloaders.adoc#_neighbor_loader[Neighbor Loader Documentation]
         """
         return NeighborLoader(
@@ -136,33 +139,33 @@ class GDS:
         kafka_address_producer: str = None,
         timeout: int = 300000,
     ) -> EdgeLoader:
-        """Get a graph loader that pulls batches of edges from database.
-        Edge attributes are not supported.
+        """Data loader that pulls batches of edges from database.
 
-        Specifically, it divides edges into `num_batches` and returns each batch separately.
+        It divides edges into `num_batches` and returns each batch separately.
         The boolean attribute provided to `filter_by` indicates which edges are included.
         If you need random batches, set `shuffle` to True.
 
-        **Note**: For the first time you initialize the loader on a graph in TigerGraph,
+        NOTE: When you initialize the loader on a graph for the first time,
         the initialization might take a minute as it installs the corresponding
-        query to the database and optimizes it. However, the query installation only
+        query to the database. However, the query installation only
         needs to be done once, so it will take no time when you initialize the loader
-        on the same TG graph again.
+        on the same graph again.
 
-        There are two ways to use the data loader. See
-        https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/main/tutorials/basics/2_dataloaders.ipynb
-        for examples.
+        There are two ways to use the data loader.
 
-        * First, it can be used as an iterable, which means you can loop through
+        * It can be used as an iterable, which means you can loop through
           it to get every batch of data. If you load all edges at once (`num_batches=1`),
           there will be only one batch (of all the edges) in the iterator.
-        * Second, you can access the `data` property of the class directly. If there is
+        * You can access the `data` property of the class directly. If there is
           only one batch of data to load, it will give you the batch directly instead
           of an iterator, which might make more sense in that case. If there are
           multiple batches of data to load, it will return the loader again.
 
-        See the following documentation for more details about the Edge Loader arguments:
-        xref:dataloaders.adoc#_edge_loader[Edge Loader Documentation]
+        See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_edgeloader.ipynb[the ML Workbench edge loader tutorial notebook]
+        for examples.
+
+        See
+        xref:dataloaders.adoc#_edge_loader[`EdgeLoader` documentation] for more details about the `EdgeLoader` arguments,
         """
         return EdgeLoader(
             self.conn,
@@ -205,21 +208,19 @@ class GDS:
             kafka_address_producer: str = None,
             timeout: int = 300000,
     ) -> VertexLoader:
-        """Get a data loader that pulls batches of vertices from database.
+        """Data loader that pulls batches of vertices from database.
 
-        Specifically, it divides vertices into `num_batches` and returns each batch separately.
+        It divides vertices into `num_batches` and returns each batch separately.
         The boolean attribute provided to `filter_by` indicates which vertices are included.
         If you need random batches, set `shuffle` to True.
 
-        **Note**: For the first time you initialize the loader on a graph in TigerGraph,
+        NOTE: When you initialize the loader on a graph for the first time,
         the initialization might take a minute as it installs the corresponding
-        query to the database and optimizes it. However, the query installation only
+        query to the database. However, the query installation only
         needs to be done once, so it will take no time when you initialize the loader
-        on the same TG graph again.
+        on the same graph again.
 
-        There are two ways to use the data loader.
-        See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/main/tutorials/basics/2_dataloaders.ipynb
-        for examples.
+        There are two ways to use the data loader:
 
         * First, it can be used as an iterable, which means you can loop through
           it to get every batch of data. If you load all vertices at once (`num_batches=1`),
@@ -229,8 +230,10 @@ class GDS:
           of an iterator, which might make more sense in that case. If there are
           multiple batches of data to load, it will return the loader again.
 
-        See the following documentation for more details about the Vertex Loader arguments:
-        xref:dataloaders.adoc#_vertex_loader[Vertex Loader Documentation]
+        See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_vertexloader.ipynb[the ML Workbench tutorial notebook]
+        for examples.
+
+        See xref:dataloaders.adoc#_vertex_loader[`VertexLoader` documentation] for more details about the VertexLoader arguments
         """
         return VertexLoader(
             self.conn,
@@ -279,30 +282,31 @@ class GDS:
         kafka_address_producer: str = None,
         timeout: int = 300000,
     ) -> GraphLoader:
-        """Get a data loader that pulls batches of vertices and edges from database.
+        """Data loader that pulls batches of vertices and edges from database.
 
         Different from NeighborLoader which produces connected subgraphs, this loader
         generates (random) batches of edges and vertices attached to those edges.
 
-        **Note**: For the first time you initialize the loader on a graph in TigerGraph,
+        NOTE: When you initialize the loader on a graph for the first time,
         the initialization might take a minute as it installs the corresponding
-        query to the database and optimizes it. However, the query installation only
+        query to the database. However, the query installation only
         needs to be done once, so it will take no time when you initialize the loader
-        on the same TG graph again.
+        on the same graph again.
 
-        There are two ways to use the data loader. See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/main/tutorials/basics/2_dataloaders.ipynb
-        for examples.
+        There are two ways to use the data loader:
 
-        * First, it can be used as an iterable, which means you can loop through
+        * It can be used as an iterable, which means you can loop through
           it to get every batch of data. If you load all data at once (`num_batches=1`),
           there will be only one batch (of all the data) in the iterator.
-        * Second, you can access the `data` property of the class directly. If there is
+        * You can access the `data` property of the class directly. If there is
           only one batch of data to load, it will give you the batch directly instead
           of an iterator, which might make more sense in that case. If there are
           multiple batches of data to load, it will return the loader itself.
 
-        See the following documentation for more details about the Graph Loader arguments:
-        xref:dataloaders.adoc#_graph_loader[Graph Loader Documentation]
+        See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_graphloader.ipynb[the ML Workbench tutorial notebook for graph loaders]
+         for examples.
+
+        See xref:dataloaders.adoc#_graph_loader[Graph Loader Documentation] for more details about the Graph Loader arguments:
         """
         return GraphLoader(
             self.conn,
@@ -345,30 +349,37 @@ class GDS:
         indicates which part a vertex belongs to.
 
         Usage:
-                1)  A random 60% of vertices will have their attribute "attr_name" set to True, and
-                others False. `attr_name` can be any attribute that exists in the database (same below).
-                Example:
-                [source,python]
-                conn = TigerGraphConnection(...)
-                splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6)
-                splitter.run()
-            
-                2) A random 60% of vertices will have their attribute "attr_name" set to True, and a
-                random 20% of vertices will have their attribute "attr_name2" set to True. The two
-                parts are disjoint. Example:
-                [source,python]
-                conn = TigerGraphConnection(...)
-                splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2)
-                splitter.run()
 
-                3)  A random 60% of vertices will have their attribute "attr_name" set to True, a
-                random 20% of vertices will have their attribute "attr_name2" set to True, and
-                another random 20% of vertices will have their attribute "attr_name3" set to True.
-                The three parts are disjoint. Example:
-                [source,python]
-                conn = TigerGraphConnection(...)
-                splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2, attr_name3=0.2)
-                splitter.run()
+            * A random 60% of vertices will have their attribute `attr_name` set to True, and
+            others False. `attr_name` can be any attribute that exists in the database (same below).
+            Example:
+            [source,python]
+            ----
+            conn = TigerGraphConnection(...)
+            splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6)
+            splitter.run()
+            ----
+
+            * A random 60% of vertices will have their attribute "attr_name" set to True, and a
+            random 20% of vertices will have their attribute "attr_name2" set to True. The two
+            parts are disjoint. Example:
+            [source,python]
+            ----
+            conn = TigerGraphConnection(...)
+            splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2)
+            splitter.run()
+            ----
+
+            * A random 60% of vertices will have their attribute "attr_name" set to True, a
+            random 20% of vertices will have their attribute "attr_name2" set to True, and
+            another random 20% of vertices will have their attribute "attr_name3" set to True.
+            The three parts are disjoint. Example:
+            [source,python]
+            ----
+            conn = TigerGraphConnection(...)
+            splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2, attr_name3=0.2)
+            splitter.run()
+            ----
 
         Args:
             timeout (int, optional):
@@ -383,7 +394,8 @@ class GDS:
         indicates which part an edge belongs to.
 
         Usage:
-            1) A random 60% of edges will have their attribute "attr_name" set to True, and 
+            
+            * A random 60% of edges will have their attribute "attr_name" set to True, and 
             others False. `attr_name` can be any attribute that exists in the database (same below).
             Example:
             [source,python]
@@ -391,7 +403,7 @@ class GDS:
             splitter = conn.gds.edgeSplitter(timeout, attr_name=0.6)
             splitter.run()
 
-            2) A random 60% of edges will have their attribute "attr_name" set to True, and a 
+            * A random 60% of edges will have their attribute "attr_name" set to True, and a 
             random 20% of edges will have their attribute "attr_name2" set to True. The two 
             parts are disjoint. Example:
             [source,python]
@@ -399,7 +411,7 @@ class GDS:
             splitter = conn.gds.edgeSplitter(timeout, attr_name=0.6, attr_name2=0.2)
             splitter.run()
 
-            3) A random 60% of edges will have their attribute "attr_name" set to True, a 
+            * A random 60% of edges will have their attribute "attr_name" set to True, a 
             random 20% of edges will have their attribute "attr_name2" set to True, and 
             another random 20% of edges will have their attribute "attr_name3" set to True. 
             The three parts are disjoint. Example:

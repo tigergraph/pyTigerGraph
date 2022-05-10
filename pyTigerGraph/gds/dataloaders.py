@@ -60,11 +60,11 @@ class BaseLoader:
         Kafka is used as the data streaming pipeline. Hence, for the data loader to work,
         a running Kafka cluster is required.
 
-        **Note**: For the first time you initialize the loader on a graph in TigerGraph,
+        NOTE: When you initialize the loader on a graph for the first time,
         the initialization might take a minute as it installs the corresponding
-        query to the database and optimizes it. However, the query installation only
+        query to the database. However, the query installation only
         needs to be done once, so it will take no time when you initialize the loader
-        on the same TG graph again.
+        on the same graph again.
 
         Args:
             graph (TigerGraphConnection):
@@ -851,7 +851,7 @@ class BaseLoader:
 
 
 class NeighborLoader(BaseLoader):
-    """Neighbor Loader."""
+    """NeighborLoader"""
     def __init__(
         self,
         graph: "TigerGraphConnection",
@@ -881,10 +881,11 @@ class NeighborLoader(BaseLoader):
         kafka_address_producer: str = None,
         timeout: int = 300000,
     ) -> None:
-        """A data loader that performs neighbor sampling as introduced in the
-        [Inductive Representation Learning on Large Graphs](https://arxiv.org/abs/1706.02216) paper.
+        """A data loader that performs neighbor sampling.
+        See more details about the specific sampling method in 
+        link:https://arxiv.org/abs/1706.02216[Inductive Representation Learning on Large Graphs] paper.
 
-        Specifically, it first chooses `batch_size` number of vertices as seeds,
+        It first chooses `batch_size` number of vertices as seeds,
         then picks `num_neighbors` number of neighbors of each seed at random,
         then `num_neighbors` neighbors of each neighbor, and repeat for `num_hops`.
         This generates one subgraph. As you loop through this data loader, every
@@ -893,14 +894,14 @@ class NeighborLoader(BaseLoader):
         attribute provided to `filter_by` will be used to indicate which vertices can be
         included as seeds.
 
-        **Note**: For the first time you initialize the loader on a graph in TigerGraph,
+        NOTE: When you initialize the loader on a graph for the first time,
         the initialization might take a minute as it installs the corresponding
-        query to the database and optimizes it. However, the query installation only
+        query to the database. However, the query installation only
         needs to be done once, so it will take no time when you initialize the loader
-        on the same TG graph again.
+        on the same graph again.
 
-        There are two ways to use the data loader. See [here](https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/main/tutorials/basics/2_dataloaders.ipynb)
-        for examples.
+
+        There are two ways to use the data loader:
 
         * First, it can be used as an iterable, which means you can loop through
           it to get every batch of data. If you load all data at once (`num_batches=1`),
@@ -909,6 +910,9 @@ class NeighborLoader(BaseLoader):
           only one batch of data to load, it will give you the batch directly instead
           of an iterator, which might make more sense in that case. If there are
           multiple batches of data to load, it will return the loader itself.
+
+        See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_neighborloader.ipynb[the ML Workbench tutorial notebook]
+        for examples.
 
         Args:
             graph (TigerGraphConnection):
@@ -1193,27 +1197,28 @@ class EdgeLoader(BaseLoader):
     ) -> None:
         """Data loader that pulls batches of edges from database.
 
-        Specifically, it divides edges into `num_batches` and returns each batch separately.
+        It divides edges into `num_batches` and returns each batch separately.
         The boolean attribute provided to `filter_by` indicates which edges are included.
         If you need random batches, set `shuffle` to True.
 
-        **Note**: For the first time you initialize the loader on a graph in TigerGraph,
+        NOTE: When you initialize the loader on a graph for the first time,
         the initialization might take a minute as it installs the corresponding
-        query to the database and optimizes it. However, the query installation only
+        query to the database. However, the query installation only
         needs to be done once, so it will take no time when you initialize the loader
-        on the same TG graph again.
+        on the same graph again.
 
         There are two ways to use the data loader.
-        See [here](https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/main/tutorials/basics/2_dataloaders.ipynb)
-        for examples.
 
-        * First, it can be used as an iterable, which means you can loop through
+        * It can be used as an iterable, which means you can loop through
           it to get every batch of data. If you load all edges at once (`num_batches=1`),
           there will be only one batch (of all the edges) in the iterator.
-        * Second, you can access the `data` property of the class directly. If there is
+        * You can access the `data` property of the class directly. If there is
           only one batch of data to load, it will give you the batch directly instead
           of an iterator, which might make more sense in that case. If there are
           multiple batches of data to load, it will return the loader again.
+
+        See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_edgeloader.ipynb[the ML Workbench edge loader tutorial notebook]
+        for examples.
 
         Args:
             graph (TigerGraphConnection):
@@ -1445,19 +1450,17 @@ class VertexLoader(BaseLoader):
     ) -> None:
         """Data loader that pulls batches of vertices from database.
 
-        Specifically, it divides vertices into `num_batches` and returns each batch separately.
+        It divides vertices into `num_batches` and returns each batch separately.
         The boolean attribute provided to `filter_by` indicates which vertices are included.
         If you need random batches, set `shuffle` to True.
 
-        **Note**: For the first time you initialize the loader on a graph in TigerGraph,
+        NOTE: When you initialize the loader on a graph for the first time,
         the initialization might take a minute as it installs the corresponding
-        query to the database and optimizes it. However, the query installation only
+        query to the database. However, the query installation only
         needs to be done once, so it will take no time when you initialize the loader
-        on the same TG graph again.
+        on the same graph again.
 
-        There are two ways to use the data loader.
-        See [here](https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/main/tutorials/basics/2_dataloaders.ipynb)
-        for examples.
+        There are two ways to use the data loader:
 
         * First, it can be used as an iterable, which means you can loop through
           it to get every batch of data. If you load all vertices at once (`num_batches=1`),
@@ -1466,6 +1469,9 @@ class VertexLoader(BaseLoader):
           only one batch of data to load, it will give you the batch directly instead
           of an iterator, which might make more sense in that case. If there are
           multiple batches of data to load, it will return the loader again.
+
+        See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_vertexloader.ipynb[the ML Workbench tutorial notebook]
+        for examples.
 
         Args:
             graph (TigerGraphConnection):
@@ -1710,22 +1716,24 @@ class GraphLoader(BaseLoader):
         Different from NeighborLoader which produces connected subgraphs, this loader
         generates (random) batches of edges and vertices attached to those edges.
 
-        **Note**: For the first time you initialize the loader on a graph in TigerGraph,
+        NOTE: When you initialize the loader on a graph for the first time,
         the initialization might take a minute as it installs the corresponding
-        query to the database and optimizes it. However, the query installation only
+        query to the database. However, the query installation only
         needs to be done once, so it will take no time when you initialize the loader
-        on the same TG graph again.
+        on the same graph again.
 
-        There are two ways to use the data loader. See [here](https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/main/tutorials/basics/2_dataloaders.ipynb)
-        for examples.
+        There are two ways to use the data loader:
 
-        * First, it can be used as an iterable, which means you can loop through
+        * It can be used as an iterable, which means you can loop through
           it to get every batch of data. If you load all data at once (`num_batches=1`),
           there will be only one batch (of all the data) in the iterator.
-        * Second, you can access the `data` property of the class directly. If there is
+        * You can access the `data` property of the class directly. If there is
           only one batch of data to load, it will give you the batch directly instead
           of an iterator, which might make more sense in that case. If there are
           multiple batches of data to load, it will return the loader itself.
+
+        See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_graphloader.ipynb[the ML Workbench tutorial notebook for graph loaders]
+         for examples.
 
         Args:
             graph (TigerGraphConnection):
