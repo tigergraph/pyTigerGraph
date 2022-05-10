@@ -2,7 +2,7 @@ from asyncio import tasks
 from urllib import request
 #from lib_metadata import metadata
 from parso import split_lines
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Union, List
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
 
@@ -22,7 +22,7 @@ class Featurizer:
     self, 
     conn: "TigerGraphConnection"):
     
-        """Class for Feature Extraction.
+        """NO DOC: Class for Feature Extraction.
         The job of a feature extracter is to install and run the current algorithms in graph data science libarary.
         Currently, a set of graph algorithms are moved to the gsql folder and have been saved into a dictionary along with their output type.
         To add a specific algorithm, it should be added both to the gsql folder and class variable dictionary. 
@@ -193,7 +193,7 @@ class Featurizer:
             raise ConnectionError(status)
         return query_name 
 
-    def installAlgorithm(self,query_name:str):
+    def installAlgorithm(self,query_name:str) -> str:
         '''
         Checks if the query is already installed, if not it will install the query and change the schema if an attribute needs to be added.        
         Args:
@@ -298,7 +298,7 @@ class Featurizer:
         self.params_dict[query_name] = _dict
         return _dict  
                
-    def runAlgorithm(self,query_name:str,params:dict = None,feat_name:str=None,schema_name:list[str]=None,timeout:int=2147480,sizeLimit:int=None):
+    def runAlgorithm(self, query_name:str, params:dict = None, feat_name:str = None, schema_name:list = None, timeout:int = 2147480, sizeLimit:int = None) -> Any:
         '''
         Runs an installed query.
         The query must be already created and installed in the graph.
