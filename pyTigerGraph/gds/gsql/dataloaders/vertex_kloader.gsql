@@ -5,7 +5,7 @@ CREATE QUERY vertex_kloader_{QUERYSUFFIX}(
     STRING filter_by,
     STRING kafka_address,
     STRING kafka_topic
-){
+) SYNTAX V2 {
     /*
     This query generates batches of vertices. If `input_vertices` is given, it will generate 
     a batches of those vertices. Otherwise, it will divide all vertices into `num_batches`, 

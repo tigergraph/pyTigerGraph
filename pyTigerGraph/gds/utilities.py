@@ -108,7 +108,7 @@ def install_query_file(
     with open(file_path) as infile:
         firstline = infile.readline()
     try:
-        query_name = re.search("QUERY (.+?)\(", firstline).group(1).strip()
+        query_name = re.search(r"QUERY (.+?)\(", firstline).group(1).strip()
     except:
         raise ValueError(
             "Cannot parse the query file. It should start with CREATE QUERY ... "

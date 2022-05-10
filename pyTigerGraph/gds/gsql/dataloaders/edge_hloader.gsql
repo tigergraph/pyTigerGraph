@@ -2,7 +2,7 @@ CREATE QUERY edge_hloader_{QUERYSUFFIX}(
     INT num_batches=1, 
     BOOL shuffle=FALSE,
     STRING filter_by
-){ 
+) SYNTAX V2 { 
     /*
     This query generates batches of edges.
 
