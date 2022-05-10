@@ -21,6 +21,7 @@ class BaseRandomSplitter:
         timeout: int = 600000,
         **split_ratios
     ) -> None:
+        """NO DOC: Initialize the splitter."""
         self._validate_args(split_ratios)
         self.split_ratios = split_ratios
         self._graph = conn
@@ -110,6 +111,7 @@ class RandomVertexSplitter(BaseRandomSplitter):
     def __init__(
         self, conn: "TigerGraphConnection", timeout: int = 600000, **split_ratios
     ) -> None:
+        """NO DOC: Initialize the splitter."""
         query_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             "gsql",
@@ -167,6 +169,7 @@ class RandomEdgeSplitter(BaseRandomSplitter):
         conn = TigerGraphConnection(...)
         splitter = conn.gds.edgeSplitter(timeout, attr_name=0.6, attr_name2=0.2, attr_name3=0.2)
         splitter.run()
+<<<<<<< HEAD
         ----
 
     Args:
@@ -174,11 +177,20 @@ class RandomEdgeSplitter(BaseRandomSplitter):
             Connection to TigerGraph database.
         timeout (int, optional):
             Timeout value for the operation. Defaults to 600000.
+=======
+>>>>>>> f8c316a4eae0a37cc18fcf91dd666569a8d01f78
     """
 
     def __init__(
         self, conn: "TigerGraphConnection", timeout: int = 600000, **split_ratios
     ) -> None:
+        """NODOC:
+        Args:
+            conn (TigerGraphConnection):
+                Connection to TigerGraph database.
+            timeout (int, optional):
+                Timeout value for the operation. Defaults to 600000.
+        """
         query_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             "gsql",

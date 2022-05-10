@@ -1,3 +1,7 @@
+"""GSQL Interface.
+
+Use GSQL within pyTigerGraph.
+"""
 import os
 import sys
 from typing import Union
@@ -11,11 +15,6 @@ from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
 
 class pyTigerGraphGSQL(pyTigerGraphBase):
-    """GSQL Interface.
-
-    Use GSQL within pyTigerGraph.
-    """
-
     def _initGsql(self, certLocation: str = "~/.gsql/my-cert.txt") -> bool:
         """Initialises the GSQL support.
 
@@ -24,10 +23,10 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                 The path and file of the CA certificate.
 
         Returns:
-            `True` if initialisation was successful.
+            `True` if initialization was successful.
 
         Raises:
-            Exception if initialisation was unsuccessful.
+            Exception if initialization was unsuccessful.
         """
         if not certLocation:
             if not os.path.isdir(os.path.expanduser("~/.gsql")):
@@ -80,11 +79,11 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             self.gsqlInitiated = True
             return True
         except Exception as e:
-            print("Connection Failed check your Username/Password {}".format(e))
+            print("Connection failed. Check your username or password {}".format(e))
             self.gsqlInitiated = False
 
     def gsql(self, query: str, graphname: str = None, options=None) -> Union[str, dict]:
-        """Runs a GSQL query and process the output.
+        """Runs a GSQL query and processes the output.
 
         Args:
             query:
@@ -118,5 +117,5 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                 else:
                     return res
         else:
-            print("Couldn't Initialize the client see above error.")
+            print("Couldn't initialize the client. See above error.")
             sys.exit(1)

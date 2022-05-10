@@ -36,7 +36,7 @@ _udf_funcs = {
 
 
 class BaseLoader:
-    """Base Dataloader Class."""
+    """NO DOC: Base Dataloader Class."""
     def __init__(
         self,
         graph: "TigerGraphConnection",
@@ -1170,6 +1170,11 @@ class NeighborLoader(BaseLoader):
             ),
         )
         self._reader.start()
+    
+    @property
+    def data(self) -> Any:
+        """Return the last data read from the queue."""
+        return super().data
 
 
 class EdgeLoader(BaseLoader):
@@ -1423,6 +1428,11 @@ class EdgeLoader(BaseLoader):
             ),
         )
         self._reader.start()
+
+    @property
+    def data(self) -> Any:
+        """Return the last data read from the queue."""
+        return super().data
 
 
 class VertexLoader(BaseLoader):
@@ -1680,6 +1690,11 @@ class VertexLoader(BaseLoader):
             ),
         )
         self._reader.start()
+    
+    @property
+    def data(self) -> Any:
+        """Return the last data read from the queue."""
+        return super().data
 
 
 class GraphLoader(BaseLoader):
@@ -1980,3 +1995,8 @@ class GraphLoader(BaseLoader):
             ),
         )
         self._reader.start()
+
+    @property
+    def data(self) -> Any:
+        """Return the last data read from the queue."""
+        return super().data
