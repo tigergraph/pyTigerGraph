@@ -4,7 +4,7 @@ CREATE QUERY graph_kloader_{QUERYSUFFIX}(
     STRING filter_by,
     STRING kafka_address,
     STRING kafka_topic
-){ 
+) SYNTAX V2 { 
     /*
     This query generates the batches of edges and vertices attached to those edges.
 
