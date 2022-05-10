@@ -1,3 +1,6 @@
+"""Featurizer
+The Featurizer class provides methods for installing and running Graph Data Science Algorithms onto a TigerGraph server.
+"""
 from asyncio import tasks
 from urllib import request
 #from lib_metadata import metadata
@@ -24,8 +27,6 @@ class Featurizer:
     
         """NO DOC: Class for Feature Extraction.
         The job of a feature extracter is to install and run the current algorithms in graph data science libarary.
-        Currently, a set of graph algorithms are moved to the gsql folder and have been saved into a dictionary along with their output type.
-        To add a specific algorithm, it should be added both to the gsql folder and class variable dictionary. 
         Args:
             conn (TigerGraphConnection): 
                 Connection to the TigerGraph database.
