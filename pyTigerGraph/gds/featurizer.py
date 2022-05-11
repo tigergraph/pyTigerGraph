@@ -25,7 +25,7 @@ class Featurizer:
     self, 
     conn: "TigerGraphConnection"):
     
-        """Class for feature extraction.
+        """NO DOC: Class for feature extraction.
 
         The job of a feature extracter is to install and run algorithms in the Graph Data Science (GDS) libarary.
         Currently, a set of graph algorithms are moved to the `gsql` folder, which you can find in the same directory as this file,
