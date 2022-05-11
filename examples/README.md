@@ -4,7 +4,7 @@ We broke down some examples of the usage of pyTigerGraph into the core functions
 ## Core Functions
 The Core Functions of pyTigerGraph have been included into one notebook found in this directory, called `pyTigerGraphCoreFunctions.ipynb`. A companion YouTube video by Dan Barkus can be found below.
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/2BcC3C-qfX4" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+[![Watch the video](https://img.youtube.com/vi/2BcC3C-qfX4/hqdefault.jpg)](https://www.youtube.com/watch?v=2BcC3C-qfX4)
 
 ## Graph Data Science Functions
 The Graph Data Science examples can be found [here](https://docs.tigergraph.com/ml-workbench/current/tutorials/).
