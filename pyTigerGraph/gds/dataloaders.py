@@ -7,7 +7,6 @@ import io
 import logging
 import math
 import os
-import re
 from queue import Empty, Queue
 from threading import Event, Thread
 from time import sleep
@@ -17,6 +16,8 @@ if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
     from kafka import KafkaAdminClient, KafkaConsumer
     import torch
+    import dgl
+    import torch_geometric as pyg
 
 import numpy as np
 import pandas as pd
@@ -24,7 +25,7 @@ import pandas as pd
 from ..pyTigerGraphException import TigerGraphException
 from .utilities import install_query_file, random_string
 
-__all__ = ["VertexLoader", "EdgeLoader", "NeighborLoader"]
+__all__ = ["VertexLoader", "EdgeLoader", "NeighborLoader", "GraphLoader"]
 __pdoc__ = {}
 
 _udf_funcs = {
@@ -293,52 +294,6 @@ class BaseLoader:
         self.query_name = ""
         raise NotImplementedError
 
-    def _is_query_installed(self, query_name: str) -> bool:
-        target = "GET /query/{}/{}".format(self._graph.graphname, query_name)
-        queries = self._graph.getInstalledQueries()
-        return target in queries
-
-    def _install_query_file(self, file_path: str, replace: dict = None) -> str:
-        # Read the first line of the file to get query name. The first line should be
-        # something like CREATE QUERY query_name (...
-        with open(file_path) as infile:
-            firstline = infile.readline()
-        try:
-            query_name = re.search(r"QUERY (.+?)\(", firstline).group(1).strip()
-        except:
-            raise ValueError(
-                "Cannot parse the query file. It should start with CREATE QUERY ... "
-            )
-        # If a suffix is to be added to query name
-        if replace and ("{QUERYSUFFIX}" in replace):
-            query_name = query_name.replace("{QUERYSUFFIX}", replace["{QUERYSUFFIX}"])
-        # If query is already installed, skip.
-        if self._is_query_installed(query_name):
-            return query_name
-        # Otherwise, install the query from file
-        with open(file_path) as infile:
-            query = infile.read()
-        # Replace placeholders with actual content if given
-        if replace:
-            for placeholder in replace:
-                query = query.replace(placeholder, replace[placeholder])
-        # TODO: Check if Distributed query is needed.
-        query = (
-            "USE GRAPH {}\n".format(self._graph.graphname)
-            + query
-            + "\nInstall Query {}\n".format(query_name)
-        )
-        print(
-            "Installing and optimizing queries. It might take a minute if this is the first time you use this loader."
-        )
-        resp = self._graph.gsql(query)
-        status = resp.splitlines()[-1]
-        if "Failed" in status:
-            raise ConnectionError(status)
-        else:
-            print(status)
-        return query_name
-
     @staticmethod
     def _request_kafka(
         exit_event: Event,
@@ -508,6 +463,48 @@ class BaseLoader:
         add_self_loop: bool = False,
         reindex: bool = True,
     ) -> NoReturn:
+        while not exit_event.is_set():
+            raw = in_q.get()
+            if raw is None:
+                in_q.task_done()
+                out_q.put(None)
+                break
+            data = BaseLoader._parse_data(
+                raw = raw,
+                in_format = in_format,
+                out_format = out_format,
+                v_in_feats = v_in_feats,
+                v_out_labels = v_out_labels,
+                v_extra_feats = v_extra_feats,
+                v_attr_types = v_attr_types,
+                e_in_feats = e_in_feats,
+                e_out_labels = e_out_labels,
+                e_extra_feats = e_extra_feats,
+                e_attr_types = e_attr_types,
+                add_self_loop = add_self_loop,
+                reindex = reindex,
+                primary_id = []
+            )
+            out_q.put(data)
+            in_q.task_done()
+
+    @staticmethod
+    def _parse_data(
+        raw: Union[str, bytes, Tuple[str, str], Tuple[bytes, bytes]],
+        in_format: str = "vertex_bytes",
+        out_format: str = "dataframe",
+        v_in_feats: Union[list, dict] = [],
+        v_out_labels: Union[list, dict] = [],
+        v_extra_feats: Union[list, dict] = [],
+        v_attr_types: dict = {},
+        e_in_feats: Union[list, dict] = [],
+        e_out_labels: Union[list, dict] = [],
+        e_extra_feats: Union[list, dict] = [],
+        e_attr_types: dict = {},
+        add_self_loop: bool = False,
+        reindex: bool = True,
+        primary_id: list = []
+    ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, pd.DataFrame], "dgl.DGLGraph", "pyg.Data"]:
         def attr_to_tensor(
             attributes: list, attr_types: dict, df: pd.DataFrame
         ) -> "torch.Tensor":
@@ -527,207 +524,202 @@ class BaseLoader:
         v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
         e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
 
-        while not exit_event.is_set():
-            raw = in_q.get()
-            if raw is None:
-                in_q.task_done()
-                out_q.put(None)
-                break
-            vertices, edges = None, None
-            if in_format == "vertex_bytes":
-                # Bytes of vertices in format vid,v_in_feats,v_out_labels,v_extra_feats
-                data = pd.read_csv(io.BytesIO(raw), header=None, names=v_attributes)
-            elif in_format == "edge_bytes":
-                # Bytes of edges in format source_vid,target_vid
-                data = pd.read_csv(io.BytesIO(raw), header=None, names=e_attributes)
-            elif in_format == "graph_bytes":
-                # A pair of in-memory CSVs (vertex, edge)
-                v_file, e_file = raw
-                vertices = pd.read_csv(
-                    io.BytesIO(v_file), header=None, names=v_attributes
-                )
-                edges = pd.read_csv(io.BytesIO(e_file), header=None, names=e_attributes)
-                data = (vertices, edges)
-            elif in_format == "vertex_str":
-                # String of vertices in format vid,v_in_feats,v_out_labels,v_extra_feats
-                data = pd.read_csv(io.StringIO(raw), header=None, names=v_attributes)
-            elif in_format == "edge_str":
-                # String of edges in format source_vid,target_vid
-                data = pd.read_csv(io.StringIO(raw), header=None, names=e_attributes)
-            elif in_format == "graph_str":
-                # A pair of in-memory CSVs (vertex, edge)
-                v_file, e_file = raw
-                vertices = pd.read_csv(
-                    io.StringIO(v_file), header=None, names=v_attributes
-                )
-                edges = pd.read_csv(
-                    io.StringIO(e_file), header=None, names=e_attributes
-                )
-                data = (vertices, edges)
-            else:
-                raise NotImplementedError
+        vertices, edges = None, None
+        if in_format == "vertex_bytes":
+            # Bytes of vertices in format vid,v_in_feats,v_out_labels,v_extra_feats
+            data = pd.read_csv(io.BytesIO(raw), header=None, names=v_attributes)
+        elif in_format == "edge_bytes":
+            # Bytes of edges in format source_vid,target_vid
+            data = pd.read_csv(io.BytesIO(raw), header=None, names=e_attributes)
+        elif in_format == "graph_bytes":
+            # A pair of in-memory CSVs (vertex, edge)
+            v_file, e_file = raw
+            vertices = pd.read_csv(
+                io.BytesIO(v_file), header=None, names=v_attributes
+            )
+            edges = pd.read_csv(io.BytesIO(e_file), header=None, names=e_attributes)
+            data = (vertices, edges)
+        elif in_format == "vertex_str":
+            # String of vertices in format vid,v_in_feats,v_out_labels,v_extra_feats
+            data = pd.read_csv(io.StringIO(raw), header=None, names=v_attributes)
+        elif in_format == "edge_str":
+            # String of edges in format source_vid,target_vid
+            data = pd.read_csv(io.StringIO(raw), header=None, names=e_attributes)
+        elif in_format == "graph_str":
+            # A pair of in-memory CSVs (vertex, edge)
+            v_file, e_file = raw
+            vertices = pd.read_csv(
+                io.StringIO(v_file), header=None, names=v_attributes
+            )
+            if primary_id:
+                vertices["primary_id"] = primary_id
+                v_extra_feats.append("primary_id")
+            edges = pd.read_csv(
+                io.StringIO(e_file), header=None, names=e_attributes
+            )
+            data = (vertices, edges)
+        else:
+            raise NotImplementedError
 
-            if out_format.lower() == "pyg" or out_format.lower() == "dgl":
+        if out_format.lower() == "pyg" or out_format.lower() == "dgl":
+            try:
+                import torch
+            except ImportError:
+                raise ImportError("PyTorch is not installed. Please install it to use PyG or DGL output.")
+            if vertices is None or edges is None:
+                raise ValueError(
+                    "PyG or DGL format can only be used with graph output."
+                )
+            if out_format.lower() == "dgl":
                 try:
-                    import torch
+                    import dgl
+                    mode = "dgl"
                 except ImportError:
-                    raise ImportError("PyTorch is not installed. Please install it to use PyG or DGL output.")
-                if vertices is None or edges is None:
-                    raise ValueError(
-                        "PyG or DGL format can only be used with graph output."
+                    raise ImportError(
+                        "DGL is not installed. Please install DGL to use DGL format."
                     )
-                if out_format.lower() == "dgl":
-                    try:
-                        import dgl
-
-                        mode = "dgl"
-                    except ImportError:
-                        raise ImportError(
-                            "DGL is not installed. Please install DGL to use DGL format."
-                        )
-                elif out_format.lower() == "pyg":
-                    try:
-                        from torch_geometric.data import Data as pygData
-                        from torch_geometric.utils import add_self_loops
-
-                        mode = "pyg"
-                    except ImportError:
-                        raise ImportError(
-                            "PyG is not installed. Please install PyG to use PyG format."
-                        )
-                else:
-                    raise NotImplementedError
-                # Reformat as a graph.
-                # Need to have a pair of tables for edges and vertices.
-                # Deal with edgelist first
-                if reindex:
-                    vertices["tmp_id"] = range(len(vertices))
-                    id_map = vertices[["vid", "tmp_id"]]
-                    edges = edges.merge(id_map, left_on="source", right_on="vid")
-                    edges.drop(columns=["source", "vid"], inplace=True)
-                    edges = edges.merge(id_map, left_on="target", right_on="vid")
-                    edges.drop(columns=["target", "vid"], inplace=True)
-                    edgelist = edges[["tmp_id_x", "tmp_id_y"]]
-                else:
-                    edgelist = edges[["source", "target"]]
-                edgelist = torch.tensor(edgelist.to_numpy().T, dtype=torch.long)
-                if mode == "dgl":
-                    data = dgl.graph(data=(edgelist[0], edgelist[1]))
-                    if add_self_loop:
-                        data = dgl.add_self_loop(data)
-                elif mode == "pyg":
-                    data = pygData()
-                    if add_self_loop:
-                        edgelist = add_self_loops(edgelist)[0]
-                    data["edge_index"] = edgelist
-                del edgelist
-                # Deal with edge attributes
-                if e_in_feats:
-                    if mode == "dgl":
-                        data.edata["feat"] = attr_to_tensor(
-                            e_in_feats, e_attr_types, edges
-                        )
-                    elif mode == "pyg":
-                        data["edge_feat"] = attr_to_tensor(e_in_feats, e_attr_types, edges)
-                if e_out_labels:
-                    if mode == "dgl":
-                        data.edata["label"] = attr_to_tensor(
-                            e_out_labels, e_attr_types, edges
-                        )
-                    elif mode == "pyg":
-                        data["edge_label"] = attr_to_tensor(e_out_labels, e_attr_types, edges)
-                if e_extra_feats:
-                    if mode == "dgl":
-                        data.extra_data = {}
-                    for col in e_extra_feats:
-                        dtype = e_attr_types[col].lower()
-                        if dtype.startswith("str"):
-                            if mode == "dgl":
-                                data.extra_data[col] = edges[col].to_list()
-                            elif mode == "pyg":
-                                data[col] = edges[col].to_list()
-                        elif edges[col].dtype == "object":
-                            if mode == "dgl":
-                                data.edata[col] = torch.tensor(
-                                    edges[col]
-                                    .str.split(expand=True)
-                                    .to_numpy()
-                                    .astype(dtype)
-                                )
-                            elif mode == "pyg":
-                                data[col] = torch.tensor(
-                                    edges[col]
-                                    .str.split(expand=True)
-                                    .to_numpy()
-                                    .astype(dtype)
-                                )
-                        else:
-                            if mode == "dgl":
-                                data.edata[col] = torch.tensor(
-                                    edges[col].to_numpy().astype(dtype)
-                                )
-                            elif mode == "pyg":
-                                data[col] = torch.tensor(
-                                    edges[col].to_numpy().astype(dtype)
-                                )
-                del edges
-                # Deal with vertex attributes next
-                if v_in_feats:
-                    if mode == "dgl":
-                        data.ndata["feat"] = attr_to_tensor(
-                            v_in_feats, v_attr_types, vertices
-                        )
-                    elif mode == "pyg":
-                        data["x"] = attr_to_tensor(v_in_feats, v_attr_types, vertices)
-                if v_out_labels:
-                    if mode == "dgl":
-                        data.ndata["label"] = attr_to_tensor(
-                            v_out_labels, v_attr_types, vertices
-                        )
-                    elif mode == "pyg":
-                        data["y"] = attr_to_tensor(v_out_labels, v_attr_types, vertices)
-                if v_extra_feats:
-                    if mode == "dgl":
-                        data.extra_data = {}
-                    for col in v_extra_feats:
-                        dtype = v_attr_types[col].lower()
-                        if dtype.startswith("str"):
-                            if mode == "dgl":
-                                data.extra_data[col] = vertices[col].to_list()
-                            elif mode == "pyg":
-                                data[col] = vertices[col].to_list()
-                        elif vertices[col].dtype == "object":
-                            if mode == "dgl":
-                                data.ndata[col] = torch.tensor(
-                                    vertices[col]
-                                    .str.split(expand=True)
-                                    .to_numpy()
-                                    .astype(dtype)
-                                )
-                            elif mode == "pyg":
-                                data[col] = torch.tensor(
-                                    vertices[col]
-                                    .str.split(expand=True)
-                                    .to_numpy()
-                                    .astype(dtype)
-                                )
-                        else:
-                            if mode == "dgl":
-                                data.ndata[col] = torch.tensor(
-                                    vertices[col].to_numpy().astype(dtype)
-                                )
-                            elif mode == "pyg":
-                                data[col] = torch.tensor(
-                                    vertices[col].to_numpy().astype(dtype)
-                                )
-                del vertices
-            elif out_format.lower() == "dataframe":
-                pass
+            elif out_format.lower() == "pyg":
+                try:
+                    from torch_geometric.data import Data as pygData
+                    from torch_geometric.utils import add_self_loops
+                    mode = "pyg"
+                except ImportError:
+                    raise ImportError(
+                        "PyG is not installed. Please install PyG to use PyG format."
+                    )
             else:
                 raise NotImplementedError
-            out_q.put(data)
-            in_q.task_done()
+            # Reformat as a graph.
+            # Need to have a pair of tables for edges and vertices.
+            # Deal with edgelist first
+            if reindex:
+                vertices["tmp_id"] = range(len(vertices))
+                id_map = vertices[["vid", "tmp_id"]]
+                edges = edges.merge(id_map, left_on="source", right_on="vid")
+                edges.drop(columns=["source", "vid"], inplace=True)
+                edges = edges.merge(id_map, left_on="target", right_on="vid")
+                edges.drop(columns=["target", "vid"], inplace=True)
+                edgelist = edges[["tmp_id_x", "tmp_id_y"]]
+            else:
+                edgelist = edges[["source", "target"]]
+            edgelist = torch.tensor(edgelist.to_numpy().T, dtype=torch.long)
+            if mode == "dgl":
+                data = dgl.graph(data=(edgelist[0], edgelist[1]))
+                if add_self_loop:
+                    data = dgl.add_self_loop(data)
+            elif mode == "pyg":
+                data = pygData()
+                if add_self_loop:
+                    edgelist = add_self_loops(edgelist)[0]
+                data["edge_index"] = edgelist
+            del edgelist
+            # Deal with edge attributes
+            if e_in_feats:
+                if mode == "dgl":
+                    data.edata["feat"] = attr_to_tensor(
+                        e_in_feats, e_attr_types, edges
+                    )
+                elif mode == "pyg":
+                    data["edge_feat"] = attr_to_tensor(e_in_feats, e_attr_types, edges)
+            if e_out_labels:
+                if mode == "dgl":
+                    data.edata["label"] = attr_to_tensor(
+                        e_out_labels, e_attr_types, edges
+                    )
+                elif mode == "pyg":
+                    data["edge_label"] = attr_to_tensor(e_out_labels, e_attr_types, edges)
+            if e_extra_feats:
+                if mode == "dgl":
+                    data.extra_data = {}
+                for col in e_extra_feats:
+                    dtype = e_attr_types[col].lower()
+                    if dtype.startswith("str"):
+                        if mode == "dgl":
+                            data.extra_data[col] = edges[col].to_list()
+                        elif mode == "pyg":
+                            data[col] = edges[col].to_list()
+                    elif edges[col].dtype == "object":
+                        if mode == "dgl":
+                            data.edata[col] = torch.tensor(
+                                edges[col]
+                                .str.split(expand=True)
+                                .to_numpy()
+                                .astype(dtype)
+                            )
+                        elif mode == "pyg":
+                            data[col] = torch.tensor(
+                                edges[col]
+                                .str.split(expand=True)
+                                .to_numpy()
+                                .astype(dtype)
+                            )
+                    else:
+                        if mode == "dgl":
+                            data.edata[col] = torch.tensor(
+                                edges[col].to_numpy().astype(dtype)
+                            )
+                        elif mode == "pyg":
+                            data[col] = torch.tensor(
+                                edges[col].to_numpy().astype(dtype)
+                            )
+            del edges
+            # Deal with vertex attributes next
+            if v_in_feats:
+                if mode == "dgl":
+                    data.ndata["feat"] = attr_to_tensor(
+                        v_in_feats, v_attr_types, vertices
+                    )
+                elif mode == "pyg":
+                    data["x"] = attr_to_tensor(v_in_feats, v_attr_types, vertices)
+            if v_out_labels:
+                if mode == "dgl":
+                    data.ndata["label"] = attr_to_tensor(
+                        v_out_labels, v_attr_types, vertices
+                    )
+                elif mode == "pyg":
+                    data["y"] = attr_to_tensor(v_out_labels, v_attr_types, vertices)
+            if v_extra_feats:
+                if mode == "dgl":
+                    data.extra_data = {}
+                for col in v_extra_feats:
+                    dtype = v_attr_types[col].lower()
+                    if dtype.startswith("str"):
+                        if mode == "dgl":
+                            data.extra_data[col] = vertices[col].to_list()
+                        elif mode == "pyg":
+                            data[col] = vertices[col].to_list()
+                    elif vertices[col].dtype == "object":
+                        if mode == "dgl":
+                            data.ndata[col] = torch.tensor(
+                                vertices[col]
+                                .str.split(expand=True)
+                                .to_numpy()
+                                .astype(dtype)
+                            )
+                        elif mode == "pyg":
+                            data[col] = torch.tensor(
+                                vertices[col]
+                                .str.split(expand=True)
+                                .to_numpy()
+                                .astype(dtype)
+                            )
+                    else:
+                        if mode == "dgl":
+                            data.ndata[col] = torch.tensor(
+                                vertices[col].to_numpy().astype(dtype)
+                            )
+                        elif mode == "pyg":
+                            data[col] = torch.tensor(
+                                vertices[col].to_numpy().astype(dtype)
+                            )
+            del vertices
+        elif out_format.lower() == "dataframe":
+            pass
+        else:
+            raise NotImplementedError
 
+        return data
+        
     def _start(self) -> None:
         # This is a template. Implement your own logics here.
         # Create task and result queues
@@ -1167,6 +1159,58 @@ class NeighborLoader(BaseLoader):
         )
         self._reader.start()
 
+    def fetch(self, vertices: list) -> None:
+        """Fetch neighborhood subgraphs for specific vertices.
+
+        Args:
+            vertices (list of dict): 
+                Vertices to fetch with their neighborhood subgraphs. 
+                Each vertex corresponds to a dict with two mandatory keys 
+                {"primary_id": ..., "type": ...}
+        """
+        # Check input
+        if not vertices:
+            return None
+        if not isinstance(vertices, list):
+            raise ValueError('Input to fetch() should be in format: [{"primary_id": ..., "type": ...}, ...]')
+        for i in vertices:
+            if not (isinstance(i, dict) and len(i)==2):
+                raise ValueError('Input to fetch() should be in format: [{"primary_id": ..., "type": ...}, ...]')
+        # Send request
+        _payload = {}
+        _payload["num_batches"] = 1
+        _payload["num_neighbors"] = self._payload["num_neighbors"]
+        _payload["num_hops"] = self._payload["num_hops"]
+        _payload["input_vertices"] = []
+        for i in vertices:
+            _payload["input_vertices"].append((i["primary_id"], i["type"]))
+        resp = self._graph.runInstalledQuery(
+            self.query_name, params=_payload, timeout=self.timeout, usePost=True
+        )
+        # Parse data
+        v_attr_types = next(iter(self._v_schema.values()))
+        v_attr_types["is_seed"] = "bool"
+        v_attr_types["primary_id"] = "str"
+        e_attr_types = next(iter(self._e_schema.values()))
+        i = resp[0]
+        data = self._parse_data(
+            raw = ("".join(i["vertex_batch"].values()), i["edge_batch"]),
+            in_format = "graph_str",
+            out_format = self.output_format,
+            v_in_feats = self.v_in_feats,
+            v_out_labels = self.v_out_labels,
+            v_extra_feats = self.v_extra_feats + ["is_seed"],
+            v_attr_types = v_attr_types, 
+            e_in_feats = self.e_in_feats,
+            e_out_labels = self.e_out_labels,
+            e_extra_feats = self.e_extra_feats,
+            e_attr_types = e_attr_types,
+            add_self_loop = self.add_self_loop,
+            reindex = True,
+            primary_id = list(i["vertex_batch"].keys())
+        )
+        # Return data
+        return data
 
 class EdgeLoader(BaseLoader):
     """Edge Loader."""
