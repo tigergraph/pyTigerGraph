@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 class BaseRandomSplitter:
-    """NO DOC Base Random Splitter"""
+    """NO DOC: Base Random Splitter"""
 
     def __init__(
         self,
