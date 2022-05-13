@@ -868,7 +868,6 @@ class NeighborLoader(BaseLoader):
     Examples:
     
     The following example iterates over a neighbor loader instance. 
-    --
     [.wrap,python]
     ----
     for i, batch in enumerate(neighbor_loader):
@@ -1223,6 +1222,7 @@ class EdgeLoader(BaseLoader):
     0  9437185  13631508     0         1
     ----
     --
+    ====
 
 
     See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_edgeloader.ipynb[the ML Workbench edge loader tutorial notebook]
