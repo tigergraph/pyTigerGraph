@@ -11,7 +11,7 @@ We are excited to announce the pyTigerGraph v0.9 release! This release adds many
 * Feature: Include Graph Data Science Capability
     - Many new capabilities added for graph data science and graph machine learning. Highlights include data loaders for training Graph Neural Networks in DGL and PyTorch Geometric, a "featurizer" to generate graph-based features for machine learning, and utilities to support those activities.
 
-* Documentation: We have moved the documentation to [the official TigerGraph Documentation site](https://docs.tigergraph.com/pytigergraph/current/intro/) and updated many of the contents.
+* Documentation: We have moved the documentation to [the official TigerGraph Documentation site](https://docs.tigergraph.com/pytigergraph/current/intro/) and updated many of the contents with type hints and more descriptive parameter explainations.
 
 * Testing: There is now well-defined testing for every function in the package. A more defined testing framework is coming soon.
 
