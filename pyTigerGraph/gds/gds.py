@@ -254,7 +254,7 @@ class GDS:
           of an iterator. If there are
           multiple batches of data to load, it returns the loader itself.
 
-         Args:
+        Args:
             attributes (list, optional):
                 Edge attributes to be included. Defaults to None.
             batch_size (int, optional):
@@ -492,7 +492,7 @@ class GDS:
           of an iterator, which might make more sense in that case. If there are
           multiple batches of data to load, it will return the loader itself.
 
-         Args:
+        Args:
             v_in_feats (list, optional):
                 Vertex attributes to be used as input features.
                 Only numeric and boolean attributes are allowed. The type of an attrbiute
