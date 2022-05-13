@@ -73,33 +73,36 @@ class RandomVertexSplitter(BaseRandomSplitter):
         . A random 60% of vertices will have their attribute "attr_name" set to True, and
         others False. `attr_name` can be any attribute that exists in the database (same below).
         Example:
-        [source,python]
-        ----
-        conn = TigerGraphConnection(...)
-        splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6)
-        splitter.run()
-        ----
+    +
+    [source,python]
+    ----
+    conn = TigerGraphConnection(...)
+    splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6)
+    splitter.run()
+    ----
        
         . A random 60% of vertices will have their attribute "attr_name" set to True, and a
         random 20% of vertices will have their attribute "attr_name2" set to True. The two
         parts are disjoint. Example:
-        [source,python]
-        ----
-        conn = TigerGraphConnection(...)
-        splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2)
-        splitter.run()
-        ----
+    +
+    [source,python]
+    ----
+    conn = TigerGraphConnection(...)
+    splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2)
+    splitter.run()
+    ----
 
         . A random 60% of vertices will have their attribute "attr_name" set to True, a
         random 20% of vertices will have their attribute "attr_name2" set to True, and
         another random 20% of vertices will have their attribute "attr_name3" set to True.
         The three parts are disjoint. Example:
-        [source,python]
-        ----
-        conn = TigerGraphConnection(...)
-        splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2, attr_name3=0.2)
-        splitter.run()
-        ----
+    +
+    [source,python]
+    ----
+    conn = TigerGraphConnection(...)
+    splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2, attr_name3=0.2)
+    splitter.run()
+    ----
         
     Args:
         conn (TigerGraphConnection):
@@ -143,32 +146,36 @@ class RandomEdgeSplitter(BaseRandomSplitter):
         . A random 60% of edges will have their attribute "attr_name" set to True, and 
         others False. `attr_name` can be any attribute that exists in the database (same below).
         Example:
-        [source,python]
-        ----
-        conn = TigerGraphConnection(...)
-        splitter = conn.gds.edgeSplitter(timeout, attr_name=0.6)
-        splitter.run()
-        ----
+    +
+    [source,python]
+    ----
+    conn = TigerGraphConnection(...)
+    splitter = conn.gds.edgeSplitter(timeout, attr_name=0.6)
+    splitter.run()
+    ----
 
         . A random 60% of edges will have their attribute "attr_name" set to True, and a 
         random 20% of edges will have their attribute "attr_name2" set to True. The two 
         parts are disjoint. Example:
-        [source,python]
-        ----
-        conn = TigerGraphConnection(...)
-        splitter = conn.gds.edgeSplitter(timeout, attr_name=0.6, attr_name2=0.2)
-        splitter.run()
-        ----
+    +   
+    [source,python]
+    ----
+    conn = TigerGraphConnection(...)
+    splitter = conn.gds.edgeSplitter(timeout, attr_name=0.6, attr_name2=0.2)
+    splitter.run()
+    ----
 
         . A random 60% of edges will have their attribute "attr_name" set to True, a 
         random 20% of edges will have their attribute "attr_name2" set to True, and 
         another random 20% of edges will have their attribute "attr_name3" set to True. 
         The three parts are disjoint. Example:
-        [source,python]
-        ----
-        conn = TigerGraphConnection(...)
-        splitter = conn.gds.edgeSplitter(timeout, attr_name=0.6, attr_name2=0.2, attr_name3=0.2)
-        splitter.run()
+    +    
+    [source,python]
+    ----
+    conn = TigerGraphConnection(...)
+    splitter = conn.gds.edgeSplitter(timeout, attr_name=0.6, attr_name2=0.2, attr_name3=0.2)
+    splitter.run()
+    ----
     """
 
     def __init__(
@@ -192,9 +199,10 @@ class RandomEdgeSplitter(BaseRandomSplitter):
     def run(self, **split_ratios) -> None:
         """Perform the split.
 
-        The split ratios set in initialization can be overridden here. For example,
+        The split ratios set in initialization can be overridden here. 
+        For example,
         `splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6); splitter.run(attr_name=0.3)`
-        will use the ratio 0.3 instead of 0.6.
+        uses the ratio 0.3 instead of 0.6.
 
         """
         print("Splitting edges...")
