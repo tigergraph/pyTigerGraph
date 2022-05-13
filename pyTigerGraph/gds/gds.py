@@ -78,11 +78,11 @@ class GDS:
         timeout: int = 300000,
     ) -> NeighborLoader:
         """Returns a `NeighborLoader` instance.
-        A `NeighborLoader` instance performs neighbor sampling from all vertices in the graph in bathces in the following manner:
+        A `NeighborLoader` instance performs neighbor sampling from all vertices in the graph in batches in the following manner:
 
         . It chooses a specified number (`batch_size`) of vertices as seeds. 
         The number of batches is the total number of vertices divided by the batch size. 
-        * If you specify the number of batchs (`num_batches`) instead, `batch_size` is calculated by dividing the total number of vertices by the number of batches.
+        * If you specify the number of batches (`num_batches`) instead, `batch_size` is calculated by dividing the total number of vertices by the number of batches.
         If specify both parameters, `batch_size` takes priority. 
         . It picks a specified number (`num_neighbors`) of neighbors of each seed at random.
         . It picks the same number of neighbors for each neighbor, and repeats this process until it finished performing a specified number of hops (`num_hops`).
@@ -106,7 +106,7 @@ class GDS:
         Args:
             v_in_feats (list, optional):
                 Vertex attributes to be used as input features.
-                Only numeric and boolean attributes are allowed. The type of an attrbiute
+                Only numeric and boolean attributes are allowed. The type of an attribute
                 is automatically determined from the database schema. Defaults to None.
             v_out_labels (list, optional):
                 Vertex attributes to be used as labels for
@@ -116,7 +116,7 @@ class GDS:
                 train/test data. All types of attributes are allowed. Defaults to None.
             e_in_feats (list, optional):
                 Edge attributes to be used as input features.
-                Only numeric and boolean attributes are allowed. The type of an attrbiute
+                Only numeric and boolean attributes are allowed. The type of an attribute
                 is automatically determined from the database schema. Defaults to None.
             e_out_labels (list, optional):
                 Edge attributes to be used as labels for
@@ -495,7 +495,7 @@ class GDS:
         Args:
             v_in_feats (list, optional):
                 Vertex attributes to be used as input features.
-                Only numeric and boolean attributes are allowed. The type of an attrbiute
+                Only numeric and boolean attributes are allowed. The type of an attribute
                 is automatically determined from the database schema. Defaults to None.
             v_out_labels (list, optional):
                 Vertex attributes to be used as labels for prediction.
@@ -505,7 +505,7 @@ class GDS:
                 All types of attributes are allowed. Defaults to None.
             e_in_feats (list, optional):
                 Edge attributes to be used as input features.
-                Only numeric and boolean attributes are allowed. The type of an attrbiute
+                Only numeric and boolean attributes are allowed. The type of an attribute
                 is automatically determined from the database schema. Defaults to None.
             e_out_labels (list, optional):
                 Edge attributes to be used as labels for

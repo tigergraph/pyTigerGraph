@@ -107,7 +107,7 @@ class Featurizer:
 
     def listAlgorithms(self,category:str=None):
         '''
-        Print the list of avalaible algorithms in GDS.
+        Print the list of available algorithms in GDS.
         Args:
             category (str): 
                 The class of the algorithms, if it is None the entire list will be printed out.
