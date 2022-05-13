@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 class BaseRandomSplitter:
-    """Base Random Splitter"""
+    """NO DOC: Base Random Splitter"""
 
     def __init__(
         self,
@@ -181,7 +181,7 @@ class RandomEdgeSplitter(BaseRandomSplitter):
     def __init__(
         self, conn: "TigerGraphConnection", timeout: int = 600000, **split_ratios
     ) -> None:
-        """NODOC:
+        """NO DOC:
         Args:
             conn (TigerGraphConnection):
                 Connection to TigerGraph database.
