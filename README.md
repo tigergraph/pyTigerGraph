@@ -1,47 +1,59 @@
 # pyTigerGraph
 
-pyTigerGraph is a Python package for connecting to TigerGraph databases. Check out the extended docs [here](https://pytigergraph.github.io/pyTigerGraph/)
+pyTigerGraph is a Python package for connecting to TigerGraph databases. Check out the documentation [here](https://docs.tigergraph.com/pytigergraph/current/intro/)
 
-## Getting Started
-To download pyTigerGraph, simply run:
-```pip3 install pyTigerGraph```
-Once the package installs, you can import it and instantiate a connection to your database:
+## Quickstart
+
+### Installing pyTigerGraph
+This section walks you through installing pyTigerGraph on your machine.
+
+#### Prerequisites
+* OS version
+* Python version
+* Package managers
+
+#### Install _pyTigerGraph_
+
+To download _pyTigerGraph_, run the following command in the command line or use the appropriate tool of your development environment (anaconda, PyCharm, etc.).:
+
+```sh
+pip3 install pyTigerGraph
+```
+
+#### Install _pyTigerGraph[gds]_
+
+To utilize the Graph Data Science functionality, download the GDS package that fits your needs.
+Any of the options below allows you to use GDS functions, but certain flavors allow you to output results in formats sup
+The options are:
+
+* To install all required packages for full GDS functionality, including PyTorch, PyTorch Geometric, and DGL, run the following command:
++
+```sh
+pip3 install pyTigerGraph[gds]
+```
+
+* To use the GDS functions with the option of producing output in the format supported by the *PyTorch Geometric framework*, run the following command:
+```sh
+pip3 install pyTigerGraph[gds-pyg]
+```
+
+* To use the GDS functions with the option of producing output in the format supported by the *Deep Graph Library* (DGL) framework, run the following command:
+```sh
+pip3 install pyTigerGraph[gds-dgl]
+```
+* To use the GDS functions without needing to produce output in the format supported by PyTorch Geometric or DGL.
+This makes the data loaders output *Pandas dataframes*:
+```sh
+pip3 install pyTigerGraph[gds-lite]
+```
+
+Once the package is installed, you can import it like any other Python package:
+
 ```py
 import pyTigerGraph as tg
-
-conn = tg.TigerGraphConnection(host="<hostname>", graphname="<graph_name>", username="<username>", password="<password>", apiToken="<api_token>")
 ```
-If your database is not using the standard ports (or they are mapped), you can use the following arguments to specify those:
-- restppPort (default 9000): [REST++ API port](https://docs.tigergraph.com/dev/restpp-api/restpp-requests)
-- gsPort (default: 14240): [GraphStudio port](https://docs.tigergraph.com/ui/graphstudio/overview#TigerGraphGraphStudioUIGuide-GraphStudioOn-Premises)
+### Getting Started with Core Functions
 
-For example, in case of using a local virtual machine with the ports mapped:
-```py
-conn = tg.TigerGraphConnection(host="localhost", restppPort=25900, gsPort=25240, graphname="MyGraph", username="tigergraph", password="tigergraph", apiToken="2aa016d747ede9gg6da3drslm98srfoj")
-```
+[![pyTigerGraph 101](https://img.youtube.com/vi/2BcC3C-qfX4/hqdefault.jpg)](https://www.youtube.com/watch?v=2BcC3C-qfX4)
 
-For more details on establishing a connection, read the [Getting Started](https://pytigergraph.github.io/pyTigerGraph/GettingStarted/) page.
-
-## Development
-Fork or clone this repo. Check out a new branch. 
-
-Set up the dev environment:
-* For core functions
-* For the GDS subpackage, install the `gds_dev_env.yml` environment in the "conda" folder. If you don't have `conda`, install [miniforge](https://github.com/conda-forge/miniforge) first. (Don't use [miniconda](https://docs.conda.io/en/latest/miniconda.html) as  Anaconda repo has a restrictive license now.)
-
-Work on your branch. Once your work is done, send a pull request. Unit tests are required for the review.
-
-## Example Projects
-
-- [Connecting to TigerGraph Database with pyTigerGraph](https://colab.research.google.com/drive/1sYv3Jvc6KYsqC4D-Rxkvjh4iPnrp4rg7)
-
-- [Predicting IPOs using Graph Convolutional Neural Networks](https://towardsdatascience.com/predicting-initial-public-offerings-using-graph-convolutional-neural-networks-42df5ce16006?source=friends_link&sk=17501f6534a0352951d118eb8b597599)
-
-- [Using pyTigergraph With Plotly](https://colab.research.google.com/drive/1MwtdXlbxzUsVgiI2bv1U-QmV0r5ES_Q-)
-
-- [TigerGraph to Tensorflow](https://colab.research.google.com/drive/1yXg1UTJynjLKmdCvVNm_ldvurTR6szGN)
-
-- [Movie Prediction with Graph Convolutional Neural Networks](https://colab.research.google.com/drive/11tcL4KXXwY__TmUUTjOf6InFQMC-VsG6)
-
-## Credits
-pyTigerGraph was originally created by Parker Erickson, a Computer Science student at the University of Minnesota. Special thanks to contributors Jon Herke and Szilard Barany of TigerGraph. Read [this](docs/CONTRIBUTING.md) to learn more about how you can contribute.
+The video above is a good starting place for learning the core functions of pyTigerGraph. [This Google Colab notebook](https://colab.research.google.com/drive/1JhYcnGVWT51KswcXZzyPzKqCoPP5htcC) is the companion notebook to the video.
