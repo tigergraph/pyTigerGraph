@@ -1,4 +1,4 @@
-"""pyTigerGraph Authentication
+"""Authentication Functions
 Provides functions for authenticating and managing permissions with TigerGraph.
 """
 import json

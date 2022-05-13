@@ -145,6 +145,7 @@ class RandomEdgeSplitter(BaseRandomSplitter):
     indicates which part an edge belongs to.
 
     Usage:
+    
     * A random 60% of edges will have their attribute "attr_name" set to True, and 
         others False. `attr_name` can be any attribute that exists in the database (same below).
         Example:

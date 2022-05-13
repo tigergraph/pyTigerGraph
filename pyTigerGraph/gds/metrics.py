@@ -1,4 +1,6 @@
 """pyTigerGraph GDS Metrics.
+:stem: latexmath
+
 Utility for gathering metrics for GNN predictions.
 """
 
