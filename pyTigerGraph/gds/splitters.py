@@ -128,9 +128,17 @@ class RandomVertexSplitter(BaseRandomSplitter):
     def run(self, **split_ratios) -> None:
         """Perform the split.
 
-        The split ratios set in initialization can be overridden here. For example,
-        `splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6); splitter.run(attr_name=0.3)`
-        will use the ratio 0.3 instead of 0.6.
+        The split ratios set in initialization can be overridden here. 
+        
+        For example:
+
+        [,python]
+        ----
+        splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6); 
+        splitter.run(attr_name=0.3)
+        ----
+        
+        The spliter above uses the ratio 0.3 instead of 0.6.
 
         """
         print("Splitting vertices...")
@@ -203,9 +211,14 @@ class RandomEdgeSplitter(BaseRandomSplitter):
         """Perform the split.
 
         The split ratios set in initialization can be overridden here. 
-        For example,
-        `splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6); splitter.run(attr_name=0.3)`
-        uses the ratio 0.3 instead of 0.6.
+        For example:
+
+        [source,python]
+        ----
+        splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6); 
+        splitter.run(attr_name=0.3)
+        ----
+        The splitter above uses the ratio 0.3 instead of 0.6.
 
         """
         print("Splitting edges...")
