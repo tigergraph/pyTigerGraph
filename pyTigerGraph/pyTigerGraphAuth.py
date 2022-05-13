@@ -168,7 +168,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             occurred.
 
         Endpoint:
-            - `GET /requesttoken`
+            - `POST /requesttoken`
                 See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_request_a_token
         """
         s, m, i = (0, 0, 0)
