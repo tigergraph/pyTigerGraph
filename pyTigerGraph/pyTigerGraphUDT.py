@@ -1,6 +1,7 @@
 """User Defined Tuple (UDT) Functions.
 
-Get information about User Defined Function for the graph.
+The functions on this page retrieve information about user-defined tuples (UDT) for the graph.
+All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base`[TigerGraphConnection` obejct].
 """
 from pyTigerGraph.pyTigerGraphSchema import pyTigerGraphSchema
 

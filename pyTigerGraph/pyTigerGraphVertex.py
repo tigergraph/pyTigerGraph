@@ -1,5 +1,8 @@
 """Vertex Functions.
-Provides functions to upsert, retrieve and delete vertices.
+
+Functions to upsert, retrieve and delete vertices.
+
+All functions in this module are called as methods on a `TigerGraphConnection` obejct. 
 """
 import json
 
