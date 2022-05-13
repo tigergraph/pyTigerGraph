@@ -70,9 +70,10 @@ class RandomVertexSplitter(BaseRandomSplitter):
 
     Usage:
 
-        . A random 60% of vertices will have their attribute "attr_name" set to True, and
+    * A random 60% of vertices will have their attribute "attr_name" set to True, and
         others False. `attr_name` can be any attribute that exists in the database (same below).
         Example:
+
     +
     [source,python]
     ----
@@ -81,9 +82,10 @@ class RandomVertexSplitter(BaseRandomSplitter):
     splitter.run()
     ----
        
-        . A random 60% of vertices will have their attribute "attr_name" set to True, and a
+    * A random 60% of vertices will have their attribute "attr_name" set to True, and a
         random 20% of vertices will have their attribute "attr_name2" set to True. The two
         parts are disjoint. Example:
+    
     +
     [source,python]
     ----
@@ -92,7 +94,7 @@ class RandomVertexSplitter(BaseRandomSplitter):
     splitter.run()
     ----
 
-        . A random 60% of vertices will have their attribute "attr_name" set to True, a
+    * A random 60% of vertices will have their attribute "attr_name" set to True, a
         random 20% of vertices will have their attribute "attr_name2" set to True, and
         another random 20% of vertices will have their attribute "attr_name3" set to True.
         The three parts are disjoint. Example:
@@ -143,7 +145,7 @@ class RandomEdgeSplitter(BaseRandomSplitter):
     indicates which part an edge belongs to.
 
     Usage:
-        . A random 60% of edges will have their attribute "attr_name" set to True, and 
+    * A random 60% of edges will have their attribute "attr_name" set to True, and 
         others False. `attr_name` can be any attribute that exists in the database (same below).
         Example:
     +
@@ -154,7 +156,7 @@ class RandomEdgeSplitter(BaseRandomSplitter):
     splitter.run()
     ----
 
-        . A random 60% of edges will have their attribute "attr_name" set to True, and a 
+    * A random 60% of edges will have their attribute "attr_name" set to True, and a 
         random 20% of edges will have their attribute "attr_name2" set to True. The two 
         parts are disjoint. Example:
     +   
@@ -165,7 +167,7 @@ class RandomEdgeSplitter(BaseRandomSplitter):
     splitter.run()
     ----
 
-        . A random 60% of edges will have their attribute "attr_name" set to True, a 
+    * A random 60% of edges will have their attribute "attr_name" set to True, a 
         random 20% of edges will have their attribute "attr_name2" set to True, and 
         another random 20% of edges will have their attribute "attr_name3" set to True. 
         The three parts are disjoint. Example:
