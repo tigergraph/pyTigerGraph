@@ -1,7 +1,7 @@
 """Loading Job Functions
 
 The functions on this page run loading jobs on the TigerGraph server.
-All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base`[TigerGraphConnection` obejct].
+All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` obejct]. 
 """
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
