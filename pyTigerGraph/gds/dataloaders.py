@@ -779,7 +779,9 @@ class BaseLoader:
 
     @property
     def data(self) -> Any:
-        """Return the last data read from the queue."""
+        """A property of the instance. 
+        The `data` property stores all data if all data is loaded in a single batch.
+        If there are multiple batches of data, the `data` property returns the instance itself"""
         if self.num_batches == 1:
             if self._data is None:
                 self._reset()
@@ -857,32 +859,37 @@ class BaseLoader:
 class NeighborLoader(BaseLoader):
     """NeighborLoader
     
-    A data loader that performs neighbor sampling.
-    See more details about the specific sampling method in 
-    link:https://arxiv.org/abs/1706.02216[Inductive Representation Learning on Large Graphs].
+    A data loader that performs neighbor sampling. 
+    You can decalre a `NeighborLoader` instance with the factory function `neighborLoder()`.
+    
+    A neighbor loader is an iterable.
+    When you loop through a neighbor loader instance, it loads one batch of data from the graph to which you established a connection. 
+    
+    In every iteration, it first chooses a specified number of vertices as seeds,
+    then picks a specified number of neighbors of each seed at random,
+    then the same number of neighbors of each neighbor, and repeat for a specified number of hops.
+    It loads both the vertices and the edges connecting them to their neighbors. 
+    The vertices sampled this way along with their edges form one subgraph and is contained in one batch.
 
-    It first chooses `batch_size` number of vertices as seeds,
-    then picks `num_neighbors` number of neighbors of each seed at random,
-    then `num_neighbors` neighbors of each neighbor, and repeat for `num_hops`.
-    This generates one subgraph. As you loop through this data loader, every
-    vertex will at some point be chosen as a seed and you will get the subgraph
-    expanded from the seed. If you want to limit seeds to certain vertices, the boolean
-    attribute provided to `filter_by` will be used to indicate which vertices can be
-    included as seeds.
+    You can iterate on the instance until every vertex has been picked as seed. 
 
+    Examples:
+    
+    The following example iterates over a neighbor loader instance. 
+    --
+    [.wrap,python]
+    ----
+    for i, batch in enumerate(neighbor_loader):
+        print("----Batch {}----".format(i))
+        print(batch)
+    ----
+    
 
-    There are two ways to use the data loader:
-
-    * It can be used as an iterable, which means you can loop through
-        it to get every batch of data. If you load all data at once (`num_batches=1`),
-        there will be only one batch (of all the data) in the iterator.
-    * You can access the `data` property of the class directly. If there is
-        only one batch of data to load, it will give you the batch directly instead
-        of an iterator, which might make more sense in that case. If there are
-        multiple batches of data to load, it will return the loader itself.
 
     See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_neighborloader.ipynb[the ML Workbench tutorial notebook]
         for examples.
+    See more details about the specific sampling method in 
+    link:https://arxiv.org/abs/1706.02216[Inductive Representation Learning on Large Graphs].
     """
     def __init__(
         self,
@@ -1096,28 +1103,83 @@ class NeighborLoader(BaseLoader):
     
     @property
     def data(self) -> Any:
-        """Return the last data read from the queue."""
+        """A property of the instance. 
+        The `data` property stores all data if all data is loaded in a single batch.
+        If there are multiple batches of data, the `data` property returns the instance itself"""
         return super().data
 
 
 class EdgeLoader(BaseLoader):
     """Edge Loader.
     
-    Data loader that pulls batches of edges from database.
+    Data loader that loads all edges from the graph in batches.
+    You can define an edge loader using the `edgeLoader()` factory function.
 
-    It divides edges into `num_batches` and returns each batch separately.
-        The boolean attribute provided to `filter_by` indicates which edges are included.
-        If you need random batches, set `shuffle` to True.
+    An edge loader instance is an iterable. 
+    When you loop through an edge loader instance, it loads one batch of data from the graph to which you established a connection in each iteration.
+    The size and total number of batches are specified when you define the edge loader instance. 
+    
+    The boolean attribute provided to `filter_by` indicates which edges are included.
+    If you need random batches, set `shuffle` to True.
 
-    There are two ways to use the data loader.
+    Examples:
+    The following for loop prints every edge in batches. 
 
-    * It can be used as an iterable, which means you can loop through
-          it to get every batch of data. If you load all edges at once (`num_batches=1`),
-          there will be only one batch (of all the edges) in the iterator.
-    * You can access the `data` property of the class directly. If there is
-          only one batch of data to load, it will give you the batch directly instead
-          of an iterator, which might make more sense in that case. If there are
-          multiple batches of data to load, it will return the loader again.
+    [tabs]
+    ====
+    Input::
+    +
+    --
+    [.wrap,python]
+    ----
+    edge_loader = conn.gds.edgeLoader(
+        num_batches=10,
+        attributes=["time", "is_train"],
+        shuffle=True,
+        filter_by=None
+    )
+    for i, batch in enumerate(edge_loader):
+        print("----Batch {}: Shape {}----".format(i, batch.shape))
+        print(batch.head(1))
+    ----
+    --
+    Output::
+    +
+    --
+    ----
+    ----Batch 0: Shape (1129, 4)----
+        source    target  time  is_train
+    0  3145728  22020185     0         1
+    ----Batch 1: Shape (1002, 4)----
+        source    target  time  is_train
+    0  1048577  20971586     0         1
+    ----Batch 2: Shape (1124, 4)----
+    source   target  time  is_train
+    0       4  9437199     0         1
+    ----Batch 3: Shape (1071, 4)----
+        source    target  time  is_train
+    0  11534340  32505859     0         1
+    ----Batch 4: Shape (978, 4)----
+        source    target  time  is_train
+    0  11534341  16777293     0         1
+    ----Batch 5: Shape (1149, 4)----
+        source   target  time  is_train
+    0  5242882  2097158     0         1
+    ----Batch 6: Shape (1013, 4)----
+        source    target  time  is_train
+    0  4194305  23068698     0         1
+    ----Batch 7: Shape (1037, 4)----
+        source   target  time  is_train
+    0  7340035  4194337     0         0
+    ----Batch 8: Shape (1067, 4)----
+    source   target  time  is_train
+    0       3  1048595     0         1
+    ----Batch 9: Shape (986, 4)----
+        source    target  time  is_train
+    0  9437185  13631508     0         1
+    ----
+    --
+
 
     See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_edgeloader.ipynb[the ML Workbench edge loader tutorial notebook]
         for examples.
@@ -1300,31 +1362,90 @@ class EdgeLoader(BaseLoader):
 
     @property
     def data(self) -> Any:
-        """Return the last data read from the queue."""
+        """A property of the instance. 
+        The `data` property stores all edges if all data is loaded in a single batch.
+        If there are multiple batches of data, the `data` property returns the instance itself. """
         return super().data
 
 
 class VertexLoader(BaseLoader):
     """Vertex Loader.
     
-    Data loader that pulls batches of vertices from database.
+    Data loader that loads all vertices from the graph in batches.
 
-    It divides vertices into `num_batches` and returns each batch separately.
-        The boolean attribute provided to `filter_by` indicates which vertices are included.
-        If you need random batches, set `shuffle` to True.
+    A vertex loader instance is an iterable. 
+    When you loop through an vertex loader instance, it loads one batch of data from the graph to which you established a connection in each iteration.
+    The size and total number of batches are specified when you define the vertex loader instance. 
+    
+    The boolean attribute provided to `filter_by` indicates which vertices are included.
+    If you need random batches, set `shuffle` to True.
 
-    There are two ways to use the data loader:
+    Examples:
+    The following for loop loads all vertices in the graph and prints one from each batch:
 
-    * First, it can be used as an iterable, which means you can loop through
-          it to get every batch of data. If you load all vertices at once (`num_batches=1`),
-          there will be only one batch (of all the vertices) in the iterator.
-    * Second, you can access the `data` property of the class directly. If there is
-          only one batch of data to load, it will give you the batch directly instead
-          of an iterator, which might make more sense in that case. If there are
-          multiple batches of data to load, it will return the loader again.
+    [tabs]
+    ====
+    Input::
+    +
+    --
+    [.wrap,python]
+    ----
+    edge_loader = conn.gds.edgeLoader(
+        num_batches=10,
+        attributes=["time", "is_train"],
+        shuffle=True,
+        filter_by=None
+    )
+
+    for i, batch in enumerate(edge_loader):
+        print("----Batch {}: Shape {}----".format(i, batch.shape))
+        print(batch.head(1)) <1>
+    ----
+    <1> Since the example does not provide an output format, the output format defaults to panda frames, have access to the methods of panda frame instances. 
+    --
+    Output::
+    +
+    --
+    [.wrap,python]
+    ----
+    ----Batch 0: Shape (1129, 4)----
+    source    target  time  is_train
+    0  3145728  22020185     0         1
+    ----Batch 1: Shape (1002, 4)----
+        source    target  time  is_train
+    0  1048577  20971586     0         1
+    ----Batch 2: Shape (1124, 4)----
+    source   target  time  is_train
+    0       4  9437199     0         1
+    ----Batch 3: Shape (1071, 4)----
+        source    target  time  is_train
+    0  11534340  32505859     0         1
+    ----Batch 4: Shape (978, 4)----
+        source    target  time  is_train
+    0  11534341  16777293     0         1
+    ----Batch 5: Shape (1149, 4)----
+        source   target  time  is_train
+    0  5242882  2097158     0         1
+    ----Batch 6: Shape (1013, 4)----
+        source    target  time  is_train
+    0  4194305  23068698     0         1
+    ----Batch 7: Shape (1037, 4)----
+        source   target  time  is_train
+    0  7340035  4194337     0         0
+    ----Batch 8: Shape (1067, 4)----
+    source   target  time  is_train
+    0       3  1048595     0         1
+    ----Batch 9: Shape (986, 4)----
+        source    target  time  is_train
+    0  9437185  13631508     0         1
+    ----
+    --
+    ====
+
+
 
     See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_vertexloader.ipynb[the ML Workbench tutorial notebook]
-        for examples.
+        for more examples.
     """
     def __init__(
         self,
@@ -1508,17 +1629,19 @@ class VertexLoader(BaseLoader):
     
     @property
     def data(self) -> Any:
-        """Return the last data read from the queue."""
+        """A property of the instance. 
+        The `data` property stores all data if all data is loaded in a single batch.
+        If there are multiple batches of data, the `data` property returns the instance itself."""
         return super().data
 
 
 class GraphLoader(BaseLoader):
     """Graph Loader.
     
-    Data loader that pulls batches of vertices and edges from database.
+    Data loader that loads all edges from the graph in batches, along with the vertices that are connected with each edge.
 
     Different from NeighborLoader which produces connected subgraphs, this loader
-        generates (random) batches of edges and vertices attached to those edges.
+        loads all edges by batches and vertices attached to those edges.
 
     There are two ways to use the data loader:
 
@@ -1529,6 +1652,64 @@ class GraphLoader(BaseLoader):
           only one batch of data to load, it will give you the batch directly instead
           of an iterator, which might make more sense in that case. If there are
           multiple batches of data to load, it will return the loader itself.
+
+    Examples:
+    The following for loop prints all edges and their connected vertices in batches.
+    The outout format is `PyG`:
+
+
+    [tabs]
+    ====
+    Input::
+    +
+    --
+    [.wrap,python]
+    ----
+    graph_loader = conn.gds.graphLoader(
+        num_batches=10,
+        v_in_feats = ["x"],
+        v_out_labels = ["y"],
+        v_extra_feats = ["train_mask", "val_mask", "test_mask"],
+        e_in_feats=["time"],
+        e_out_labels=[],
+        e_extra_feats=["is_train", "is_val"],
+        output_format = "PyG",
+        shuffle=True,
+        filter_by=None
+    ) 
+    for i, batch in enumerate(graph_loader):
+        print("----Batch {}----".format(i))
+        print(batch)
+    ----
+    --
+    Output::
+    +
+    --
+    ----
+    ----Batch 0----
+    Data(edge_index=[2, 1128], edge_feat=[1128], is_train=[1128], is_val=[1128], x=[1061, 1433], y=[1061], train_mask=[1061], val_mask=[1061], test_mask=[1061])
+    ----Batch 1----
+    Data(edge_index=[2, 997], edge_feat=[997], is_train=[997], is_val=[997], x=[1207, 1433], y=[1207], train_mask=[1207], val_mask=[1207], test_mask=[1207])
+    ----Batch 2----
+    Data(edge_index=[2, 1040], edge_feat=[1040], is_train=[1040], is_val=[1040], x=[1218, 1433], y=[1218], train_mask=[1218], val_mask=[1218], test_mask=[1218])
+    ----Batch 3----
+    Data(edge_index=[2, 1071], edge_feat=[1071], is_train=[1071], is_val=[1071], x=[1261, 1433], y=[1261], train_mask=[1261], val_mask=[1261], test_mask=[1261])
+    ----Batch 4----
+    Data(edge_index=[2, 1091], edge_feat=[1091], is_train=[1091], is_val=[1091], x=[1163, 1433], y=[1163], train_mask=[1163], val_mask=[1163], test_mask=[1163])
+    ----Batch 5----
+    Data(edge_index=[2, 1076], edge_feat=[1076], is_train=[1076], is_val=[1076], x=[1018, 1433], y=[1018], train_mask=[1018], val_mask=[1018], test_mask=[1018])
+    ----Batch 6----
+    Data(edge_index=[2, 1054], edge_feat=[1054], is_train=[1054], is_val=[1054], x=[1249, 1433], y=[1249], train_mask=[1249], val_mask=[1249], test_mask=[1249])
+    ----Batch 7----
+    Data(edge_index=[2, 1006], edge_feat=[1006], is_train=[1006], is_val=[1006], x=[1185, 1433], y=[1185], train_mask=[1185], val_mask=[1185], test_mask=[1185])
+    ----Batch 8----
+    Data(edge_index=[2, 1061], edge_feat=[1061], is_train=[1061], is_val=[1061], x=[1250, 1433], y=[1250], train_mask=[1250], val_mask=[1250], test_mask=[1250])
+    ----Batch 9----
+    Data(edge_index=[2, 1032], edge_feat=[1032], is_train=[1032], is_val=[1032], x=[1125, 1433], y=[1125], train_mask=[1125], val_mask=[1125], test_mask=[1125])
+    ----
+    --
+    ====
+
 
     See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_graphloader.ipynb[the ML Workbench tutorial notebook for graph loaders]
          for examples.
@@ -1739,5 +1920,7 @@ class GraphLoader(BaseLoader):
 
     @property
     def data(self) -> Any:
-        """Return the last data read from the queue."""
+        """A property of the instance. 
+        The `data` property stores all data if all data is loaded in a single batch.
+        If there are multiple batches of data, the `data` property returns the instance itself"""
         return super().data

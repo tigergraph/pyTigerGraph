@@ -77,16 +77,20 @@ class GDS:
         kafka_address_producer: str = None,
         timeout: int = 300000,
     ) -> NeighborLoader:
-        """A data loader that performs neighbor sampling.
-        See more details about the specific sampling method in 
-        link:https://arxiv.org/abs/1706.02216[Inductive Representation Learning on Large Graphs].
+        """Returns a `NeighborLoader` instance.
+        A `NeighborLoader` instance performs neighbor sampling from all vertices in the graph in bathces in the following manner:
 
-        It first chooses `batch_size` number of vertices as seeds,
-        then picks `num_neighbors` number of neighbors of each seed at random,
-        then `num_neighbors` neighbors of each neighbor, and repeat for `num_hops`.
-        This generates one subgraph. As you loop through this data loader, every
-        vertex will at some point be chosen as a seed and you will get the subgraph
-        expanded from the seed. If you want to limit seeds to certain vertices, the boolean
+        . It chooses a specified number (`batch_size`) of vertices as seeds. 
+        The number of batches is the total number of vertices divided by the batch size. 
+        * If you specify the number of batchs (`num_batches`) instead, `batch_size` is calculated by dividing the total number of vertices by the number of batches.
+        If specify both parameters, `batch_size` takes priority. 
+        . It picks a specified number (`num_neighbors`) of neighbors of each seed at random.
+        . It picks the same number of neighbors for each neighbor, and repeats this process until it finished performing a specified number of hops (`num_hops`).
+        
+        This generates one subgraph. 
+        As you loop through this data loader, every vertex will at some point be chosen as a seed and you will get the subgraph
+        expanded from the seeds. 
+        If you want to limit seeds to certain vertices, the boolean
         attribute provided to `filter_by` will be used to indicate which vertices can be
         included as seeds.
 
@@ -96,22 +100,85 @@ class GDS:
         needs to be done once, so it will take no time when you initialize the loader
         on the same graph again.
 
-
-        There are two ways to use the data loader:
-
-        * First, it can be used as an iterable, which means you can loop through
-          it to get every batch of data. If you load all data at once (`num_batches=1`),
-          there will be only one batch (of all the data) in the iterator.
-        * Second, you can access the `data` property of the class directly. If there is
-          only one batch of data to load, it will give you the batch directly instead
-          of an iterator, which might make more sense in that case. If there are
-          multiple batches of data to load, it will return the loader itself.
-
         See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_neighborloader.ipynb[the ML Workbench tutorial notebook]
         for examples.
 
-        See the following documentation for more details about `NeighborLoader` arguments:
-        xref:dataloaders.adoc#_neighbor_loader[Neighbor Loader Documentation]
+        Args:
+            v_in_feats (list, optional):
+                Vertex attributes to be used as input features.
+                Only numeric and boolean attributes are allowed. The type of an attrbiute
+                is automatically determined from the database schema. Defaults to None.
+            v_out_labels (list, optional):
+                Vertex attributes to be used as labels for
+                prediction. Only numeric and boolean attributes are allowed. Defaults to None.
+            v_extra_feats (list, optional):
+                Other attributes to get such as indicators of
+                train/test data. All types of attributes are allowed. Defaults to None.
+            e_in_feats (list, optional):
+                Edge attributes to be used as input features.
+                Only numeric and boolean attributes are allowed. The type of an attrbiute
+                is automatically determined from the database schema. Defaults to None.
+            e_out_labels (list, optional):
+                Edge attributes to be used as labels for
+                prediction. Only numeric and boolean attributes are allowed. Defaults to None.
+            e_extra_feats (list, optional):
+                Other edge attributes to get such as indicators of
+                train/test data. All types of attributes are allowed. Defaults to None.
+            batch_size (int, optional):
+                Number of vertices as seeds in each batch.
+                Defaults to None.
+            num_batches (int, optional):
+                Number of batches to split the vertices into as seeds.
+                If both `batch_size` and `num_batches` are provided, `batch_size` takes higher
+                priority. Defaults to 1.
+            num_neighbors (int, optional):
+                Number of neighbors to sample for each vertex.
+                Defaults to 10.
+            num_hops (int, optional):
+                Number of hops to traverse when sampling neighbors.
+                Defaults to 2.
+            shuffle (bool, optional):
+                Whether to shuffle the vertices before loading data.
+                Defaults to False.
+            filter_by (str, optional):
+                A boolean attribute used to indicate which vertices
+                can be included as seeds. Defaults to None.
+            output_format (str, optional):
+                Format of the output data of the loader. Only
+                "PyG", "DGL" and "dataframe" are supported. Defaults to "PyG".
+            add_self_loop (bool, optional):
+                Whether to add self-loops to the graph. Defaults to False.
+            loader_id (str, optional):
+                An identifier of the loader which can be any string. It is
+                also used as the Kafka topic name. If `None`, a random string will be generated
+                for it. Defaults to None.
+            buffer_size (int, optional):
+                Number of data batches to prefetch and store in memory. Defaults to 4.
+            kafka_address (str, optional):
+                Address of the kafka broker. Defaults to None.
+            kafka_max_msg_size (int, optional):
+                Maximum size of a Kafka message in bytes.
+                Defaults to 104857600.
+            kafka_num_partitions (int, optional):
+                Number of partitions for the topic created by this loader.
+                Defaults to 1.
+            kafka_replica_factor (int, optional):
+                Number of replications for the topic created by this
+                loader. Defaults to 1.
+            kafka_retention_ms (int, optional):
+                Retention time for messages in the topic created by this
+                loader in milliseconds. Defaults to 60000.
+            kafka_auto_del_topic (bool, optional):
+                Whether to delete the Kafka topic once the
+                loader finishes pulling data. Defaults to True.
+            kafka_address_consumer (str, optional):
+                Address of the kafka broker that a consumer
+                should use. Defaults to be the same as `kafkaAddress`.
+            kafka_address_producer (str, optional):
+                Address of the kafka broker that a producer
+                should use. Defaults to be the same as `kafkaAddress`.
+            timeout (int, optional):
+                Timeout value for GSQL queries, in ms. Defaults to 300000.
         """
         return NeighborLoader(
             self.conn,
@@ -162,9 +229,12 @@ class GDS:
         kafka_address_producer: str = None,
         timeout: int = 300000,
     ) -> EdgeLoader:
-        """Data loader that pulls batches of edges from database.
+        """Returns an `EdgeLoader` instance. 
+        An `EdgeLoader` instance loads all edges in the graph in batches.
 
-        It divides edges into `num_batches` and returns each batch separately.
+        It divides all edges into `num_batches` and returns each batch separately.
+        You can also specify the size of each batch, and the number of batched is calculated accordingly. 
+        If you provide both parameters, `batch_size` take priority. 
         The boolean attribute provided to `filter_by` indicates which edges are included.
         If you need random batches, set `shuffle` to True.
 
@@ -181,14 +251,60 @@ class GDS:
           there will be only one batch (of all the edges) in the iterator.
         * You can access the `data` property of the class directly. If there is
           only one batch of data to load, it will give you the batch directly instead
-          of an iterator, which might make more sense in that case. If there are
-          multiple batches of data to load, it will return the loader again.
+          of an iterator. If there are
+          multiple batches of data to load, it returns the loader itself.
+
+         Args:
+            attributes (list, optional):
+                Edge attributes to be included. Defaults to None.
+            batch_size (int, optional):
+                Number of edges in each batch.
+                Defaults to None.
+            num_batches (int, optional):
+                Number of batches to split the edges.
+                Defaults to 1.
+            shuffle (bool, optional):
+                Whether to shuffle the edges before loading data.
+                Defaults to False.
+            filter_by (str, optional):
+                A boolean attribute used to indicate which edges are included. Defaults to None.
+            output_format (str, optional):
+                Format of the output data of the loader. Only
+                "dataframe" is supported. Defaults to "dataframe".
+            loader_id (str, optional):
+                An identifier of the loader which can be any string. It is
+                also used as the Kafka topic name. If `None`, a random string will be generated
+                for it. Defaults to None.
+            buffer_size (int, optional):
+                Number of data batches to prefetch and store in memory. Defaults to 4.
+            kafka_address (str, optional):
+                Address of the kafka broker. Defaults to None.
+            kafka_max_msg_size (int, optional):
+                Maximum size of a Kafka message in bytes.
+                Defaults to 104857600.
+            kafka_num_partitions (int, optional):
+                Number of partitions for the topic created by this loader.
+                Defaults to 1.
+            kafka_replica_factor (int, optional):
+                Number of replications for the topic created by this
+                loader. Defaults to 1.
+            kafka_retention_ms (int, optional):
+                Retention time for messages in the topic created by this
+                loader in milliseconds. Defaults to 60000.
+            kafka_auto_del_topic (bool, optional):
+                Whether to delete the Kafka topic once the
+                loader finishes pulling data. Defaults to True.
+            kafka_address_consumer (str, optional):
+                Address of the kafka broker that a consumer
+                should use. Defaults to be the same as `kafkaAddress`.
+            kafka_address_producer (str, optional):
+                Address of the kafka broker that a producer
+                should use. Defaults to be the same as `kafkaAddress`.
+            timeout (int, optional):
+                Timeout value for GSQL queries, in ms. Defaults to 300000.
 
         See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_edgeloader.ipynb[the ML Workbench edge loader tutorial notebook]
         for examples.
-
-        See
-        xref:dataloaders.adoc#_edge_loader[`EdgeLoader` documentation] for more details about the `EdgeLoader` arguments,
         """
         return EdgeLoader(
             self.conn,
@@ -231,7 +347,8 @@ class GDS:
             kafka_address_producer: str = None,
             timeout: int = 300000,
     ) -> VertexLoader:
-        """Data loader that pulls batches of vertices from database.
+        """Returns a `VertexLoader` instance.
+        A `VertexLoader` can load all vertices of a graph in batches.
 
         It divides vertices into `num_batches` and returns each batch separately.
         The boolean attribute provided to `filter_by` indicates which vertices are included.
@@ -245,18 +362,66 @@ class GDS:
 
         There are two ways to use the data loader:
 
-        * First, it can be used as an iterable, which means you can loop through
+        * It can be used as an iterable, which means you can loop through
           it to get every batch of data. If you load all vertices at once (`num_batches=1`),
           there will be only one batch (of all the vertices) in the iterator.
-        * Second, you can access the `data` property of the class directly. If there is
+        * You can access the `data` property of the class directly. If there is
           only one batch of data to load, it will give you the batch directly instead
           of an iterator, which might make more sense in that case. If there are
           multiple batches of data to load, it will return the loader again.
 
+        Args:
+            attributes (list, optional):
+                Vertex attributes to be included. Defaults to None.
+            batch_size (int, optional):
+                Number of vertices in each batch.
+                Defaults to None.
+            num_batches (int, optional):
+                Number of batches to split the vertices.
+                Defaults to 1.
+            shuffle (bool, optional):
+                Whether to shuffle the vertices before loading data.
+                Defaults to False.
+            filter_by (str, optional):
+                A boolean attribute used to indicate which vertices
+                can be included. Defaults to None.
+            output_format (str, optional):
+                Format of the output data of the loader. Only
+                "dataframe" is supported. Defaults to "dataframe".
+            loader_id (str, optional):
+                An identifier of the loader which can be any string. It is
+                also used as the Kafka topic name. If `None`, a random string will be generated
+                for it. Defaults to None.
+            buffer_size (int, optional):
+                Number of data batches to prefetch and store in memory. Defaults to 4.
+            kafka_address (str, optional):
+                Address of the kafka broker. Defaults to None.
+            kafka_max_msg_size (int, optional):
+                Maximum size of a Kafka message in bytes.
+                Defaults to 104857600.
+            kafka_num_partitions (int, optional):
+                Number of partitions for the topic created by this loader.
+                Defaults to 1.
+            kafka_replica_factor (int, optional):
+                Number of replications for the topic created by this loader.
+                Defaults to 1.
+            kafka_retention_ms (int, optional):
+                Retention time for messages in the topic created by this
+                loader in milliseconds. Defaults to 60000.
+            kafka_auto_del_topic (bool, optional):
+                Whether to delete the Kafka topic once the
+                loader finishes pulling data. Defaults to True.
+            kafka_address_consumer (str, optional):
+                Address of the kafka broker that a consumer
+                should use. Defaults to be the same as `kafkaAddress`.
+            kafka_address_producer (str, optional):
+                Address of the kafka broker that a producer
+                should use. Defaults to be the same as `kafkaAddress`.
+            timeout (int, optional):
+                Timeout value for GSQL queries, in ms. Defaults to 300000.
+
         See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_vertexloader.ipynb[the ML Workbench tutorial notebook]
         for examples.
-
-        See xref:dataloaders.adoc#_vertex_loader[`VertexLoader` documentation] for more details about the VertexLoader arguments
         """
         return VertexLoader(
             self.conn,
@@ -305,7 +470,8 @@ class GDS:
         kafka_address_producer: str = None,
         timeout: int = 300000,
     ) -> GraphLoader:
-        """Data loader that pulls batches of vertices and edges from database.
+        """Returns a `GraphLoader`instance.
+        A `GraphLoader` instance loads all edges from the graph in batches, along with the vertices that are connected with each edge.
 
         Different from NeighborLoader which produces connected subgraphs, this loader
         generates (random) batches of edges and vertices attached to those edges.
@@ -326,10 +492,78 @@ class GDS:
           of an iterator, which might make more sense in that case. If there are
           multiple batches of data to load, it will return the loader itself.
 
+         Args:
+            v_in_feats (list, optional):
+                Vertex attributes to be used as input features.
+                Only numeric and boolean attributes are allowed. The type of an attrbiute
+                is automatically determined from the database schema. Defaults to None.
+            v_out_labels (list, optional):
+                Vertex attributes to be used as labels for prediction.
+                Only numeric and boolean attributes are allowed. Defaults to None.
+            v_extra_feats (list, optional):
+                Other attributes to get such as indicators of train/test data.
+                All types of attributes are allowed. Defaults to None.
+            e_in_feats (list, optional):
+                Edge attributes to be used as input features.
+                Only numeric and boolean attributes are allowed. The type of an attrbiute
+                is automatically determined from the database schema. Defaults to None.
+            e_out_labels (list, optional):
+                Edge attributes to be used as labels for
+                prediction. Only numeric and boolean attributes are allowed. Defaults to None.
+            e_extra_feats (list, optional):
+                Other edge attributes to get such as indicators of
+                train/test data. All types of attributes are allowed. Defaults to None.
+            batch_size (int, optional):
+                Number of edges in each batch.
+                Defaults to None.
+            num_batches (int, optional):
+                Number of batches to split the edges.
+                Defaults to 1.
+            shuffle (bool, optional):
+                Whether to shuffle the data before loading.
+                Defaults to False.
+            filter_by (str, optional):
+                A boolean attribute used to indicate which edges can be included.
+                Defaults to None.
+            output_format (str, optional):
+                Format of the output data of the loader.
+                Only "PyG", "DGL" and "dataframe" are supported. Defaults to "dataframe".
+            add_self_loop (bool, optional):
+                Whether to add self-loops to the graph. Defaults to False.
+            loader_id (str, optional):
+                An identifier of the loader which can be any string. It is
+                also used as the Kafka topic name. If `None`, a random string will be generated
+                for it. Defaults to None.
+            buffer_size (int, optional):
+                Number of data batches to prefetch and store in memory. Defaults to 4.
+            kafka_address (str, optional):
+                Address of the kafka broker. Defaults to None.
+            kafka_max_msg_size (int, optional):
+                Maximum size of a Kafka message in bytes.
+                Defaults to 104857600.
+            kafka_num_partitions (int, optional):
+                Number of partitions for the topic created by this loader.
+                Defaults to 1.
+            kafka_replica_factor (int, optional):
+                Number of replications for the topic created by this
+                loader. Defaults to 1.
+            kafka_retention_ms (int, optional):
+                Retention time for messages in the topic created by this
+                loader in milliseconds. Defaults to 60000.
+            kafka_auto_del_topic (bool, optional):
+                Whether to delete the Kafka topic once the
+                loader finishes pulling data. Defaults to True.
+            kafka_address_consumer (str, optional):
+                Address of the kafka broker that a consumer
+                should use. Defaults to be the same as `kafkaAddress`.
+            kafka_address_producer (str, optional):
+                Address of the kafka broker that a producer
+                should use. Defaults to be the same as `kafkaAddress`.
+            timeout (int, optional):
+                Timeout value for GSQL queries, in ms. Defaults to 300000.
+
         See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_graphloader.ipynb[the ML Workbench tutorial notebook for graph loaders]
          for examples.
-
-        See xref:dataloaders.adoc#_graph_loader[Graph Loader Documentation] for more details about the Graph Loader arguments:
         """
         return GraphLoader(
             self.conn,
