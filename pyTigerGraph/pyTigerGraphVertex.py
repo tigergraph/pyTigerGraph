@@ -23,7 +23,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
                 cached copy of vertex type metadata (if they were already fetched previously).
 
         Returns:
-            The list of vertex types defined in the the current graph.
+            The list of vertex types defined in the current graph.
         """
         ret = []
         for vt in self.getSchema(force=force)["VertexTypes"]:
@@ -35,7 +35,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         Args:
             vertexType:
-                The name of of the vertex type.
+                The name of the vertex type.
             force:
                 If `True`, forces the retrieval the schema metadata again, otherwise returns a
                 cached copy of vertex type details (if they were already fetched previously).

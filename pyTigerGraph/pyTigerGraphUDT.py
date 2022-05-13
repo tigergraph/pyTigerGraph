@@ -1,4 +1,4 @@
-"""User Defined Typle (UDT) Functions.
+"""User Defined Tuple (UDT) Functions.
 
 Get information about User Defined Function for the graph.
 """
