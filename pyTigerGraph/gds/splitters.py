@@ -187,6 +187,12 @@ class RandomEdgeSplitter(BaseRandomSplitter):
     splitter = conn.gds.edgeSplitter(timeout, attr_name=0.6, attr_name2=0.2, attr_name3=0.2)
     splitter.run()
     ----
+
+    Args:
+        conn (TigerGraphConnection):
+            Connection to TigerGraph database.
+        timeout (int, optional):
+            Timeout value for the operation. Defaults to 600000.
     """
 
     def __init__(
