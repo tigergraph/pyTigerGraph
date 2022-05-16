@@ -1,3 +1,8 @@
+"""Query Functions.
+
+The functions on this page run installed or interpret queries in TigerGraph.
+All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object]. 
+"""
 import json
 from datetime import datetime
 
@@ -12,13 +17,7 @@ from pyTigerGraph.pyTigerGraphUtils import pyTigerGraphUtils
 
 
 class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
-    """Query Functions.
-
-    Run installed and interpreted queries in TigerGraph.
-    """
-
     # TODO getQueries()  # List _all_ query names
-
     def getInstalledQueries(self, fmt: str = "py") -> Union[dict, str, 'pd.DataFrame']:
         """Returns a list of installed queries.
 
@@ -50,24 +49,25 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
 
     # TODO getQueryMetadata()
     #   GET /gsqlserver/gsql/queryinfo
-    #   https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#get-query-metadata
+    #   xref:tigergraph-server:API:built-in-endpoints.adoc#get-query-metadata[Get query metadata]
 
     # TODO installQueries()
     #   POST /gsql/queries/install
-    #   https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_install_a_query
+    #   xref:tigergraph-server:API:built-in-endpoints.adoc#_install_a_query[Install a query]
 
     # TODO checkQueryInstallationStatus()
     #   GET /gsql/queries/install/{request_id}
-    #   https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_check_query_installation_status
+    #   xref:tigergraph-server:API:built-in-endpoints.adoc#_check_query_installation_status[Check query installation status]
 
     def _parseQueryParameters(self, params: dict) -> str:
-        """Parse a dictionary of query parameters and convert them to query string.
+        """Parses a dictionary of query parameters and converts them to query strings.
 
         While most of the values provided for various query parameter types can be easily converted
-        to query string (key1=value1&key2=value2), SET and BAG parameter types, and especially
-        VERTEX and SET<VERTEX> (i.e. vertex primary ID types without vertex type specification)
+        to query strings (key1=value1&key2=value2), `SET` and `BAG` parameter types, and especially
+        `VERTEX` and `SET<VERTEX>` (i.e. vertex primary ID types without vertex type specification)
         require special handling.
-        See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_query_parameter_passing
+
+        See xref:tigergraph-server:API:built-in-endpoints.adoc#_query_parameter_passing[Query parameter passing]
 
         TODO Accept this format for SET<VERTEX>:
             "key": [([p_id1, p_id2, ...], "vtype"), ...]
@@ -105,8 +105,8 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
         """Runs an installed query.
 
         The query must be already created and installed in the graph.
-        Use ``getEndpoints(dynamic=True)`` or GraphStudio to find out the generated endpoint URL of
-        the query, but only the query name needs to be specified here.
+        Use `getEndpoints(dynamic=True)` or GraphStudio to find out the generated endpoint URL of
+        the query. Only the query name needs to be specified here.
 
         Args:
             queryName:
@@ -116,12 +116,12 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
                 See below for special rules for dictionaries.
             timeout:
                 Maximum duration for successful query execution (in milliseconds).
-                See https://docs.tigergraph.com/tigergraph-server/current/api/#_gsql_query_timeout
+                See xref:tigergraph-server:API:index.adoc#_gsql_query_timeout[GSQL query timeout]
             sizeLimit:
                 Maximum size of response (in bytes).
-                See https://docs.tigergraph.com/tigergraph-server/current/api/#_response_size
+                See xref:tigergraph-server:API:index.adoc#_response_size[Response size]
             usePost:
-                The RESTPP accepts a maximum URL length of 8192 characters. Use POST if params cause
+                The RESTPP accepts a maximum URL length of 8192 characters. Use POST if additional parameters cause
                 you to exceed this limit.
 
         Returns:
@@ -146,9 +146,9 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
 
         Endpoints:
             - `GET /query/{graph_name}/{query_name}`
-                See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_run_an_installed_query_get
+                See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_an_installed_query_get[Run an installed query (GET)]
             - `POST /query/{graph_name}/{query_name}`
-                See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_run_an_installed_query_post
+                See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_an_installed_query_post[Run an installed query (POST)]
 
         TODO Specify replica: GSQL-REPLICA
         TODO Specify thread limit: GSQL-THREAD-LIMIT
@@ -172,33 +172,36 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
 
     # TODO checkQueryStatus()
     #   GET /query_status/{graph_name}
-    #   https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_check_query_status_detached_mode
+    #   xref:tigergraph-server:API:built-in-endpoints.adoc#_check_query_status_detached_mode[Check query status (detached mode)]
 
     # TODO getQueryResult()
     #   GET /query_result/{requestid}
-    #   https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_check_query_results_detached_mode
+    #   xref:tigergraph-server:API:built-in-endpoints.adoc#_check_query_results_detached_mode[Check query results (detached mode)]
 
     def runInterpretedQuery(self, queryText: str, params: Union[str, dict] = None) -> list:
         """Runs an interpreted query.
 
-        Use ``$graphname`` or ``@graphname@`` in the ``FOR GRAPH`` clause to avoid hard coding the
-        name of the graph in your app; it will be replaced by the actual graph name.
+        Use ``$graphname`` or ``@graphname@`` in the ``FOR GRAPH`` clause to avoid hardcoding the
+        name of the graph in your app. It will be replaced by the actual graph name.
 
         Args:
             queryText:
                 The text of the GSQL query that must be provided in this format:
-                ```
+
+                [source.wrap, gsql]
+                ----
                 INTERPRET QUERY (<params>) FOR GRAPH <graph_name> {
                     <statements>
                 }
-                ```
+                ----
+
             params:
                 A string of `param1=value1&param2=value2...` format or a dictionary.
                 See below for special rules for dictionaries.
 
         Returns:
-            The output of the query, a list of output elements (vertex sets, edge sets, variables,
-            accumulators, etc.
+            The output of the query, a list of output elements such as vertex sets, edge sets, variables and
+            accumulators.
 
         Notes:
             When specifying parameter values in a dictionary:
@@ -219,7 +222,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
 
         Endpoint:
             - `POST /gsqlserver/interpreted_query`
-                See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_run_an_interpreted_query
+                See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_an_interpreted_query[Run an interpreted query]
 
         TODO Add "GSQL-TIMEOUT: <timeout value in ms>" and "RESPONSE-LIMIT: <size limit in byte>"
             plus parameters if applicable to interpreted queries (see runInstalledQuery() above)
@@ -233,11 +236,11 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
 
     # TODO getRunningQueries()
     # GET /showprocesslist/{graph_name}
-    # https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#list-running-queries
+    # xref:tigergraph-server:API:built-in-endpoints.adoc#_list_running_queries
 
     # TODO abortQuery()
     #   GET /abortquery/{graph_name}
-    #   https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_abort_a_query
+    #   xref:tigergraph-server:API:built-in-endpoints.adoc#_abort_a_query[Abort a query]
 
     def parseQueryOutput(self, output: list, graphOnly: bool = True) -> dict:
         """Parses query output and separates vertex and edge data (and optionally other output) for
@@ -247,26 +250,25 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
             output:
                 The data structure returned by `runInstalledQuery()` or `runInterpretedQuery()`.
             graphOnly:
-                Should output be restricted to vertices and edges (True, default) or should any
-                other output (e.g. values of variables or accumulators, or plain text printed) be
-                captured as well.
+                If `True` (the default setting), restricts captured output to vertices and edges.
+                If `False`, captures values of variables and accumulators and any other plain text printed.
 
         Returns:
-            A dictionary with two (or three) keys: "vertices", "edges" and optionally "output".
-            First two refer to another dictionary containing keys for each vertex and edge types
-            found, and the instances of those vertex and edge types. "output" is a list of
+            A dictionary with two (or three) keys: `"vertices"`, `"edges"` and optionally `"output"`.
+            The first two refer to another dictionary containing keys for each vertex and edge types
+            found and the instances of those vertex and edge types. `"output"` is a list of
             dictionaries containing the key/value pairs of any other output.
 
         The JSON output from a query can contain a mixture of results: vertex sets (the output of a
             SELECT statement), edge sets (e.g. collected in a global accumulator), printout of
             global and local variables and accumulators, including complex types (LIST, MAP, etc.).
-            The type of the various output entries is not explicit, you need to inspect the content
-            to find out what it is actually. /
+            The type of the various output entries is not explicit and requires manual inspection to determine the type.
+
         This function "cleans" this output, separating and collecting vertices and edges in an easy
             to access way. It can also collect other output or ignore it. /
         The output of this function can be used e.g. with the `vertexSetToDataFrame()` and
             `edgeSetToDataFrame()` functions or (after some transformation) to pass a subgraph to a
-            visualisation component.
+            visualization component.
         """
 
         def attCopy(src: dict, trg: dict):
@@ -284,18 +286,18 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
                 trga[att] = srca[att]
 
         def addOccurrences(obj: dict, src: str):
-            """Counts and lists te occurrences of a vertex or edge.
+            """Counts and lists the occurrences of a vertex or edge.
 
             Args:
                 obj:
                     The vertex or edge that was found in the output.
                 src:
-                    The the label (variable name or alias) of the source where the vertex or edge
+                    The label (variable name or alias) of the source where the vertex or edge
                     was found.
 
             A given vertex or edge can appear multiple times (in different vertex or edge sets) in
             the output of a query. Each output has a label (either the variable name or an alias
-            used in the PRINT statement), `x_sources` contains a list of these labels.
+            used in the `PRINT` statement), `x_sources` contains a list of these labels.
             """
             if "x_occurrences" in obj:
                 obj["x_occurrences"] += 1
@@ -398,17 +400,17 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
 
         Args:
             seconds:
-                The duration of statistic collection period (the last n seconds before the function
+                The duration of statistic collection period (the last _n_ seconds before the function
                 call).
             segments:
                 The number of segments of the latency distribution (shown in results as
-                LatencyPercentile). By default, segments is 10, meaning the percentile range 0-100%
+                `LatencyPercentile`). By default, segments is `10`, meaning the percentile range 0-100%
                 will be divided into ten equal segments: 0%-10%, 11%-20%, etc.
-                Segments must be [1, 100].
+                This argument must be an integer between 1 and 100.
 
         Endpoint:
             - `GET /statistics/{graph_name}`
-                See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_show_query_performance
+                See xref:tigergraph-server:API:built-in-endpoints.adoc#_show_query_performance[Show query performance]
         """
         if not seconds:
             seconds = 10

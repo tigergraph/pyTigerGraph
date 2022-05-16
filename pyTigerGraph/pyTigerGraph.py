@@ -42,8 +42,8 @@ class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT
                     self.gds = gds.GDS(self)
                     return super().__getattribute__(name)
                 except:
-                    raise (Exception("Please install the GDS package requirements to use the GDS"
-                                     " functionality. Check the docs for more details."))
+                    raise Exception("Please install the GDS package requirements to use the GDS functionality."
+                                    "Check the https://docs.tigergraph.com/pytigergraph/current/getting-started/install#_install_pytigergraphgds for more details.")
             else:
                 return super().__getattribute__(name)
         else:

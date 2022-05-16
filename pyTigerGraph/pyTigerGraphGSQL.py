@@ -1,3 +1,8 @@
+"""GSQL Interface
+
+Use GSQL within pyTigerGraph.
+All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object]. 
+"""
 import os
 import sys
 from typing import Union
@@ -11,12 +16,7 @@ from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
 
 class pyTigerGraphGSQL(pyTigerGraphBase):
-    """GSQL Interface.
-
-    Use GSQL within pyTigerGraph.
-    """
-
-    def initGsql(self, certLocation: str = "~/.gsql/my-cert.txt") -> bool:
+    def _initGsql(self, certLocation: str = "~/.gsql/my-cert.txt") -> bool:
         """Initialises the GSQL support.
 
         Args:
@@ -24,10 +24,10 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                 The path and file of the CA certificate.
 
         Returns:
-            `True` if initialisation was successful.
+            `True` if initialization was successful.
 
         Raises:
-            Exception if initialisation was unsuccessful.
+            Exception if initialization was unsuccessful.
         """
         if not certLocation:
             if not os.path.isdir(os.path.expanduser("~/.gsql")):
@@ -80,11 +80,11 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             self.gsqlInitiated = True
             return True
         except Exception as e:
-            print("Connection Failed check your Username/Password {}".format(e))
+            print("Connection failed. Check your username or password {}".format(e))
             self.gsqlInitiated = False
 
     def gsql(self, query: str, graphname: str = None, options=None) -> Union[str, dict]:
-        """Runs a GSQL query and process the output.
+        """Runs a GSQL query and processes the output.
 
         Args:
             query:
@@ -103,7 +103,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
         if str(graphname).upper() == "GLOBAL" or str(graphname).upper() == "":
             graphname = ""
         if not self.gsqlInitiated:
-            self.gsqlInitiated = self.initGsql()
+            self.gsqlInitiated = self._initGsql()
         if self.gsqlInitiated:
             if "\n" not in query:
                 res = self.Client.query(query, graph=graphname)
@@ -118,5 +118,5 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                 else:
                     return res
         else:
-            print("Couldn't Initialize the client see above error.")
+            print("Couldn't initialize the client. See above error.")
             sys.exit(1)

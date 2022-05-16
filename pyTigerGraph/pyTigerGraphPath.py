@@ -1,3 +1,9 @@
+"""Path Finding Functions.
+
+The functions on this page find paths between vertices within the graph.
+All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object]. 
+"""
+
 import json
 from typing import Union
 
@@ -5,11 +11,6 @@ from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
 
 class pyTigerGraphPath(pyTigerGraphBase):
-    """Path Finding Functions.
-
-    Find paths between vertices within the graph.
-    """
-
     def _preparePathParams(self, sourceVertices: Union[dict, tuple, list],
             targetVertices: Union[dict, tuple, list], maxLength: int = None,
             vertexFilters: Union[list, dict] = None, edgeFilters: Union[list, dict] = None,
@@ -17,28 +18,28 @@ class pyTigerGraphPath(pyTigerGraphBase):
         """Prepares the input parameters by transforming them to the format expected by the path
          algorithms.
 
-        See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_input_parameters_and_output_format_for_path_finding
+        See xref:tigergraph-server:API:built-in-endpoints.adoc#[Parameters and output format for path finding]
 
-        A vertex set is a dict that has three top-level keys: v_type, v_id, attributes (a dict).
+        A vertex set is a dict that has three top-level keys: `v_type`, `v_id`, `attributes` (also a dictionary).
 
         Args:
             sourceVertices:
-                A vertex set (a list of vertices) or a list of (vertexType, vertexID) tuples;
+                A vertex set (a list of vertices) or a list of `(vertexType, vertexID)` tuples;
                 the source vertices of the shortest paths sought.
             targetVertices:
-                A vertex set (a list of vertices) or a list of (vertexType, vertexID) tuples;
+                A vertex set (a list of vertices) or a list of `(vertexType, vertexID)` tuples;
                 the target vertices of the shortest paths sought.
             maxLength:
-                The maximum length of a shortest path. Optional, default is 6.
+                The maximum length of a shortest path. Optional, default is `6`.
             vertexFilters:
-                An optional list of (vertexType, condition) tuples or
-                {"type": <str>, "condition": <str>} dictionaries.
+                An optional list of `(vertexType, condition)` tuples or
+                `{"type": <str>, "condition": <str>}` dictionaries.
             edgeFilters:
-                An optional list of (edgeType, condition) tuples or
-                {"type": <str>, "condition": <str>} dictionaries.
+                An optional list of `(edgeType, condition)` tuples or
+                `{"type": <str>, "condition": <str>}` dictionaries.
             allShortestPaths:
-                If True, the endpoint will return all shortest paths between the source and target.
-                Default is False, meaning that the endpoint will return only one path.
+                If `True`, the endpoint will return all shortest paths between the source and target.
+                Default is `False`, meaning that the endpoint will return only one path.
 
         Returns:
             A string representation of the dictionary of end-point parameters.
@@ -50,10 +51,10 @@ class pyTigerGraphPath(pyTigerGraphBase):
 
             Args:
                 vertices:
-                    A vertex set (a list of vertices) or a list of (vertexType, vertexID) tuples;
+                    A vertex set (a list of vertices) or a list of `(vertexType, vertexID)` tuples;
                     the source or target vertices of the shortest paths sought.
             Returns:
-                A list of vertices in the the format required by the path finding endpoints.
+                A list of vertices in the format required by the path finding endpoints.
             """
             ret = []
             if not isinstance(vertices, list):
@@ -76,7 +77,7 @@ class pyTigerGraphPath(pyTigerGraphBase):
 
             Args:
                 filters:
-                    A list of (vertexType, condition) tuples or {"type": <str>, "condition": <str>}
+                    A list of `(vertexType, condition)` tuples or `{"type": <str>, "condition": <str>}`
                     dictionaries.
 
             Returns:
@@ -117,7 +118,7 @@ class pyTigerGraphPath(pyTigerGraphBase):
             targetVertices: Union[dict, tuple, list], maxLength: int = None,
             vertexFilters: Union[list, dict] = None, edgeFilters: Union[list, dict] = None,
             allShortestPaths: bool = False) -> dict:
-        """Find the shortest path (or all shortest paths) between the source and target vertex sets.
+        """Finds the shortest path (or all shortest paths) between the source and target vertex sets.
 
         A vertex set is a set of dictionaries that each has three top-level keys: `v_type`, `v_id`,
             and `attributes` (also a dictionary).
@@ -132,10 +133,10 @@ class pyTigerGraphPath(pyTigerGraphBase):
             maxLength:
                 The maximum length of a shortest path. Optional, default is 6.
             vertexFilters:
-                An optional list of (vertexType, condition) tuples or
+                An optional list of `(vertexType, condition)` tuples or
                 `{"type": <str>, "condition": <str>}` dictionaries.
             edgeFilters:
-                An optional list of (edgeType, condition) tuples or
+                An optional list of `(edgeType, condition)` tuples or
                 `{"type": <str>, "condition": <str>}` dictionaries.
             allShortestPaths:
                 If `True`, the endpoint will return all shortest paths between the source and target.
@@ -147,16 +148,18 @@ class pyTigerGraphPath(pyTigerGraphBase):
             i.e. not a (list of individual) path(s).
 
         Examples:
-            ```
+
+            [source.wrap,python]
+            ----
             path = conn.shortestPath(("account", 10), ("person", 50), maxLength=3)
 
             path = conn.shortestPath(("account", 10), ("person", 50), allShortestPaths=True,
                 vertexFilters=("transfer", "amount>950"), edgeFilters=("receive", "type=4"))
-            ```
+            ----
 
         Endpoint:
             - `POST /shortestpath/{graphName}`
-                See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_find_shortest_path
+                See xref:tigergraph-server:API:built-in-endpoints.adoc#_find_shortest_path[Find the shortest path].
         """
         data = self._preparePathParams(sourceVertices, targetVertices, maxLength, vertexFilters,
             edgeFilters, allShortestPaths)
@@ -180,10 +183,10 @@ class pyTigerGraphPath(pyTigerGraphBase):
             maxLength:
                 The maximum length of the paths.
             vertexFilters:
-                An optional list of (vertexType, condition) tuples or
+                An optional list of `(vertexType, condition)` tuples or
                 `{"type": <str>, "condition": <str>}` dictionaries.
             edgeFilters:
-                An optional list of (edgeType, condition) tuples or
+                An optional list of `(edgeType, condition)` tuples or
                 `{"type": <str>, "condition": <str>}` dictionaries.
 
         Returns:
@@ -192,15 +195,16 @@ class pyTigerGraphPath(pyTigerGraphBase):
             i.e. not a (list of individual) path(s).
 
         Example:
-            ```
+            [source.wrap, python]
+            ----
             path = conn.allPaths(("account", 10), ("person", 50), allShortestPaths=True,
                 vertexFilters=("transfer", "amount>950"), edgeFilters=("receive", "type=4"))
-            ```
+            ----
 
 
         Endpoint:
             - `POST /allpaths/{graphName}`
-                See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_find_all_paths
+                See xref:tigergraph-server:API:built-in-endpoints.adoc#_find_all_paths[Find all paths]
         """
         data = self._preparePathParams(sourceVertices, targetVertices, maxLength, vertexFilters,
             edgeFilters)

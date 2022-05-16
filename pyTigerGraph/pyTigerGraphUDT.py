@@ -1,16 +1,16 @@
+"""User Defined Tuple (UDT) Functions.
+
+The functions on this page retrieve information about user-defined tuples (UDT) for the graph.
+All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object]. 
+"""
 from pyTigerGraph.pyTigerGraphSchema import pyTigerGraphSchema
 
 
 class pyTigerGraphUDT(pyTigerGraphSchema):
-    """User Defined Type (UDT) Functions.
-
-    Get information about User Defined Function for the graph.
-    """
-
     def getUDTs(self) -> list:
-        """Returns the list of User Defined Types (names only).
+        """Returns the list of User-Defined Tuples (names only).
 
-        For information on UDTs see https://docs.tigergraph.com/dev/gsql-ref/ddl-and-loading/system-and-language-basics#typedef-tuple .
+        For information on UDTs see xref:gsql-ref:ddl-and-loading:system-and-language-basics.adoc#typedef-tuple[User-Defined Tuple]
 
         Returns:
             The list of names of UDTs (defined in the global scope, i.e. not in queries).
@@ -21,13 +21,13 @@ class pyTigerGraphUDT(pyTigerGraphSchema):
         return ret
 
     def getUDT(self, udtName: str) -> list:
-        """Returns the details of a specific User Defined Type (defined in the global scope).
+        """Returns the details of a specific User-Defined Tuple (defined in the global scope).
 
-        For information on UDTs see https://docs.tigergraph.com/dev/gsql-ref/ddl-and-loading/system-and-language-basics#typedef-tuple .
+        For information on UDTs see xref:gsql-ref:ddl-and-loading:system-and-language-basics.adoc#typedef-tuple[User-Defined Tuple]
 
         Args:
             udtName:
-                The name of the User Defined Type.
+                The name of the User-Defined Tuple.
 
         Returns:
             The metadata (the details of the fields) of the UDT.

@@ -1,8 +1,13 @@
+"""Featurizer
+The Featurizer class provides methods for installing and running Graph Data Science Algorithms onto a TigerGraph server.
+"""
 from asyncio import tasks
 from urllib import request
 #from lib_metadata import metadata
 from parso import split_lines
-from typing import TYPE_CHECKING, List, Union
+
+from typing import TYPE_CHECKING, Any, Union, List
+
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
 
@@ -22,10 +27,12 @@ class Featurizer:
     self, 
     conn: "TigerGraphConnection"):
     
-        """Class for Feature Extraction.
-        The job of a feature extracter is to install and run the current algorithms in graph data science libarary.
-        Currently, a set of graph algorithms are moved to the gsql folder and have been saved into a dictionary along with their output type.
-        To add a specific algorithm, it should be added both to the gsql folder and class variable dictionary. 
+        """NO DOC: Class for feature extraction.
+
+        The job of a feature extracter is to install and run algorithms in the Graph Data Science (GDS) libarary.
+        Currently, a set of graph algorithms are moved to the `gsql` folder, which you can find in the same directory as this file,
+         and have been saved into a dictionary along with their output type.
+        To add a specific algorithm, it should be added both to the `gsql` folder and class variable dictionary. 
         Args:
             conn (TigerGraphConnection): 
                 Connection to the TigerGraph database.
@@ -102,7 +109,7 @@ class Featurizer:
 
     def listAlgorithms(self,category:str=None):
         '''
-        Print the list of avalaible algorithms in GDS.
+        Print the list of available algorithms in GDS.
         Args:
             category (str): 
                 The class of the algorithms, if it is None the entire list will be printed out.
@@ -143,7 +150,8 @@ class Featurizer:
 
     def _get_query_url(self,query_name:str):
         '''
-        Get the query name, and return its url from the github.
+        Get the query name, and return its url from GitHub.
+
         Args:
             query_name (str): 
                 The name of the query
@@ -161,6 +169,7 @@ class Featurizer:
     def _install_query_file(self, query_name: str, replace: dict = None):
         '''
         Reads the first line of the query file to get the query name, e.g, CREATE QUERY query_name ...
+
         Args:
             query_name (str): 
                 The name of the query
@@ -193,9 +202,11 @@ class Featurizer:
             raise ConnectionError(status)
         return query_name 
 
-    def installAlgorithm(self,query_name:str):
+    def installAlgorithm(self,query_name:str) -> str:
         '''
-        Checks if the query is already installed, if not it will install the query and change the schema if an attribute needs to be added.        
+        Checks if the query is already installed. If the query is not installed,
+         it installs the query and changes the schema if an attribute needs to be added.
+        
         Args:
             query_name (str): 
                 The name of query to be installed
@@ -203,10 +214,11 @@ class Featurizer:
         resp = self._install_query_file(query_name)
         return resp.strip() 
 
-    def _add_attribute(self, schema_type: str, attr_type: str,attr_name: str=None,schema_name: List[str]=None):
+    def _add_attribute(self, schema_type: str, attr_type: str,attr_name: str=None, schema_name: List[str]=None):
         '''
         If the current attribute is not already added to the schema, it will create the schema job to do that.
-        Check whether to add the attribute to vertex(vertices) or edge(s)
+        Check whether to add the attribute to vertex(vertices) or edge(s).
+
         Args:
             schema_type (str): 
                 Vertex or edge
@@ -298,12 +310,13 @@ class Featurizer:
         self.params_dict[query_name] = _dict
         return _dict  
                
-    def runAlgorithm(self,query_name:str,params:dict = None,feat_name:str=None,schema_name:list[str]=None,timeout:int=2147480,sizeLimit:int=None):
+    def runAlgorithm(self, query_name:str, params:dict = None, feat_name:str = None, schema_name:list = None, timeout:int = 2147480, sizeLimit:int = None) -> Any:
         '''
         Runs an installed query.
         The query must be already created and installed in the graph.
-        If the query accepts input parameters and the parameters have not been provided, they will be initialized by parsing the query.
-        If the initialized parameters contain any None value, the function will raise the ValueError.
+        If the query accepts input parameters and the parameters have not been provided, calling this function runs the query with the default values for the parameters.
+        If the there isn't a default value in the query definition and no parameters are provided, the function raises a `ValueError`.
+
         Args:
             query_name (str):
                 The name of the query to be executed.
@@ -315,10 +328,8 @@ class Featurizer:
                 List of Vertices/Edges that the attr_name need to added to them.    
             timeout (int):
                 Maximum duration for successful query execution (in milliseconds).
-                See https://docs.tigergraph.com/tigergraph-server/current/api/#_gsql_query_timeout
             sizeLimit (int):
                 Maximum size of response (in bytes).
-                See https://docs.tigergraph.com/tigergraph-server/current/api/#_response_size
 
         Returns:
             The output of the query, a list of output elements (vertex sets, edge sets, variables,

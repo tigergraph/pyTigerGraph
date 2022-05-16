@@ -1,3 +1,8 @@
+"""Edge Functions
+
+Functions to upsert, retrieve and delete edges.
+All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object]. 
+"""
 import json
 
 from typing import TYPE_CHECKING, Union
@@ -10,11 +15,6 @@ from pyTigerGraph.pyTigerGraphQuery import pyTigerGraphQuery
 
 
 class pyTigerGraphEdge(pyTigerGraphQuery):
-    """Edge Functions.
-
-    Provides functions to upsert, retrieve and delete edges.
-    """
-
     def getEdgeTypes(self, force: bool = False) -> list:
         """Returns the list of edge type names of the graph.
 
@@ -32,7 +32,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         return ret
 
     def getEdgeType(self, edgeType: str, force: bool = False) -> dict:
-        """Returns the details of vertex type.
+        """Returns the details of the edge type.
 
         Args:
             edgeType:
@@ -63,8 +63,8 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                 See https://docs.tigergraph.com/v/2.6/dev/gsql-ref/ddl-and-loading/defining-a-graph-schema#creating-an-edge-from-or-to-any-vertex-type
             - A set of vertex type name strings (unique values) if the edge has multiple source
                 vertex types (notation used in 3.0 and later versions). /
-                Even if the source vertex types were defined as "*", the REST API will list them as
-                pairs (i.e. not as "*" in 2.6.1 and earlier versions), just like as if there were
+                Even if the source vertex types were defined as `"*"`, the REST API will list them as
+                pairs (i.e. not as `"*"` in 2.6.1 and earlier versions), just like as if there were
                 defined one by one (e.g. `FROM v1, TO v2 | FROM v3, TO v4 | …`).
 
             The returned set contains all source vertex types, but it does not certainly mean that
@@ -698,13 +698,13 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                 The primary ID value of the target vertex instance.
             where:
                 Comma separated list of conditions that are all applied on each edge's attributes.
-                The conditions are in logical conjunction (i.e. they are "AND'ed" together).
+                The conditions are in logical conjunction (they are connected as if with an `AND` statement).
             limit:
-                Maximum number of edge instances to be returned (after sorting).
+                Maximum number of edge instances to be returned after sorting.
             sort:
-                Comma separated list of attributes the results should be sorted by.
+                Comma-separated list of attributes the results should be sorted by.
             timeout:
-                Time allowed for successful execution (0 = no limit, default).
+                Time allowed for successful execution. The default is `0`, or no limit.
 
         Returns:
              A dictionary of `edge_type: deleted_edge_count` pairs.
@@ -744,8 +744,8 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         """Converts an edge set to Pandas DataFrame
 
         Edge sets contain instances of the same edge type. Edge sets are not generated "naturally"
-        like vertex sets, you need to collect edges in (global) accumulators, like in case when you
-        want to visualise them in GraphStudio or by other tools.
+        like vertex sets. Instead, you need to collect edges in (global) accumulators, like when you
+        want to visualize them in GraphStudio or by other tools.
 
         For example:
         ```
@@ -762,12 +762,16 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         ```
 
         The `@@edges` is an edge set.
-        It contains for each edge instance the source and target vertex type and ID, the edge type,
+        It contains, for each edge instance, the source and target vertex type and ID, the edge type,
         a directedness indicator and the (optional) attributes. /
-        Note: `start` and `result` are vertex sets.
+
+        [NOTE]
+        `start` and `result` are vertex sets.
 
         An edge set has this structure (when serialised as JSON):
-        ```
+
+        [source.wrap, json]
+        ----
         [
             {
                 "e_type": <edge_type_name>,
@@ -785,19 +789,19 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             },
                 ⋮
         ]
-        ```
+        ----
 
         Args:
             edgeSet:
                 A JSON array containing an edge set in the format returned by queries (see below).
             withId:
-                Include the type and primary ID of source and target vertices as a columns?
+                Whether to include the type and primary ID of source and target vertices as a column. Default is `True`.
             withType:
-                Include edge type info as a column?
+                Whether to include edge type info as a column. Default is `False`.
 
         Returns:
-            A pandas DataFrame containing the edge attributes (and optionally the type and primary
-            ID or source and target vertices, and the edge type).
+            A pandas DataFrame containing the edge attributes and optionally the type and primary
+            ID or source and target vertices, and the edge type.
 
         """
         try:

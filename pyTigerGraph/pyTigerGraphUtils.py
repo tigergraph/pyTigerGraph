@@ -1,3 +1,8 @@
+"""Utility Functions.
+
+Utility functions for pyTigerGraph.
+All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object]. 
+"""
 import json
 import re
 import urllib
@@ -12,11 +17,6 @@ from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
 
 class pyTigerGraphUtils(pyTigerGraphBase):
-    """Utility Functions.
-
-    Utility functions for pyTigerGraph.
-    """
-
     def _safeChar(self, inputString: Any) -> str:
         """Replace special characters in string using the %xx escape.
 
@@ -45,7 +45,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         Endpoint:
             - `GET /echo`
             - `POST /echo`
-                See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_echo
+                See xref:tigergraph-server:API:built-in-endpoints.adoc#_echo[Echo]
 
         TODO Implement POST
         """
@@ -58,16 +58,16 @@ class pyTigerGraphUtils(pyTigerGraphBase):
 
         Args:
             raw:
-                Return unprocessed version info string, or extract version info for each components
+                Return unprocessed version info string, or extract version info for each component
                 into a list.
 
         Returns:
             Either an unprocessed string containing the version info details, or a list with version
-            info for each components.
+            info for each component.
 
         Endpoint:
             - `GET /version`
-                See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_show_component_versions
+                See xref:tigergraph-server:API:built-in-endpoints.adoc#_show_component_versions[Show component versions]
         """
         if self.useCert and self.certPath:
             response = requests.request("GET", self.restppUrl + "/version/" + self.graphname,
@@ -91,7 +91,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         return components
 
     def getVer(self, component: str = "product", full: bool = False) -> str:
-        """Gets the version information of specific component.
+        """Gets the version information of a specific component.
 
         Get the full list of components using `getVersion()`.
 
@@ -123,8 +123,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         """Returns the expiration date and remaining days of the license.
 
         Returns:
-            In case of evaluation/trial deployment, an information message and -1 remaining days are
-            returned; otherwise the license details.
+            Returns license details. For an evaluation/trial deployment, returns an information message and -1 remaining days.
 
         TODO Check if this endpoint was still available.
         """
