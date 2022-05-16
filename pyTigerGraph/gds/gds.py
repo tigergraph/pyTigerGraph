@@ -26,6 +26,9 @@ You can find the reference for those classes on the following pages:
 * link:https://docs.tigergraph.com/pytigergraph/current/gds/featurizer[Featurizer]
 * link:https://docs.tigergraph.com/pytigergraph/current/gds/metrics[Metrics]
 * link:https://docs.tigergraph.com/pytigergraph/current/gds/dataloaders[Splitters]
+
+NOTE: If you are not sure how to configure the optional arguments related to Kafka, leave them blank. 
+More detailed instructions on how to use them will be provided in a future release. 
 """
 from typing import TYPE_CHECKING, Union
 
