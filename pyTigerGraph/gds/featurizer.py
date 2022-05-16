@@ -1,6 +1,7 @@
 """Featurizer
 The Featurizer class provides methods for installing and running Graph Data Science Algorithms onto a TigerGraph server.
 """
+
 from typing import TYPE_CHECKING, Any, List
 
 if TYPE_CHECKING:
@@ -203,7 +204,7 @@ class Featurizer:
         resp = self._install_query_file(query_name)
         return resp.strip() 
 
-    def _add_attribute(self, schema_type: str, attr_type: str,attr_name: str=None, schema_name: List[str]=None):
+    def _add_attribute(self, schema_type: str, attr_type: str, attr_name: str=None, schema_name: List[str]=None):
         '''
         If the current attribute is not already added to the schema, it will create the schema job to do that.
         Check whether to add the attribute to vertex(vertices) or edge(s).
