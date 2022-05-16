@@ -85,7 +85,7 @@ setup(
         ],
     },
     project_urls={
-        "Bug Reports": "https://github.com/pyTigerGraph/pyTigerGraph/issues",
-        "Source": "https://github.com/pyTigerGraph/pyTigerGraph",
+        "Bug Reports": "https://github.com/tigergraph/pyTigerGraph/issues",
+        "Source": "https://github.com/tigergraph/pyTigerGraph",
     },
 )
