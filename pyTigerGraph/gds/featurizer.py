@@ -5,7 +5,9 @@ from asyncio import tasks
 from urllib import request
 #from lib_metadata import metadata
 from parso import split_lines
+
 from typing import TYPE_CHECKING, Any, Union, List
+
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
 
