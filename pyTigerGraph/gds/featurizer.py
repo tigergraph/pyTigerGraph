@@ -1,25 +1,15 @@
 """Featurizer
 The Featurizer class provides methods for installing and running Graph Data Science Algorithms onto a TigerGraph server.
 """
-from asyncio import tasks
-from urllib import request
-#from lib_metadata import metadata
-from parso import split_lines
 
-from typing import TYPE_CHECKING, Any, Union, List
+from typing import TYPE_CHECKING, Any, List
 
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
 
 from .utilities import random_string
-import os
 from os.path import join as pjoin
-import re
-import random
-import string
 import requests
-import json
-#import pandas as pd
 
 
 class Featurizer:
