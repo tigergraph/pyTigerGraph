@@ -8,9 +8,8 @@ pyTigerGraph is a Python package for connecting to TigerGraph databases. Check o
 This section walks you through installing pyTigerGraph on your machine.
 
 #### Prerequisites
-* OS version
-* Python version
-* Package managers
+* Python 3+
+* If you wish to use the GDS functionality, install `torch` ahead of time.
 
 #### Install _pyTigerGraph_
 
