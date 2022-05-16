@@ -128,9 +128,17 @@ class RandomVertexSplitter(BaseRandomSplitter):
     def run(self, **split_ratios) -> None:
         """Perform the split.
 
-        The split ratios set in initialization can be overridden here. For example,
-        `splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6); splitter.run(attr_name=0.3)`
-        will use the ratio 0.3 instead of 0.6.
+        The split ratios set in initialization can be overridden here. 
+        
+        For example:
+
+        [,python]
+        ----
+        splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6); 
+        splitter.run(attr_name=0.3)
+        ----
+        
+        The spliter above uses the ratio 0.3 instead of 0.6.
 
         """
         print("Splitting vertices...")
@@ -145,6 +153,7 @@ class RandomEdgeSplitter(BaseRandomSplitter):
     indicates which part an edge belongs to.
 
     Usage:
+    
     * A random 60% of edges will have their attribute "attr_name" set to True, and 
         others False. `attr_name` can be any attribute that exists in the database (same below).
         Example:
@@ -178,6 +187,12 @@ class RandomEdgeSplitter(BaseRandomSplitter):
     splitter = conn.gds.edgeSplitter(timeout, attr_name=0.6, attr_name2=0.2, attr_name3=0.2)
     splitter.run()
     ----
+
+    Args:
+        conn (TigerGraphConnection):
+            Connection to TigerGraph database.
+        timeout (int, optional):
+            Timeout value for the operation. Defaults to 600000.
     """
 
     def __init__(
@@ -202,9 +217,14 @@ class RandomEdgeSplitter(BaseRandomSplitter):
         """Perform the split.
 
         The split ratios set in initialization can be overridden here. 
-        For example,
-        `splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6); splitter.run(attr_name=0.3)`
-        uses the ratio 0.3 instead of 0.6.
+        For example:
+
+        [source,python]
+        ----
+        splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6); 
+        splitter.run(attr_name=0.3)
+        ----
+        The splitter above uses the ratio 0.3 instead of 0.6.
 
         """
         print("Splitting edges...")

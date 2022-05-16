@@ -1,6 +1,8 @@
-"""pyTigerGraph basic functionality.
+"""`TigerGraphConnection`
 
-Offers low(est) level HTTP(S) communication used by all other modules (directly or indirectly).
+A TigerGraphConnection object provides the HTTP(S) communication used by all other modules.
+
+
 """
 import base64
 import json

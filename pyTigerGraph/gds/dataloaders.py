@@ -852,7 +852,7 @@ class NeighborLoader(BaseLoader):
     """NeighborLoader
     
     A data loader that performs neighbor sampling. 
-    You can decalre a `NeighborLoader` instance with the factory function `neighborLoder()`.
+    You can declare a `NeighborLoader` instance with the factory function `neighborLoder()`.
     
     A neighbor loader is an iterable.
     When you loop through a neighbor loader instance, it loads one batch of data from the graph to which you established a connection. 
@@ -1418,7 +1418,7 @@ class VertexLoader(BaseLoader):
     Data loader that loads all vertices from the graph in batches.
 
     A vertex loader instance is an iterable. 
-    When you loop through an vertex loader instance, it loads one batch of data from the graph to which you established a connection in each iteration.
+    When you loop through a vertex loader instance, it loads one batch of data from the graph to which you established a connection in each iteration.
     The size and total number of batches are specified when you define the vertex loader instance. 
     
     The boolean attribute provided to `filter_by` indicates which vertices are included.
@@ -1699,7 +1699,7 @@ class GraphLoader(BaseLoader):
 
     Examples:
     The following for loop prints all edges and their connected vertices in batches.
-    The outout format is `PyG`:
+    The output format is `PyG`:
 
 
     [tabs]

@@ -1,5 +1,7 @@
-"""pyTigerGraph Authentication
-Provides functions for authenticating and managing permissions with TigerGraph.
+"""Authentication Functions
+
+The functions on this page authenticate connections and manage TigerGraph credentials.
+All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object]. 
 """
 import json
 import time
@@ -242,8 +244,8 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
 
         Raises:
-            `TigerGraphException` if REST++ authentication is not enabled or authentication error
-            occurred, e.g. specified token does not exists.
+            `TigerGraphException` if REST++ authentication is not enabled or if an authentication error
+            occurs. 
 
         Note:
 

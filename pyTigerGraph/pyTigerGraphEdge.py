@@ -1,6 +1,7 @@
-"""Edge Functions.
+"""Edge Functions
 
-Provides functions to upsert, retrieve and delete edges.
+Functions to upsert, retrieve and delete edges.
+All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object]. 
 """
 import json
 
