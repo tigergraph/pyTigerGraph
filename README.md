@@ -29,22 +29,22 @@ The options are:
 * To install all required packages for full GDS functionality, including PyTorch, PyTorch Geometric, and DGL, run the following command:
 +
 ```sh
-pip3 install pyTigerGraph[gds]
+pip3 install 'pyTigerGraph[gds]'
 ```
 
 * To use the GDS functions with the option of producing output in the format supported by the *PyTorch Geometric framework*, run the following command:
 ```sh
-pip3 install pyTigerGraph[gds-pyg]
+pip3 install 'pyTigerGraph[gds-pyg]'
 ```
 
 * To use the GDS functions with the option of producing output in the format supported by the *Deep Graph Library* (DGL) framework, run the following command:
 ```sh
-pip3 install pyTigerGraph[gds-dgl]
+pip3 install 'pyTigerGraph[gds-dgl]'
 ```
 * To use the GDS functions without needing to produce output in the format supported by PyTorch Geometric or DGL.
 This makes the data loaders output *Pandas dataframes*:
 ```sh
-pip3 install pyTigerGraph[gds-lite]
+pip3 install 'pyTigerGraph[gds-lite]'
 ```
 
 Once the package is installed, you can import it like any other Python package:
