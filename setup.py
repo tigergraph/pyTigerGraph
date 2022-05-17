@@ -27,20 +27,18 @@ def get_data_files(directory):
     return files
 
 
-#TODO: Update url and email, project_urls
-
 setup(
     name='pyTigerGraph',
     packages=find_packages(where="."),
     package_data={"pyTigerGraph.gds": get_data_files(here / "pyTigerGraph" / "gds")},
     version=get_version(here/"pyTigerGraph"/"__init__.py"),
-    license='MIT',
+    license='Apache 2',
     description='Library to connect to TigerGraph databases',
     long_description=long_description,
     long_description_content_type='text/markdown',
     author='TigerGraph Inc.',
     author_email='support@tigergraph.com',
-    url='https://www.tigergraph.com/',
+    url='https://docs.tigergraph.com/home/',
     download_url='',
     keywords=['TigerGraph', 'Graph Database', 'Data Science', 'Machine Learning'],
     install_requires=[
@@ -51,7 +49,7 @@ setup(
         'Development Status :: 4 - Beta',  # 3 - Alpha, 4 - Beta or 5 - Production/Stable
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Build Tools',
-        'License :: OSI Approved :: MIT License',
+        'License :: OSI Approved :: Apache 2 License',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
@@ -62,27 +60,7 @@ setup(
         'Programming Language :: Python :: 3.10',
     ],
     extras_require={
-        "gds-pyg": [
-            "pandas",
-            "kafka-python",
-            "numpy",
-            "torch",
-            "torch-sparse",
-            "torch-scatter",
-            "torch-geometric",
-        ],
-        "gds-dgl": ["pandas", "kafka-python", "numpy", "torch", "dgl"],
-        "gds-lite": ["pandas", "kafka-python", "numpy"],
-        "gds": [
-            "pandas",
-            "kafka-python",
-            "numpy",
-            "torch",
-            "torch-sparse",
-            "torch-scatter",
-            "torch-geometric",
-            "dgl",
-        ],
+        "gds": ["pandas", "kafka-python", "numpy"],
     },
     project_urls={
         "Bug Reports": "https://github.com/tigergraph/pyTigerGraph/issues",
