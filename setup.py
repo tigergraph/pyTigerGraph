@@ -37,7 +37,7 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     author='TigerGraph Inc.',
-    author_email='tgds-feedback@tigergraph.com',
+    author_email='support@tigergraph.com',
     url='https://docs.tigergraph.com/home/',
     download_url='',
     keywords=['TigerGraph', 'Graph Database', 'Data Science', 'Machine Learning'],
