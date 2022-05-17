@@ -62,27 +62,7 @@ setup(
         'Programming Language :: Python :: 3.10',
     ],
     extras_require={
-        "gds-pyg": [
-            "pandas",
-            "kafka-python",
-            "numpy",
-            "torch",
-            "torch-sparse",
-            "torch-scatter",
-            "torch-geometric",
-        ],
-        "gds-dgl": ["pandas", "kafka-python", "numpy", "torch", "dgl"],
-        "gds-lite": ["pandas", "kafka-python", "numpy"],
-        "gds": [
-            "pandas",
-            "kafka-python",
-            "numpy",
-            "torch",
-            "torch-sparse",
-            "torch-scatter",
-            "torch-geometric",
-            "dgl",
-        ],
+        "gds": ["pandas", "kafka-python", "numpy"],
     },
     project_urls={
         "Bug Reports": "https://github.com/tigergraph/pyTigerGraph/issues",

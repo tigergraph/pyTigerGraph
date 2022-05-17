@@ -21,29 +21,33 @@ pip3 install pyTigerGraph
 
 #### Install _pyTigerGraph[gds]_
 
-To utilize the Graph Data Science functionality, download the GDS package that fits your needs.
-Any of the options below allows you to use GDS functions, but certain flavors allow you to output results in formats sup
-The options are:
+To utilize the Graph Data Science Functionality, there are a few options:
+* To use the GDS functions with **PyTorch Geometric**, install `torch` and `PyTorch Geometric` according to their instructions:
 
-* To install all required packages for full GDS functionality, including PyTorch, PyTorch Geometric, and DGL, run the following command:
-+
-```sh
-pip3 install 'pyTigerGraph[gds]'
-```
+    1) [Install Torch](https://pytorch.org/get-started/locally/)
 
-* To use the GDS functions with the option of producing output in the format supported by the *PyTorch Geometric framework*, run the following command:
-```sh
-pip3 install 'pyTigerGraph[gds-pyg]'
-```
+    2) [Install PyTorch Geometric](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html)
 
-* To use the GDS functions with the option of producing output in the format supported by the *Deep Graph Library* (DGL) framework, run the following command:
-```sh
-pip3 install 'pyTigerGraph[gds-dgl]'
-```
+    3) Install pyTigerGraph with:
+        ```sh
+        pip3 install 'pyTigerGraph[gds]'
+        ```
+
+* To use the GDS functions with **DGL**, install `torch` and `dgl` according to their instructions:
+
+    1) [Install Torch](https://pytorch.org/get-started/locally/)
+
+    2) [Install DGL](https://www.dgl.ai/pages/start.html)
+
+    3) Install pyTigerGraph with:
+        ```sh
+        pip3 install 'pyTigerGraph[gds]'
+        ```
+
 * To use the GDS functions without needing to produce output in the format supported by PyTorch Geometric or DGL.
 This makes the data loaders output *Pandas dataframes*:
 ```sh
-pip3 install 'pyTigerGraph[gds-lite]'
+pip3 install 'pyTigerGraph[gds]'
 ```
 
 Once the package is installed, you can import it like any other Python package:
