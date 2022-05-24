@@ -17,6 +17,6 @@ class Config:
 
 
 config = Config(
-    epochs=10, k=10, num_layers=2, batch_size=1000, lr=1e-3,
-    embedding_dim=64, save_emb_dir=None, model_name="lgcn"
+    epochs=4, k=10, num_layers=2, batch_size=1000, lr=1e-3,
+    embedding_dim=64, save_emb_dir=None, model_name="egcn"
 )
