@@ -44,28 +44,64 @@ class TestGDSBaseLoader(unittest.TestCase):
         )
 
     def test_validate_vertex_attributes(self):
+        # Empty input
         self.assertListEqual(self.loader._validate_vertex_attributes(None), [])
         self.assertListEqual(self.loader._validate_vertex_attributes([]), [])
         self.assertListEqual(self.loader._validate_vertex_attributes({}), [])
+        self.assertDictEqual(self.loader._validate_vertex_attributes(None, True), {})
+        self.assertDictEqual(self.loader._validate_vertex_attributes([], True), {})
+        self.assertDictEqual(self.loader._validate_vertex_attributes({}, True), {})
+        # Extra spaces
         self.assertListEqual(
             self.loader._validate_vertex_attributes(["x ", " y"]), ["x", "y"]
         )
+        self.assertDictEqual(
+            self.loader._validate_vertex_attributes({"Paper": ["x ", " y"]}, True), 
+            {"Paper": ["x", "y"]}
+        )
+        # Wrong input
         with self.assertRaises(ValueError):
             self.loader._validate_vertex_attributes("x")
         with self.assertRaises(ValueError):
             self.loader._validate_vertex_attributes(["nonexist"])
+        with self.assertRaises(ValueError):
+            self.loader._validate_vertex_attributes({"Paper": ["nonexist"]})
+        with self.assertRaises(ValueError):
+            self.loader._validate_vertex_attributes(1)
+        with self.assertRaises(ValueError):
+            self.loader._validate_vertex_attributes(["x"], is_hetero = True)
+        with self.assertRaises(ValueError):
+            self.loader._validate_vertex_attributes({"Paper": ["x"]}, is_hetero = False)    
 
     def test_validate_edge_attributes(self):
+        # Empty input
         self.assertListEqual(self.loader._validate_edge_attributes(None), [])
         self.assertListEqual(self.loader._validate_edge_attributes([]), [])
         self.assertListEqual(self.loader._validate_edge_attributes({}), [])
+        self.assertDictEqual(self.loader._validate_edge_attributes(None, True), {})
+        self.assertDictEqual(self.loader._validate_edge_attributes([], True), {})
+        self.assertDictEqual(self.loader._validate_edge_attributes({}, True), {})
+        # Extra spaces
         self.assertListEqual(
             self.loader._validate_edge_attributes(["time ", "is_train"]), ["time", "is_train"]
         )
+        self.assertDictEqual(
+            self.loader._validate_edge_attributes({"Cite": ["time ", "is_train"]}, True), 
+            {"Cite": ["time", "is_train"]}
+        )
+        # Wrong input
         with self.assertRaises(ValueError):
             self.loader._validate_edge_attributes("time")
         with self.assertRaises(ValueError):
             self.loader._validate_edge_attributes(["nonexist"])
+        with self.assertRaises(ValueError):
+            self.loader._validate_edge_attributes({"Cite": ["nonexist"]})
+        with self.assertRaises(ValueError):
+            self.loader._validate_edge_attributes(1)
+        with self.assertRaises(ValueError):
+            self.loader._validate_edge_attributes(["time"], is_hetero = True)
+        with self.assertRaises(ValueError):
+            self.loader._validate_edge_attributes({"Cite": ["time"]}, is_hetero = False)  
 
     def test_read_vertex_bytes(self):
         read_task_q = Queue()

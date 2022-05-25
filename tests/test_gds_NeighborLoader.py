@@ -61,6 +61,8 @@ class TestGDSNeighborLoader(unittest.TestCase):
                     self.assertIn("val_mask", data)
                     self.assertIn("test_mask", data)
                     self.assertIn("is_seed", data)
+                    self.assertGreater(data["x"].shape[0], 0)
+                    self.assertGreater(data["edge_index"].shape[1], 0)
                     num_batches += 1
                 self.assertEqual(num_batches, 9)
 
@@ -127,6 +129,7 @@ class TestGDSNeighborLoader(unittest.TestCase):
                     num_batches += 1
                 self.assertEqual(num_batches, 9)
 
+
 class TestGDSNeighborLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -178,6 +181,8 @@ class TestGDSNeighborLoaderREST(unittest.TestCase):
             self.assertIn("val_mask", data)
             self.assertIn("test_mask", data)
             self.assertIn("is_seed", data)
+            self.assertGreater(data["x"].shape[0], 0)
+            self.assertGreater(data["edge_index"].shape[1], 0)
             num_batches += 1
         self.assertEqual(num_batches, 9)
 
@@ -262,12 +267,42 @@ class TestGDSNeighborLoaderREST(unittest.TestCase):
             {"primary_id": "100", "type": "Paper"},
             {"primary_id": "55", "type": "Paper"}])
         self.assertIn("primary_id", data)
+        self.assertGreater(data["x"].shape[0], 2)
+        self.assertGreater(data["edge_index"].shape[1], 0)
         for i,d in enumerate(data["primary_id"]):
             if d=="100" or d=="55":
                 self.assertTrue(data["is_seed"][i].item())
             else:
                 self.assertFalse(data["is_seed"][i].item())
 
+
+class TestGDSHeteroNeighborLoaderREST(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.conn = TigerGraphConnection(host="http://35.230.92.92", graphname="hetero")
+        # cls.conn.gsql("drop query all")
+
+    def test_init(self):
+        loader = NeighborLoader(
+            graph=self.conn,
+            v_in_feats={"v0": ["x"],
+                        "v1": ["x"],
+                        "v2": ["x"]},
+            v_out_labels={"v0": ["y"]},
+            v_extra_feats={"v0": ["train_mask", "val_mask", "test_mask"]},
+            batch_size=16,
+            num_neighbors=10,
+            num_hops=2,
+            shuffle=True,
+            output_format="PyG",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4,
+        )
+        self.assertTrue(is_query_installed(self.conn, loader.query_name))
+        print(loader.num_batches)
+        # self.assertEqual(loader.num_batches, 9)
+        
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
@@ -280,6 +315,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSNeighborLoaderREST("test_whole_graph_pyg"))
     suite.addTest(TestGDSNeighborLoaderREST("test_edge_attr"))
     suite.addTest(TestGDSNeighborLoaderREST("test_fetch"))
+    suite.addTest(TestGDSHeteroNeighborLoaderREST("test_init"))
 
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)
