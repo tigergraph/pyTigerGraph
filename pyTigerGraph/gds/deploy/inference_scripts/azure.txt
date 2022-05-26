@@ -1,0 +1,61 @@
+import pyTigerGraph as tg
+import torch
+import json
+import os
+import sys
+
+
+def init():
+    # Configure device usage
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    # Load configuration JSON file
+    with open(os.path.join(os.getenv("AZUREML_SOURCE_DIR"), "config.json")) as json_file:
+        data = json.load(json_file)
+        model_config = data["model_config"]
+        connection_config = data["connection_config"]
+        loader_config = data["infer_loader_config"]
+        model_name = data["model_name"]
+
+    sys.path.append(os.getenv("AZUREML_SOURCE_DIR"))
+
+    # Load model definition
+    import model
+    global mdl
+    mdl = getattr(model, model_name)(**model_config)
+
+    # Setup Connection to TigerGraph Database
+    global conn
+    conn = tg.TigerGraphConnection(**connection_config)
+
+    # Load the trained model weights
+    with open(os.path.join(os.getenv("AZUREML_MODEL_DIR"), "model.pth"), 'rb') as f:
+        mdl.load_state_dict(torch.load(f))
+    mdl.to(device).eval()
+
+    # Configure data loader
+    global infer_loader
+    infer_loader = conn.gds.neighborLoader(**loader_config)
+
+
+def run(request):
+    # load data from JSON request
+    input_data = json.loads(request)
+    
+    # fetch subgraphs for JSON requests
+    sub_graphs = infer_loader.fetch(input_data["vertices"])
+
+    # move data to device
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    mdl.to(device)
+    sub_graphs.to(device)
+
+    # run inference
+    with torch.no_grad():
+        output = mdl(sub_graphs)
+
+    # process and return results
+    returnJSON = {}
+    for i in range(len(input_data["vertices"])):
+        returnJSON[input_data["vertices"][i]["primary_id"]] = list(output[i].tolist())
+    return returnJSON

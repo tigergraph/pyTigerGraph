@@ -37,13 +37,13 @@ class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT
     def __getattribute__(self, name):
         if name == "gds":
             if super().__getattribute__(name) is None:
-                try:
-                    from .gds import gds
-                    self.gds = gds.GDS(self)
-                    return super().__getattribute__(name)
-                except:
-                    raise Exception("Please install the GDS package requirements to use the GDS functionality."
-                                    "Check the https://docs.tigergraph.com/pytigergraph/current/getting-started/install#_install_pytigergraphgds for more details.")
+                #try:
+                from .gds import gds
+                self.gds = gds.GDS(self)
+                return super().__getattribute__(name)
+            #except ImportError:
+                #    raise Exception("Please install the GDS package requirements to use the GDS functionality."
+                #                    "Check the https://docs.tigergraph.com/pytigergraph/current/getting-started/install#_install_pytigergraphgds for more details.")
             else:
                 return super().__getattribute__(name)
         else:

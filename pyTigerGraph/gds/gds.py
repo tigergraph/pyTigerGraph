@@ -35,9 +35,10 @@ if TYPE_CHECKING:
 from .dataloaders import EdgeLoader, GraphLoader, NeighborLoader, VertexLoader
 from .featurizer import Featurizer
 from .splitters import RandomEdgeSplitter, RandomVertexSplitter
+from .deploy import deploy
 
 
-class GDS:
+class GDS(object):
     def __init__(self, conn: "TigerGraphConnection") -> None:
         """NO DOC: Initiate a GDS object.
             Args:
@@ -48,6 +49,7 @@ class GDS:
                 None
         """
         self.conn = conn
+        self.deploy = deploy.Deploy()
 
     def neighborLoader(
         self,
