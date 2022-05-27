@@ -49,7 +49,7 @@ class GDS(object):
                 None
         """
         self.conn = conn
-        self.deploy = deploy.Deploy()
+        self.deploy = deploy.Deploy(conn)
 
     def neighborLoader(
         self,

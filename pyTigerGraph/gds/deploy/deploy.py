@@ -8,15 +8,16 @@ class TigerGraphCloudDeploymentException(Exception):
         super().__init__(message)
 
 class Deploy(object):
-    def __init__(self):
-        self.toAzureML = None
+    def __init__(self, conn:'TigerGraphConnection') -> None:
+        self.AzureML = None
+        self.conn = conn
 
     def __getattribute__(self, name):
-        if name == "toAzureML":
+        if name == "AzureML":
             if super().__getattribute__(name) is None:
                 try:
-                    from .azure import toAzureML
-                    self.toAzureML = toAzureML
+                    from .azure import AzureML 
+                    self.AzureML = AzureML(self.conn)
                     return super().__getattribute__(name)
                 except:
                     raise TigerGraphCloudDeploymentException("Please install the required AzureML packages. "
@@ -26,7 +27,7 @@ class Deploy(object):
         else:
             return super().__getattribute__(name)
 
-    def createModelDirectory(self,
+    def _createModelDirectory(self,
                              model:torch.nn.Module,
                              parameters:dict,
                              model_definition_path:str,

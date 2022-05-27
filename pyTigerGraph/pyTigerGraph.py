@@ -32,18 +32,35 @@ class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT
         super().__init__(host, graphname, username, password, restppPort, gsPort, gsqlVersion,
             version, apiToken, useCert, certPath, debug, sslPort, gcp)
 
+        self.connection_config = {
+            "host": host, 
+            "graphname": graphname, 
+            "username": username, 
+            "password": password, 
+            "restppPort": restppPort, 
+            "gsPort": gsPort, 
+            "gsqlVersion": gsqlVersion,
+            "version": version, 
+            "apiToken": apiToken, 
+            "useCert": useCert, 
+            "certPath": certPath, 
+            "debug": debug, 
+            "sslPort": sslPort, 
+            "gcp": gcp
+        }
+
         self.gds = None
 
     def __getattribute__(self, name):
         if name == "gds":
             if super().__getattribute__(name) is None:
-                #try:
-                from .gds import gds
-                self.gds = gds.GDS(self)
-                return super().__getattribute__(name)
-            #except ImportError:
-                #    raise Exception("Please install the GDS package requirements to use the GDS functionality."
-                #                    "Check the https://docs.tigergraph.com/pytigergraph/current/getting-started/install#_install_pytigergraphgds for more details.")
+                try:
+                    from .gds import gds
+                    self.gds = gds.GDS(self)
+                    return super().__getattribute__(name)
+                except ImportError:
+                    raise Exception("Please install the GDS package requirements to use the GDS functionality."
+                                    "Check the https://docs.tigergraph.com/pytigergraph/current/getting-started/install#_install_pytigergraphgds for more details.")
             else:
                 return super().__getattribute__(name)
         else:
