@@ -2039,22 +2039,43 @@ class GraphLoader(BaseLoader):
             timeout,
         )
         # Resolve attributes
-        self.v_in_feats = self._validate_vertex_attributes(v_in_feats)
-        self.v_out_labels = self._validate_vertex_attributes(v_out_labels)
-        self.v_extra_feats = self._validate_vertex_attributes(v_extra_feats)
-        self.e_in_feats = self._validate_edge_attributes(e_in_feats)
-        self.e_out_labels = self._validate_edge_attributes(e_out_labels)
-        self.e_extra_feats = self._validate_edge_attributes(e_extra_feats)
+        is_hetero = any(map(lambda x: isinstance(x, dict), 
+                        (v_in_feats, v_out_labels, v_extra_feats,
+                         e_in_feats, e_out_labels, e_extra_feats)))
+        self.is_hetero = is_hetero
+        self.v_in_feats = self._validate_vertex_attributes(v_in_feats, is_hetero)
+        self.v_out_labels = self._validate_vertex_attributes(v_out_labels, is_hetero)
+        self.v_extra_feats = self._validate_vertex_attributes(v_extra_feats, is_hetero)
+        self.e_in_feats = self._validate_edge_attributes(e_in_feats, is_hetero)
+        self.e_out_labels = self._validate_edge_attributes(e_out_labels, is_hetero)
+        self.e_extra_feats = self._validate_edge_attributes(e_extra_feats, is_hetero)
+        if is_hetero:
+            self._vtypes = list(
+                    set(self.v_in_feats.keys())
+                    | set(self.v_out_labels.keys())
+                    | set(self.v_extra_feats.keys())
+                )
+            if not self._vtypes:
+                self._vtypes = list(self._v_schema.keys())
+            self._etypes = list(
+                set(self.e_in_feats.keys())
+                | set(self.e_out_labels.keys())
+                | set(self.e_extra_feats.keys())
+            )
+            if not self._etypes:
+                self._etypes = list(self._e_schema.keys())
+        else:
+            self._vtypes = list(self._v_schema.keys())
+            self._etypes = list(self._e_schema.keys())
         # Initialize parameters for the query
         self._payload = {}
         if batch_size:
             # If batch_size is given, calculate the number of batches
-            num_edges_by_type = self._graph.getEdgeCount("*")
             if filter_by:
                 # TODO: get edge count with filter
                 raise NotImplementedError
             else:
-                num_edges = sum(num_edges_by_type.values())
+                num_edges = sum(self._graph.getEdgeCount(i) for i in self._etypes)
             self.num_batches = math.ceil(num_edges / batch_size)
         else:
             # Otherwise, take the number of batches as is.
@@ -2063,6 +2084,8 @@ class GraphLoader(BaseLoader):
         if filter_by:
             self._payload["filter_by"] = filter_by
         self._payload["shuffle"] = shuffle
+        self._payload["v_types"] = self._vtypes
+        self._payload["e_types"] = self._etypes
         if self.kafka_address_producer:
             self._payload["kafka_address"] = self.kafka_address_producer
         # kafka_topic will be filled in later.
@@ -2073,41 +2096,94 @@ class GraphLoader(BaseLoader):
 
     def _install_query(self) -> str:
         # Install the right GSQL query for the loader.
-        v_attr_names = self.v_in_feats + self.v_out_labels + self.v_extra_feats
-        e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
-        query_replace = {"{QUERYSUFFIX}": "_".join(v_attr_names + e_attr_names)}
-        v_attr_types = next(iter(self._v_schema.values()))
-        e_attr_types = next(iter(self._e_schema.values()))
-        if v_attr_names:
-            query_print = '+","+'.join(
-                "{}(s.{})".format(_udf_funcs[v_attr_types[attr]], attr)
-                for attr in v_attr_names
-            )
-            query_replace["{VERTEXATTRS}"] = query_print
+        query_suffix = []
+        query_replace = {}
+
+        if isinstance(self.v_in_feats, dict):
+            # Multiple vertex types
+            print_query = ""
+            for idx, vtype in enumerate(self._vtypes):
+                v_attr_names = (
+                    self.v_in_feats.get(vtype, [])
+                    + self.v_out_labels.get(vtype, [])
+                    + self.v_extra_feats.get(vtype, [])
+                )
+                query_suffix.extend(v_attr_names)
+                v_attr_types = self._v_schema[vtype]
+                if v_attr_names:
+                    print_attr = '+","+'.join(
+                        "{}(s.{})".format(_udf_funcs[v_attr_types[attr]], attr)
+                        for attr in v_attr_names
+                    )
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + "\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", vtype, print_attr)
+                else:
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", vtype)
+            print_query += "END"
+            query_replace["{VERTEXATTRS}"] = print_query
+            # Multiple edge types
+            print_query = ""
+            for idx, etype in enumerate(self._etypes):
+                e_attr_names = (
+                    self.e_in_feats.get(etype, [])
+                    + self.e_out_labels.get(etype, [])
+                    + self.e_extra_feats.get(etype, [])
+                )
+                query_suffix.extend(e_attr_names)
+                e_attr_types = self._e_schema[etype]
+                if e_attr_names:
+                    print_attr = '+","+'.join(
+                        "{}(e.{})".format(_udf_funcs[e_attr_types[attr]], attr)
+                        for attr in e_attr_names
+                    )
+                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", etype, print_attr)
+                else:
+                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", etype)
+            print_query += "END"
+            query_replace["{EDGEATTRS}"] = print_query
+            query_suffix = list(dict.fromkeys(query_suffix))
         else:
-            query_replace['+ "," + {VERTEXATTRS}'] = ""
-        if e_attr_names:
-            query_print = '+","+'.join(
-                "{}(e.{})".format(_udf_funcs[e_attr_types[attr]], attr)
-                for attr in e_attr_names
-            )
-            query_replace["{EDGEATTRS}"] = query_print
-        else:
-            query_replace['+ "," + {EDGEATTRS}'] = ""
-        if self.kafka_address_producer:
-            query_path = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "gsql",
-                "dataloaders",
-                "graph_kloader.gsql",
-            )
-        else:
-            query_path = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "gsql",
-                "dataloaders",
-                "graph_hloader.gsql",
-            )
+            # Ignore vertex types
+            v_attr_names = self.v_in_feats + self.v_out_labels + self.v_extra_feats
+            query_suffix.extend(v_attr_names)
+            v_attr_types = next(iter(self._v_schema.values()))
+            if v_attr_names:
+                print_attr = '+","+'.join(
+                    "{}(s.{})".format(_udf_funcs[v_attr_types[attr]], attr)
+                    for attr in v_attr_names
+                )
+                print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + "\\n")'.format(
+                    print_attr
+                )
+            else:
+                print_query = '@@v_batch += (int_to_string(getvid(s)) + "\\n")'
+            query_replace["{VERTEXATTRS}"] = print_query
+            # Ignore edge types
+            e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
+            query_suffix.extend(e_attr_names)
+            e_attr_types = next(iter(self._e_schema.values()))
+            if e_attr_names:
+                print_attr = '+","+'.join(
+                    "{}(e.{})".format(_udf_funcs[e_attr_types[attr]], attr)
+                    for attr in e_attr_names
+                )
+                print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")'.format(
+                    print_attr
+                )
+            else:
+                print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "\\n")'
+            query_replace["{EDGEATTRS}"] = print_query
+        query_replace["{QUERYSUFFIX}"] = "_".join(query_suffix)
+        # Install query
+        query_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "gsql",
+            "dataloaders",
+            "graph_loader.gsql",
+        )
         return install_query_file(self._graph, query_path, query_replace)
 
     def _start(self) -> None:
@@ -2168,19 +2244,19 @@ class GraphLoader(BaseLoader):
             self._downloader.start()
 
         # Start reading thread.
-        v_attr_types = next(iter(self._v_schema.values()))
-        e_attr_types = next(iter(self._e_schema.values()))
-        if self.kafka_address_consumer:
-            raw_format = "graph_bytes"
+        if not self.is_hetero:
+            v_attr_types = next(iter(self._v_schema.values()))
+            e_attr_types = next(iter(self._e_schema.values()))
         else:
-            raw_format = "graph_str"
+            v_attr_types = self._v_schema
+            e_attr_types = self._e_schema
         self._reader = Thread(
             target=self._read_data,
             args=(
                 self._exit_event,
                 self._read_task_q,
                 self._data_q,
-                raw_format,
+                "graph",
                 self.output_format,
                 self.v_in_feats,
                 self.v_out_labels,
@@ -2192,6 +2268,7 @@ class GraphLoader(BaseLoader):
                 e_attr_types,
                 self.add_self_loop,
                 True,
+                self.is_hetero
             ),
         )
         self._reader.start()
