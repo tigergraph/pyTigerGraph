@@ -10,6 +10,7 @@ from pyTigerGraph import TigerGraphConnection
 from pyTigerGraph.gds.dataloaders import BaseLoader
 from torch.testing import assert_close as assert_close_torch
 from torch_geometric.data import Data as pygData
+from torch_geometric.data import HeteroData as pygHeteroData
 
 
 class TestGDSBaseLoader(unittest.TestCase):
@@ -24,7 +25,7 @@ class TestGDSBaseLoader(unittest.TestCase):
             self.loader._v_schema,
             {
                 "Paper": {
-                    "x": "INT",
+                    "x": "LIST:INT",
                     "y": "INT",
                     "train_mask": "BOOL",
                     "val_mask": "BOOL",
@@ -37,6 +38,8 @@ class TestGDSBaseLoader(unittest.TestCase):
             self.loader._e_schema,
             {
                 "Cite": {
+                    "FromVertexTypeName": "Paper",
+                    "ToVertexTypeName": "Paper",
                     "time": "INT",
                     "is_train": "BOOL"
                 }
@@ -103,60 +106,60 @@ class TestGDSBaseLoader(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.loader._validate_edge_attributes({"Cite": ["time"]}, is_hetero = False)  
 
-    def test_read_vertex_bytes(self):
+    def test_read_vertex(self):
         read_task_q = Queue()
         data_q = Queue(4)
         exit_event = Event()
-        raw = "99,1 0 0 1 ,1,0,1\n8,1 0 0 1 ,1,1,1\n".encode("utf-8")
+        raw = "99,1 0 0 1 ,1,0,1\n8,1 0 0 1 ,1,1,1\n"
         read_task_q.put(raw)
         read_task_q.put(None)
         self.loader._read_data(
             exit_event,
             read_task_q,
             data_q,
-            "vertex_bytes",
+            "vertex",
             "dataframe",
             ["x"],
             ["y"],
             ["train_mask", "is_seed"],
-            {"x": "int", "y": "int", "train_mask": "bool", "is_seed": "bool"},
+            {"x": "INT", "y": "INT", "train_mask": "BOOL", "is_seed": "BOOL"},
         )
         data = data_q.get()
         truth = pd.read_csv(
-            io.BytesIO(raw),
+            io.StringIO(raw),
             header=None,
-            names=["vid", "x", "y", "train_mask", "is_seed"],
+            names=["vid", "x", "y", "train_mask", "is_seed"]
         )
         assert_frame_equal(data, truth)
         data = data_q.get()
         self.assertIsNone(data)
 
-    def test_read_edge_bytes(self):
+    def test_read_edge(self):
         read_task_q = Queue()
         data_q = Queue(4)
         exit_event = Event()
-        raw = "1,2,0.1,2021,1,0\n2,1,1.5,2020,0,1\n".encode("utf-8")
+        raw = "1,2,0.1,2021,1,0\n2,1,1.5,2020,0,1\n"
         read_task_q.put(raw)
         read_task_q.put(None)
         self.loader._read_data(
-            exit_event, read_task_q, data_q, "edge_bytes", "dataframe", [], [], [], {},
+            exit_event, read_task_q, data_q, "edge", "dataframe", [], [], [], {},
             ["x", "time"], ["y"], ["is_train"], 
-            {"x": "float", "time": "int", "y": "int", "is_train": "bool"} 
+            {"x": "FLOAT", "time": "INT", "y": "INT", "is_train": "BOOL"} 
         )
         data = data_q.get()
-        truth = pd.read_csv(io.BytesIO(raw), header=None, 
+        truth = pd.read_csv(io.StringIO(raw), header=None, 
             names=["source", "target", "x", "time", "y", "is_train"])
         assert_frame_equal(data, truth)
         data = data_q.get()
         self.assertIsNone(data)
 
-    def test_read_graph_bytes_out_df(self):
+    def test_read_graph_out_df(self):
         read_task_q = Queue()
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "99,1 0 0 1 ,1,0,1\n8,1 0 0 1 ,1,1,1\n".encode("utf-8"),
-            "1,2,0.1,2021,1,0\n2,1,1.5,2020,0,1\n".encode("utf-8")
+            "99,1 0 0 1 ,1,0,1\n8,1 0 0 1 ,1,1,1\n",
+            "1,2,0.1,2021,1,0\n2,1,1.5,2020,0,1\n"
         )
         read_task_q.put(raw)
         read_task_q.put(None)
@@ -164,35 +167,40 @@ class TestGDSBaseLoader(unittest.TestCase):
             exit_event,
             read_task_q,
             data_q,
-            "graph_bytes",
+            "graph",
             "dataframe",
             ["x"],
             ["y"],
             ["train_mask", "is_seed"],
-            {"x": "int", "y": "int", "train_mask": "bool", "is_seed": "bool"},
+            {"x": "INT", "y": "INT", "train_mask": "BOOL", "is_seed": "BOOL"},
             ["x", "time"], ["y"], ["is_train"], 
-            {"x": "float", "time": "int", "y": "int", "is_train": "bool"} 
+            {"x": "FLOAT", "time": "INT", "y": "INT", "is_train": "BOOL"} 
         )
         data = data_q.get()
         vertices = pd.read_csv(
-            io.BytesIO(raw[0]),
+            io.StringIO(raw[0]),
             header=None,
             names=["vid", "x", "y", "train_mask", "is_seed"],
+            dtype="object"
         )
-        edges = pd.read_csv(io.BytesIO(raw[1]), header=None, 
-            names=["source", "target", "x", "time", "y", "is_train"])
+        edges = pd.read_csv(
+            io.StringIO(raw[1]), 
+            header=None, 
+            names=["source", "target", "x", "time", "y", "is_train"],
+            dtype="object"
+        )
         assert_frame_equal(data[0], vertices)
         assert_frame_equal(data[1], edges)
         data = data_q.get()
         self.assertIsNone(data)
 
-    def test_read_graph_bytes_out_pyg(self):
+    def test_read_graph_out_pyg(self):
         read_task_q = Queue()
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "99,1 0 0 1 ,1,0,Alex,1\n8,1 0 0 1 ,1,1,Bill,1\n".encode("utf-8"),
-            "99,8,0.1,2021,1,0\n8,99,1.5,2020,0,1\n".encode("utf-8")
+            "99,1 0 0 1 ,1,0,Alex,1\n8,1 0 0 1 ,1,1,Bill,0\n",
+            "99,8,0.1,2021,1,0\n8,99,1.5,2020,0,1\n"
         )
         read_task_q.put(raw)
         read_task_q.put(None)
@@ -200,20 +208,20 @@ class TestGDSBaseLoader(unittest.TestCase):
             exit_event,
             read_task_q,
             data_q,
-            "graph_bytes",
+            "graph",
             "pyg",
             ["x"],
             ["y"],
             ["train_mask", "name", "is_seed"],
             {
-                "x": "int",
-                "y": "int",
-                "train_mask": "bool",
-                "name": "string",
-                "is_seed": "bool",
+                "x": "LIST:INT",
+                "y": "INT",
+                "train_mask": "BOOL",
+                "name": "STRING",
+                "is_seed": "BOOL",
             },
             ["x", "time"], ["y"], ["is_train"], 
-            {"x": "double", "time": "int", "y": "int", "is_train": "bool"} 
+            {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL"} 
         )
         data = data_q.get()
         self.assertIsInstance(data, pygData)
@@ -225,33 +233,33 @@ class TestGDSBaseLoader(unittest.TestCase):
         assert_close_torch(data["x"], torch.tensor([[1, 0, 0, 1], [1, 0, 0, 1]]))
         assert_close_torch(data["y"], torch.tensor([1, 1]))
         assert_close_torch(data["train_mask"], torch.tensor([False, True]))
-        assert_close_torch(data["is_seed"], torch.tensor([True, True]))
+        assert_close_torch(data["is_seed"], torch.tensor([True, False]))
         self.assertListEqual(data["name"], ["Alex", "Bill"])
         data = data_q.get()
         self.assertIsNone(data)
 
-    def test_read_graph_bytes_no_attr(self):
+    def test_read_graph_no_attr(self):
         read_task_q = Queue()
         data_q = Queue(4)
         exit_event = Event()
-        raw = ("99,1\n8,1\n".encode("utf-8"), "99,8\n8,99\n".encode("utf-8"))
+        raw = ("99,1\n8,0\n", "99,8\n8,99\n")
         read_task_q.put(raw)
         read_task_q.put(None)
         self.loader._read_data(
             exit_event,
             read_task_q,
             data_q,
-            "graph_bytes",
+            "graph",
             "pyg",
             [],
             [],
             ["is_seed"],
             {
-                "x": "int",
-                "y": "int",
-                "train_mask": "bool",
-                "name": "string",
-                "is_seed": "bool",
+                "x": "INT",
+                "y": "INT",
+                "train_mask": "BOOL",
+                "name": "STRING",
+                "is_seed": "BOOL",
             },
             [],
             [],
@@ -261,20 +269,73 @@ class TestGDSBaseLoader(unittest.TestCase):
         data = data_q.get()
         self.assertIsInstance(data, pygData)
         assert_close_torch(data["edge_index"], torch.tensor([[0, 1], [1, 0]]))
-        assert_close_torch(data["is_seed"], torch.tensor([True, True]))
+        assert_close_torch(data["is_seed"], torch.tensor([True, False]))
         data = data_q.get()
         self.assertIsNone(data)
 
+    def test_read_hetero_graph_out_pyg(self):
+        read_task_q = Queue()
+        data_q = Queue(4)
+        exit_event = Event()
+        raw = (
+            "People,99,1 0 0 1 ,1,0,Alex,1\nPeople,8,1 0 0 1 ,1,1,Bill,0\nCompany,1,0.3,0\n",
+            "Work,99,8,0.1,2021,1,0\nWork,8,99,1.5,2020,0,1\n"
+        )
+        read_task_q.put(raw)
+        read_task_q.put(None)
+        self.loader._read_data(
+            exit_event,
+            read_task_q,
+            data_q,
+            "graph",
+            "pyg",
+            {"People": ["x"], "Company": ["x"]},
+            {"People": ["y"]},
+            {"People": ["train_mask", "name", "is_seed"], "Company": ["is_seed"]},
+            {"People": {
+                "x": "LIST:INT",
+                "y": "INT",
+                "train_mask": "BOOL",
+                "name": "STRING",
+                "is_seed": "BOOL"},
+             "Company": {"x": "FLOAT", "is_seed": "BOOL"}
+            },
+            {"Work": ["x", "time"]}, 
+            {"Work": ["y"]}, 
+            {"Work": ["is_train"]}, 
+            {"Work": {"FromVertexTypeName": "People", "ToVertexTypeName": "People",
+                "x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL"}},
+            False,
+            True,
+            True
+        )
+        data = data_q.get()
+        self.assertIsInstance(data, pygHeteroData)
+        assert_close_torch(data["Work"]["edge_index"], torch.tensor([[0, 1], [1, 0]]))
+        assert_close_torch(data["Work"]["edge_feat"], 
+            torch.tensor([[0.1, 2021], [1.5, 2020]], dtype=torch.double))
+        assert_close_torch(data["Work"]["edge_label"], torch.tensor([1, 0]))
+        assert_close_torch(data["Work"]["is_train"], torch.tensor([False, True]))
+        assert_close_torch(data["People"]["x"], torch.tensor([[1, 0, 0, 1], [1, 0, 0, 1]]))
+        assert_close_torch(data["People"]["y"], torch.tensor([1, 1]))
+        assert_close_torch(data["People"]["train_mask"], torch.tensor([False, True]))
+        assert_close_torch(data["People"]["is_seed"], torch.tensor([True, False]))
+        self.assertListEqual(data["People"]["name"], ["Alex", "Bill"])
+        assert_close_torch(data["Company"]["x"], torch.tensor([0.3], dtype=torch.double))
+        assert_close_torch(data["Company"]["is_seed"], torch.tensor([False]))
+        data = data_q.get()
+        self.assertIsNone(data)
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(TestGDSBaseLoader("test_get_schema"))
     suite.addTest(TestGDSBaseLoader("test_validate_vertex_attributes"))
     suite.addTest(TestGDSBaseLoader("test_validate_edge_attributes"))
-    suite.addTest(TestGDSBaseLoader("test_read_vertex_bytes"))
-    suite.addTest(TestGDSBaseLoader("test_read_edge_bytes"))
-    suite.addTest(TestGDSBaseLoader("test_read_graph_bytes_out_df"))
-    suite.addTest(TestGDSBaseLoader("test_read_graph_bytes_out_pyg"))
-    suite.addTest(TestGDSBaseLoader("test_read_graph_bytes_no_attr"))
+    suite.addTest(TestGDSBaseLoader("test_read_vertex"))
+    suite.addTest(TestGDSBaseLoader("test_read_edge"))
+    suite.addTest(TestGDSBaseLoader("test_read_graph_out_df"))
+    suite.addTest(TestGDSBaseLoader("test_read_graph_out_pyg"))
+    suite.addTest(TestGDSBaseLoader("test_read_graph_no_attr"))
+    suite.addTest(TestGDSBaseLoader("test_read_hetero_graph_out_pyg"))
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)

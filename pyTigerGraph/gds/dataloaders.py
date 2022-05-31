@@ -11,10 +11,12 @@ import io
 import logging
 import math
 import os
+from collections import defaultdict
 from queue import Empty, Queue
 from threading import Event, Thread
 from time import sleep
-from typing import TYPE_CHECKING, Any, Iterator, NoReturn, Union, Tuple
+from typing import (TYPE_CHECKING, Any, Iterator, Literal, NoReturn, Tuple,
+                    Union)
 
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
@@ -33,10 +35,16 @@ __all__ = ["VertexLoader", "EdgeLoader", "NeighborLoader", "GraphLoader"]
 __pdoc__ = {}
 
 _udf_funcs = {
+    "UINT": "int_to_string",
     "INT": "int_to_string",
     "BOOL": "bool_to_string",
     "FLOAT": "float_to_string",
     "DOUBLE": "float_to_string",
+    "LIST:UINT": "int_to_string",
+    "LIST:INT": "int_to_string",
+    "LIST:BOOL": "bool_to_string",
+    "LIST:FLOAT": "float_to_string",
+    "LIST:DOUBLE": "float_to_string",
 }
 
 
@@ -190,8 +198,8 @@ class BaseLoader:
             v = vtype["Name"]
             v_schema[v] = {}
             for attr in vtype["Attributes"]:
-                if "ValueTypeName" in attr["AttributeType"]:
-                    v_schema[v][attr["AttributeName"]] = attr["AttributeType"][
+                if attr["AttributeType"]["Name"] == "LIST":
+                    v_schema[v][attr["AttributeName"]] = "LIST:" + attr["AttributeType"][
                         "ValueTypeName"
                     ]
                 else:
@@ -204,9 +212,11 @@ class BaseLoader:
         for etype in schema["EdgeTypes"]:
             e = etype["Name"]
             e_schema[e] = {}
+            e_schema[e]["FromVertexTypeName"] = etype["FromVertexTypeName"]
+            e_schema[e]["ToVertexTypeName"] = etype["ToVertexTypeName"]
             for attr in etype["Attributes"]:
-                if "ValueTypeName" in attr["AttributeType"]:
-                    e_schema[e][attr["AttributeName"]] = attr["AttributeType"][
+                if attr["AttributeType"]["Name"] == "LIST":
+                    e_schema[e][attr["AttributeName"]] = "LIST:" + attr["AttributeType"][
                         "ValueTypeName"
                     ]
                 else:
@@ -214,8 +224,27 @@ class BaseLoader:
         return v_schema, e_schema
 
     def _validate_vertex_attributes(
-        self, attributes: Union[list, dict], is_hetero: bool = False
+        self, attributes: Union[None, list, dict], is_hetero: bool = False
     ) -> Union[list, dict]:
+        return self._validate_attributes(attributes, "vertex", is_hetero)
+
+    def _validate_edge_attributes(
+        self, attributes: Union[None, list, dict], is_hetero: bool = False
+    ) -> Union[list, dict]:
+        return self._validate_attributes(attributes, "edge", is_hetero)
+
+    def _validate_attributes(
+        self, 
+        attributes: Union[None, list, dict], 
+        schema_type: Literal["vertex", "edge"], 
+        is_hetero: bool = False
+    ) -> Union[list, dict]:
+        if schema_type == "vertex":
+            schema = self._v_schema
+        elif schema_type == "edge":
+            schema = self._e_schema
+        else:
+            raise ValueError("Schema type can only be vertex or edge.")
         if not attributes:
             if is_hetero:
                 return {}
@@ -231,78 +260,30 @@ class BaseLoader:
             for i in range(len(attributes)):
                 attributes[i] = attributes[i].strip()
             attr_set = set(attributes)
-            for vtype in self._v_schema:
-                allowlist = set(self._v_schema[vtype].keys())
+            for vtype in schema:
+                allowlist = set(schema[vtype].keys())
                 if attr_set - allowlist:
                     raise ValueError(
-                        "Attributes {} are available for vertex type {}.".format(
-                            attr_set - allowlist, vtype
+                        "Attributes {} are not available for {} type {}.".format(
+                            attr_set - allowlist, schema_type, vtype
                         )
                     )
         elif isinstance(attributes, dict):
             if not is_hetero:
                 raise ValueError("Input to attributes should be list or None if you want homogeneous graph output.")
             for vtype in attributes:
-                if vtype not in self._v_schema:
+                if vtype not in schema:
                     raise ValueError(
-                        "Vertex type {} is not available in the database.".format(vtype)
+                        "{} type {} is not available in the database.".format(schema_type, vtype)
                     )
                 for i in range(len(attributes[vtype])):
                     attributes[vtype][i] = attributes[vtype][i].strip()
                 attr_set = set(attributes[vtype])
-                allowlist = set(self._v_schema[vtype].keys())
+                allowlist = set(schema[vtype].keys())
                 if attr_set - allowlist:
                     raise ValueError(
-                        "Attributes {} are available for vertex type {}.".format(
-                            attr_set - allowlist, vtype
-                        )
-                    )
-        else:
-            raise ValueError("Input to attributes should be None, list, or dict.")
-        return attributes
-
-    def _validate_edge_attributes(
-        self, attributes: Union[list, dict], is_hetero: bool = False
-    ) -> Union[list, dict]:
-        if not attributes:
-            if is_hetero:
-                return {}
-            else:
-                return []
-        if isinstance(attributes, str):
-            raise ValueError(
-                "The old string way of specifying attributes is deprecated to better support heterogeneous graphs. Please use the new format."
-            )
-        if isinstance(attributes, list):
-            if is_hetero:
-                raise ValueError("Input to attributes should be dict or None if you want heterogeneous graph output.")
-            for i in range(len(attributes)):
-                attributes[i] = attributes[i].strip()
-            attr_set = set(attributes)
-            for etype in self._e_schema:
-                allowlist = set(self._e_schema[etype].keys())
-                if attr_set - allowlist:
-                    raise ValueError(
-                        "Attributes {} are available for edge type {}.".format(
-                            attr_set - allowlist, etype
-                        )
-                    )
-        elif isinstance(attributes, dict):
-            if not is_hetero:
-                raise ValueError("Input to attributes should be list or None if you want homogeneous graph output.")
-            for etype in attributes:
-                if etype not in self._e_schema:
-                    raise ValueError(
-                        "Edge type {} is not available in the database.".format(etype)
-                    )
-                for i in range(len(attributes[etype])):
-                    attributes[etype][i] = attributes[etype][i].strip()
-                attr_set = set(attributes[etype])
-                allowlist = set(self._e_schema[etype].keys())
-                if attr_set - allowlist:
-                    raise ValueError(
-                        "Attributes {} are available for edge type {}.".format(
-                            attr_set - allowlist, etype
+                        "Attributes {} are not available for {} type {}.".format(
+                            attr_set - allowlist, schema_type, vtype
                         )
                     )
         else:
@@ -405,7 +386,7 @@ class BaseLoader:
         read_task_q: Queue,
         timeout: int = 600000,
         payload: dict = {},
-        resp_type: str = "both",
+        resp_type: Literal["both", "vertex", "edge"] = "both",
     ) -> NoReturn:
         # Run query
         resp = tgraph.runInstalledQuery(
@@ -414,7 +395,7 @@ class BaseLoader:
         # Put raw data into reading queue
         for i in resp:
             if resp_type == "both":
-                data = ("".join(i["vertex_batch"].values()), i["edge_batch"])
+                data = (i["vertex_batch"], i["edge_batch"])
             elif resp_type == "vertex":
                 data = "".join(i["vertex_batch"].values())
             elif resp_type == "edge":
@@ -445,19 +426,21 @@ class BaseLoader:
                         if key.startswith("vertex"):
                             companion_key = key.replace("vertex", "edge")
                             if companion_key in buffer:
-                                read_task_q.put((message.value, buffer[companion_key]))
+                                read_task_q.put((message.value.decode("utf-8"), 
+                                                 buffer[companion_key]))
                                 del buffer[companion_key]
                                 delivered_batch += 1
                             else:
-                                buffer[key] = message.value
+                                buffer[key] = message.value.decode("utf-8")
                         elif key.startswith("edge"):
                             companion_key = key.replace("edge", "vertex")
                             if companion_key in buffer:
-                                read_task_q.put((buffer[companion_key], message.value))
+                                read_task_q.put((buffer[companion_key], 
+                                                 message.value.decode("utf-8")))
                                 del buffer[companion_key]
                                 delivered_batch += 1
                             else:
-                                buffer[key] = message.value
+                                buffer[key] = message.value.decode("utf-8")
                         else:
                             raise ValueError(
                                 "Unrecognized key {} for messages in kafka".format(key)
@@ -472,7 +455,7 @@ class BaseLoader:
         exit_event: Event,
         in_q: Queue,
         out_q: Queue,
-        in_format: str = "vertex_bytes",
+        in_format: str = "vertex",
         out_format: str = "dataframe",
         v_in_feats: Union[list, dict] = [],
         v_out_labels: Union[list, dict] = [],
@@ -484,6 +467,7 @@ class BaseLoader:
         e_attr_types: dict = {},
         add_self_loop: bool = False,
         reindex: bool = True,
+        is_hetero: bool = False
     ) -> NoReturn:
         while not exit_event.is_set():
             raw = in_q.get()
@@ -505,15 +489,16 @@ class BaseLoader:
                 e_attr_types = e_attr_types,
                 add_self_loop = add_self_loop,
                 reindex = reindex,
-                primary_id = []
+                primary_id = {},
+                is_hetero = is_hetero
             )
             out_q.put(data)
             in_q.task_done()
 
     @staticmethod
     def _parse_data(
-        raw: Union[str, bytes, Tuple[str, str], Tuple[bytes, bytes]],
-        in_format: str = "vertex_bytes",
+        raw: Union[str, Tuple[str, str]],
+        in_format: Literal["vertex", "edge", "graph"] = "vertex",
         out_format: str = "dataframe",
         v_in_feats: Union[list, dict] = [],
         v_out_labels: Union[list, dict] = [],
@@ -525,11 +510,17 @@ class BaseLoader:
         e_attr_types: dict = {},
         add_self_loop: bool = False,
         reindex: bool = True,
-        primary_id: list = []
-    ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, pd.DataFrame], "dgl.DGLGraph", "pyg.Data"]:
+        primary_id: dict = {},
+        is_hetero: bool = False
+    ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, pd.DataFrame], "dgl.DGLGraph", "pyg.data.Data",
+               dict, Tuple[dict, dict], "pyg.data.HeteroData"]:
+        """Parse raw data into dataframes, DGL graphs, or PyG graphs.
+        """    
         def attr_to_tensor(
             attributes: list, attr_types: dict, df: pd.DataFrame
         ) -> "torch.Tensor":
+            """Turn multiple columes of a dataframe into a tensor.
+            """        
             x = []
             for col in attributes:
                 dtype = attr_types[col].lower()
@@ -537,46 +528,159 @@ class BaseLoader:
                     raise TypeError(
                         "String type not allowed for input and output features."
                     )
-                if df[col].dtype == "object":
-                    x.append(df[col].str.split(expand=True).to_numpy().astype(dtype))
+                if dtype.startswith("list"):
+                    dtype2 = dtype.split(":")[1]
+                    x.append(df[col].str.split(expand=True).to_numpy().astype(dtype2))
+                elif dtype.startswith("set") or dtype.startswith("map") or dtype.startswith("date"):
+                    raise NotImplementedError(
+                        "{} type not supported for input and output features yet.".format(dtype))
                 else:
                     x.append(df[[col]].to_numpy().astype(dtype))
-            return torch.tensor(np.hstack(x).squeeze())
+            return torch.tensor(np.hstack(x)).squeeze(dim=1)
 
-        v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
-        e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
+        def add_attributes(attr_names: list, attr_types: dict, attr_df: pd.DataFrame, 
+                           graph, is_hetero: bool, mode: str, feat_name: str, 
+                           target: Literal["edge", "vertex"], vetype: str = None) -> None:
+            """Add multiple attributes as a single feature to edges or vertices.
+            """                    
+            if is_hetero:
+                if not vetype:
+                    raise ValueError("Vertex or edge type required for heterogeneous graphs")
+                # Focus on a specific type
+                if mode == "pyg":
+                    if target == "edge":
+                        data = graph[attr_types["FromVertexTypeName"], 
+                                     vetype,
+                                     attr_types["ToVertexTypeName"]]
+                    elif target == "vertex":
+                        data = graph[vetype]
+                elif mode == "dgl":
+                    raise NotImplementedError
+            else:
+                if mode == "pyg":
+                    data = graph
+                elif mode == "dgl":
+                    if target == "edge":
+                        data = graph.edata
+                    elif target == "vertex":
+                        data = graph.ndata
 
+            data[feat_name] = attr_to_tensor(attr_names, attr_types, attr_df)
+        
+        def add_sep_attr(attr_names: list, attr_types: dict, attr_df: pd.DataFrame, 
+                         graph, is_hetero: bool, mode: str,
+                         target: Literal["edge", "vertex"], vetype: str = None) -> None:
+            """Add each attribute as a single feature to edges or vertices.
+            """
+            if is_hetero:
+                if not vetype:
+                    raise ValueError("Vertex or edge type required for heterogeneous graphs")
+                # Focus on a specific type
+                if mode == "pyg":
+                    if target == "edge":
+                        data = graph[attr_types["FromVertexTypeName"], 
+                                     vetype,
+                                     attr_types["ToVertexTypeName"]]
+                    elif target == "vertex":
+                        data = graph[vetype]
+                elif mode == "dgl":
+                    raise NotImplementedError
+            else:
+                if mode == "pyg":
+                    data = graph
+                elif mode == "dgl":
+                    if target == "edge":
+                        data = graph.edata
+                    elif target == "vertex":
+                        data = graph.ndata
+
+            for col in attr_names:
+                dtype = attr_types[col].lower()
+                if dtype.startswith("str"):
+                    if mode == "dgl":
+                        graph.extra_data[col] = attr_df[col].to_list()
+                    elif mode == "pyg":
+                        data[col] = attr_df[col].to_list()
+                elif dtype.startswith("list"):
+                    dtype2 = dtype.split(":")[1]
+                    data[col] = torch.tensor(
+                        attr_df[col]
+                        .str.split(expand=True)
+                        .to_numpy()
+                        .astype(dtype2)
+                    )
+                elif dtype.startswith("set") or dtype.startswith("map") or dtype.startswith("date"):
+                    raise NotImplementedError(
+                        "{} type not supported for extra features yet.".format(dtype))
+                elif dtype == "bool":
+                    data[col] = torch.tensor(
+                        attr_df[col].astype("int8").astype(dtype)
+                    )
+                else:
+                    data[col] = torch.tensor(
+                        attr_df[col].astype(dtype)
+                    )
+        # Read in vertex and edge CSVs as dataframes              
         vertices, edges = None, None
-        if in_format == "vertex_bytes":
-            # Bytes of vertices in format vid,v_in_feats,v_out_labels,v_extra_feats
-            data = pd.read_csv(io.BytesIO(raw), header=None, names=v_attributes)
-        elif in_format == "edge_bytes":
-            # Bytes of edges in format source_vid,target_vid
-            data = pd.read_csv(io.BytesIO(raw), header=None, names=e_attributes)
-        elif in_format == "graph_bytes":
-            # A pair of in-memory CSVs (vertex, edge)
-            v_file, e_file = raw
-            vertices = pd.read_csv(io.BytesIO(v_file), header=None, names=v_attributes)
-            edges = pd.read_csv(io.BytesIO(e_file), header=None, names=e_attributes)
-            data = (vertices, edges)
-        elif in_format == "vertex_str":
+        if in_format == "vertex":
             # String of vertices in format vid,v_in_feats,v_out_labels,v_extra_feats
-            data = pd.read_csv(io.StringIO(raw), header=None, names=v_attributes)
-        elif in_format == "edge_str":
+            if not is_hetero:
+                v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
+                data = pd.read_csv(io.StringIO(raw), header=None, names=v_attributes)
+        elif in_format == "edge":
             # String of edges in format source_vid,target_vid
-            data = pd.read_csv(io.StringIO(raw), header=None, names=e_attributes)
-        elif in_format == "graph_str":
+            if not is_hetero:
+                e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
+                data = pd.read_csv(io.StringIO(raw), header=None, names=e_attributes)
+        elif in_format == "graph":
             # A pair of in-memory CSVs (vertex, edge)
             v_file, e_file = raw
-            vertices = pd.read_csv(io.StringIO(v_file), header=None, names=v_attributes)
-            if primary_id:
-                vertices["primary_id"] = primary_id
-                v_extra_feats.append("primary_id")
-            edges = pd.read_csv(io.StringIO(e_file), header=None, names=e_attributes)
-            data = (vertices, edges)
+            if not is_hetero:
+                v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
+                e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
+                vertices = pd.read_csv(io.StringIO(v_file), header=None, names=v_attributes, dtype="object")
+                if primary_id:
+                    id_map = pd.DataFrame({"vid": primary_id.keys(), "primary_id": primary_id.values()}, 
+                                          dtype="object")
+                    vertices = vertices.merge(id_map, on="vid")
+                    v_extra_feats.append("primary_id")
+                edges = pd.read_csv(io.StringIO(e_file), header=None, names=e_attributes, dtype="object")
+                data = (vertices, edges)
+            else:
+                v_file = (line.split(',') for line in v_file.split('\n') if line)
+                v_file_dict = defaultdict(list)
+                for line in v_file:
+                    v_file_dict[line[0]].append(line[1:])
+                vertices = {}
+                for vtype in v_file_dict:
+                    v_attributes = ["vid"] + \
+                                   v_in_feats.get(vtype, []) + \
+                                   v_out_labels.get(vtype, []) + \
+                                   v_extra_feats.get(vtype, [])
+                    vertices[vtype] = pd.DataFrame(v_file_dict[vtype], columns=v_attributes, dtype="object")
+                if primary_id:
+                    id_map = pd.DataFrame({"vid": primary_id.keys(), "primary_id": primary_id.values()},
+                                          dtype="object")
+                    for vtype in vertices:
+                        vertices[vtype] = vertices[vtype].merge(id_map, on="vid")
+                        v_extra_feats[vtype].append("primary_id")
+                del v_file_dict, v_file
+                e_file = (line.split(',') for line in e_file.split('\n') if line)
+                e_file_dict = defaultdict(list)
+                for line in e_file:
+                    e_file_dict[line[0]].append(line[1:])
+                edges = {}
+                for etype in e_file_dict:
+                    e_attributes = ["source", "target"] + \
+                                   e_in_feats.get(etype, []) + \
+                                   e_out_labels.get(etype, [])  + \
+                                   e_extra_feats.get(etype, [])
+                    edges[etype] = pd.DataFrame(e_file_dict[etype], columns=e_attributes, dtype="object")
+                del e_file_dict, e_file
+                data = (vertices, edges)
         else:
             raise NotImplementedError
-
+        # Convert dataframes into PyG or DGL graphs
         if out_format.lower() == "pyg" or out_format.lower() == "dgl":
             try:
                 import torch
@@ -586,7 +690,7 @@ class BaseLoader:
                 )
             if vertices is None or edges is None:
                 raise ValueError(
-                    "PyG or DGL format can only be used with graph output."
+                    "PyG or DGL format can only be used with (sub)graph loaders."
                 )
             if out_format.lower() == "dgl":
                 try:
@@ -599,6 +703,8 @@ class BaseLoader:
             elif out_format.lower() == "pyg":
                 try:
                     from torch_geometric.data import Data as pygData
+                    from torch_geometric.data import \
+                        HeteroData as pygHeteroData
                     from torch_geometric.utils import add_self_loops
                     mode = "pyg"
                 except ImportError:
@@ -609,126 +715,126 @@ class BaseLoader:
                 raise NotImplementedError
             # Reformat as a graph.
             # Need to have a pair of tables for edges and vertices.
-            # Deal with edgelist first
-            if reindex:
-                vertices["tmp_id"] = range(len(vertices))
-                id_map = vertices[["vid", "tmp_id"]]
-                edges = edges.merge(id_map, left_on="source", right_on="vid")
-                edges.drop(columns=["source", "vid"], inplace=True)
-                edges = edges.merge(id_map, left_on="target", right_on="vid")
-                edges.drop(columns=["target", "vid"], inplace=True)
-                edgelist = edges[["tmp_id_x", "tmp_id_y"]]
+            if not is_hetero:
+                # Deal with edgelist first
+                if reindex:
+                    vertices["tmp_id"] = range(len(vertices))
+                    id_map = vertices[["vid", "tmp_id"]]
+                    edges = edges.merge(id_map, left_on="source", right_on="vid")
+                    edges.drop(columns=["source", "vid"], inplace=True)
+                    edges = edges.merge(id_map, left_on="target", right_on="vid")
+                    edges.drop(columns=["target", "vid"], inplace=True)
+                    edgelist = edges[["tmp_id_x", "tmp_id_y"]]
+                else:
+                    edgelist = edges[["source", "target"]]
+                edgelist = torch.tensor(edgelist.to_numpy().T, dtype=torch.long)
+                if mode == "dgl":
+                    data = dgl.graph(data=(edgelist[0], edgelist[1]))
+                    if add_self_loop:
+                        data = dgl.add_self_loop(data)
+                    data.extra_data = {}
+                elif mode == "pyg":
+                    data = pygData()
+                    if add_self_loop:
+                        edgelist = add_self_loops(edgelist)[0]
+                    data["edge_index"] = edgelist
+                del edgelist
+                # Deal with edge attributes
+                if e_in_feats:
+                    add_attributes(e_in_feats, e_attr_types, edges, 
+                                   data, is_hetero, mode, "edge_feat", "edge")
+                if e_out_labels:
+                    add_attributes(e_out_labels, e_attr_types, edges, 
+                                   data, is_hetero, mode, "edge_label", "edge")
+                if e_extra_feats:
+                    add_sep_attr(e_extra_feats, e_attr_types, edges,
+                                 data, is_hetero, mode, "edge")            
+                del edges
+                # Deal with vertex attributes next
+                if v_in_feats:
+                    add_attributes(v_in_feats, v_attr_types, vertices, 
+                                   data, is_hetero, mode, "x", "vertex")
+                if v_out_labels:
+                    add_attributes(v_out_labels, v_attr_types, vertices, 
+                                   data, is_hetero, mode, "y", "vertex")
+                if v_extra_feats:
+                    add_sep_attr(v_extra_feats, v_attr_types, vertices,
+                                 data, is_hetero, mode, "vertex")
+                del vertices
             else:
-                edgelist = edges[["source", "target"]]
-            edgelist = torch.tensor(edgelist.to_numpy().T, dtype=torch.long)
-            if mode == "dgl":
-                data = dgl.graph(data=(edgelist[0], edgelist[1]))
-                if add_self_loop:
-                    data = dgl.add_self_loop(data)
-            elif mode == "pyg":
-                data = pygData()
-                if add_self_loop:
-                    edgelist = add_self_loops(edgelist)[0]
-                data["edge_index"] = edgelist
-            del edgelist
-            # Deal with edge attributes
-            if e_in_feats:
-                if mode == "dgl":
-                    data.edata["feat"] = attr_to_tensor(e_in_feats, e_attr_types, edges)
-                elif mode == "pyg":
-                    data["edge_feat"] = attr_to_tensor(e_in_feats, e_attr_types, edges)
-            if e_out_labels:
-                if mode == "dgl":
-                    data.edata["label"] = attr_to_tensor(
-                        e_out_labels, e_attr_types, edges
-                    )
-                elif mode == "pyg":
-                    data["edge_label"] = attr_to_tensor(e_out_labels, e_attr_types, edges)
-            if e_extra_feats:
+                # Heterogeneous graph
+                # Deal with edgelist first
+                edgelist = {}
+                if reindex:
+                    id_map = []
+                    for vtype in vertices:
+                        vertices[vtype]["tmp_id"] = range(len(vertices[vtype]))
+                        id_map.append(vertices[vtype][["vid", "tmp_id"]])
+                    id_map = pd.concat(id_map)
+                    for etype in edges:
+                        edges[etype] = edges[etype].merge(id_map, left_on="source", right_on="vid")
+                        edges[etype].drop(columns=["source", "vid"], inplace=True)
+                        edges[etype] = edges[etype].merge(id_map, left_on="target", right_on="vid")
+                        edges[etype].drop(columns=["target", "vid"], inplace=True)
+                        edgelist[etype] = edges[etype][["tmp_id_x", "tmp_id_y"]]
+                else:
+                    for etype in edges:
+                        edgelist[etype] = edges[etype][["source", "target"]]
+                for etype in edges:
+                    edgelist[etype] = torch.tensor(edgelist[etype].to_numpy().T, dtype=torch.long)
                 if mode == "dgl":
                     data.extra_data = {}
-                for col in e_extra_feats:
-                    dtype = e_attr_types[col].lower()
-                    if dtype.startswith("str"):
-                        if mode == "dgl":
-                            data.extra_data[col] = edges[col].to_list()
-                        elif mode == "pyg":
-                            data[col] = edges[col].to_list()
-                    elif edges[col].dtype == "object":
-                        if mode == "dgl":
-                            data.edata[col] = torch.tensor(
-                                edges[col]
-                                .str.split(expand=True)
-                                .to_numpy()
-                                .astype(dtype)
-                            )
-                        elif mode == "pyg":
-                            data[col] = torch.tensor(
-                                edges[col]
-                                .str.split(expand=True)
-                                .to_numpy()
-                                .astype(dtype)
-                            )
-                    else:
-                        if mode == "dgl":
-                            data.edata[col] = torch.tensor(
-                                edges[col].to_numpy().astype(dtype)
-                            )
-                        elif mode == "pyg":
-                            data[col] = torch.tensor(
-                                edges[col].to_numpy().astype(dtype)
-                            )
-            del edges
-            # Deal with vertex attributes next
-            if v_in_feats:
-                if mode == "dgl":
-                    data.ndata["feat"] = attr_to_tensor(
-                        v_in_feats, v_attr_types, vertices
-                    )
+                    raise NotImplementedError
                 elif mode == "pyg":
-                    data["x"] = attr_to_tensor(v_in_feats, v_attr_types, vertices)
-            if v_out_labels:
-                if mode == "dgl":
-                    data.ndata["label"] = attr_to_tensor(
-                        v_out_labels, v_attr_types, vertices
-                    )
-                elif mode == "pyg":
-                    data["y"] = attr_to_tensor(v_out_labels, v_attr_types, vertices)
-            if v_extra_feats:
-                if mode == "dgl":
-                    data.extra_data = {}
-                for col in v_extra_feats:
-                    dtype = v_attr_types[col].lower()
-                    if dtype.startswith("str"):
-                        if mode == "dgl":
-                            data.extra_data[col] = vertices[col].to_list()
-                        elif mode == "pyg":
-                            data[col] = vertices[col].to_list()
-                    elif vertices[col].dtype == "object":
-                        if mode == "dgl":
-                            data.ndata[col] = torch.tensor(
-                                vertices[col]
-                                .str.split(expand=True)
-                                .to_numpy()
-                                .astype(dtype)
-                            )
-                        elif mode == "pyg":
-                            data[col] = torch.tensor(
-                                vertices[col]
-                                .str.split(expand=True)
-                                .to_numpy()
-                                .astype(dtype)
-                            )
-                    else:
-                        if mode == "dgl":
-                            data.ndata[col] = torch.tensor(
-                                vertices[col].to_numpy().astype(dtype)
-                            )
-                        elif mode == "pyg":
-                            data[col] = torch.tensor(
-                                vertices[col].to_numpy().astype(dtype)
-                            )
-            del vertices
+                    data = pygHeteroData()
+                    for etype in edgelist:
+                        if add_self_loop:
+                            edgelist[etype] = add_self_loops(edgelist[etype])[0]
+                        data[e_attr_types[etype]["FromVertexTypeName"], 
+                             etype,
+                             e_attr_types[etype]["ToVertexTypeName"]].edge_index = edgelist[etype]
+                    del edgelist[etype]
+                del edgelist
+                # Deal with edge attributes
+                if e_in_feats:
+                    for etype in edges:
+                        if etype not in e_in_feats:
+                            continue
+                        add_attributes(e_in_feats[etype], e_attr_types[etype], edges[etype], 
+                                       data, is_hetero, mode, "edge_feat", "edge", etype)
+                if e_out_labels:
+                    for etype in edges:
+                        if etype not in e_out_labels:
+                            continue
+                        add_attributes(e_out_labels[etype], e_attr_types[etype], edges[etype], 
+                                       data, is_hetero, mode, "edge_label", "edge", etype)
+                if e_extra_feats:
+                    for etype in edges:
+                        if etype not in e_extra_feats:
+                            continue
+                        add_sep_attr(e_extra_feats[etype], e_attr_types[etype], edges[etype],
+                                     data, is_hetero, mode, "edge", etype)   
+                del edges
+                # Deal with vertex attributes next
+                if v_in_feats:
+                    for vtype in vertices:
+                        if vtype not in v_in_feats:
+                            continue
+                        add_attributes(v_in_feats[vtype], v_attr_types[vtype], vertices[vtype], 
+                                       data, is_hetero, mode, "x", "vertex", vtype)
+                if v_out_labels:
+                    for vtype in vertices:
+                        if vtype not in v_out_labels:
+                            continue
+                        add_attributes(v_out_labels[vtype], v_attr_types[vtype], vertices[vtype], 
+                                       data, is_hetero, mode, "y", "vertex", vtype)
+                if v_extra_feats:
+                    for vtype in vertices:
+                        if vtype not in v_extra_feats:
+                            continue
+                        add_sep_attr(v_extra_feats[vtype], v_attr_types[vtype], vertices[vtype],
+                                     data, is_hetero, mode, "vertex", vtype)   
+                del vertices
         elif out_format.lower() == "dataframe":
             pass
         else:
@@ -849,11 +955,6 @@ class BaseLoader:
         Args:
             payload (dict): The JSON payload to send to the API.
         """
-        if self._mode == "training":
-            print(
-                "Loader is in training mode. Please call `inference()` function to switch to inference mode."
-            )
-
         # Send request
         # Parse data
         # Return data
@@ -945,6 +1046,7 @@ class NeighborLoader(BaseLoader):
         is_hetero = any(map(lambda x: isinstance(x, dict), 
                         (v_in_feats, v_out_labels, v_extra_feats,
                          e_in_feats, e_out_labels, e_extra_feats)))
+        self.is_hetero = is_hetero
         self.v_in_feats = self._validate_vertex_attributes(v_in_feats, is_hetero)
         self.v_out_labels = self._validate_vertex_attributes(v_out_labels, is_hetero)
         self.v_extra_feats = self._validate_vertex_attributes(v_extra_feats, is_hetero)
@@ -952,14 +1054,14 @@ class NeighborLoader(BaseLoader):
         self.e_out_labels = self._validate_edge_attributes(e_out_labels, is_hetero)
         self.e_extra_feats = self._validate_edge_attributes(e_extra_feats, is_hetero)
         if is_hetero:
-            self._vtypes = (
+            self._vtypes = list(
                     set(self.v_in_feats.keys())
                     | set(self.v_out_labels.keys())
                     | set(self.v_extra_feats.keys())
                 )
             if not self._vtypes:
                 self._vtypes = list(self._v_schema.keys())
-            self._etypes = (
+            self._etypes = list(
                 set(self.e_in_feats.keys())
                 | set(self.e_out_labels.keys())
                 | set(self.e_extra_feats.keys())
@@ -1023,14 +1125,14 @@ class NeighborLoader(BaseLoader):
                         "{}(s.{})".format(_udf_funcs[v_attr_types[attr]], attr)
                         for attr in v_attr_names
                     )
-                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s -> (s.type + "," + int_to_string(getvid(s)) + "," + {} + ",1\\n"))\n'.format(
+                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + ",1\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
-                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s -> (s.type + "," + int_to_string(getvid(s)) + "," + {} + ",0\\n"))\n'.format(
+                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + ",0\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
                 else:
-                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s -> (s.type + "," + int_to_string(getvid(s)) + ",1\\n"))\n'.format(
+                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + ",1\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype)
-                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s -> (s.type + "," + int_to_string(getvid(s)) + ",0\\n"))\n'.format(
+                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + ",0\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype)
             print_query_seed += "END"
             print_query_other += "END"
@@ -1069,18 +1171,18 @@ class NeighborLoader(BaseLoader):
                     "{}(s.{})".format(_udf_funcs[v_attr_types[attr]], attr)
                     for attr in v_attr_names
                 )
-                print_query = '@@v_batch += (s -> (int_to_string(getvid(s)) + "," + {} + ",1\\n"))'.format(
+                print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + ",1\\n")'.format(
                     print_attr
                 )
                 query_replace["{SEEDVERTEXATTRS}"] = print_query
-                print_query = '@@v_batch += (s -> (int_to_string(getvid(s)) + "," + {} + ",0\\n"))'.format(
+                print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + ",0\\n")'.format(
                     print_attr
                 )
                 query_replace["{OTHERVERTEXATTRS}"] = print_query
             else:
-                print_query = '@@v_batch += (s -> (int_to_string(getvid(s)) + ",1\\n"))'
+                print_query = '@@v_batch += (int_to_string(getvid(s)) + ",1\\n")'
                 query_replace["{SEEDVERTEXATTRS}"] = print_query
-                print_query = '@@v_batch += (s -> (int_to_string(getvid(s)) + ",0\\n"))'
+                print_query = '@@v_batch += (int_to_string(getvid(s)) + ",0\\n")'
                 query_replace["{OTHERVERTEXATTRS}"] = print_query
             # Ignore edge types
             e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
@@ -1165,24 +1267,30 @@ class NeighborLoader(BaseLoader):
             self._downloader.start()
 
         # Start reading thread.
-        v_attr_types = next(iter(self._v_schema.values()))
-        v_attr_types["is_seed"] = "bool"
-        e_attr_types = next(iter(self._e_schema.values()))
-        if self.kafka_address_consumer:
-            raw_format = "graph_bytes"
+        if not self.is_hetero:
+            v_extra_feats = self.v_extra_feats + ["is_seed"]
+            v_attr_types = next(iter(self._v_schema.values()))
+            v_attr_types["is_seed"] = "bool"
+            e_attr_types = next(iter(self._e_schema.values()))
         else:
-            raw_format = "graph_str"
+            v_extra_feats = {}
+            for vtype in self._vtypes:
+                v_extra_feats[vtype] = self.v_extra_feats.get(vtype, []) + ["is_seed"]
+            v_attr_types = self._v_schema
+            for vtype in v_attr_types:
+                v_attr_types[vtype]["is_seed"] = "bool"
+            e_attr_types = self._e_schema
         self._reader = Thread(
             target=self._read_data,
             args=(
                 self._exit_event,
                 self._read_task_q,
                 self._data_q,
-                raw_format,
+                "graph",
                 self.output_format,
                 self.v_in_feats,
                 self.v_out_labels,
-                self.v_extra_feats + ["is_seed"],
+                v_extra_feats,
                 v_attr_types,
                 self.e_in_feats,
                 self.e_out_labels,
@@ -1190,6 +1298,7 @@ class NeighborLoader(BaseLoader):
                 e_attr_types,
                 self.add_self_loop,
                 True,
+                self.is_hetero
             ),
         )
         self._reader.start()
@@ -1218,7 +1327,7 @@ class NeighborLoader(BaseLoader):
                 'Input to fetch() should be in format: [{"primary_id": ..., "type": ...}, ...]'
             )
         for i in vertices:
-            if not (isinstance(i, dict) and len(i) == 2):
+            if not (isinstance(i, dict) and ("primary_id" in i) and ("type" in i)):
                 raise ValueError(
                     'Input to fetch() should be in format: [{"primary_id": ..., "type": ...}, ...]'
                 )
@@ -1235,19 +1344,30 @@ class NeighborLoader(BaseLoader):
         resp = self._graph.runInstalledQuery(
             self.query_name, params=_payload, timeout=self.timeout, usePost=True
         )
-        # Parse data
-        v_attr_types = next(iter(self._v_schema.values()))
-        v_attr_types["is_seed"] = "bool"
-        v_attr_types["primary_id"] = "str"
-        e_attr_types = next(iter(self._e_schema.values()))
+        # Parse data        
+        if not self.is_hetero:
+            v_extra_feats = self.v_extra_feats + ["is_seed"]
+            v_attr_types = next(iter(self._v_schema.values()))
+            v_attr_types["is_seed"] = "bool"
+            v_attr_types["primary_id"] = "str"
+            e_attr_types = next(iter(self._e_schema.values()))
+        else:
+            v_extra_feats = {}
+            for vtype in self._vtypes:
+                v_extra_feats[vtype] = self.v_extra_feats.get(vtype, []) + ["is_seed"]
+            v_attr_types = self._v_schema
+            for vtype in v_attr_types:
+                v_attr_types[vtype]["is_seed"] = "bool"
+                v_attr_types[vtype]["primary_id"] = "str"
+            e_attr_types = self._e_schema
         i = resp[0]
         data = self._parse_data(
-            raw = ("".join(i["vertex_batch"].values()), i["edge_batch"]),
-            in_format = "graph_str",
+            raw = (i["vertex_batch"], i["edge_batch"]),
+            in_format = "graph",
             out_format = self.output_format,
             v_in_feats = self.v_in_feats,
             v_out_labels = self.v_out_labels,
-            v_extra_feats = self.v_extra_feats + ["is_seed"],
+            v_extra_feats = v_extra_feats,
             v_attr_types = v_attr_types,
             e_in_feats = self.e_in_feats,
             e_out_labels = self.e_out_labels,
@@ -1255,7 +1375,8 @@ class NeighborLoader(BaseLoader):
             e_attr_types = e_attr_types,
             add_self_loop = self.add_self_loop,
             reindex = True,
-            primary_id = list(i["vertex_batch"].keys())
+            primary_id = i["pids"],
+            is_hetero = self.is_hetero
         )
         # Return data
         return data

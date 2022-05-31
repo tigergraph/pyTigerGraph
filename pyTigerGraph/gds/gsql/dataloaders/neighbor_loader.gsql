@@ -23,6 +23,8 @@ CREATE QUERY neighbor_loader_{QUERYSUFFIX}(
       shuffle        : Whether to shuffle vertices before collecting data.
       filter_by      : A Boolean attribute to determine which vertices are eligible as seeds.
                        Only effective when `input_vertices` is NULL.
+      v_types        : Vertex types to be included.
+      e_types        : Edge types to be included.
       kafka_address  : Address of the Kafka cluster to send data to.
       kafka_topic    : The kafka topic to send data to.
     */
@@ -47,8 +49,10 @@ CREATE QUERY neighbor_loader_{QUERYSUFFIX}(
 
     # Generate subgraphs
     FOREACH batch_id IN RANGE[0, num_batches-1] DO
-        MapAccum<VERTEX, STRING> @@v_batch;
+        SumAccum<STRING> @@v_batch;
         SumAccum<STRING> @@e_batch;
+        SetAccum<VERTEX> @@printed_vertices;
+        SetAccum<EDGE> @@printed_edges;
         # Get seeds
         IF input_vertices.size()==0 THEN
             start = {v_types};
@@ -57,33 +61,40 @@ CREATE QUERY neighbor_loader_{QUERYSUFFIX}(
                         FROM start:s 
                         WHERE s.getAttr(filter_by, "BOOL") and s.@tmp_id % num_batches == batch_id
                         POST-ACCUM 
-                            {SEEDVERTEXATTRS};
+                            {SEEDVERTEXATTRS},
+                            @@printed_vertices += s;
             ELSE
                 seeds = SELECT s 
                         FROM start:s 
                         WHERE s.@tmp_id % num_batches == batch_id
                         POST-ACCUM
-                            {SEEDVERTEXATTRS};
+                            {SEEDVERTEXATTRS},
+                            @@printed_vertices += s;
             END;
         ELSE
             start = input_vertices;
             seeds = SELECT s 
                     FROM start:s 
                     POST-ACCUM
-                        {SEEDVERTEXATTRS};
+                        {SEEDVERTEXATTRS},
+                        @@printed_vertices += s;
         END;
         # Get neighbors of seeeds
         FOREACH i IN RANGE[1, num_hops] DO
             seeds = SELECT t
                     FROM seeds:s -(e_types:e)- v_types:t 
                     SAMPLE num_neighbors EDGE WHEN s.outdegree() >= 1
-                    ACCUM 
-                        {EDGEATTRS};
+                    ACCUM
+                        IF NOT @@printed_edges.contains(e) THEN
+                            {EDGEATTRS},
+                            @@printed_edges += e
+                        END;
             attr = SELECT s
                 FROM seeds:s 
                 POST-ACCUM 
-                    IF NOT @@v_batch.containsKey(s) THEN
-                        {OTHERVERTEXATTRS}
+                    IF NOT @@printed_vertices.contains(s) THEN
+                        {OTHERVERTEXATTRS},
+                        @@printed_vertices += s
                     END;
         END;
         # Now redo everything in the other direction
@@ -120,11 +131,7 @@ CREATE QUERY neighbor_loader_{QUERYSUFFIX}(
         */
         IF kafka_address IS NOT NULL THEN
             # Write to kafka
-            STRING v_batch_str = "";
-            FOREACH (v, vattr) IN @@v_batch DO
-                v_batch_str += vattr;
-            END;
-            IF write_to_kafka(kafka_address, kafka_topic, "vertex_batch_" + int_to_string(batch_id), v_batch_str)!=0 THEN
+            IF write_to_kafka(kafka_address, kafka_topic, "vertex_batch_" + int_to_string(batch_id), @@v_batch)!=0 THEN
                 @@kafka_error += ("Failed sending vertex batch " + int_to_string(batch_id) + "\n");
             END;
             IF write_to_kafka(kafka_address, kafka_topic, "edge_batch_" + int_to_string(batch_id), @@e_batch)!=0 THEN 
@@ -132,7 +139,17 @@ CREATE QUERY neighbor_loader_{QUERYSUFFIX}(
             END;
         ELSE
             # Add to response
-            PRINT @@v_batch AS vertex_batch, @@e_batch AS edge_batch;  
+            IF input_vertices.size()==0 THEN
+                PRINT @@v_batch AS vertex_batch, @@e_batch AS edge_batch;  
+            ELSE
+                MapAccum<UINT, VERTEX> @@id_map;
+                source = @@printed_vertices;
+                res = 
+                    SELECT s 
+                    FROM source:s
+                    POST-ACCUM @@id_map += (getvid(s) -> s);
+                PRINT @@v_batch AS vertex_batch, @@e_batch AS edge_batch, @@id_map AS pids; 
+            END;
         END;                          
     END;
     IF kafka_address IS NOT NULL THEN
