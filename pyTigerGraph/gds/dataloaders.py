@@ -397,7 +397,7 @@ class BaseLoader:
             if resp_type == "both":
                 data = (i["vertex_batch"], i["edge_batch"])
             elif resp_type == "vertex":
-                data = "".join(i["vertex_batch"].values())
+                data = i["vertex_batch"]
             elif resp_type == "edge":
                 data = i["edge_batch"]
             read_task_q.put(data)
@@ -446,7 +446,7 @@ class BaseLoader:
                                 "Unrecognized key {} for messages in kafka".format(key)
                             )
                     else:
-                        read_task_q.put(message.value)
+                        read_task_q.put(message.value.decode("utf-8"))
                         delivered_batch += 1
         read_task_q.put(None)
 
@@ -632,6 +632,20 @@ class BaseLoader:
             if not is_hetero:
                 e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
                 data = pd.read_csv(io.StringIO(raw), header=None, names=e_attributes)
+            else:
+                e_file = (line.split(',') for line in raw.split('\n') if line)
+                e_file_dict = defaultdict(list)
+                for line in e_file:
+                    e_file_dict[line[0]].append(line[1:])
+                edges = {}
+                for etype in e_file_dict:
+                    e_attributes = ["source", "target"] + \
+                                   e_in_feats.get(etype, []) + \
+                                   e_out_labels.get(etype, [])  + \
+                                   e_extra_feats.get(etype, [])
+                    edges[etype] = pd.DataFrame(e_file_dict[etype], columns=e_attributes)
+                del e_file_dict, e_file
+                data = edges
         elif in_format == "graph":
             # A pair of in-memory CSVs (vertex, edge)
             v_file, e_file = raw
@@ -1499,17 +1513,24 @@ class EdgeLoader(BaseLoader):
             timeout,
         )
         # Resolve attributes
-        self.attributes = self._validate_edge_attributes(attributes)
+        is_hetero = isinstance(attributes, dict)
+        self.is_hetero = is_hetero
+        self.attributes = self._validate_edge_attributes(attributes, is_hetero)
+        if is_hetero:
+            self._etypes = list(attributes.keys())
+            if not self._etypes:
+                self._etypes = list(self._e_schema.keys())
+        else:
+            self._etypes = list(self._e_schema.keys())
         # Initialize parameters for the query
         self._payload = {}
         if batch_size:
             # If batch_size is given, calculate the number of batches
-            num_edges_by_type = self._graph.getEdgeCount("*")
             if filter_by:
                 # TODO: get edge count with filter
                 raise NotImplementedError
             else:
-                num_edges = sum(num_edges_by_type.values())
+                num_edges = sum(self._graph.getEdgeCount(i) for i in self._etypes)
             self.num_batches = math.ceil(num_edges / batch_size)
         else:
             # Otherwise, take the number of batches as is.
@@ -1519,6 +1540,7 @@ class EdgeLoader(BaseLoader):
         if filter_by:
             self._payload["filter_by"] = filter_by
         self._payload["shuffle"] = shuffle
+        self._payload["e_types"] = self._etypes
         if self.kafka_address_producer:
             self._payload["kafka_address"] = self.kafka_address_producer
         # kafka_topic will be filled in later.
@@ -1528,31 +1550,53 @@ class EdgeLoader(BaseLoader):
 
     def _install_query(self):
         # Install the right GSQL query for the loader.
-        e_attr_names = self.attributes
-        query_replace = {"{QUERYSUFFIX}": "_".join(e_attr_names)}
-        attr_types = next(iter(self._e_schema.values()))
-        if e_attr_names:
-            query_print = '+","+'.join(
-                "{}(e.{})".format(_udf_funcs[attr_types[attr]], attr)
-                for attr in e_attr_names
-            )
-            query_replace["{EDGEATTRS}"] = query_print
+        query_suffix = []
+        query_replace = {}
+
+        if isinstance(self.attributes, dict):
+            # Multiple edge types
+            print_query = ""
+            for idx, etype in enumerate(self._etypes):
+                e_attr_names = self.attributes.get(etype, [])
+                query_suffix.extend(e_attr_names)
+                e_attr_types = self._e_schema[etype]
+                if e_attr_names:
+                    print_attr = '+","+'.join(
+                        "{}(e.{})".format(_udf_funcs[e_attr_types[attr]], attr)
+                        for attr in e_attr_names
+                    )
+                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", etype, print_attr)
+                else:
+                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", etype)
+            print_query += "END"
+            query_replace["{EDGEATTRS}"] = print_query
+            query_suffix = list(dict.fromkeys(query_suffix))
         else:
-            query_replace['+ "," + {EDGEATTRS}'] = ""
-        if self.kafka_address_producer:
-            query_path = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "gsql",
-                "dataloaders",
-                "edge_kloader.gsql",
-            )
-        else:
-            query_path = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "gsql",
-                "dataloaders",
-                "edge_hloader.gsql",
-            )
+            # Ignore edge types
+            e_attr_names = self.attributes
+            query_suffix.extend(e_attr_names)
+            e_attr_types = next(iter(self._e_schema.values()))
+            if e_attr_names:
+                print_attr = '+","+'.join(
+                    "{}(e.{})".format(_udf_funcs[e_attr_types[attr]], attr)
+                    for attr in e_attr_names
+                )
+                print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")'.format(
+                    print_attr
+                )
+            else:
+                print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "\\n")'
+            query_replace["{EDGEATTRS}"] = print_query
+        query_replace["{QUERYSUFFIX}"] = "_".join(query_suffix)
+        # Install query
+        query_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "gsql",
+            "dataloaders",
+            "edge_loader.gsql",
+        )
         return install_query_file(self._graph, query_path, query_replace)
 
     def _start(self) -> None:
@@ -1613,27 +1657,29 @@ class EdgeLoader(BaseLoader):
             self._downloader.start()
 
         # Start reading thread.
-        e_attr_types = next(iter(self._e_schema.values()))
-        if self.kafka_address_consumer:
-            raw_format = "edge_bytes"
+        if not self.is_hetero:
+            e_attr_types = next(iter(self._e_schema.values()))
         else:
-            raw_format = "edge_str"
+            e_attr_types = self._e_schema
         self._reader = Thread(
             target=self._read_data,
             args=(
                 self._exit_event,
                 self._read_task_q,
                 self._data_q,
-                raw_format,
+                "edge",
                 self.output_format,
                 [],
                 [],
                 [],
                 {},
                 self.attributes,
-                [],
-                [],
-                e_attr_types
+                {} if self.is_hetero else [],
+                {} if self.is_hetero else [],
+                e_attr_types,
+                False,
+                False,
+                self.is_hetero
             ),
         )
         self._reader.start()
