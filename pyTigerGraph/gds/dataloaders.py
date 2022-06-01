@@ -627,6 +627,19 @@ class BaseLoader:
             if not is_hetero:
                 v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
                 data = pd.read_csv(io.StringIO(raw), header=None, names=v_attributes)
+            else:
+                v_file = (line.split(',') for line in raw.split('\n') if line)
+                v_file_dict = defaultdict(list)
+                for line in v_file:
+                    v_file_dict[line[0]].append(line[1:])
+                vertices = {}
+                for vtype in v_file_dict:
+                    v_attributes = ["vid"] + \
+                                   v_in_feats.get(vtype, []) + \
+                                   v_out_labels.get(vtype, []) + \
+                                   v_extra_feats.get(vtype, [])
+                    vertices[vtype] = pd.DataFrame(v_file_dict[vtype], columns=v_attributes)
+                data = vertices
         elif in_format == "edge":
             # String of edges in format source_vid,target_vid
             if not is_hetero:
@@ -1812,12 +1825,20 @@ class VertexLoader(BaseLoader):
             timeout,
         )
         # Resolve attributes
-        self.attributes = self._validate_vertex_attributes(attributes)
+        is_hetero = isinstance(attributes, dict)
+        self.is_hetero = is_hetero
+        self.attributes = self._validate_vertex_attributes(attributes, is_hetero)
+        if is_hetero:
+            self._vtypes = list(self.attributes.keys())
+            if not self._vtypes:
+                self._vtypes = list(self._v_schema.keys())
+        else:
+            self._vtypes = list(self._v_schema.keys())
         # Initialize parameters for the query
         self._payload = {}
         if batch_size:
             # If batch_size is given, calculate the number of batches
-            num_vertices_by_type = self._graph.getVertexCount("*")
+            num_vertices_by_type = self._graph.getVertexCount(self._vtypes)
             if filter_by:
                 num_vertices = sum(
                     self._graph.getVertexCount(k, where="{}!=0".format(filter_by))
@@ -1833,6 +1854,7 @@ class VertexLoader(BaseLoader):
         if filter_by:
             self._payload["filter_by"] = filter_by
         self._payload["shuffle"] = shuffle
+        self._payload["v_types"] = self._vtypes
         if self.kafka_address_producer:
             self._payload["kafka_address"] = self.kafka_address_producer
         # kafka_topic will be filled in later.
@@ -1841,31 +1863,53 @@ class VertexLoader(BaseLoader):
 
     def _install_query(self) -> str:
         # Install the right GSQL query for the loader.
-        v_attr_names = self.attributes
-        query_replace = {"{QUERYSUFFIX}": "_".join(v_attr_names)}
-        attr_types = next(iter(self._v_schema.values()))
-        if v_attr_names:
-            query_print = '+","+'.join(
-                "{}(s.{})".format(_udf_funcs[attr_types[attr]], attr)
-                for attr in v_attr_names
-            )
-            query_replace["{VERTEXATTRS}"] = query_print
+        query_suffix = []
+        query_replace = {}
+
+        if isinstance(self.attributes, dict):
+            # Multiple vertex types
+            print_query = ""
+            for idx, vtype in enumerate(self._vtypes):
+                v_attr_names = self.attributes.get(vtype, [])
+                query_suffix.extend(v_attr_names)
+                v_attr_types = self._v_schema[vtype]
+                if v_attr_names:
+                    print_attr = '+","+'.join(
+                        "{}(s.{})".format(_udf_funcs[v_attr_types[attr]], attr)
+                        for attr in v_attr_names
+                    )
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + "\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", vtype, print_attr)
+                else:
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", vtype)
+            print_query += "END"
+            query_replace["{VERTEXATTRS}"] = print_query
+            query_suffix = list(dict.fromkeys(query_suffix))
         else:
-            query_replace['+ "," + {VERTEXATTRS}'] = ""
-        if self.kafka_address_producer:
-            query_path = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "gsql",
-                "dataloaders",
-                "vertex_kloader.gsql",
-            )
-        else:
-            query_path = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "gsql",
-                "dataloaders",
-                "vertex_hloader.gsql",
-            )
+            # Ignore vertex types
+            v_attr_names = self.attributes
+            query_suffix.extend(v_attr_names)
+            v_attr_types = next(iter(self._v_schema.values()))
+            if v_attr_names:
+                print_attr = '+","+'.join(
+                    "{}(s.{})".format(_udf_funcs[v_attr_types[attr]], attr)
+                    for attr in v_attr_names
+                )
+                print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + "\\n")'.format(
+                    print_attr
+                )
+            else:
+                print_query = '@@v_batch += (int_to_string(getvid(s)) + "\\n")'
+            query_replace["{VERTEXATTRS}"] = print_query
+        query_replace["{QUERYSUFFIX}"] = "_".join(query_suffix)
+        # Install query
+        query_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "gsql",
+            "dataloaders",
+            "vertex_loader.gsql",
+        )
         return install_query_file(self._graph, query_path, query_replace)
 
     def _start(self) -> None:
@@ -1926,27 +1970,29 @@ class VertexLoader(BaseLoader):
             self._downloader.start()
 
         # Start reading thread.
-        v_attr_types = next(iter(self._v_schema.values()))
-        if self.kafka_address_consumer:
-            raw_format = "vertex_bytes"
+        if not self.is_hetero:
+            v_attr_types = next(iter(self._v_schema.values()))
         else:
-            raw_format = "vertex_str"
+            v_attr_types = self._v_schema
         self._reader = Thread(
             target=self._read_data,
             args=(
                 self._exit_event,
                 self._read_task_q,
                 self._data_q,
-                raw_format,
+                "vertex",
                 self.output_format,
                 self.attributes,
-                [],
-                [],
+                {} if self.is_hetero else [],
+                {} if self.is_hetero else [],
                 v_attr_types,
                 [],
                 [],
                 [],
                 {},
+                False,
+                False,
+                self.is_hetero
             ),
         )
         self._reader.start()
