@@ -120,3 +120,39 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
         else:
             print("Couldn't initialize the client. See above error.")
             sys.exit(1)
+
+    def installUDF(self, ExprFunctions: str = '', ExprUtil: str = '') -> None:
+        """Install User Defined Function (UDF) to the database. See https://docs.tigergraph.com/gsql-ref/current/querying/func/query-user-defined-functions for details on UDFs.
+
+        Args:
+            ExprFunctions (str, optional): 
+                Path to the file for ExprFunctions. Defaults to ''.
+            ExprUtil (str, optional): 
+                Path to the file for ExprUtil. Defaults to ''.
+
+        Returns:
+            Status of the installation.
+        """
+        if ExprFunctions:
+            with open(ExprFunctions) as infile:
+                res = self._req("POST", 
+                    url="{}/gsqlserver/gsql/userdefinedfunction?filename=ExprFunctions".format(self.gsUrl),
+                    authMode='pwd',
+                    data=infile.read(),
+                    resKey=None)
+                if (res["error"] == False):
+                    print("ExprFunctions installed succesfully !") 
+                else:
+                    print("Failed to install ExprFunctions")
+        
+        if ExprUtil:
+            with open(ExprUtil) as infile:
+                res = self._req("POST", 
+                    url="{}/gsqlserver/gsql/userdefinedfunction?filename=ExprUtil".format(self.gsUrl),
+                    authMode='pwd',
+                    data=infile.read(),
+                    resKey=None)
+                if (res["error"] == False):
+                    print("ExprFunctions installed succesfully !") 
+                else:
+                    print("Failed to install ExprFunctions")
