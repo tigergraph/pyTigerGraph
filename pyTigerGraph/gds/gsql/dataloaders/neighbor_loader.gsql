@@ -97,38 +97,6 @@ CREATE QUERY neighbor_loader_{QUERYSUFFIX}(
                         @@printed_vertices += s
                     END;
         END;
-        # Now redo everything in the other direction
-        /*
-        // IF input_vertices.size()==0 THEN
-        //     start = {ANY};
-        //     IF filter_by IS NOT NULL THEN
-        //         seeds = SELECT s 
-        //                 FROM start:s 
-        //                 WHERE s.getAttr(filter_by, "BOOL") and s.@tmp_id % num_batches == batch_id;
-        //     ELSE
-        //         seeds = SELECT s 
-        //                 FROM start:s 
-        //                 WHERE s.@tmp_id % num_batches == batch_id;
-        //     END;
-        // ELSE
-        //     start = input_vertices;
-        //     seeds = SELECT s 
-        //             FROM start:s;
-        // END;
-        // # Get neighbors of seeeds
-        // FOREACH i IN RANGE[1, num_hops] DO
-        //     seeds = SELECT t
-        //             FROM seeds:s -(<_:e)- :t 
-        //             SAMPLE num_neighbors EDGE WHEN s.outdegree() >= 1
-        //             ACCUM @@e_batch += (int_to_string(getvid(t)) + "," + int_to_string(getvid(s)) + "," + {EDGEATTRS} + "\n");
-        //     attr = SELECT s
-        //             FROM seeds:s 
-        //             POST-ACCUM 
-        //                 IF NOT @@v_batch.containsKey(s) THEN
-        //                     @@v_batch += (s -> (int_to_string(getvid(s)) + "," + {VERTEXATTRS} + ",0\n"))
-        //                 END;
-        // END;
-        */
         IF kafka_address IS NOT NULL THEN
             # Write to kafka
             IF write_to_kafka(kafka_address, kafka_topic, "vertex_batch_" + int_to_string(batch_id), @@v_batch)!=0 THEN
