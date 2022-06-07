@@ -31,7 +31,7 @@ import pandas as pd
 from ..pyTigerGraphException import TigerGraphException
 from .utilities import install_query_file, random_string
 
-__all__ = ["VertexLoader", "EdgeLoader", "NeighborLoader", "GraphLoader"]
+__all__ = ["VertexLoader", "EdgeLoader", "NeighborLoader", "GraphLoader", "EdgeNeighborLoader"]
 __pdoc__ = {}
 
 _udf_funcs = {
@@ -70,8 +70,9 @@ class BaseLoader:
         """Base Class for data loaders.
 
         The job of a data loader is to stream data from the TigerGraph database to the client.
-        Kafka is used as the data streaming pipeline. Hence, for the data loader to work,
-        a running Kafka cluster is required.
+        Kafka is used as the data streaming pipeline. Hence, for data streaming to work,
+        a running Kafka cluster is required. However, you can also get data in a single HTTP
+        response without streaming if you don't provide the Kafka cluster.
 
         NOTE: When you initialize the loader on a graph for the first time,
         the initialization might take a minute as it installs the corresponding
@@ -181,8 +182,6 @@ class BaseLoader:
         self._exit_event = None
         # In-memory data cache. Only used if num_batches=1
         self._data = None
-        # Default mode of the loader is for training
-        self._mode = "training"
         # Implement `_install_query()` that installs your query
         # self._install_query()
 
@@ -992,7 +991,7 @@ class NeighborLoader(BaseLoader):
     """NeighborLoader
 
     A data loader that performs neighbor sampling.
-    You can declare a `NeighborLoader` instance with the factory function `neighborLoder()`.
+    You can declare a `NeighborLoader` instance with the factory function `neighborLoader()`.
 
     A neighbor loader is an iterable.
     When you loop through a neighbor loader instance, it loads one batch of data from the graph to which you established a connection.
@@ -2374,13 +2373,13 @@ class GraphLoader(BaseLoader):
 
 
 class EdgeNeighborLoader(BaseLoader):
-    """EdgeNeighborLoader
+    """EdgeNeighborLoader.
 
     A data loader that performs neighbor sampling from seed edges.
     You can declare a `EdgeNeighborLoader` instance with the factory function `edgeNeighborLoader()`.
 
     An edge neighbor loader is an iterable.
-    When you loop through a neighbor loader instance, it loads one batch of data from the graph to which you established a connection.
+    When you loop through a loader instance, it loads one batch of data from the graph to which you established a connection.
 
     In every iteration, it first chooses a specified number of edges as seeds, 
     then starting from the vertices attached to those seed edges, it
@@ -2403,7 +2402,7 @@ class EdgeNeighborLoader(BaseLoader):
 
 
 
-    See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/4_edgeneighborloader.ipynb[the ML Workbench tutorial notebook]
+    See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_edgeneighborloader.ipynb[the ML Workbench tutorial notebook]
         for examples.
     """
     def __init__(

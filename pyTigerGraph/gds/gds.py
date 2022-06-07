@@ -25,7 +25,7 @@ You can find the reference for those classes on the following pages:
 * link:https://docs.tigergraph.com/pytigergraph/current/gds/dataloaders[Data loaders]
 * link:https://docs.tigergraph.com/pytigergraph/current/gds/featurizer[Featurizer]
 * link:https://docs.tigergraph.com/pytigergraph/current/gds/metrics[Metrics]
-* link:https://docs.tigergraph.com/pytigergraph/current/gds/dataloaders[Splitters]
+* link:https://docs.tigergraph.com/pytigergraph/current/gds/splitters[Splitters]
 """
 from typing import TYPE_CHECKING, Union
 
@@ -79,7 +79,7 @@ class GDS:
         timeout: int = 300000,
     ) -> NeighborLoader:
         """Returns a `NeighborLoader` instance.
-        A `NeighborLoader` instance performs neighbor sampling from all vertices in the graph in batches in the following manner:
+        A `NeighborLoader` instance performs neighbor sampling from vertices in the graph in batches in the following manner:
 
         . It chooses a specified number (`batch_size`) of vertices as seeds. 
         The number of batches is the total number of vertices divided by the batch size. 
@@ -94,6 +94,11 @@ class GDS:
         If you want to limit seeds to certain vertices, the boolean
         attribute provided to `filter_by` will be used to indicate which vertices can be
         included as seeds.
+        If you want to load from certain types of vertices and edges, 
+        use the `dict` input for `v_in_feats`, `v_out_labels`, `v_extra_feats`,
+        `e_in_feats`, `e_out_labels`, `e_extra_feats` where keys of the dict are vertex 
+        or edge types to be selected and values are lists of attributes to collect from the
+        vertex or edge types. 
 
         NOTE: When you initialize the loader on a graph for the first time,
         the initialization might take a minute as it installs the corresponding
@@ -105,26 +110,54 @@ class GDS:
         for examples.
 
         Args:
-            v_in_feats (list, optional):
-                Vertex attributes to be used as input features.
+            v_in_feats (list or dict, optional):
+                Vertex attributes to be used as input features. 
+                If it is a list, then the attributes
+                in the list from all vertex types will be selected. An error will be thrown if
+                certain attribute doesn't exist in all vertex types. If it is a dict, keys of the 
+                dict are vertex types to be selected, and values are lists of attributes to be 
+                selected for each vertex type.
+                Only numeric and boolean attributes are allowed. The type of an attribute 
+                is automatically determined from the database schema. Defaults to None.
+            v_out_labels (list or dict, optional):
+                Vertex attributes to be used as labels for prediction. 
+                If it is a list, then the attributes
+                in the list from all vertex types will be selected. An error will be thrown if
+                certain attribute doesn't exist in all vertex types. If it is a dict, keys of the 
+                dict are vertex types to be selected, and values are lists of attributes to be 
+                selected for each vertex type.
+                Only numeric and boolean attributes are allowed. Defaults to None.
+            v_extra_feats (list or dict, optional):
+                Other attributes to get such as indicators of train/test data. 
+                If it is a list, then the attributes
+                in the list from all vertex types will be selected. An error will be thrown if
+                certain attribute doesn't exist in all vertex types. If it is a dict, keys of the 
+                dict are vertex types to be selected, and values are lists of attributes to be 
+                selected for each vertex type. 
+                All types of attributes are allowed. Defaults to None.
+            e_in_feats (list or dict, optional):
+                Edge attributes to be used as input features. 
+                If it is a list, then the attributes
+                in the list from all edge types will be selected. An error will be thrown if
+                certain attribute doesn't exist in all edge types. If it is a dict, keys of the 
+                dict are edge types to be selected, and values are lists of attributes to be 
+                selected for each edge type.
                 Only numeric and boolean attributes are allowed. The type of an attribute
                 is automatically determined from the database schema. Defaults to None.
-            v_out_labels (list, optional):
-                Vertex attributes to be used as labels for
-                prediction. Only numeric and boolean attributes are allowed. Defaults to None.
-            v_extra_feats (list, optional):
-                Other attributes to get such as indicators of
-                train/test data. All types of attributes are allowed. Defaults to None.
-            e_in_feats (list, optional):
-                Edge attributes to be used as input features.
-                Only numeric and boolean attributes are allowed. The type of an attribute
-                is automatically determined from the database schema. Defaults to None.
-            e_out_labels (list, optional):
-                Edge attributes to be used as labels for
-                prediction. Only numeric and boolean attributes are allowed. Defaults to None.
-            e_extra_feats (list, optional):
-                Other edge attributes to get such as indicators of
-                train/test data. All types of attributes are allowed. Defaults to None.
+            e_out_labels (list or dict, optional):
+                Edge attributes to be used as labels for prediction. 
+                If it is a list, then the attributes in the list from all edge types will be 
+                selected. An error will be thrown if certain attribute doesn't exist in all 
+                edge types. If it is a dict, keys of the dict are edge types to be selected, 
+                and values are lists of attributes to be selected for each edge type.
+                Only numeric and boolean attributes are allowed. Defaults to None.
+            e_extra_feats (list or dict, optional):
+                Other edge attributes to get such as indicators of train/test data. 
+                If it is a list, then the attributes in the list from all edge types will be 
+                selected. An error will be thrown if certain attribute doesn't exist in all 
+                edge types. If it is a dict, keys of the dict are edge types to be selected, 
+                and values are lists of attributes to be selected for each edge type.
+                All types of attributes are allowed. Defaults to None.
             batch_size (int, optional):
                 Number of vertices as seeds in each batch.
                 Defaults to None.
@@ -234,9 +267,12 @@ class GDS:
         An `EdgeLoader` instance loads all edges in the graph in batches.
 
         It divides all edges into `num_batches` and returns each batch separately.
-        You can also specify the size of each batch, and the number of batched is calculated accordingly. 
+        You can also specify the size of each batch, and the number of batches is calculated accordingly. 
         If you provide both parameters, `batch_size` take priority. 
         The boolean attribute provided to `filter_by` indicates which edges are included.
+        If you want to load from certain types of edges, 
+        use the `dict` input for `attributes` where keys of the dict are edge types to be 
+        selected and values are lists of attributes to collect from the edge types. 
         If you need random batches, set `shuffle` to True.
 
         NOTE: When you initialize the loader on a graph for the first time,
@@ -256,8 +292,12 @@ class GDS:
           multiple batches of data to load, it returns the loader itself.
 
         Args:
-            attributes (list, optional):
-                Edge attributes to be included. Defaults to None.
+            attributes (list or dict, optional):
+                Edge attributes to be included. If it is a list, then the attributes
+                in the list from all edge types will be selected. An error will be thrown if
+                certain attribute doesn't exist in all edge types. If it is a dict, keys of the 
+                dict are edge types to be selected, and values are lists of attributes to be 
+                selected for each edge type. Defaults to None.
             batch_size (int, optional):
                 Number of edges in each batch.
                 Defaults to None.
@@ -353,6 +393,10 @@ class GDS:
 
         It divides vertices into `num_batches` and returns each batch separately.
         The boolean attribute provided to `filter_by` indicates which vertices are included.
+        If you want to load from certain types of vertices, 
+        use the `dict` input for `attributes` where keys of the dict are vertex 
+        types to be selected and values are lists of attributes to collect from the
+        vertex types. 
         If you need random batches, set `shuffle` to True.
 
         NOTE: When you initialize the loader on a graph for the first time,
@@ -372,8 +416,12 @@ class GDS:
           multiple batches of data to load, it will return the loader again.
 
         Args:
-            attributes (list, optional):
-                Vertex attributes to be included. Defaults to None.
+            attributes (list or dict, optional):
+                Vertex attributes to be included. If it is a list, then the attributes
+                in the list from all vertex types will be selected. An error will be thrown if
+                certain attribute doesn't exist in all vertex types. If it is a dict, keys of the 
+                dict are vertex types to be selected, and values are lists of attributes to be 
+                selected for each vertex type. Defaults to None.
             batch_size (int, optional):
                 Number of vertices in each batch.
                 Defaults to None.
@@ -477,6 +525,12 @@ class GDS:
         Different from NeighborLoader which produces connected subgraphs, this loader
         generates (random) batches of edges and vertices attached to those edges.
 
+        If you want to load from certain types of vertices and edges, 
+        use the `dict` input for `v_in_feats`, `v_out_labels`, `v_extra_feats`,
+        `e_in_feats`, `e_out_labels`, `e_extra_feats` where keys of the dict are vertex 
+        or edge types to be selected and values are lists of attributes to collect from the
+        vertex or edge types. 
+
         NOTE: When you initialize the loader on a graph for the first time,
         the initialization might take a minute as it installs the corresponding
         query to the database. However, the query installation only
@@ -494,26 +548,54 @@ class GDS:
           multiple batches of data to load, it will return the loader itself.
 
         Args:
-            v_in_feats (list, optional):
-                Vertex attributes to be used as input features.
+            v_in_feats (list or dict, optional):
+                Vertex attributes to be used as input features. 
+                If it is a list, then the attributes
+                in the list from all vertex types will be selected. An error will be thrown if
+                certain attribute doesn't exist in all vertex types. If it is a dict, keys of the 
+                dict are vertex types to be selected, and values are lists of attributes to be 
+                selected for each vertex type.
                 Only numeric and boolean attributes are allowed. The type of an attribute
                 is automatically determined from the database schema. Defaults to None.
-            v_out_labels (list, optional):
-                Vertex attributes to be used as labels for prediction.
+            v_out_labels (list or dict, optional):
+                Vertex attributes to be used as labels for prediction. 
+                If it is a list, then the attributes
+                in the list from all vertex types will be selected. An error will be thrown if
+                certain attribute doesn't exist in all vertex types. If it is a dict, keys of the 
+                dict are vertex types to be selected, and values are lists of attributes to be 
+                selected for each vertex type.
                 Only numeric and boolean attributes are allowed. Defaults to None.
-            v_extra_feats (list, optional):
+            v_extra_feats (list or dict, optional):
                 Other attributes to get such as indicators of train/test data.
+                If it is a list, then the attributes
+                in the list from all vertex types will be selected. An error will be thrown if
+                certain attribute doesn't exist in all vertex types. If it is a dict, keys of the 
+                dict are vertex types to be selected, and values are lists of attributes to be 
+                selected for each vertex type. 
                 All types of attributes are allowed. Defaults to None.
-            e_in_feats (list, optional):
-                Edge attributes to be used as input features.
+            e_in_feats (list or dict, optional):
+                Edge attributes to be used as input features. 
+                If it is a list, then the attributes
+                in the list from all edge types will be selected. An error will be thrown if
+                certain attribute doesn't exist in all edge types. If it is a dict, keys of the 
+                dict are edge types to be selected, and values are lists of attributes to be 
+                selected for each edge type.
                 Only numeric and boolean attributes are allowed. The type of an attribute
                 is automatically determined from the database schema. Defaults to None.
-            e_out_labels (list, optional):
-                Edge attributes to be used as labels for
-                prediction. Only numeric and boolean attributes are allowed. Defaults to None.
-            e_extra_feats (list, optional):
-                Other edge attributes to get such as indicators of
-                train/test data. All types of attributes are allowed. Defaults to None.
+            e_out_labels (list or dict, optional):
+                Edge attributes to be used as labels for prediction. 
+                If it is a list, then the attributes in the list from all edge types will be 
+                selected. An error will be thrown if certain attribute doesn't exist in all 
+                edge types. If it is a dict, keys of the dict are edge types to be selected, 
+                and values are lists of attributes to be selected for each edge type.
+                Only numeric and boolean attributes are allowed. Defaults to None.
+            e_extra_feats (list or dict, optional):
+                Other edge attributes to get such as indicators of train/test data. 
+                If it is a list, then the attributes in the list from all edge types will be 
+                selected. An error will be thrown if certain attribute doesn't exist in all 
+                edge types. If it is a dict, keys of the dict are edge types to be selected, 
+                and values are lists of attributes to be selected for each edge type.
+                All types of attributes are allowed. Defaults to None.
             batch_size (int, optional):
                 Number of edges in each batch.
                 Defaults to None.
@@ -625,7 +707,7 @@ class GDS:
         An `EdgeNeighborLoader` instance performs neighbor sampling from all edges in the graph in batches in the following manner:
 
         . It chooses a specified number (`batch_size`) of edges as seeds. 
-        The number of batches is the total number of vertices divided by the batch size. 
+        The number of batches is the total number of edges divided by the batch size. 
         * If you specify the number of batches (`num_batches`) instead, `batch_size` is calculated by dividing the total number of vertices by the number of batches.
         If specify both parameters, `batch_size` takes priority. 
         . Starting from the vertices attached to the seed edges, it picks a specified number (`num_neighbors`) of neighbors of each vertex at random.
@@ -637,6 +719,11 @@ class GDS:
         If you want to limit seeds to certain edges, the boolean
         attribute provided to `filter_by` will be used to indicate which edges can be
         included as seeds.
+        If you want to load from certain types of vertices and edges, 
+        use the `dict` input for `v_in_feats`, `v_out_labels`, `v_extra_feats`,
+        `e_in_feats`, `e_out_labels`, `e_extra_feats` where keys of the dict are vertex 
+        or edge types to be selected and values are lists of attributes to collect from the
+        vertex or edge types. 
 
         NOTE: When you initialize the loader on a graph for the first time,
         the initialization might take a minute as it installs the corresponding
@@ -648,26 +735,54 @@ class GDS:
         for examples.
 
         Args:
-            v_in_feats (list, optional):
-                Vertex attributes to be used as input features.
+            v_in_feats (list or dict, optional):
+                Vertex attributes to be used as input features. 
+                If it is a list, then the attributes
+                in the list from all vertex types will be selected. An error will be thrown if
+                certain attribute doesn't exist in all vertex types. If it is a dict, keys of the 
+                dict are vertex types to be selected, and values are lists of attributes to be 
+                selected for each vertex type. 
+                Only numeric and boolean attributes are allowed. The type of an attribute 
+                is automatically determined from the database schema. Defaults to None.
+            v_out_labels (list or dict, optional):
+                Vertex attributes to be used as labels for prediction. 
+                If it is a list, then the attributes
+                in the list from all vertex types will be selected. An error will be thrown if
+                certain attribute doesn't exist in all vertex types. If it is a dict, keys of the 
+                dict are vertex types to be selected, and values are lists of attributes to be 
+                selected for each vertex type.
+                Only numeric and boolean attributes are allowed. Defaults to None.
+            v_extra_feats (list or dict, optional):
+                Other attributes to get such as indicators of train/test data. 
+                If it is a list, then the attributes
+                in the list from all vertex types will be selected. An error will be thrown if
+                certain attribute doesn't exist in all vertex types. If it is a dict, keys of the 
+                dict are vertex types to be selected, and values are lists of attributes to be 
+                selected for each vertex type. 
+                All types of attributes are allowed. Defaults to None.
+            e_in_feats (list or dict, optional):
+                Edge attributes to be used as input features. 
+                If it is a list, then the attributes
+                in the list from all edge types will be selected. An error will be thrown if
+                certain attribute doesn't exist in all edge types. If it is a dict, keys of the 
+                dict are edge types to be selected, and values are lists of attributes to be 
+                selected for each edge type.
                 Only numeric and boolean attributes are allowed. The type of an attribute
                 is automatically determined from the database schema. Defaults to None.
-            v_out_labels (list, optional):
-                Vertex attributes to be used as labels for
-                prediction. Only numeric and boolean attributes are allowed. Defaults to None.
-            v_extra_feats (list, optional):
-                Other attributes to get such as indicators of
-                train/test data. All types of attributes are allowed. Defaults to None.
-            e_in_feats (list, optional):
-                Edge attributes to be used as input features.
-                Only numeric and boolean attributes are allowed. The type of an attribute
-                is automatically determined from the database schema. Defaults to None.
-            e_out_labels (list, optional):
-                Edge attributes to be used as labels for
-                prediction. Only numeric and boolean attributes are allowed. Defaults to None.
-            e_extra_feats (list, optional):
-                Other edge attributes to get such as indicators of
-                train/test data. All types of attributes are allowed. Defaults to None.
+            e_out_labels (list or dict, optional):
+                Edge attributes to be used as labels for prediction. 
+                If it is a list, then the attributes in the list from all edge types will be 
+                selected. An error will be thrown if certain attribute doesn't exist in all 
+                edge types. If it is a dict, keys of the dict are edge types to be selected, 
+                and values are lists of attributes to be selected for each edge type.
+                Only numeric and boolean attributes are allowed. Defaults to None.
+            e_extra_feats (list or dict, optional):
+                Other edge attributes to get such as indicators of train/test data. 
+                If it is a list, then the attributes in the list from all edge types will be 
+                selected. An error will be thrown if certain attribute doesn't exist in all 
+                edge types. If it is a dict, keys of the dict are edge types to be selected, 
+                and values are lists of attributes to be selected for each edge type.
+                All types of attributes are allowed. Defaults to None.
             batch_size (int, optional):
                 Number of vertices as seeds in each batch.
                 Defaults to None.
