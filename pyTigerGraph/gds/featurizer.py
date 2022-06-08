@@ -221,7 +221,7 @@ class Featurizer:
             self.conn.gsql("USE GRAPH {}\n".format(self.conn.graphname) + "drop job *")
             res = self._add_attribute(schema_type="VERTEX",attr_type="LIST<DOUBLE>",attr_name="fastrp_embedding")
         # TODO: Check if Distributed query is needed.
-        query = ("USE GRAPH {}\n".format(self.conn.graphname) + query + "\INSTALL QUERY {}\n".format(query_name))
+        query = ("USE GRAPH {}\n".format(self.conn.graphname) + query + "\nINSTALL QUERY {}\n".format(query_name))
         print("Installing and optimizing the queries, it might take a minute")
         resp = self.conn.gsql(query)
         status = resp.splitlines()[-1]
