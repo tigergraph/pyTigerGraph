@@ -56,7 +56,7 @@ class test_Featurizer(unittest.TestCase):
 
     def test02_add_attribute(self):
         try:
-            tasks = "ALTER Edge Cites DROP ATTRIBUTE (attr2);"
+            tasks = "ALTER Edge Cites2 DROP ATTRIBUTE (attr2);"
             job_name = "drop_{}_attr_{}".format("EDGE",random_string(6)) 
             job = "USE GRAPH {}\n".format(self.featurizer.conn.graphname) + "CREATE GLOBAL SCHEMA_CHANGE JOB {} {{\n".format(
                 job_name) + ''.join(tasks) + "}}\nRUN GLOBAL SCHEMA_CHANGE JOB {}".format(job_name)
