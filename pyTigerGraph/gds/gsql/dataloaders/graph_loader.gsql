@@ -1,10 +1,12 @@
-CREATE QUERY graph_kloader_{QUERYSUFFIX}(
+CREATE QUERY graph_loader_{QUERYSUFFIX}(
     INT num_batches=1, 
     BOOL shuffle=FALSE,
     STRING filter_by,
+    SET<STRING> v_types,
+    SET<STRING> e_types,
     STRING kafka_address,
     STRING kafka_topic
-) SYNTAX V2 { 
+) SYNTAX V1 { 
     /*
     This query generates the batches of edges and vertices attached to those edges.
 
@@ -12,6 +14,8 @@ CREATE QUERY graph_kloader_{QUERYSUFFIX}(
       num_batches    : Number of batches to divide all edges.
       shuffle        : Whether to shuffle vertices before collecting data.
       filter_by      : A Boolean attribute to determine which edges are included.
+      v_types        : Vertex types to be included.
+      e_types        : Edge types to be included.
       kafka_address  : Address of the Kafka cluster to send data to.
       kafka_topic    : The kafka topic to send data to.
     */
@@ -20,7 +24,7 @@ CREATE QUERY graph_kloader_{QUERYSUFFIX}(
     SumAccum<STRING> @@kafka_error;
 
     # Shuffle vertex ID if needed
-    start = {ANY};
+    start = {v_types};
     IF shuffle THEN
         num_vertices = start.size();
         res = SELECT s 
@@ -36,41 +40,49 @@ CREATE QUERY graph_kloader_{QUERYSUFFIX}(
     FOREACH batch_id IN RANGE[0, num_batches-1] DO
         SetAccum<VERTEX> @@vertices;
         SumAccum<STRING> @@e_batch;
-        SumAccum<STRING> @@v_batch_str;
+        SumAccum<STRING> @@v_batch;
        
-        start = {ANY};
+        start = {v_types};
         IF filter_by IS NOT NULL THEN
             res = 
                 SELECT s
-                FROM start:s-((_>|_):e)-:t
+                FROM start:s -(e_types:e)- v_types:t
                 WHERE e.getAttr(filter_by, "BOOL") and ((s.@tmp_id+t.@tmp_id)*(s.@tmp_id+t.@tmp_id+1)/2+t.@tmp_id)%num_batches==batch_id
-                ACCUM @@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {EDGEATTRS} + "\n"),
-                      @@vertices += s,
-                      @@vertices += t;
+                ACCUM 
+                    {EDGEATTRS},
+                    @@vertices += s,
+                    @@vertices += t;
         ELSE
             res = 
                 SELECT s
-                FROM start:s-((_>|_):e)-:t
+                FROM start:s -(e_types:e)- v_types:t
                 WHERE ((s.@tmp_id+t.@tmp_id)*(s.@tmp_id+t.@tmp_id+1)/2+t.@tmp_id)%num_batches==batch_id
-                ACCUM @@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t))+ "," + {EDGEATTRS} + "\n"),
-                      @@vertices += s,
-                      @@vertices += t;
+                ACCUM 
+                    {EDGEATTRS},
+                    @@vertices += s,
+                    @@vertices += t;
         END;
-        
+    
         # Get vertex attributes
         v_in_batch = @@vertices;
         attr = 
             SELECT s
             FROM v_in_batch:s 
-            POST-ACCUM @@v_batch_str += (int_to_string(getvid(s)) + "," + {VERTEXATTRS} + "\n");
-        # Export batch
-        IF write_to_kafka(kafka_address, kafka_topic, "vertex_batch_" + int_to_string(batch_id), @@v_batch_str)!=0 THEN
-            @@kafka_error += ("Failed sending vertex batch " + int_to_string(batch_id) + "\n");
+            POST-ACCUM 
+                {VERTEXATTRS};
+
+        IF kafka_address IS NOT NULL THEN
+            IF write_to_kafka(kafka_address, kafka_topic, "vertex_batch_" + int_to_string(batch_id), @@v_batch)!=0 THEN
+                @@kafka_error += ("Failed sending vertex batch " + int_to_string(batch_id) + "\n");
+            END;
+            IF write_to_kafka(kafka_address, kafka_topic, "edge_batch_" + int_to_string(batch_id), @@e_batch)!=0 THEN 
+                @@kafka_error += ("Failed sending edge batch " + int_to_string(batch_id) + "\n");
+            END;
+        ELSE
+            PRINT @@v_batch AS vertex_batch, @@e_batch AS edge_batch;   
         END;
-        IF write_to_kafka(kafka_address, kafka_topic, "edge_batch_" + int_to_string(batch_id), @@e_batch)!=0 THEN 
-            @@kafka_error += ("Failed sending edge batch " + int_to_string(batch_id) + "\n");
-        END;
+    END;
+    IF kafka_address IS NOT NULL THEN
         PRINT @@kafka_error as kafkaError;
-    
     END;
 }
