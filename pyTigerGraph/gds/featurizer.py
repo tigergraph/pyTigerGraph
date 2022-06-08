@@ -231,20 +231,23 @@ class Featurizer:
 
     def installAlgorithm(self, query_name: str, query_path: str = None) -> str:
         '''
-        Checks if the query is already installed. If the query is not installed,
-         it installs the query and changes the schema if an attribute needs to be added.
+        Checks if the query is already installed. If the query is not installed, 
+        it installs the query and changes the schema if an attribute needs to be added.
         
         Args:
             query_name (str): 
-                The name of query to be installed
+                The name of query to be installed.
             query_path (str):
                 If using a custom query, the path to the `.gsql` file that contains the query.
                 Note: you must have the `query_name` parameter match the name of the query in the file.
+        
+        Returns:
+            String of query name installed.
         '''
         resp = self._install_query_file(query_name, query_path=query_path)
         return resp.strip() 
 
-    def _add_attribute(self, schema_type: str, attr_type: str, attr_name: str=None, schema_name: List[str]=None):
+    def _add_attribute(self, schema_type:str, attr_type:str, attr_name:str=None, schema_name:List[str]=None, global_change:bool = False):
         '''
         If the current attribute is not already added to the schema, it will create the schema job to do that.
         Check whether to add the attribute to vertex(vertices) or edge(s).
@@ -258,6 +261,8 @@ class Featurizer:
                 An attribute name that needs to be added to the vertex/edge
             schema_name:
                 List of Vertices/Edges that the attr_name need to added to them.
+            global_change (bool):
+                If the schema change should be global or local.
         '''
         # Check whether to add the attribute to vertex(vertices) or edge(s)
         self.result_attr = attr_name
@@ -291,11 +296,15 @@ class Featurizer:
         if not tasks:
             return "Attribute already exists"
         # Drop all jobs on the graph
-        self.conn.gsql("USE GRAPH {}\n".format(self.conn.graphname) + "DROP JOB *")
+        # self.conn.gsql("USE GRAPH {}\n".format(self.conn.graphname) + "DROP JOB *")
         # Create schema change job 
         job_name = "add_{}_attr_{}".format(schema_type,random_string(6)) 
-        job = "USE GRAPH {}\n".format(self.conn.graphname) + "CREATE GLOBAL SCHEMA_CHANGE JOB {} {{\n".format(
-            job_name) + ''.join(tasks) + "}}\nRUN GLOBAL SCHEMA_CHANGE JOB {}".format(job_name)
+        if not(global_change):
+            job = "USE GRAPH {}\n".format(self.conn.graphname) + "CREATE SCHEMA_CHANGE JOB {} {{\n".format(
+                job_name) + ''.join(tasks) + "}}\nRUN SCHEMA_CHANGE JOB {}".format(job_name)
+        else:
+            job = "USE GRAPH {}\n".format(self.conn.graphname) + "CREATE GLOBAL SCHEMA_CHANGE JOB {} {{\n".format(
+                job_name) + ''.join(tasks) + "}}\nRUN GLOBAL SCHEMA_CHANGE JOB {}".format(job_name)
         # Submit the job
         resp = self.conn.gsql(job)
         status = resp.splitlines()[-1]
@@ -303,7 +312,7 @@ class Featurizer:
             raise ConnectionError(status)
         else:
             print(status)
-        return 'Global schema change succeeded.'
+        return 'Schema change succeeded.'
 
     
     def _get_Params(self,query_name:str):
@@ -340,7 +349,7 @@ class Featurizer:
         self.params_dict[query_name] = _dict
         return _dict  
                
-    def runAlgorithm(self, query_name:str, params:dict = None, feat_name:str = None, feat_type:str = None, custom_query:bool = False, schema_name:list = None, timeout:int = 2147480, sizeLimit:int = None) -> Any:
+    def runAlgorithm(self, query_name:str, params:dict = None, feat_name:str = None, feat_type:str = None, custom_query:bool = False, schema_name:list = None, global_schema:bool = False, timeout:int = 2147480, sizeLimit:int = None) -> Any:
         '''
         Runs an installed query.
         The query must be already created and installed in the graph.
@@ -351,7 +360,7 @@ class Featurizer:
             query_name (str):
                 The name of the query to be executed.
             params (dict):
-                Query parameters. a dictionary.
+                Query parameters. A dictionary.
             feat_name (str): 
                 An attribute name that needs to be added to the vertex/edge
             feat_type (str):
@@ -359,7 +368,11 @@ class Featurizer:
             custom_query (bool):
                 If the query is a custom query. Defaults to False. 
             schema_name:
-                List of Vertices/Edges that the attr_name need to added to them.    
+                List of Vertices/Edges that the attr_name need to added to them.
+            global_schema (bool):
+                False by default. Set to true if you want to run `GLOBAL SCHEMA_CHANGE JOB`.
+                See https://docs.tigergraph.com/gsql-ref/current/ddl-and-loading/modifying-a-graph-schema#_global_vs_local_schema_changes
+                for more details.
             timeout (int):
                 Maximum duration for successful query execution (in milliseconds).
             sizeLimit (int):
@@ -396,7 +409,7 @@ class Featurizer:
                     if query_name != "tg_fastRP":
                         if not(feat_type):
                             feat_type = self.queryResult_type_dict[query_name]
-                        _ = self._add_attribute(schema_type, feat_type, feat_name, schema_name)
+                        _ = self._add_attribute(schema_type, feat_type, feat_name, schema_name, global_change=global_schema)
                 else:
                     query_ulr= self._get_query_url(query_name)
                     raise ValueError("The algorithm does not provide any feature, see the algorithm details:"+query_ulr+".")
