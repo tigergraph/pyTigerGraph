@@ -133,9 +133,13 @@ class Featurizer:
     def listAlgorithms(self,category:str=None):
         '''
         Print the list of available algorithms in GDS.
+        
         Args:
-            category (str): 
+            category (str):
                 The class of the algorithms, if it is None the entire list will be printed out.
+        
+        Returns:
+            Prints the information for algorithms within the specified category.
         '''
         if category!=None:
             print("Available algorithms for category", category,"in the GDS (https://github.com/tigergraph/gsql-graph-algorithms):")
@@ -231,11 +235,11 @@ class Featurizer:
 
     def installAlgorithm(self, query_name: str, query_path: str = None) -> str:
         '''
-        Checks if the query is already installed. If the query is not installed, 
-        it installs the query and changes the schema if an attribute needs to be added.
+        Checks if the query is already installed. 
+        If the query is not installed, it installs the query and changes the schema if an attribute needs to be added.
         
         Args:
-            query_name (str): 
+            query_name (str):
                 The name of query to be installed.
             query_path (str):
                 If using a custom query, the path to the `.gsql` file that contains the query.
@@ -367,12 +371,11 @@ class Featurizer:
                 Type of attribute that needs to be added to the vertex/edge. Only needed if `custom_query` is set to `True`.
             custom_query (bool):
                 If the query is a custom query. Defaults to False. 
-            schema_name:
+            schema_name (list[str]):
                 List of Vertices/Edges that the attr_name need to added to them.
             global_schema (bool):
                 False by default. Set to true if you want to run `GLOBAL SCHEMA_CHANGE JOB`.
                 See https://docs.tigergraph.com/gsql-ref/current/ddl-and-loading/modifying-a-graph-schema#_global_vs_local_schema_changes
-                for more details.
             timeout (int):
                 Maximum duration for successful query execution (in milliseconds).
             sizeLimit (int):
