@@ -1035,7 +1035,7 @@ class NeighborLoader(BaseLoader):
         num_neighbors: int = 10,
         num_hops: int = 2,
         shuffle: bool = False,
-        filter_by: str = None,
+        filter_by: Union[str, dict] = None,
         output_format: str = "PyG",
         add_self_loop: bool = False,
         loader_id: str = None,
@@ -1097,30 +1097,48 @@ class NeighborLoader(BaseLoader):
         else:
             self._vtypes = list(self._v_schema.keys())
             self._etypes = list(self._e_schema.keys())
-        # Initialize parameters for the query
-        self._payload = {}
+        # Resolve seeds
         if batch_size:
             # If batch_size is given, calculate the number of batches
-            num_vertices_by_type = self._graph.getVertexCount(self._vtypes)
-            if filter_by:
+            if not filter_by:
+                self._seed_types = self._vtypes
+                num_vertices = sum(self._graph.getVertexCount(self._seed_types).values())
+            elif isinstance(filter_by, str):
+                self._seed_types = self._vtypes
                 num_vertices = sum(
                     self._graph.getVertexCount(k, where="{}!=0".format(filter_by))
-                    for k in num_vertices_by_type
+                    for k in self._seed_types
+                )
+            elif isinstance(filter_by, dict):
+                self._seed_types = list(filter_by.keys())
+                num_vertices = sum(
+                    self._graph.getVertexCount(k, where="{}!=0".format(filter_by[k]))
+                    for k in self._seed_types
                 )
             else:
-                num_vertices = sum(num_vertices_by_type.values())
+                raise ValueError("filter_by should be None, attribute name, or dict of {type name: attribute name}.")
             self.num_batches = math.ceil(num_vertices / batch_size)
         else:
             # Otherwise, take the number of batches as is.
+            self._seed_types = self._vtypes if ((not filter_by) or isinstance(filter_by, str)) else list(filter_by.keys())
             self.num_batches = num_batches
+        # Initialize parameters for the query
+        self._payload = {}
         self._payload["num_batches"] = self.num_batches
         self._payload["num_neighbors"] = num_neighbors
         self._payload["num_hops"] = num_hops
         if filter_by:
-            self._payload["filter_by"] = filter_by
+            if isinstance(filter_by, str):
+                self._payload["filter_by"] = filter_by
+            else:
+                attr = set(filter_by.values())
+                if len(attr) != 1:
+                    raise NotImplementedError("Filtering by different attributes for different vertex types is not supported. Please use the same attribute for different types.")
+                self._payload["filter_by"] = attr.pop()
         self._payload["shuffle"] = shuffle
         self._payload["v_types"] = self._vtypes
         self._payload["e_types"] = self._etypes
+        self._payload["seed_types"] = self._seed_types
         if self.kafka_address_producer:
             self._payload["kafka_address"] = self.kafka_address_producer
         # kafka_topic will be filled in later.
