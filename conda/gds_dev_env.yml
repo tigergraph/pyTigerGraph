@@ -2,22 +2,19 @@ name: gds_dev
 channels:
   - pyg
   - pytorch
-  - dglteam
+  - dglteam  
   - conda-forge
 dependencies:
   - python=3.9
-  - conda
   - pip
-  - numpy
-  - scipy
-  - pandas
-  - pytorch
+  - pytorch=1.11.0
   - cpuonly
-  - pyg
-  - dgl
+  - pyg=2.0.4
+  - dgl=0.8.1
   - pip:
-    - requests
+    - requests==2.28.0
+    - class-resolver==0.3.9
+    - kafka-python==2.0.2
     - boto3
     - google-cloud-storage
     - pyTigerDriver
-    - kafka-python

@@ -3,7 +3,7 @@ This class contains functions for data splitting.
 """
 
 import os.path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from .utilities import install_query_file
 
@@ -17,8 +17,9 @@ class BaseRandomSplitter:
     def __init__(
         self,
         conn: "TigerGraphConnection",
-        query_path,
+        query_path: str,
         timeout: int = 600000,
+        schema_types: List[str] = None,
         **split_ratios
     ) -> None:
         """NO DOC: Initialize the splitter."""
@@ -27,7 +28,7 @@ class BaseRandomSplitter:
         self._graph = conn
         self.query_name = install_query_file(self._graph, query_path)
         self.timeout = timeout
-        # TODO: Check if attributes exist in database. If not, raise error or create
+        self.schema_types = schema_types
 
     def _validate_args(self, split_ratios) -> None:
         if len(split_ratios) == 0:
@@ -53,6 +54,7 @@ class BaseRandomSplitter:
         else:
             split_ratios = self.split_ratios
         payload = {}
+        payload["stypes"] = self.schema_types
         for i, key in enumerate(split_ratios):
             payload["attr{}".format(i + 1)] = key
             payload["ratio{}".format(i + 1)] = split_ratios[key]
@@ -114,7 +116,7 @@ class RandomVertexSplitter(BaseRandomSplitter):
     """
 
     def __init__(
-        self, conn: "TigerGraphConnection", timeout: int = 600000, **split_ratios
+        self, conn: "TigerGraphConnection", v_types: List[str] = None, timeout: int = 600000, **split_ratios
     ) -> None:
         """NO DOC: Initialize the splitter."""
         query_path = os.path.join(
@@ -123,7 +125,10 @@ class RandomVertexSplitter(BaseRandomSplitter):
             "splitters",
             "random_vertex_split.gsql",
         )
-        super().__init__(conn, query_path, timeout, **split_ratios)
+        if not v_types:
+            v_types = conn.getVertexTypes()
+        # TODO: Check if attributes exist in database. If not, raise error or create
+        super().__init__(conn, query_path, timeout, v_types, **split_ratios)
 
     def run(self, **split_ratios) -> None:
         """Perform the split.
@@ -196,7 +201,7 @@ class RandomEdgeSplitter(BaseRandomSplitter):
     """
 
     def __init__(
-        self, conn: "TigerGraphConnection", timeout: int = 600000, **split_ratios
+        self, conn: "TigerGraphConnection", e_types: List[str] = None, timeout: int = 600000, **split_ratios
     ) -> None:
         """NO DOC:
         Args:
@@ -211,7 +216,10 @@ class RandomEdgeSplitter(BaseRandomSplitter):
             "splitters",
             "random_edge_split.gsql",
         )
-        super().__init__(conn, query_path, timeout, **split_ratios)
+        if not e_types:
+            e_types = conn.getEdgeTypes()
+        # TODO: Check if attributes exist in database. If not, raise error or create
+        super().__init__(conn, query_path, timeout, e_types, **split_ratios)
 
     def run(self, **split_ratios) -> None:
         """Perform the split.

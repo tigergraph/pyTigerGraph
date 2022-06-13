@@ -48,7 +48,7 @@ class TestGDSEdgeNeighborLoaderREST(unittest.TestCase):
         )
         num_batches = 0
         for data in loader:
-            print(num_batches, data)
+            # print(num_batches, data)
             self.assertIsInstance(data, pygData)
             self.assertIn("x", data)
             self.assertIn("is_seed", data)
