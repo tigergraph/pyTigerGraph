@@ -27,7 +27,7 @@ You can find the reference for those classes on the following pages:
 * link:https://docs.tigergraph.com/pytigergraph/current/gds/metrics[Metrics]
 * link:https://docs.tigergraph.com/pytigergraph/current/gds/splitters[Splitters]
 """
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union, List
 
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
@@ -875,7 +875,7 @@ class GDS:
         """
         return Featurizer(self.conn)
 
-    def vertexSplitter(self, timeout: int = 600000, **split_ratios):
+    def vertexSplitter(self, v_types: List[str] = None, timeout: int = 600000, **split_ratios):
         """Get a vertex splitter that splits vertices into at most 3 parts randomly.
 
         The split results are stored in the provided vertex attributes. Each boolean attribute
@@ -915,12 +915,14 @@ class GDS:
             ----
 
         Args:
+            v_types (List[str], optional):
+                Types of vertex the split will work on. Defaults to None (all types).
             timeout (int, optional):
                 Timeout value for the operation. Defaults to 600000.
         """
-        return RandomVertexSplitter(self.conn, timeout, **split_ratios)
+        return RandomVertexSplitter(self.conn, v_types, timeout, **split_ratios)
 
-    def edgeSplitter(self, timeout: int = 600000, **split_ratios):
+    def edgeSplitter(self, e_types: List[str] = None, timeout: int = 600000, **split_ratios):
         """Get an edge splitter that splits edges into at most 3 parts randomly. 
 
         The split results are stored in the provided edge attributes. Each boolean attribute
@@ -954,7 +956,9 @@ class GDS:
             splitter.run()
 
         Args:
+            e_types (List[str], optional):
+                Types of edges the split will work on. Defaults to None (all types).
             timeout (int, optional): 
                 Timeout value for the operation. Defaults to 600000.
         """     
-        return RandomEdgeSplitter(self.conn, timeout, **split_ratios)
+        return RandomEdgeSplitter(self.conn, e_types, timeout, **split_ratios)
