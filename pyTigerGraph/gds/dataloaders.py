@@ -2437,7 +2437,7 @@ class EdgeNeighborLoader(BaseLoader):
         num_neighbors: int = 10,
         num_hops: int = 2,
         shuffle: bool = False,
-        filter_by: str = None,
+        filter_by: Union[str, dict] = None,
         output_format: str = "PyG",
         add_self_loop: bool = False,
         loader_id: str = None,
@@ -2499,27 +2499,37 @@ class EdgeNeighborLoader(BaseLoader):
         else:
             self._vtypes = list(self._v_schema.keys())
             self._etypes = list(self._e_schema.keys())
-        # Initialize parameters for the query
-        self._payload = {}
+        # Resolve seeds
+        self._seed_types = self._etypes if ((not filter_by) or isinstance(filter_by, str)) else list(filter_by.keys())
+        # Resolve number of batches
         if batch_size:
             # If batch_size is given, calculate the number of batches
             if filter_by:
                 # TODO: get edge count with filter
-                raise NotImplementedError
+                raise NotImplementedError("Cannot specify batch_size and filter_by at the same time. Please use num_batches and filter_by.")
             else:
                 num_edges = sum(self._graph.getEdgeCount(i) for i in self._etypes)
             self.num_batches = math.ceil(num_edges / batch_size)
         else:
             # Otherwise, take the number of batches as is.
             self.num_batches = num_batches
+        # Initialize parameters for the query
+        self._payload = {}
         self._payload["num_batches"] = self.num_batches
         self._payload["num_neighbors"] = num_neighbors
         self._payload["num_hops"] = num_hops
         if filter_by:
-            self._payload["filter_by"] = filter_by
+            if isinstance(filter_by, str):
+                self._payload["filter_by"] = filter_by
+            else:
+                attr = set(filter_by.values())
+                if len(attr) != 1:
+                    raise NotImplementedError("Filtering by different attributes for different edge types is not supported. Please use the same attribute for different types.")
+                self._payload["filter_by"] = attr.pop()
         self._payload["shuffle"] = shuffle
         self._payload["v_types"] = self._vtypes
         self._payload["e_types"] = self._etypes
+        self._payload["seed_types"] = self._seed_types
         if self.kafka_address_producer:
             self._payload["kafka_address"] = self.kafka_address_producer
         # kafka_topic will be filled in later.
