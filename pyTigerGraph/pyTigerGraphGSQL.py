@@ -135,7 +135,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
         """
         if ExprFunctions:
             with open(ExprFunctions) as infile:
-                res = self._req("POST", 
+                res = self._req("PUT", 
                     url="{}/gsqlserver/gsql/userdefinedfunction?filename=ExprFunctions".format(self.gsUrl),
                     authMode='pwd',
                     data=infile.read(),
@@ -147,7 +147,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
         
         if ExprUtil:
             with open(ExprUtil) as infile:
-                res = self._req("POST", 
+                res = self._req("PUT", 
                     url="{}/gsqlserver/gsql/userdefinedfunction?filename=ExprUtil".format(self.gsUrl),
                     authMode='pwd',
                     data=infile.read(),

@@ -35,10 +35,11 @@ if TYPE_CHECKING:
 from .dataloaders import EdgeLoader, GraphLoader, NeighborLoader, VertexLoader
 from .featurizer import Featurizer
 from .splitters import RandomEdgeSplitter, RandomVertexSplitter
+# from ..pyTigerGraph import pyTigerGraphGSQL
 
 
 class GDS:
-    def __init__(self, conn: "TigerGraphConnection") -> None:
+    def __init__(self, conn: "TigerGraphConnection") -> None: 
         """NO DOC: Initiate a GDS object.
             Args:
                 conn (TigerGraphConnection):

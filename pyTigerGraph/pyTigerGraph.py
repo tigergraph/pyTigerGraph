@@ -9,6 +9,7 @@ from pyTigerGraph.pyTigerGraphLoading import pyTigerGraphLoading
 from pyTigerGraph.pyTigerGraphPath import pyTigerGraphPath
 from pyTigerGraph.pyTigerGraphUDT import pyTigerGraphUDT
 from pyTigerGraph.pyTigerGraphVertex import pyTigerGraphVertex
+from pyTigerGraph.pyTigerGraphGSQL import pyTigerGraphGSQL
 
 if TYPE_CHECKING:
     from .gds import gds
