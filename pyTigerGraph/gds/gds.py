@@ -76,6 +76,10 @@ class GDS:
         kafka_auto_del_topic: bool = True,
         kafka_address_consumer: str = None,
         kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
         timeout: int = 300000,
     ) -> NeighborLoader:
         """Returns a `NeighborLoader` instance.
@@ -211,6 +215,14 @@ class GDS:
             kafka_address_producer (str, optional):
                 Address of the kafka broker that a producer
                 should use. Defaults to be the same as `kafkaAddress`.
+            kafka_security_protocol (str, optional):
+                Security prototol for Kafka. Defaults to None.
+            kafka_sasl_mechanism (str, optional):
+                Authentication mechanism for Kafka. Defaults to None.
+            kafka_sasl_plain_username (str, optional):
+                SASL username for Kafka. Defaults to None.
+            kafka_sasl_plain_password (str, optional):
+                SASL password for Kafka. Defaults to None.
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
         """
@@ -240,6 +252,10 @@ class GDS:
             kafka_auto_del_topic,
             kafka_address_consumer,
             kafka_address_producer,
+            kafka_security_protocol,
+            kafka_sasl_mechanism,
+            kafka_sasl_plain_username,
+            kafka_sasl_plain_password,
             timeout,
         )
 
@@ -261,6 +277,10 @@ class GDS:
         kafka_auto_del_topic: bool = True,
         kafka_address_consumer: str = None,
         kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
         timeout: int = 300000,
     ) -> EdgeLoader:
         """Returns an `EdgeLoader` instance. 
@@ -341,6 +361,14 @@ class GDS:
             kafka_address_producer (str, optional):
                 Address of the kafka broker that a producer
                 should use. Defaults to be the same as `kafkaAddress`.
+            kafka_security_protocol (str, optional):
+                Security prototol for Kafka. Defaults to None.
+            kafka_sasl_mechanism (str, optional):
+                Authentication mechanism for Kafka. Defaults to None.
+            kafka_sasl_plain_username (str, optional):
+                SASL username for Kafka. Defaults to None.
+            kafka_sasl_plain_password (str, optional):
+                SASL password for Kafka. Defaults to None.
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
 
@@ -365,6 +393,10 @@ class GDS:
             kafka_auto_del_topic,
             kafka_address_consumer,
             kafka_address_producer,
+            kafka_security_protocol,
+            kafka_sasl_mechanism,
+            kafka_sasl_plain_username,
+            kafka_sasl_plain_password,
             timeout,
         )
 
@@ -386,6 +418,10 @@ class GDS:
             kafka_auto_del_topic: bool = True,
             kafka_address_consumer: str = None,
             kafka_address_producer: str = None,
+            kafka_security_protocol: str = "PLAINTEXT",
+            kafka_sasl_mechanism: str = None,
+            kafka_sasl_plain_username: str = None,
+            kafka_sasl_plain_password: str = None,
             timeout: int = 300000,
     ) -> VertexLoader:
         """Returns a `VertexLoader` instance.
@@ -466,6 +502,14 @@ class GDS:
             kafka_address_producer (str, optional):
                 Address of the kafka broker that a producer
                 should use. Defaults to be the same as `kafkaAddress`.
+            kafka_security_protocol (str, optional):
+                Security prototol for Kafka. Defaults to None.
+            kafka_sasl_mechanism (str, optional):
+                Authentication mechanism for Kafka. Defaults to None.
+            kafka_sasl_plain_username (str, optional):
+                SASL username for Kafka. Defaults to None.
+            kafka_sasl_plain_password (str, optional):
+                SASL password for Kafka. Defaults to None.
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
 
@@ -490,6 +534,10 @@ class GDS:
             kafka_auto_del_topic,
             kafka_address_consumer,
             kafka_address_producer,
+            kafka_security_protocol,
+            kafka_sasl_mechanism,
+            kafka_sasl_plain_username,
+            kafka_sasl_plain_password,
             timeout,
         )
 
@@ -517,6 +565,10 @@ class GDS:
         kafka_auto_del_topic: bool = True,
         kafka_address_consumer: str = None,
         kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
         timeout: int = 300000,
     ) -> GraphLoader:
         """Returns a `GraphLoader`instance.
@@ -642,6 +694,14 @@ class GDS:
             kafka_address_producer (str, optional):
                 Address of the kafka broker that a producer
                 should use. Defaults to be the same as `kafkaAddress`.
+            kafka_security_protocol (str, optional):
+                Security prototol for Kafka. Defaults to None.
+            kafka_sasl_mechanism (str, optional):
+                Authentication mechanism for Kafka. Defaults to None.
+            kafka_sasl_plain_username (str, optional):
+                SASL username for Kafka. Defaults to None.
+            kafka_sasl_plain_password (str, optional):
+                SASL password for Kafka. Defaults to None.
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
 
@@ -672,6 +732,10 @@ class GDS:
             kafka_auto_del_topic,
             kafka_address_consumer,
             kafka_address_producer,
+            kafka_security_protocol,
+            kafka_sasl_mechanism,
+            kafka_sasl_plain_username,
+            kafka_sasl_plain_password,
             timeout,
         )
 
@@ -701,6 +765,10 @@ class GDS:
         kafka_auto_del_topic: bool = True,
         kafka_address_consumer: str = None,
         kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
         timeout: int = 300000,
     ) -> EdgeNeighborLoader:
         """Returns an `EdgeNeighborLoader` instance.
@@ -836,6 +904,14 @@ class GDS:
             kafka_address_producer (str, optional):
                 Address of the kafka broker that a producer
                 should use. Defaults to be the same as `kafkaAddress`.
+            kafka_security_protocol (str, optional):
+                Security prototol for Kafka. Defaults to None.
+            kafka_sasl_mechanism (str, optional):
+                Authentication mechanism for Kafka. Defaults to None.
+            kafka_sasl_plain_username (str, optional):
+                SASL username for Kafka. Defaults to None.
+            kafka_sasl_plain_password (str, optional):
+                SASL password for Kafka. Defaults to None.
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
         """
@@ -865,6 +941,10 @@ class GDS:
             kafka_auto_del_topic,
             kafka_address_consumer,
             kafka_address_producer,
+            kafka_security_protocol,
+            kafka_sasl_mechanism,
+            kafka_sasl_plain_username,
+            kafka_sasl_plain_password,
             timeout,
         )
 

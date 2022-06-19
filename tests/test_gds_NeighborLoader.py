@@ -130,6 +130,43 @@ class TestGDSNeighborLoaderKafka(unittest.TestCase):
                     num_batches += 1
                 self.assertEqual(num_batches, 9)
 
+    def test_sasl_plaintext(self):
+        loader = NeighborLoader(
+            graph=self.conn,
+            v_in_feats=["x"],
+            v_out_labels=["y"],
+            v_extra_feats=["train_mask", "val_mask", "test_mask"],
+            batch_size=16,
+            num_neighbors=10,
+            num_hops=2,
+            shuffle=True,
+            filter_by="train_mask",
+            output_format="PyG",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4,
+            kafka_address="34.127.11.236:9092",
+            kafka_security_protocol="SASL_PLAINTEXT",
+            kafka_sasl_mechanism="PLAIN",
+            kafka_sasl_plain_username="bill",
+            kafka_sasl_plain_password="bill"
+        )
+        for epoch in range(2):
+            with self.subTest(i=epoch):
+                num_batches = 0
+                for data in loader:
+                    # print(num_batches, data)
+                    self.assertIsInstance(data, pygData)
+                    self.assertIn("x", data)
+                    self.assertIn("y", data)
+                    self.assertIn("train_mask", data)
+                    self.assertIn("val_mask", data)
+                    self.assertIn("test_mask", data)
+                    self.assertIn("is_seed", data)
+                    self.assertGreater(data["x"].shape[0], 0)
+                    self.assertGreater(data["edge_index"].shape[1], 0)
+                    num_batches += 1
+                self.assertEqual(num_batches, 9)
 
 class TestGDSNeighborLoaderREST(unittest.TestCase):
     @classmethod
@@ -447,6 +484,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSNeighborLoaderKafka("test_iterate_pyg"))
     suite.addTest(TestGDSNeighborLoaderKafka("test_whole_graph_pyg"))
     suite.addTest(TestGDSNeighborLoaderKafka("test_edge_attr"))
+    suite.addTest(TestGDSNeighborLoaderKafka("test_sasl_plaintext"))
     suite.addTest(TestGDSNeighborLoaderREST("test_init"))
     suite.addTest(TestGDSNeighborLoaderREST("test_iterate_pyg"))
     suite.addTest(TestGDSNeighborLoaderREST("test_whole_graph_pyg"))

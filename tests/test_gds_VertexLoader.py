@@ -69,6 +69,32 @@ class TestGDSVertexLoader(unittest.TestCase):
         self.assertIn("val_mask", data.columns)
         self.assertIn("test_mask", data.columns)
 
+    def test_sasl_plaintext(self):
+        loader = VertexLoader(
+            graph=self.conn,
+            attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
+            batch_size=16,
+            shuffle=True,
+            filter_by="train_mask",
+            loader_id=None,
+            buffer_size=4,
+            kafka_address="34.127.11.236:9092",
+            kafka_security_protocol="SASL_PLAINTEXT",
+            kafka_sasl_mechanism="PLAIN",
+            kafka_sasl_plain_username="bill",
+            kafka_sasl_plain_password="bill"
+        )
+        num_batches = 0
+        for data in loader:
+            # print(num_batches, data.head())
+            self.assertIsInstance(data, DataFrame)
+            self.assertIn("x", data.columns)
+            self.assertIn("y", data.columns)
+            self.assertIn("train_mask", data.columns)
+            self.assertIn("val_mask", data.columns)
+            self.assertIn("test_mask", data.columns)
+            num_batches += 1
+        self.assertEqual(num_batches, 9)
 
 class TestGDSVertexLoaderREST(unittest.TestCase):
     @classmethod
@@ -200,6 +226,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSVertexLoader("test_init"))
     suite.addTest(TestGDSVertexLoader("test_iterate"))
     suite.addTest(TestGDSVertexLoader("test_all_vertices"))
+    suite.addTest(TestGDSVertexLoader("test_sasl_plaintext"))
     suite.addTest(TestGDSVertexLoaderREST("test_init"))
     suite.addTest(TestGDSVertexLoaderREST("test_iterate"))
     suite.addTest(TestGDSVertexLoaderREST("test_all_vertices"))

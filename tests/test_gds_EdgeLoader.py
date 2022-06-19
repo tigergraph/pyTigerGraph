@@ -76,6 +76,30 @@ class TestGDSEdgeLoader(unittest.TestCase):
             num_batches += 1
         self.assertEqual(num_batches, 11)
 
+    def test_sasl_plaintext(self):
+        loader = EdgeLoader(
+            graph=self.conn,
+            attributes=["time","is_train"],
+            batch_size=1024,
+            shuffle=True,
+            filter_by=None,
+            loader_id=None,
+            buffer_size=4,
+            kafka_address="34.127.11.236:9092",
+            kafka_security_protocol="SASL_PLAINTEXT",
+            kafka_sasl_mechanism="PLAIN",
+            kafka_sasl_plain_username="bill",
+            kafka_sasl_plain_password="bill"
+        )
+        num_batches = 0
+        for data in loader:
+            # print(num_batches, data.head())
+            self.assertIsInstance(data, DataFrame)
+            self.assertIn("time", data)
+            self.assertIn("is_train", data)
+            num_batches += 1
+        self.assertEqual(num_batches, 11)
+
     # TODO: test filter_by
 
 
@@ -211,6 +235,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSEdgeLoader("test_iterate"))
     suite.addTest(TestGDSEdgeLoader("test_whole_edgelist"))
     suite.addTest(TestGDSEdgeLoader("test_iterate_attr"))
+    suite.addTest(TestGDSEdgeLoader("test_sasl_plaintext"))
     suite.addTest(TestGDSEdgeLoaderREST("test_init"))
     suite.addTest(TestGDSEdgeLoaderREST("test_iterate"))
     suite.addTest(TestGDSEdgeLoaderREST("test_whole_edgelist"))

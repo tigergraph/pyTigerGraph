@@ -65,6 +65,10 @@ class BaseLoader:
         kafkaAutoDelTopic: bool = True,
         kafkaAddressForConsumer: str = None,
         kafkaAddressForProducer: str = None,
+        kafkaSecurityProtocol: str = "PLAINTEXT",
+        kafkaSaslMechanism: str = None,
+        kafkaSaslPlainUsername: str = None,
+        kafkaSaslPlainPassword: str = None,
         timeout: int = 300000,
     ) -> None:
         """Base Class for data loaders.
@@ -116,9 +120,31 @@ class BaseLoader:
             kafkaAddressForProducer (str, optional):
                 Address of the kafka broker that a producer
                 should use. Defaults to be the same as `kafkaAddress`.
+            kafkaSecurityProtocol (str, optional):
+                Security prototol for Kafka. Defaults to None.
+            kafkaSaslMechanism (str, optional):
+                Authentication mechanism for Kafka. Defaults to None.
+            kafkaSaslPlainUsername (str, optional):
+                SASL username for Kafka. Defaults to None.
+            kafkaSaslPlainPassword (str, optional):
+                SASL password for Kafka. Defaults to None.
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
         """
+        # Thread to send requests, download and load data
+        self._requester = None
+        self._downloader = None
+        self._reader = None
+        # Queues to store tasks and data
+        self._request_task_q = None
+        self._download_task_q = None
+        self._read_task_q = None
+        self._data_q = None
+        self._kafka_topic = None
+        # Exit signal to terminate threads
+        self._exit_event = None
+        # In-memory data cache. Only used if num_batches=1
+        self._data = None
         # Get graph info
         self._graph = graph
         self._v_schema, self._e_schema = self._get_schema()
@@ -154,11 +180,19 @@ class BaseLoader:
                     client_id=self.loader_id,
                     max_partition_fetch_bytes=KafkaMaxMsgSize,
                     fetch_max_bytes=KafkaMaxMsgSize,
-                    auto_offset_reset="earliest"
+                    auto_offset_reset="earliest",
+                    security_protocol=kafkaSecurityProtocol,
+                    sasl_mechanism=kafkaSaslMechanism,
+                    sasl_plain_username=kafkaSaslPlainUsername,
+                    sasl_plain_password=kafkaSaslPlainPassword
                 )
                 self._kafka_admin = KafkaAdminClient(
                     bootstrap_servers=self.kafka_address_consumer,
                     client_id=self.loader_id,
+                    security_protocol=kafkaSecurityProtocol,
+                    sasl_mechanism=kafkaSaslMechanism,
+                    sasl_plain_username=kafkaSaslPlainUsername,
+                    sasl_plain_password=kafkaSaslPlainPassword
                 )
             except:
                 raise ConnectionError(
@@ -168,20 +202,26 @@ class BaseLoader:
         self.kafka_replica = kafkaReplicaFactor
         self.kafka_retention_ms = kafkaRetentionMS
         self.delete_kafka_topic = kafkaAutoDelTopic
-        # Thread to send requests, download and load data
-        self._requester = None
-        self._downloader = None
-        self._reader = None
-        # Queues to store tasks and data
-        self._request_task_q = None
-        self._download_task_q = None
-        self._read_task_q = None
-        self._data_q = None
-        self._kafka_topic = None
-        # Exit signal to terminate threads
-        self._exit_event = None
-        # In-memory data cache. Only used if num_batches=1
-        self._data = None
+        # Initialize parameters for the query
+        self._payload = {}
+        if self.kafka_address_producer:
+            self._payload["kafka_address"] = self.kafka_address_producer
+            if kafkaSecurityProtocol == "PLAINTEXT":
+                pass
+            elif kafkaSecurityProtocol == "SASL_PLAINTEXT":
+                self._payload["security_protocol"] = kafkaSecurityProtocol
+                if kafkaSaslMechanism == "PLAIN":
+                    self._payload["sasl_mechanism"] = kafkaSaslMechanism
+                    if kafkaSaslPlainUsername and kafkaSaslPlainPassword:
+                        self._payload["sasl_username"] = kafkaSaslPlainUsername
+                        self._payload["sasl_password"] = kafkaSaslPlainPassword
+                    else:
+                        raise ValueError("Please provide kafka_sasl_plain_username and kafka_sasl_plain_password for Kafka.")
+                else:
+                    raise NotImplementedError("Only PLAIN mechanism is supported for SASL.")
+            else:
+                raise NotImplementedError("Only SASL PLAINTEXT is supported for Kafka authentication.")
+            # kafka_topic will be filled in later.
         # Implement `_install_query()` that installs your query
         # self._install_query()
 
@@ -1048,6 +1088,10 @@ class NeighborLoader(BaseLoader):
         kafka_auto_del_topic: bool = True,
         kafka_address_consumer: str = None,
         kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
         timeout: int = 300000,
     ) -> None:
         """NO DOC"""
@@ -1066,6 +1110,10 @@ class NeighborLoader(BaseLoader):
             kafka_auto_del_topic,
             kafka_address_consumer,
             kafka_address_producer,
+            kafka_security_protocol,
+            kafka_sasl_mechanism,
+            kafka_sasl_plain_username,
+            kafka_sasl_plain_password,
             timeout,
         )
         # Resolve attributes
@@ -1123,7 +1171,6 @@ class NeighborLoader(BaseLoader):
             self._seed_types = self._vtypes if ((not filter_by) or isinstance(filter_by, str)) else list(filter_by.keys())
             self.num_batches = num_batches
         # Initialize parameters for the query
-        self._payload = {}
         self._payload["num_batches"] = self.num_batches
         self._payload["num_neighbors"] = num_neighbors
         self._payload["num_hops"] = num_hops
@@ -1139,9 +1186,6 @@ class NeighborLoader(BaseLoader):
         self._payload["v_types"] = self._vtypes
         self._payload["e_types"] = self._etypes
         self._payload["seed_types"] = self._seed_types
-        if self.kafka_address_producer:
-            self._payload["kafka_address"] = self.kafka_address_producer
-        # kafka_topic will be filled in later.
         # Output
         self.add_self_loop = add_self_loop
         # Install query
@@ -1521,6 +1565,10 @@ class EdgeLoader(BaseLoader):
         kafka_auto_del_topic: bool = True,
         kafka_address_consumer: str = None,
         kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
         timeout: int = 300000,
     ) -> None:
         """
@@ -1540,6 +1588,10 @@ class EdgeLoader(BaseLoader):
             kafka_auto_del_topic,
             kafka_address_consumer,
             kafka_address_producer,
+            kafka_security_protocol,
+            kafka_sasl_mechanism,
+            kafka_sasl_plain_username,
+            kafka_sasl_plain_password,
             timeout,
         )
         # Resolve attributes
@@ -1553,7 +1605,6 @@ class EdgeLoader(BaseLoader):
         else:
             self._etypes = list(self._e_schema.keys())
         # Initialize parameters for the query
-        self._payload = {}
         if batch_size:
             # If batch_size is given, calculate the number of batches
             if filter_by:
@@ -1571,9 +1622,6 @@ class EdgeLoader(BaseLoader):
             self._payload["filter_by"] = filter_by
         self._payload["shuffle"] = shuffle
         self._payload["e_types"] = self._etypes
-        if self.kafka_address_producer:
-            self._payload["kafka_address"] = self.kafka_address_producer
-        # kafka_topic will be filled in later.
         # Output
         # Install query
         self.query_name = self._install_query()
@@ -1820,6 +1868,10 @@ class VertexLoader(BaseLoader):
         kafka_auto_del_topic: bool = True,
         kafka_address_consumer: str = None,
         kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
         timeout: int = 300000,
     ) -> None:
         """
@@ -1839,6 +1891,10 @@ class VertexLoader(BaseLoader):
             kafka_auto_del_topic,
             kafka_address_consumer,
             kafka_address_producer,
+            kafka_security_protocol,
+            kafka_sasl_mechanism,
+            kafka_sasl_plain_username,
+            kafka_sasl_plain_password,
             timeout,
         )
         # Resolve attributes
@@ -1852,7 +1908,6 @@ class VertexLoader(BaseLoader):
         else:
             self._vtypes = list(self._v_schema.keys())
         # Initialize parameters for the query
-        self._payload = {}
         if batch_size:
             # If batch_size is given, calculate the number of batches
             num_vertices_by_type = self._graph.getVertexCount(self._vtypes)
@@ -1872,9 +1927,6 @@ class VertexLoader(BaseLoader):
             self._payload["filter_by"] = filter_by
         self._payload["shuffle"] = shuffle
         self._payload["v_types"] = self._vtypes
-        if self.kafka_address_producer:
-            self._payload["kafka_address"] = self.kafka_address_producer
-        # kafka_topic will be filled in later.
         # Install query
         self.query_name = self._install_query()
 
@@ -2126,6 +2178,10 @@ class GraphLoader(BaseLoader):
         kafka_auto_del_topic: bool = True,
         kafka_address_consumer: str = None,
         kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
         timeout: int = 300000,
     ) -> None:
         """
@@ -2145,6 +2201,10 @@ class GraphLoader(BaseLoader):
             kafka_auto_del_topic,
             kafka_address_consumer,
             kafka_address_producer,
+            kafka_security_protocol,
+            kafka_sasl_mechanism,
+            kafka_sasl_plain_username,
+            kafka_sasl_plain_password,
             timeout,
         )
         # Resolve attributes
@@ -2177,7 +2237,6 @@ class GraphLoader(BaseLoader):
             self._vtypes = list(self._v_schema.keys())
             self._etypes = list(self._e_schema.keys())
         # Initialize parameters for the query
-        self._payload = {}
         if batch_size:
             # If batch_size is given, calculate the number of batches
             if filter_by:
@@ -2195,9 +2254,6 @@ class GraphLoader(BaseLoader):
         self._payload["shuffle"] = shuffle
         self._payload["v_types"] = self._vtypes
         self._payload["e_types"] = self._etypes
-        if self.kafka_address_producer:
-            self._payload["kafka_address"] = self.kafka_address_producer
-        # kafka_topic will be filled in later.
         # Output
         self.add_self_loop = add_self_loop
         # Install query
@@ -2450,6 +2506,10 @@ class EdgeNeighborLoader(BaseLoader):
         kafka_auto_del_topic: bool = True,
         kafka_address_consumer: str = None,
         kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
         timeout: int = 300000,
     ) -> None:
         """NO DOC"""
@@ -2468,6 +2528,10 @@ class EdgeNeighborLoader(BaseLoader):
             kafka_auto_del_topic,
             kafka_address_consumer,
             kafka_address_producer,
+            kafka_security_protocol,
+            kafka_sasl_mechanism,
+            kafka_sasl_plain_username,
+            kafka_sasl_plain_password,
             timeout,
         )
         # Resolve attributes
@@ -2514,7 +2578,6 @@ class EdgeNeighborLoader(BaseLoader):
             # Otherwise, take the number of batches as is.
             self.num_batches = num_batches
         # Initialize parameters for the query
-        self._payload = {}
         self._payload["num_batches"] = self.num_batches
         self._payload["num_neighbors"] = num_neighbors
         self._payload["num_hops"] = num_hops
@@ -2530,9 +2593,6 @@ class EdgeNeighborLoader(BaseLoader):
         self._payload["v_types"] = self._vtypes
         self._payload["e_types"] = self._etypes
         self._payload["seed_types"] = self._seed_types
-        if self.kafka_address_producer:
-            self._payload["kafka_address"] = self.kafka_address_producer
-        # kafka_topic will be filled in later.
         # Output
         self.add_self_loop = add_self_loop
         # Install query

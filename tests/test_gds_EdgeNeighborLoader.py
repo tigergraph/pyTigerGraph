@@ -7,6 +7,45 @@ from torch_geometric.data import Data as pygData
 from torch_geometric.data import HeteroData as pygHeteroData
 
 
+class TestGDSEdgeNeighborLoaderKafka(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora")
+        # cls.conn.gsql("drop query all")
+    
+    def test_sasl_plaintext(self):
+        loader = EdgeNeighborLoader(
+            graph=self.conn,
+            v_in_feats=["x"],
+            e_extra_feats=["is_train"],
+            batch_size=1024,
+            num_neighbors=10,
+            num_hops=2,
+            shuffle=False,
+            filter_by=None,
+            output_format="PyG",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4,
+            kafka_address="34.127.11.236:9092",
+            kafka_security_protocol="SASL_PLAINTEXT",
+            kafka_sasl_mechanism="PLAIN",
+            kafka_sasl_plain_username="bill",
+            kafka_sasl_plain_password="bill"
+        )
+        num_batches = 0
+        for data in loader:
+            # print(num_batches, data)
+            self.assertIsInstance(data, pygData)
+            self.assertIn("x", data)
+            self.assertIn("is_seed", data)
+            self.assertIn("is_train", data)
+            self.assertGreater(data["x"].shape[0], 0)
+            self.assertGreater(data["edge_index"].shape[1], 0)
+            num_batches += 1
+        self.assertEqual(num_batches, 11)
+
+
 class TestGDSEdgeNeighborLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -61,8 +100,9 @@ class TestGDSEdgeNeighborLoaderREST(unittest.TestCase):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
+    suite.addTest(TestGDSEdgeNeighborLoaderKafka("test_sasl_plaintext"))
     suite.addTest(TestGDSEdgeNeighborLoaderREST("test_init"))
     suite.addTest(TestGDSEdgeNeighborLoaderREST("test_iterate_pyg"))
- 
+    
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)
