@@ -53,22 +53,22 @@ class BaseLoader:
     def __init__(
         self,
         graph: "TigerGraphConnection",
-        loaderID: str = None,
-        numBatches: int = 1,
-        bufferSize: int = 4,
-        outputFormat: str = "dataframe",
-        kafkaAddress: str = "",
-        KafkaMaxMsgSize: int = 104857600,
-        kafkaNumPartitions: int = 1,
-        kafkaReplicaFactor: int = 1,
-        kafkaRetentionMS: int = 60000,
-        kafkaAutoDelTopic: bool = True,
-        kafkaAddressForConsumer: str = None,
-        kafkaAddressForProducer: str = None,
-        kafkaSecurityProtocol: str = "PLAINTEXT",
-        kafkaSaslMechanism: str = None,
-        kafkaSaslPlainUsername: str = None,
-        kafkaSaslPlainPassword: str = None,
+        loader_id: str = None,
+        num_batches: int = 1,
+        buffer_size: int = 4,
+        output_format: str = "dataframe",
+        kafka_address: str = "",
+        Kafka_max_msg_size: int = 104857600,
+        kafka_num_partitions: int = 1,
+        kafka_replica_factor: int = 1,
+        kafka_retention_ms: int = 60000,
+        kafka_auto_del_topic: bool = True,
+        kafka_consumer_address: str = None,
+        kafka_producer_address: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
         timeout: int = 300000,
@@ -89,46 +89,46 @@ class BaseLoader:
         Args:
             graph (TigerGraphConnection):
                 Connection to the TigerGraph database.
-            loaderID (str):
+            loader_iD (str):
                 An identifier of the loader which can be any string. It is
                 also used as the Kafka topic name. If `None`, a random string
                 will be generated for it. Defaults to None.
-            numBatches (int):
+            num_batches (int):
                 Number of batches to divide the desired data into. Defaults to 1.
-            bufferSize (int):
+            buffer_size (int):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
-            outputFormat (str):
+            output_format (str):
                 Format of the output data of the loader. Defaults to dataframe.
-            kafkaAddress (str):
+            kafka_address (str):
                 Address of the kafka broker. Defaults to localhost:9092.
-            maxKafkaMsgSize (int, optional):
+            max_kafka_msg_size (int, optional):
                 Maximum size of a Kafka message in bytes.
                 Defaults to 104857600.
-            kafkaNumPartitions (int, optional):
+            kafka_num_partitions (int, optional):
                 Number of partitions for the topic created by this loader.
                 Defaults to 1.
-            kafkaReplicaFactor (int, optional):
+            kafka_replica_factor (int, optional):
                 Number of replications for the topic created by this loader.
                 Defaults to 1.
-            kafkaRetentionMS (int, optional):
+            kafka_retention_ms (int, optional):
                 Retention time for messages in the topic created by this
                 loader in milliseconds. Defaults to 60000.
-            kafkaAutoDelTopic (bool, optional):
+            kafka_auto_del_topic (bool, optional):
                 Whether to delete the Kafka topic once the
                 loader finishes pulling data. Defaults to True.
-            kafkaAddressForConsumer (str, optional):
+            kafka_consumer_address (str, optional):
                 Address of the kafka broker that a consumer
                 should use. Defaults to be the same as `kafkaAddress`.
-            kafkaAddressForProducer (str, optional):
+            kafka_producer_address (str, optional):
                 Address of the kafka broker that a producer
                 should use. Defaults to be the same as `kafkaAddress`.
-            kafkaSecurityProtocol (str, optional):
+            kafka_security_protocol (str, optional):
                 Security prototol for Kafka. Defaults to None.
-            kafkaSaslMechanism (str, optional):
+            kafka_sasl_mechanism (str, optional):
                 Authentication mechanism for Kafka. Defaults to None.
-            kafkaSaslPlainUsername (str, optional):
+            kafka_sasl_plain_username (str, optional):
                 SASL username for Kafka. Defaults to None.
-            kafkaSaslPlainPassword (str, optional):
+            kafka_sasl_plain_password (str, optional):
                 SASL password for Kafka. Defaults to None.
             kafka_producer_ca_location (str, optional):
                 Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
@@ -152,31 +152,31 @@ class BaseLoader:
         # In-memory data cache. Only used if num_batches=1
         self._data = None
         # Kafka topic configs
-        self.kafka_partitions = kafkaNumPartitions
-        self.kafka_replica = kafkaReplicaFactor
-        self.kafka_retention_ms = kafkaRetentionMS
-        self.delete_kafka_topic = kafkaAutoDelTopic
+        self.kafka_partitions = kafka_num_partitions
+        self.kafka_replica = kafka_replica_factor
+        self.kafka_retention_ms = kafka_retention_ms
+        self.delete_kafka_topic = kafka_auto_del_topic
         # Get graph info
         self._graph = graph
         self._v_schema, self._e_schema = self._get_schema()
         # Initialize basic params
-        if not loaderID:
+        if not loader_id:
             self.loader_id = random_string(6)
         else:
-            self.loader_id = loaderID
-        self.num_batches = numBatches
-        self.output_format = outputFormat
-        self.buffer_size = bufferSize
+            self.loader_id = loader_id
+        self.num_batches = num_batches
+        self.output_format = output_format
+        self.buffer_size = buffer_size
         self.timeout = timeout
         self._iterations = 0
         self._iterator = False
         # Kafka consumer and admin
-        self.max_kafka_msg_size = KafkaMaxMsgSize
+        self.max_kafka_msg_size = Kafka_max_msg_size
         self.kafka_address_consumer = (
-            kafkaAddressForConsumer if kafkaAddressForConsumer else kafkaAddress
+            kafka_consumer_address if kafka_consumer_address else kafka_address
         )
         self.kafka_address_producer = (
-            kafkaAddressForProducer if kafkaAddressForProducer else kafkaAddress
+            kafka_producer_address if kafka_producer_address else kafka_address
         )
         if self.kafka_address_consumer:
             try:
@@ -189,22 +189,22 @@ class BaseLoader:
                 self._kafka_consumer = KafkaConsumer(
                     bootstrap_servers=self.kafka_address_consumer,
                     client_id=self.loader_id,
-                    max_partition_fetch_bytes=KafkaMaxMsgSize,
-                    fetch_max_bytes=KafkaMaxMsgSize,
+                    max_partition_fetch_bytes=Kafka_max_msg_size,
+                    fetch_max_bytes=Kafka_max_msg_size,
                     auto_offset_reset="earliest",
-                    security_protocol=kafkaSecurityProtocol,
-                    sasl_mechanism=kafkaSaslMechanism,
-                    sasl_plain_username=kafkaSaslPlainUsername,
-                    sasl_plain_password=kafkaSaslPlainPassword,
+                    security_protocol=kafka_security_protocol,
+                    sasl_mechanism=kafka_sasl_mechanism,
+                    sasl_plain_username=kafka_sasl_plain_username,
+                    sasl_plain_password=kafka_sasl_plain_password,
                     ssl_cafile=kafka_consumer_ca_location if kafka_consumer_ca_location else None
                 )
                 self._kafka_admin = KafkaAdminClient(
                     bootstrap_servers=self.kafka_address_consumer,
                     client_id=self.loader_id,
-                    security_protocol=kafkaSecurityProtocol,
-                    sasl_mechanism=kafkaSaslMechanism,
-                    sasl_plain_username=kafkaSaslPlainUsername,
-                    sasl_plain_password=kafkaSaslPlainPassword,
+                    security_protocol=kafka_security_protocol,
+                    sasl_mechanism=kafka_sasl_mechanism,
+                    sasl_plain_username=kafka_sasl_plain_username,
+                    sasl_plain_password=kafka_sasl_plain_password,
                     ssl_cafile=kafka_consumer_ca_location if kafka_consumer_ca_location else None
                 )
             except:
@@ -215,15 +215,15 @@ class BaseLoader:
         self._payload = {}
         if self.kafka_address_producer:
             self._payload["kafka_address"] = self.kafka_address_producer
-            if kafkaSecurityProtocol == "PLAINTEXT":
+            if kafka_security_protocol == "PLAINTEXT":
                 pass
-            elif kafkaSecurityProtocol in ("SASL_PLAINTEXT", "SASL_SSL"):
-                self._payload["security_protocol"] = kafkaSecurityProtocol
-                if kafkaSaslMechanism == "PLAIN":
-                    self._payload["sasl_mechanism"] = kafkaSaslMechanism
-                    if kafkaSaslPlainUsername and kafkaSaslPlainPassword:
-                        self._payload["sasl_username"] = kafkaSaslPlainUsername
-                        self._payload["sasl_password"] = kafkaSaslPlainPassword
+            elif kafka_security_protocol in ("SASL_PLAINTEXT", "SASL_SSL"):
+                self._payload["security_protocol"] = kafka_security_protocol
+                if kafka_sasl_mechanism == "PLAIN":
+                    self._payload["sasl_mechanism"] = kafka_sasl_mechanism
+                    if kafka_sasl_plain_username and kafka_sasl_plain_password:
+                        self._payload["sasl_username"] = kafka_sasl_plain_username
+                        self._payload["sasl_password"] = kafka_sasl_plain_password
                     else:
                         raise ValueError("Please provide kafka_sasl_plain_username and kafka_sasl_plain_password for Kafka.")
                     if kafka_producer_ca_location:
