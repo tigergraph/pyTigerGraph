@@ -69,6 +69,8 @@ class BaseLoader:
         kafkaSaslMechanism: str = None,
         kafkaSaslPlainUsername: str = None,
         kafkaSaslPlainPassword: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
         timeout: int = 300000,
     ) -> None:
         """Base Class for data loaders.
@@ -128,6 +130,10 @@ class BaseLoader:
                 SASL username for Kafka. Defaults to None.
             kafkaSaslPlainPassword (str, optional):
                 SASL password for Kafka. Defaults to None.
+            kafka_producer_ca_location (str, optional):
+                Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
+            kafka_consumer_ca_location (str, optional):
+                Path to CA certificate on client machine for verifying the broker's key. 
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
         """
@@ -145,6 +151,11 @@ class BaseLoader:
         self._exit_event = None
         # In-memory data cache. Only used if num_batches=1
         self._data = None
+        # Kafka topic configs
+        self.kafka_partitions = kafkaNumPartitions
+        self.kafka_replica = kafkaReplicaFactor
+        self.kafka_retention_ms = kafkaRetentionMS
+        self.delete_kafka_topic = kafkaAutoDelTopic
         # Get graph info
         self._graph = graph
         self._v_schema, self._e_schema = self._get_schema()
@@ -184,7 +195,8 @@ class BaseLoader:
                     security_protocol=kafkaSecurityProtocol,
                     sasl_mechanism=kafkaSaslMechanism,
                     sasl_plain_username=kafkaSaslPlainUsername,
-                    sasl_plain_password=kafkaSaslPlainPassword
+                    sasl_plain_password=kafkaSaslPlainPassword,
+                    ssl_cafile=kafka_consumer_ca_location if kafka_consumer_ca_location else None
                 )
                 self._kafka_admin = KafkaAdminClient(
                     bootstrap_servers=self.kafka_address_consumer,
@@ -192,23 +204,20 @@ class BaseLoader:
                     security_protocol=kafkaSecurityProtocol,
                     sasl_mechanism=kafkaSaslMechanism,
                     sasl_plain_username=kafkaSaslPlainUsername,
-                    sasl_plain_password=kafkaSaslPlainPassword
+                    sasl_plain_password=kafkaSaslPlainPassword,
+                    ssl_cafile=kafka_consumer_ca_location if kafka_consumer_ca_location else None
                 )
             except:
                 raise ConnectionError(
                     "Cannot reach Kafka broker. Please check Kafka settings."
                 )
-        self.kafka_partitions = kafkaNumPartitions
-        self.kafka_replica = kafkaReplicaFactor
-        self.kafka_retention_ms = kafkaRetentionMS
-        self.delete_kafka_topic = kafkaAutoDelTopic
         # Initialize parameters for the query
         self._payload = {}
         if self.kafka_address_producer:
             self._payload["kafka_address"] = self.kafka_address_producer
             if kafkaSecurityProtocol == "PLAINTEXT":
                 pass
-            elif kafkaSecurityProtocol == "SASL_PLAINTEXT":
+            elif kafkaSecurityProtocol in ("SASL_PLAINTEXT", "SASL_SSL"):
                 self._payload["security_protocol"] = kafkaSecurityProtocol
                 if kafkaSaslMechanism == "PLAIN":
                     self._payload["sasl_mechanism"] = kafkaSaslMechanism
@@ -217,10 +226,14 @@ class BaseLoader:
                         self._payload["sasl_password"] = kafkaSaslPlainPassword
                     else:
                         raise ValueError("Please provide kafka_sasl_plain_username and kafka_sasl_plain_password for Kafka.")
+                    if kafka_producer_ca_location:
+                        self._payload["ssl_ca_location"] = kafka_producer_ca_location
+                    else:
+                        self._payload["ssl_ca_location"] = ""
                 else:
                     raise NotImplementedError("Only PLAIN mechanism is supported for SASL.")
             else:
-                raise NotImplementedError("Only SASL PLAINTEXT is supported for Kafka authentication.")
+                raise NotImplementedError("Only SASL_PLAINTEXT and SASL_SSL are supported for Kafka authentication.")
             # kafka_topic will be filled in later.
         # Implement `_install_query()` that installs your query
         # self._install_query()
@@ -1092,6 +1105,8 @@ class NeighborLoader(BaseLoader):
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
         timeout: int = 300000,
     ) -> None:
         """NO DOC"""
@@ -1114,6 +1129,8 @@ class NeighborLoader(BaseLoader):
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_producer_ca_location,
+            kafka_consumer_ca_location,
             timeout,
         )
         # Resolve attributes
@@ -1569,6 +1586,8 @@ class EdgeLoader(BaseLoader):
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
         timeout: int = 300000,
     ) -> None:
         """
@@ -1592,6 +1611,8 @@ class EdgeLoader(BaseLoader):
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_producer_ca_location,
+            kafka_consumer_ca_location,
             timeout,
         )
         # Resolve attributes
@@ -1872,6 +1893,8 @@ class VertexLoader(BaseLoader):
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
         timeout: int = 300000,
     ) -> None:
         """
@@ -1895,6 +1918,8 @@ class VertexLoader(BaseLoader):
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_producer_ca_location,
+            kafka_consumer_ca_location,
             timeout,
         )
         # Resolve attributes
@@ -2182,6 +2207,8 @@ class GraphLoader(BaseLoader):
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
         timeout: int = 300000,
     ) -> None:
         """
@@ -2205,6 +2232,8 @@ class GraphLoader(BaseLoader):
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_producer_ca_location,
+            kafka_consumer_ca_location,
             timeout,
         )
         # Resolve attributes
@@ -2510,6 +2539,8 @@ class EdgeNeighborLoader(BaseLoader):
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
         timeout: int = 300000,
     ) -> None:
         """NO DOC"""
@@ -2532,6 +2563,8 @@ class EdgeNeighborLoader(BaseLoader):
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_producer_ca_location,
+            kafka_consumer_ca_location,
             timeout,
         )
         # Resolve attributes

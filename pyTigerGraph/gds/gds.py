@@ -80,6 +80,8 @@ class GDS:
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
         timeout: int = 300000,
     ) -> NeighborLoader:
         """Returns a `NeighborLoader` instance.
@@ -223,6 +225,10 @@ class GDS:
                 SASL username for Kafka. Defaults to None.
             kafka_sasl_plain_password (str, optional):
                 SASL password for Kafka. Defaults to None.
+            kafka_producer_ca_location (str, optional):
+                Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
+            kafka_consumer_ca_location (str, optional):
+                Path to CA certificate on client machine for verifying the broker's key. 
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
         """
@@ -256,6 +262,8 @@ class GDS:
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_producer_ca_location,
+            kafka_consumer_ca_location,
             timeout,
         )
 
@@ -281,6 +289,8 @@ class GDS:
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
         timeout: int = 300000,
     ) -> EdgeLoader:
         """Returns an `EdgeLoader` instance. 
@@ -369,6 +379,10 @@ class GDS:
                 SASL username for Kafka. Defaults to None.
             kafka_sasl_plain_password (str, optional):
                 SASL password for Kafka. Defaults to None.
+            kafka_producer_ca_location (str, optional):
+                Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
+            kafka_consumer_ca_location (str, optional):
+                Path to CA certificate on client machine for verifying the broker's key. 
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
 
@@ -397,6 +411,8 @@ class GDS:
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_producer_ca_location,
+            kafka_consumer_ca_location,
             timeout,
         )
 
@@ -422,6 +438,8 @@ class GDS:
             kafka_sasl_mechanism: str = None,
             kafka_sasl_plain_username: str = None,
             kafka_sasl_plain_password: str = None,
+            kafka_producer_ca_location: str = None,
+            kafka_consumer_ca_location: str = None,
             timeout: int = 300000,
     ) -> VertexLoader:
         """Returns a `VertexLoader` instance.
@@ -510,6 +528,10 @@ class GDS:
                 SASL username for Kafka. Defaults to None.
             kafka_sasl_plain_password (str, optional):
                 SASL password for Kafka. Defaults to None.
+            kafka_producer_ca_location (str, optional):
+                Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
+            kafka_consumer_ca_location (str, optional):
+                Path to CA certificate on client machine for verifying the broker's key. 
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
 
@@ -538,6 +560,8 @@ class GDS:
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_producer_ca_location,
+            kafka_consumer_ca_location,
             timeout,
         )
 
@@ -569,6 +593,8 @@ class GDS:
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
         timeout: int = 300000,
     ) -> GraphLoader:
         """Returns a `GraphLoader`instance.
@@ -702,6 +728,10 @@ class GDS:
                 SASL username for Kafka. Defaults to None.
             kafka_sasl_plain_password (str, optional):
                 SASL password for Kafka. Defaults to None.
+            kafka_producer_ca_location (str, optional):
+                Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
+            kafka_consumer_ca_location (str, optional):
+                Path to CA certificate on client machine for verifying the broker's key. 
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
 
@@ -736,6 +766,8 @@ class GDS:
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_producer_ca_location,
+            kafka_consumer_ca_location,
             timeout,
         )
 
@@ -769,6 +801,8 @@ class GDS:
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
         timeout: int = 300000,
     ) -> EdgeNeighborLoader:
         """Returns an `EdgeNeighborLoader` instance.
@@ -912,6 +946,10 @@ class GDS:
                 SASL username for Kafka. Defaults to None.
             kafka_sasl_plain_password (str, optional):
                 SASL password for Kafka. Defaults to None.
+            kafka_producer_ca_location (str, optional):
+                Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
+            kafka_consumer_ca_location (str, optional):
+                Path to CA certificate on client machine for verifying the broker's key. 
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
         """
@@ -945,6 +983,8 @@ class GDS:
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_producer_ca_location,
+            kafka_consumer_ca_location,
             timeout,
         )
 

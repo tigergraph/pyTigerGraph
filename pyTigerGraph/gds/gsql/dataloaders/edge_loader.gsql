@@ -8,7 +8,8 @@ CREATE QUERY edge_loader_{QUERYSUFFIX}(
     STRING security_protocol,
     STRING sasl_mechanism,
     STRING sasl_username,
-    STRING sasl_password
+    STRING sasl_password,
+    STRING ssl_ca_location
 ) SYNTAX V1 { 
     /*
     This query generates batches of edges.
@@ -24,6 +25,7 @@ CREATE QUERY edge_loader_{QUERYSUFFIX}(
       sasl_mechanism : Authentication mechanism for Kafka.
       sasl_username  : SASL username for Kafka. 
       sasl_password  : SASL password for Kafka. 
+      ssl_ca_location: Path to CA certificate for verifying the kafka broker key
     */
     INT num_vertices;
     SumAccum<INT> @tmp_id;
@@ -65,11 +67,11 @@ CREATE QUERY edge_loader_{QUERYSUFFIX}(
         IF kafka_address IS NOT NULL THEN
             # Write to kafka
             IF security_protocol IS NOT NULL THEN
-                IF write_to_kafka(kafka_address, kafka_topic, "edge_batch_" + int_to_string(batch_id), @@e_batch, security_protocol, sasl_mechanism, sasl_username, sasl_password)!=0 THEN 
+                IF write_to_kafka(kafka_address, kafka_topic, "edge_batch_" + int_to_string(batch_id), @@e_batch, security_protocol, sasl_mechanism, sasl_username, sasl_password, ssl_ca_location)!=0 THEN 
                     @@kafka_error += ("Failed sending edge batch " + int_to_string(batch_id) + "\n");
                 END;
             ELSE 
-                IF write_to_kafka(kafka_address, kafka_topic, "edge_batch_" + int_to_string(batch_id), @@e_batch, "", "", "", "")!=0 THEN 
+                IF write_to_kafka(kafka_address, kafka_topic, "edge_batch_" + int_to_string(batch_id), @@e_batch, "", "", "", "", "")!=0 THEN 
                     @@kafka_error += ("Failed sending edge batch " + int_to_string(batch_id) + "\n");
                 END;
             END;
