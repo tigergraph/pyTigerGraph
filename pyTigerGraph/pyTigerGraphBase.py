@@ -26,7 +26,7 @@ def excepthook(type, value, traceback):
 
 class pyTigerGraphBase(object):
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
-            username: str = "tigergraph", password: str = "tigergraph",
+            username: str = "tigergraph", password: str = "tigergraph", tgCloud: bool = False,
             restppPort: Union[int, str] = "9000", gsPort: Union[int, str] = "14240",
             gsqlVersion: str = "", version: str = "", apiToken: str = "", useCert: bool = True,
             certPath: str = None, debug: bool = False, sslPort: Union[int, str] = "443",
@@ -44,6 +44,8 @@ class pyTigerGraphBase(object):
                 The username on the TigerGraph server.
             password:
                 The password for that user.
+            tgCloud:
+                Set to `True` if using TigerGraph Cloud.
             restppPort:
                 The port for REST++ queries.
             gsPort:
@@ -64,7 +66,7 @@ class pyTigerGraphBase(object):
             sslPort:
                 Port for fetching SSL certificate in case of firewall.
             gcp:
-                Is firewall used?
+                DEPRECATED: Is firewall used?
 
         Raises:
             TigerGraphException: In case on invalid URL scheme.
@@ -81,10 +83,19 @@ class pyTigerGraphBase(object):
         self.password = password
         self.graphname = graphname
 
-        # TODO Use more generic name (e.g. `onCloud` or `viaFirewall`; not `beta` or `cgp`
-        self.beta = gcp
+        if gsqlVersion != "":
+            self.majorVersion = gsqlVersion.split(".")[0]
+            self.minorVersion = gsqlVersion.split(".")[1]
+            self.patchVersion = gsqlVersion.split(".")[2]
+
+            is36 = self.majorVersion == "3" and self.minorVersion == "6"
+
+        if((gsqlVersion == "") and tgCloud):
+            raise(TigerGraphException("TigerGraph Cloud requires a GSQL version."))
+        else:
+            self.tgCloud = (tgCloud and is36) or gcp
         restppPort = str(restppPort)
-        if self.beta and (restppPort == "9000" or restppPort == "443"):
+        if self.tgCloud and (restppPort == "9000" or restppPort == "443"):
             # TODO Should not `sslPort` be used instead of hard coded value?
             self.restppPort = "443"
             self.restppUrl = self.host + ":443" + "/restpp"
@@ -93,7 +104,7 @@ class pyTigerGraphBase(object):
             self.restppUrl = self.host + ":" + self.restppPort
         self.gsPort = ""
         gsPort = str(gsPort)
-        if self.beta and (gsPort == "14240" or gsPort == "443"):
+        if self.tgCloud and (gsPort == "14240" or gsPort == "443"):
             # TODO Should not `sslPort` be used instead of hard coded value?
             self.gsPort = "443"
             self.gsUrl = self.host + ":443"
