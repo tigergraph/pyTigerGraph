@@ -45,7 +45,8 @@ class pyTigerGraphBase(object):
             password:
                 The password for that user.
             tgCloud:
-                Set to `True` if using TigerGraph Cloud. Set `gsqlVersion` if using TigerGraph Cloud.
+                Set to `True` if using TigerGraph Cloud. Set `gsqlVersion` if using TigerGraph Cloud. 
+                (Only needed for new TigerGraph Cloud instances.)
             restppPort:
                 The port for REST++ queries.
             gsPort:
@@ -71,7 +72,6 @@ class pyTigerGraphBase(object):
         Raises:
             TigerGraphException: In case on invalid URL scheme.
 
-        TODO Rename/generalise `gcp`
         """
         inputHost = urlparse(host)
         if inputHost.scheme not in ["http", "https"]:
@@ -83,17 +83,7 @@ class pyTigerGraphBase(object):
         self.password = password
         self.graphname = graphname
 
-        if gsqlVersion != "":
-            self.majorVersion = gsqlVersion.split(".")[0]
-            self.minorVersion = gsqlVersion.split(".")[1]
-            self.patchVersion = gsqlVersion.split(".")[2]
-
-            is36orAbove = (self.majorVersion >= int(self.majorVersion)) and (self.minorVersion >= int(self.minorVersion))
-
-        if((gsqlVersion == "") and tgCloud):
-            raise(TigerGraphException("TigerGraph Cloud requires a GSQL version."))
-        else:
-            self.tgCloud = (tgCloud and is36orAbove) or gcp
+        self.tgCloud = tgCloud or gcp
         restppPort = str(restppPort)
         if self.tgCloud and (restppPort == "9000" or restppPort == "443"):
             # TODO Should not `sslPort` be used instead of hard coded value?
