@@ -45,8 +45,7 @@ class pyTigerGraphBase(object):
             password:
                 The password for that user.
             tgCloud:
-                Set to `True` if using TigerGraph Cloud. Set `gsqlVersion` if using TigerGraph Cloud. 
-                (Only needed for new TigerGraph Cloud instances.)
+                Set to `True` if using TigerGraph Cloud. (Only needed for new TigerGraph Cloud instances.)
             restppPort:
                 The port for REST++ queries.
             gsPort:
