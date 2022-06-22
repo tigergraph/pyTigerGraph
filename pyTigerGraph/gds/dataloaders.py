@@ -100,7 +100,7 @@ class BaseLoader:
             output_format (str):
                 Format of the output data of the loader. Defaults to dataframe.
             kafka_address (str):
-                Address of the kafka broker. Defaults to localhost:9092.
+                Address of the Kafka broker. Defaults to localhost:9092.
             max_kafka_msg_size (int, optional):
                 Maximum size of a Kafka message in bytes.
                 Defaults to 104857600.
@@ -117,10 +117,10 @@ class BaseLoader:
                 Whether to delete the Kafka topic once the
                 loader finishes pulling data. Defaults to True.
             kafka_consumer_address (str, optional):
-                Address of the kafka broker that a consumer
+                Address of the Kafka broker that a consumer
                 should use. Defaults to be the same as `kafkaAddress`.
             kafka_producer_address (str, optional):
-                Address of the kafka broker that a producer
+                Address of the Kafka broker that a producer
                 should use. Defaults to be the same as `kafkaAddress`.
             kafka_security_protocol (str, optional):
                 Security prototol for Kafka. Defaults to None.

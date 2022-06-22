@@ -70,7 +70,7 @@ class GDS:
         """Configure the Kafka connection. Will override any configuration that is defined in factory functions.
         Args:
             kafka_address (str, optional):
-                Address of the kafka broker. Defaults to None.
+                Address of the Kafka broker. Defaults to None.
             kafka_max_msg_size (int, optional):
                 Maximum size of a Kafka message in bytes.
                 Defaults to 104857600.
@@ -87,10 +87,10 @@ class GDS:
                 Whether to delete the Kafka topic once the
                 loader finishes pulling data. Defaults to True.
             kafka_address_consumer (str, optional):
-                Address of the kafka broker that a consumer
+                Address of the Kafka broker that a consumer
                 should use. Defaults to be the same as `kafkaAddress`.
             kafka_address_producer (str, optional):
-                Address of the kafka broker that a producer
+                Address of the Kafka broker that a producer
                 should use. Defaults to be the same as `kafkaAddress`.
             kafka_security_protocol (str, optional):
                 Security prototol for Kafka. Defaults to None.
@@ -269,7 +269,7 @@ class GDS:
             buffer_size (int, optional):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
             kafka_address (str, optional):
-                Address of the kafka broker. Defaults to None.
+                Address of the Kafka broker. Defaults to None.
             kafka_max_msg_size (int, optional):
                 Maximum size of a Kafka message in bytes.
                 Defaults to 104857600.
@@ -286,10 +286,10 @@ class GDS:
                 Whether to delete the Kafka topic once the
                 loader finishes pulling data. Defaults to True.
             kafka_address_consumer (str, optional):
-                Address of the kafka broker that a consumer
+                Address of the Kafka broker that a consumer
                 should use. Defaults to be the same as `kafkaAddress`.
             kafka_address_producer (str, optional):
-                Address of the kafka broker that a producer
+                Address of the Kafka broker that a producer
                 should use. Defaults to be the same as `kafkaAddress`.
             kafka_security_protocol (str, optional):
                 Security prototol for Kafka. Defaults to None.
@@ -429,7 +429,7 @@ class GDS:
             buffer_size (int, optional):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
             kafka_address (str, optional):
-                Address of the kafka broker. Defaults to None.
+                Address of the Kafka broker. Defaults to None.
             kafka_max_msg_size (int, optional):
                 Maximum size of a Kafka message in bytes.
                 Defaults to 104857600.
@@ -446,10 +446,10 @@ class GDS:
                 Whether to delete the Kafka topic once the
                 loader finishes pulling data. Defaults to True.
             kafka_address_consumer (str, optional):
-                Address of the kafka broker that a consumer
+                Address of the Kafka broker that a consumer
                 should use. Defaults to be the same as `kafkaAddress`.
             kafka_address_producer (str, optional):
-                Address of the kafka broker that a producer
+                Address of the Kafka broker that a producer
                 should use. Defaults to be the same as `kafkaAddress`.
             kafka_security_protocol (str, optional):
                 Security prototol for Kafka. Defaults to None.
@@ -583,7 +583,7 @@ class GDS:
             buffer_size (int, optional):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
             kafka_address (str, optional):
-                Address of the kafka broker. Defaults to None.
+                Address of the Kafka broker. Defaults to None.
             kafka_max_msg_size (int, optional):
                 Maximum size of a Kafka message in bytes.
                 Defaults to 104857600.
@@ -600,10 +600,10 @@ class GDS:
                 Whether to delete the Kafka topic once the
                 loader finishes pulling data. Defaults to True.
             kafka_address_consumer (str, optional):
-                Address of the kafka broker that a consumer
+                Address of the Kafka broker that a consumer
                 should use. Defaults to be the same as `kafkaAddress`.
             kafka_address_producer (str, optional):
-                Address of the kafka broker that a producer
+                Address of the Kafka broker that a producer
                 should use. Defaults to be the same as `kafkaAddress`.
             kafka_security_protocol (str, optional):
                 Security prototol for Kafka. Defaults to None.
@@ -789,7 +789,7 @@ class GDS:
             buffer_size (int, optional):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
             kafka_address (str, optional):
-                Address of the kafka broker. Defaults to None.
+                Address of the Kafka broker. Defaults to None.
             kafka_max_msg_size (int, optional):
                 Maximum size of a Kafka message in bytes.
                 Defaults to 104857600.
@@ -806,10 +806,10 @@ class GDS:
                 Whether to delete the Kafka topic once the
                 loader finishes pulling data. Defaults to True.
             kafka_address_consumer (str, optional):
-                Address of the kafka broker that a consumer
+                Address of the Kafka broker that a consumer
                 should use. Defaults to be the same as `kafkaAddress`.
             kafka_address_producer (str, optional):
-                Address of the kafka broker that a producer
+                Address of the Kafka broker that a producer
                 should use. Defaults to be the same as `kafkaAddress`.
             kafka_security_protocol (str, optional):
                 Security prototol for Kafka. Defaults to None.
@@ -1013,7 +1013,7 @@ class GDS:
             buffer_size (int, optional):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
             kafka_address (str, optional):
-                Address of the kafka broker. Defaults to None.
+                Address of the Kafka broker. Defaults to None.
             kafka_max_msg_size (int, optional):
                 Maximum size of a Kafka message in bytes.
                 Defaults to 104857600.
@@ -1030,10 +1030,10 @@ class GDS:
                 Whether to delete the Kafka topic once the
                 loader finishes pulling data. Defaults to True.
             kafka_address_consumer (str, optional):
-                Address of the kafka broker that a consumer
+                Address of the Kafka broker that a consumer
                 should use. Defaults to be the same as `kafkaAddress`.
             kafka_address_producer (str, optional):
-                Address of the kafka broker that a producer
+                Address of the Kafka broker that a producer
                 should use. Defaults to be the same as `kafkaAddress`.
             kafka_security_protocol (str, optional):
                 Security prototol for Kafka. Defaults to None.

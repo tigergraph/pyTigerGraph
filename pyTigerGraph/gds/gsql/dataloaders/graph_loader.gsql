@@ -22,12 +22,12 @@ CREATE QUERY graph_loader_{QUERYSUFFIX}(
       v_types        : Vertex types to be included.
       e_types        : Edge types to be included.
       kafka_address  : Address of the Kafka cluster to send data to.
-      kafka_topic    : The kafka topic to send data to.
+      kafka_topic    : The Kafka topic to send data to.
       security_protocol : Security prototol for Kafka.
       sasl_mechanism : Authentication mechanism for Kafka.
       sasl_username  : SASL username for Kafka. 
       sasl_password  : SASL password for Kafka.
-      ssl_ca_location: Path to CA certificate for verifying the kafka broker key.
+      ssl_ca_location: Path to CA certificate for verifying the Kafka broker key.
     */
     INT num_vertices;
     SumAccum<INT> @tmp_id;
