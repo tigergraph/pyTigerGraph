@@ -118,6 +118,79 @@ class TestGDSGraphLoader(unittest.TestCase):
             num_batches += 1
         self.assertEqual(num_batches, 11)
 
+    def test_sasl_plaintext(self):
+        loader = GraphLoader(
+            graph=self.conn,
+            v_in_feats=["x"],
+            v_out_labels=["y"],
+            v_extra_feats=["train_mask", "val_mask", "test_mask"],
+            e_in_feats=["time"],
+            e_extra_feats=["is_train"],
+            batch_size=1024,
+            shuffle=True,
+            filter_by=None,
+            output_format="PyG",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4,
+            kafka_address="34.127.11.236:9092",
+            kafka_security_protocol="SASL_PLAINTEXT",
+            kafka_sasl_mechanism="PLAIN",
+            kafka_sasl_plain_username="bill",
+            kafka_sasl_plain_password="bill"
+        )
+        num_batches = 0
+        for data in loader:
+            # print(num_batches, data)
+            self.assertIsInstance(data, pygData)
+            self.assertIn("x", data)
+            self.assertIn("y", data)
+            self.assertIn("train_mask", data)
+            self.assertIn("val_mask", data)
+            self.assertIn("test_mask", data)
+            self.assertIn("edge_feat", data)
+            self.assertIn("is_train", data)
+            num_batches += 1
+        self.assertEqual(num_batches, 11)
+
+    def test_sasl_ssl(self):
+        loader = GraphLoader(
+            graph=self.conn,
+            v_in_feats=["x"],
+            v_out_labels=["y"],
+            v_extra_feats=["train_mask", "val_mask", "test_mask"],
+            e_in_feats=["time"],
+            e_extra_feats=["is_train"],
+            batch_size=1024,
+            shuffle=True,
+            filter_by=None,
+            output_format="PyG",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4,
+            kafka_address="pkc-6ojv2.us-west4.gcp.confluent.cloud:9092",
+            kafka_replica_factor=3,
+            kafka_max_msg_size=8388608,
+            kafka_security_protocol="SASL_SSL",
+            kafka_sasl_mechanism="PLAIN",
+            kafka_sasl_plain_username="YIQM66T3BZZLSXBJ",
+            kafka_sasl_plain_password="UgRdpSS34e2kYe8jZ9m7py4LgjkjxsGrePiaaMv/YCHRIjRmTJMpodS/0og8SYe8",
+            kafka_producer_ca_location="/home/tigergraph/mlworkbench/ssl/cert.pem"
+        )
+        num_batches = 0
+        for data in loader:
+            # print(num_batches, data)
+            self.assertIsInstance(data, pygData)
+            self.assertIn("x", data)
+            self.assertIn("y", data)
+            self.assertIn("train_mask", data)
+            self.assertIn("val_mask", data)
+            self.assertIn("test_mask", data)
+            self.assertIn("edge_feat", data)
+            self.assertIn("is_train", data)
+            num_batches += 1
+        self.assertEqual(num_batches, 11)
+
 
 class TestGDSGraphLoaderREST(unittest.TestCase):
     @classmethod
@@ -328,7 +401,7 @@ class TestGDSHeteroGraphLoaderREST(unittest.TestCase):
         )
         num_batches = 0
         for data in loader:
-            print(num_batches, data)
+            # print(num_batches, data)
             self.assertIsInstance(data, pygHeteroData)
             self.assertIn("x", data["v0"])
             self.assertIn("y", data["v0"])
@@ -350,6 +423,8 @@ if __name__ == "__main__":
     suite.addTest(TestGDSGraphLoader("test_iterate_pyg"))
     suite.addTest(TestGDSGraphLoader("test_iterate_df"))
     suite.addTest(TestGDSGraphLoader("test_edge_attr"))
+    suite.addTest(TestGDSGraphLoader("test_sasl_plaintext"))
+    suite.addTest(TestGDSGraphLoader("test_sasl_ssl"))
     suite.addTest(TestGDSGraphLoaderREST("test_init"))
     suite.addTest(TestGDSGraphLoaderREST("test_iterate_pyg"))
     suite.addTest(TestGDSGraphLoaderREST("test_iterate_df"))
