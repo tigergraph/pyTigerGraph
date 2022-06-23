@@ -1813,7 +1813,7 @@ class VertexLoader(BaseLoader):
     --
     [.wrap,python]
     ----
-    edge_loader = conn.gds.edgeLoader(
+    vertex_loader = conn.gds.vertexLoader(
         num_batches=10,
         attributes=["time", "is_train"],
         shuffle=True,
