@@ -15,7 +15,7 @@ from collections import defaultdict
 from queue import Empty, Queue
 from threading import Event, Thread
 from time import sleep
-from typing import (TYPE_CHECKING, Any, Iterator, Literal, NoReturn, Tuple,
+from typing import (TYPE_CHECKING, Any, Iterator, NoReturn, Tuple,
                     Union)
 
 if TYPE_CHECKING:
@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     import torch
     import dgl
     import torch_geometric as pyg
+    from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -288,7 +289,7 @@ class BaseLoader:
     def _validate_attributes(
         self, 
         attributes: Union[None, list, dict], 
-        schema_type: Literal["vertex", "edge"], 
+        schema_type: 'Literal["vertex", "edge"]', 
         is_hetero: bool = False
     ) -> Union[list, dict]:
         if schema_type == "vertex":
@@ -438,7 +439,7 @@ class BaseLoader:
         read_task_q: Queue,
         timeout: int = 600000,
         payload: dict = {},
-        resp_type: Literal["both", "vertex", "edge"] = "both",
+        resp_type: 'Literal["both", "vertex", "edge"]' = "both",
     ) -> NoReturn:
         # Run query
         resp = tgraph.runInstalledQuery(
@@ -550,7 +551,7 @@ class BaseLoader:
     @staticmethod
     def _parse_data(
         raw: Union[str, Tuple[str, str]],
-        in_format: Literal["vertex", "edge", "graph"] = "vertex",
+        in_format: 'Literal["vertex", "edge", "graph"]' = "vertex",
         out_format: str = "dataframe",
         v_in_feats: Union[list, dict] = [],
         v_out_labels: Union[list, dict] = [],
@@ -592,7 +593,7 @@ class BaseLoader:
 
         def add_attributes(attr_names: list, attr_types: dict, attr_df: pd.DataFrame, 
                            graph, is_hetero: bool, mode: str, feat_name: str, 
-                           target: Literal["edge", "vertex"], vetype: str = None) -> None:
+                           target: 'Literal["edge", "vertex"]', vetype: str = None) -> None:
             """Add multiple attributes as a single feature to edges or vertices.
             """                    
             if is_hetero:
@@ -621,7 +622,7 @@ class BaseLoader:
         
         def add_sep_attr(attr_names: list, attr_types: dict, attr_df: pd.DataFrame, 
                          graph, is_hetero: bool, mode: str,
-                         target: Literal["edge", "vertex"], vetype: str = None) -> None:
+                         target: 'Literal["edge", "vertex"]', vetype: str = None) -> None:
             """Add each attribute as a single feature to edges or vertices.
             """
             if is_hetero:
