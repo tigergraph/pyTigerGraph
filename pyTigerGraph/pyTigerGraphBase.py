@@ -45,7 +45,8 @@ class pyTigerGraphBase(object):
             password:
                 The password for that user.
             tgCloud:
-                Set to `True` if using TigerGraph Cloud. (Only needed for new TigerGraph Cloud instances.)
+                Set to `True` if using TigerGraph Cloud. If your hostname contains `tgcloud`, then this is
+                automatically set to `True`, and you do not need to set this argument.
             restppPort:
                 The port for REST++ queries.
             gsPort:
@@ -81,6 +82,9 @@ class pyTigerGraphBase(object):
         self.username = username
         self.password = password
         self.graphname = graphname
+
+        if "tgcloud" in self.netloc.lower():
+            self.tgCloud = True
 
         self.tgCloud = tgCloud or gcp
         restppPort = str(restppPort)
