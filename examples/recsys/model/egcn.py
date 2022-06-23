@@ -1,3 +1,7 @@
+"""
+EvolveGCN model for temporal graphs
+"""
+
 import torch
 from torch_geometric.nn import MessagePassing
 from torch_geometric_temporal.nn.recurrent import EvolveGCNH
@@ -24,8 +28,6 @@ class EGCN(torch.nn.Module):
         for _ in range(self.num_layers):
             self.layers.append(EvolveGCNH(num_nodes, embedding_dim))
         self.sigmoid = torch.sigmoid
-        # iprint(self.embeddings.weight.shape)
-        # iprint(num_nodes, embedding_dim)
 
     def forward(self):
         raise NotImplementedError("forward() has not been implemented for the GNN class. Do not use")
@@ -47,10 +49,8 @@ class EGCN(torch.nn.Module):
         """
         The main training step.
         """
-        # print(data_mp.edge_index)
         # Perform GNN propagation on message passing edges to get final embeddings
         final_node_embs = self._propagation_node_emb(data_mp.edge_index)
-        # iprint(final_node_embs)
         # Get edge prediction scores for all positive and negative evaluation edges
         pos_scores = self.predict_scores(data_pos.edge_index, final_node_embs)
         neg_scores = self.predict_scores(data_neg.edge_index, final_node_embs)
@@ -77,15 +77,3 @@ class EGCN(torch.nn.Module):
             unique_users=unique_users.cpu(),
         )  # Calculate recall@k
         return result
-
-
-class EGCNLayer(MessagePassing):
-
-    def __init__(self):
-        super(EGCNLayer, self).__init__(aggr="add")
-    
-    def message(self, x_j, norm):
-        return norm.view(-1, 1) * x_j
-    
-    def forward(self, x, edge_index):
-        return self.propagate(edge_index, x)

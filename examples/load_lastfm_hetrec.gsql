@@ -1,0 +1,60 @@
+DROP QUERY random_edge_split
+DROP QUERY graph_loader_x_time_test_mask
+DROP QUERY graph_loader_x_time_train_mask
+DROP QUERY graph_loader_x_time_train_mask_val_mask_test_mask
+DROP QUERY graph_loader_x_time_val_mask
+DROP QUERY graph_hloader_x_time_train_mask
+DROP QUERY graph_hloader_x_time_train_mask_val_mask_test_mask
+DROP QUERY graph_hloader_x_time_edge_type_train_mask_val_mask_test_mask
+DROP QUERY graph_hloader_x_time_edge_type_val_mask
+DROP QUERY graph_hloader_x_time_edge_type_test_mask
+DROP QUERY graph_hloader_x_time_edge_type_train_mask
+
+DROP JOB load_lastfm_hetrec
+
+DROP GRAPH LastFM_hetrec
+
+DROP EDGE Listened
+DROP EDGE Friend
+DROP EDGE UserTag
+DROP EDGE TagItem
+
+DROP VERTEX UserH
+DROP VERTEX Artist
+DROP VERTEX Tag
+
+
+CREATE VERTEX UserH (PRIMARY_ID vid INT, x LIST<INT>, y INT, train_mask BOOL, val_mask BOOL, test_mask BOOL) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true"
+CREATE VERTEX Artist (PRIMARY_ID vid INT, x LIST<INT>, y INT, train_mask BOOL, val_mask BOOL, test_mask BOOL) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true"
+CREATE VERTEX Tag (PRIMARY_ID vid INT, x LIST<INT>, y INT, train_mask BOOL, val_mask BOOL, test_mask BOOL) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true"
+
+# Edge types: (user -> artist): 0, (user <-> user): 1, (user -> tag -> artist): 2
+CREATE DIRECTED EDGE Listened (FROM UserH, TO Artist, edge_type INT DEFAULT "0", train_mask BOOL DEFAULT "False", val_mask BOOL DEFAULT "False", test_mask BOOL DEFAULT "False", time INT DEFAULT "2000")
+CREATE UNDIRECTED EDGE Friend (FROM UserH, TO UserH, edge_type INT DEFAULT "1", train_mask BOOL DEFAULT "False", val_mask BOOL DEFAULT "False", test_mask BOOL DEFAULT "False", time INT DEFAULT "2000")
+CREATE DIRECTED EDGE UserTag (FROM UserH, TO Tag, edge_type INT DEFAULT "2", train_mask BOOL DEFAULT "False", val_mask BOOL DEFAULT "False", test_mask BOOL DEFAULT "False", time INT DEFAULT "2000")
+CREATE DIRECTED EDGE TagItem (FROM Tag, TO Artist, edge_type INT DEFAULT "2", train_mask BOOL DEFAULT "False", val_mask BOOL DEFAULT "False", test_mask BOOL DEFAULT "False", time INT DEFAULT "2000")
+
+CREATE GRAPH LastFM_hetrec (UserH, Artist, Tag, Listened, Friend, UserTag, TagItem)
+
+USE GRAPH LastFM_hetrec
+BEGIN
+CREATE LOADING JOB load_lastfm_hetrec FOR GRAPH LastFM_hetrec {
+    DEFINE FILENAME user_file = "/home/tigergraph/tgsandbox/gnn-recsys-sandbox/data/users.csv";
+    DEFINE FILENAME item_file = "/home/tigergraph/tgsandbox/gnn-recsys-sandbox/data/artists.csv";
+    DEFINE FILENAME tag_file = "/home/tigergraph/tgsandbox/gnn-recsys-sandbox/data/tags.csv";
+    DEFINE FILENAME listen_file = "/home/tigergraph/tgsandbox/gnn-recsys-sandbox/data/user_artists.csv";
+    DEFINE FILENAME friend_file = "/home/tigergraph/tgsandbox/gnn-recsys-sandbox/data/user_friends.csv";
+    DEFINE FILENAME assign_file = "/home/tigergraph/tgsandbox/gnn-recsys-sandbox/data/user_taggedartists.csv";
+    
+    LOAD user_file TO VERTEX UserH VALUES ($"global_id", LIST(0), 0, "False", "False", "False") USING header="true", separator=",";
+    LOAD item_file TO VERTEX Artist VALUES ($"global_id", LIST(0), 0, "False", "False", "False") USING header="true", separator=",";
+    LOAD tag_file TO VERTEX Tag VALUES ($"global_id", LIST(0), 0, "False", "False", "False") USING header="true", separator=",";
+    LOAD listen_file TO EDGE Listened VALUES ($"user_id", $"artist_id", 0, "False", "False", "False", 2000) USING header="true", separator=",";
+    LOAD friend_file TO EDGE Friend VALUES ($"user_id", $"friend_id", 1, "False", "False", "False", 2000) USING header="true", separator=",";
+    LOAD assign_file TO EDGE UserTag VALUES ($"user_id", $"tag_id", 2, "False", "False", "False", $"timestamp") USING header="true", separator=",";
+    LOAD assign_file TO EDGE TagItem VALUES ($"tag_id", $"artist_id", 2, "False", "False", "False", $"timestamp") USING header="true", separator=",";
+}
+END
+
+RUN LOADING JOB load_lastfm_hetrec
+

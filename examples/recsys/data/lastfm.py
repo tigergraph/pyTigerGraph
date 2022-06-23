@@ -22,9 +22,6 @@ def add_complementary_edges(data: Data):
                                 num_test=0,
                                 neg_sampling_ratio=0)
     rand_data, _, _ = transform(data)
-    # transform = ToUndirected()
-    # rand_data = transform(data)
-    # iprint(rand_data)
     return rand_data
 
 
@@ -120,10 +117,27 @@ class LastFMDataset(Dataset):
     Dataset object containing the user-item supervision/evaluation edges
     to calculate loss or evaluation metrics
     """
-
     def __init__(self, root, edge_index, transform=None, pre_transform=None):
         self.edge_index = edge_index
         # customers will all be in row 0, b/c sorted by RandLinkSplit
+        self.unique_idxs = torch.unique(edge_index[0, :]).tolist()
+        self.num_nodes = len(self.unique_idxs)
+        super().__init__(root, transform, pre_transform)
+
+    def len(self):
+        return self.num_nodes
+
+    def get(self, idx):  # returns all outgoing edges associated with customer idx
+        edge_index = self.edge_index[:, self.edge_index[0, :] == idx]
+        return PlainData(edge_index=edge_index)
+
+class LastFMHetRecDataset(Dataset):
+    """
+    LastFM-HetRec Dataset object with edge types
+    """
+    def __init__(self, root, edge_index, edge_type, transform=None, pre_transform=None):
+        self.edge_index = edge_index
+        self.edge_type = edge_type
         self.unique_idxs = torch.unique(edge_index[0, :]).tolist()
         self.num_nodes = len(self.unique_idxs)
         super().__init__(root, transform, pre_transform)
