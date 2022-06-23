@@ -5,7 +5,7 @@ channels:
   - dglteam  
   - conda-forge
 dependencies:
-  - python=3.9
+  - python=3.7
   - pip
   - pytorch=1.11.0
   - cpuonly
