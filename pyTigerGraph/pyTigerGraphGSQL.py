@@ -134,7 +134,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             Status of the installation.
         """
         if ExprFunctions:
-            with open(ExprFunctions) as infile:
+            with open(ExprFunctions) as infile:     
                 res = self._req("PUT", 
                     url="{}/gsqlserver/gsql/userdefinedfunction?filename=ExprFunctions".format(self.gsUrl),
                     authMode='pwd',

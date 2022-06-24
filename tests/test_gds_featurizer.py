@@ -12,7 +12,10 @@ from pyTigerGraph.gds.utilities import random_string
 class test_Featurizer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        conn = TigerGraphConnection(host="http://34.232.63.121", graphname="BankSim")
+        conn = TigerGraphConnection(host="http://localhost", 
+                                username="tigergraph", 
+                                password="tigergraph", 
+                                graphname="Cora")
         cls.featurizer = Featurizer(conn)
 
     def test_is_query_installed(self):
@@ -39,7 +42,7 @@ class test_Featurizer(unittest.TestCase):
 
     def test01_add_attribute(self):
         try:
-            tasks = "ALTER VERTEX Payer DROP ATTRIBUTE (attr1);"
+            tasks = "ALTER VERTEX Paper DROP ATTRIBUTE (attr1);"
             job_name = "drop_{}_attr_{}".format("VERTEX",random_string(6)) 
             job = "USE GRAPH {}\n".format(self.featurizer.conn.graphname) + "CREATE GLOBAL SCHEMA_CHANGE JOB {} {{\n".format(
                 job_name) + ''.join(tasks) + "}}\nRUN GLOBAL SCHEMA_CHANGE JOB {}".format(job_name)
@@ -56,7 +59,7 @@ class test_Featurizer(unittest.TestCase):
 
     def test02_add_attribute(self):
         try:
-            tasks = "ALTER Edge Trans DROP ATTRIBUTE (attr2);"
+            tasks = "ALTER Edge Cite DROP ATTRIBUTE (attr2);"
             job_name = "drop_{}_attr_{}".format("EDGE",random_string(6)) 
             job = "USE GRAPH {}\n".format(self.featurizer.conn.graphname) + "CREATE GLOBAL SCHEMA_CHANGE JOB {} {{\n".format(
                 job_name) + ''.join(tasks) + "}}\nRUN GLOBAL SCHEMA_CHANGE JOB {}".format(job_name)
@@ -81,7 +84,7 @@ class test_Featurizer(unittest.TestCase):
     
     def test05_add_attribute(self):
         try:
-            tasks = "ALTER VERTEX Payer DROP ATTRIBUTE (attr4);"
+            tasks = "ALTER VERTEX Paper DROP ATTRIBUTE (attr4);"
             job_name = "drop_{}_attr_{}".format("VERTEX",random_string(6)) 
             job = "USE GRAPH {}\n".format(self.featurizer.conn.graphname) + "CREATE GLOBAL SCHEMA_CHANGE JOB {} {{\n".format(
                 job_name) + ''.join(tasks) + "}}\nRUN GLOBAL SCHEMA_CHANGE JOB {}".format(job_name)
@@ -105,7 +108,7 @@ class test_Featurizer(unittest.TestCase):
  
     def test01_runAlgorithm(self):
         try:
-            tasks = "ALTER VERTEX Payer DROP ATTRIBUTE (pagerank);"
+            tasks = "ALTER VERTEX Paper DROP ATTRIBUTE (pagerank);"
             job_name = "drop_{}_attr_{}".format("VERTEX",random_string(6)) 
             job = "USE GRAPH {}\n".format(self.featurizer.conn.graphname) + "CREATE GLOBAL SCHEMA_CHANGE JOB {} {{\n".format(
                 job_name) + ''.join(tasks) + "}}\nRUN GLOBAL SCHEMA_CHANGE JOB {}".format(job_name)
@@ -118,8 +121,8 @@ class test_Featurizer(unittest.TestCase):
                 pass
         except:
             pass
-        params = {'v_type': 'Payer',
-            'e_type': 'Trans',
+        params = {'v_type': 'Paper',
+            'e_type': 'Cite',
             'max_change': 0.001,
             'max_iter': 25,
             'damping': 0.85,
@@ -137,20 +140,20 @@ class test_Featurizer(unittest.TestCase):
             self.featurizer.runAlgorithm("tg_pagerank",timeout=2147480)
 
     def test03_runAlgorithm(self):
-        params = {'v_type': 'Payer', 'e_type': ['Trans','reverse_Trans'], 'weights': '1,1,2', 'beta': -0.85, 'k': 3, 'reduced_dim': 128, 
+        params = {'v_type': 'Paper', 'e_type': ['Cite','reverse_Cite'], 'weights': '1,1,2', 'beta': -0.85, 'k': 3, 'reduced_dim': 128, 
           'sampling_constant': 1, 'random_seed': 42, 'print_accum': False,'result_attr':"",'file_path' :""}
         with self.assertRaises(Exception):
             self.featurizer.runAlgorithm("tg_fastRP",params=params,feat_name="fastrp_embedding",timeout=1)
 
     def test04_runAlgorithm(self):
-        params = {'v_type': 'Payer', 'e_type': ['Trans','reverse_Trans'], 'weights': '1,1,2', 'beta': -0.85, 'k': 3, 'reduced_dim': 128, 
+        params = {'v_type': 'Paper', 'e_type': ['Cite','reverse_Cite'], 'weights': '1,1,2', 'beta': -0.85, 'k': 3, 'reduced_dim': 128, 
           'sampling_constant': 1, 'random_seed': 42, 'print_accum': False,'result_attr':"",'file_path' :""}
         with self.assertRaises(Exception):
             self.featurizer.runAlgorithm("tg_fastRP",params=params,feat_name="fastrp_embedding",sizeLimit=1)
     
     def test05_runAlgorithm(self):
-        params = {'v_type': 'Payer',
-            'e_type': 'Trans',
+        params = {'v_type': 'Paper',
+            'e_type': 'Cite',
             'max_change': 0.001,
             'max_iter': 25,
             'damping': 0.85,

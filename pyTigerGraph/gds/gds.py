@@ -36,6 +36,7 @@ from .dataloaders import EdgeLoader, GraphLoader, NeighborLoader, VertexLoader
 from .featurizer import Featurizer
 from .splitters import RandomEdgeSplitter, RandomVertexSplitter
 # from ..pyTigerGraph import pyTigerGraphGSQL
+from pyTigerGraph.pyTigerGraphGSQL import pyTigerGraphGSQL
 
 
 class GDS:
