@@ -200,7 +200,7 @@ class pyTigerGraphBase(object):
             _auth = None
         if headers:
             _headers.update(headers)
-        if method == "POST":
+        if method == "POST" or method == "PUT":
             _data = data
         else:
             _data = None
