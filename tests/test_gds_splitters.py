@@ -70,6 +70,12 @@ class TestGDSRandomVertexSplit(unittest.TestCase):
         self.assertAlmostEqual(p2_count / num_vertices, 0.2, delta=0.05)
         self.assertAlmostEqual(p3_count / num_vertices, 0.7, delta=0.05)
 
+    def test_v_types(self):
+        splitter = self.conn.gds.vertexSplitter(v_types=["Paper2"],train_mask=0.3)
+        splitter.run()
+        num_vertices = self.conn.getVertexCount("Paper2")
+        p1_count = self.conn.getVertexCount("Paper2", where="train_mask!=0")
+        self.assertAlmostEqual(p1_count / num_vertices, 0.3, delta=0.05)
 
 def get_edge_count(conn: TigerGraphConnection, attribute: str):
     gsql = """
@@ -157,6 +163,13 @@ class TestGDSRandomEdgeSplit(unittest.TestCase):
         self.assertAlmostEqual(p1_count / num_edges, 0.1, delta=0.05)
         self.assertAlmostEqual(p2_count / num_edges, 0.2, delta=0.05)
         self.assertAlmostEqual(p3_count / num_edges, 0.7, delta=0.05)
+
+    def test_e_types(self):
+        splitter = self.conn.gds.edgeSplitter(e_types=["Cite2"],train_mask=0.3)
+        splitter.run()
+        num_vertices = self.conn.getEdgeCount("Cite2")
+        p1_count = get_edge_count(self.conn, "train_mask")
+        self.assertAlmostEqual(p1_count / num_vertices, 0.3, delta=0.05)
 
 
 if __name__ == "__main__":

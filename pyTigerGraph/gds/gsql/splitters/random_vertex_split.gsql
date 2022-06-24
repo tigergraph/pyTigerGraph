@@ -4,7 +4,8 @@ CREATE QUERY random_vertex_split(
   STRING attr2, 
   DOUBLE ratio2=0, 
   STRING attr3, 
-  DOUBLE ratio3=0
+  DOUBLE ratio3=0,
+  SET<STRING> stypes
 ) SYNTAX V2 { 
   /*
     This query splits vertices into at most 3 parts randomly. It does so by using a boolean attribute to
@@ -31,8 +32,9 @@ CREATE QUERY random_vertex_split(
       ratio1 : Proportion of vertices in part 2.
       attr1  : Name of the vertex attribute for part 3. It will be set to True if the vertex is assigned to this part.
       ratio1 : Proportion of vertices in part 3.
+      stypes : Vertex types to be included
     */
-  source = {Any};
+  source = {stypes};
 
   res =
     SELECT s 

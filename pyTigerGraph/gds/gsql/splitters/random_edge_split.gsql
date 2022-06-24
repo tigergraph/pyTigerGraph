@@ -4,8 +4,9 @@ CREATE QUERY random_edge_split(
   STRING attr2, 
   DOUBLE ratio2=0, 
   STRING attr3, 
-  DOUBLE ratio3=0
-) SYNTAX V2 { 
+  DOUBLE ratio3=0,
+  SET<STRING> stypes
+) SYNTAX V1 { 
   /*
     This query splits vertices into at most 3 parts randomly. It does so by using a boolean attribute to
     indicate which part a vertex belongs to.
@@ -31,12 +32,13 @@ CREATE QUERY random_edge_split(
       ratio1 : Proportion of vertices in part 2.
       attr1  : Name of the vertex attribute for part 3. It will be set to True if the vertex is assigned to this part.
       ratio1 : Proportion of vertices in part 3.
+      stypes : Edge types to be included.
     */
   source = {Any};
 
   res =
     SELECT s 
-    FROM source:s -((_>|_):e)- :t
+    FROM source:s -(stypes:e)- :t
     ACCUM
       e.setAttr(attr1,FALSE),
       IF attr2 IS NOT NULL THEN
@@ -48,7 +50,7 @@ CREATE QUERY random_edge_split(
   
   res =
     SELECT s 
-    FROM source:s -((_>|_):e)- :t
+    FROM source:s -(stypes:e)- :t
     ACCUM
       DOUBLE random_value = rand(),
       IF random_value < ratio1 THEN 

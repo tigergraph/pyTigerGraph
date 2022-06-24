@@ -9,16 +9,17 @@ class pyTigerGraphUnitTest(unittest.TestCase):
 
     def setUp(self):
         params = {
-            "host": "http://127.0.0.1",
+            "host": "http://3.144.132.94",
             "graphname": "tests",
             "username": "tigergraph",
             "password": "tigergraph",
             "restppPort": "9000",
             "gsPort": "14240",
             "gsqlVersion": "",
-            "userCert": True,
+            "userCert": False,
             "certPath": None,
             "sslPort": "443",
+            "tgCloud": False,
             "gcp": False
         }
 
@@ -42,7 +43,7 @@ class pyTigerGraphUnitTest(unittest.TestCase):
                 print(e.strerror)
 
         self.conn = pyTG.TigerGraphConnection(host=params["host"], graphname=params["graphname"],
-            username=params["username"], password=params["password"],
+            username=params["username"], password=params["password"], tgCloud=params["tgCloud"],
             restppPort=params["restppPort"], gsPort=params["gsPort"],
             gsqlVersion=params["gsqlVersion"], useCert=params["userCert"],
             certPath=params["certPath"], sslPort=params["sslPort"], gcp=params["gcp"])
