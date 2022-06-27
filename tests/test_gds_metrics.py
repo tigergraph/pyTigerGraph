@@ -1,7 +1,7 @@
 import unittest
 
 import numpy as np
-from pyTigerGraph.gds.metrics import Accumulator, Accuracy, Precision, Recall
+from pyTigerGraph.gds.metrics import Accumulator, Accuracy, BinaryPrecision, BinaryRecall
 
 
 class TestGDSAccumulator(unittest.TestCase):
@@ -44,11 +44,11 @@ class TestGDSAccuracy(unittest.TestCase):
 
 class TestGDSRecall(unittest.TestCase):
     def test_init(self):
-        measure = Recall()
+        measure = BinaryRecall()
         self.assertIsNone(measure.value)
 
     def test_update(self):
-        measure = Recall()
+        measure = BinaryRecall()
         preds = np.array([1, 1])
         truth = np.array([1, 0])
         measure.update(preds, truth)
@@ -61,11 +61,11 @@ class TestGDSRecall(unittest.TestCase):
 
 class TestGDSPrecision(unittest.TestCase):
     def test_init(self):
-        measure = Precision()
+        measure = BinaryPrecision()
         self.assertIsNone(measure.value)
 
     def test_update(self):
-        measure = Precision()
+        measure = BinaryPrecision()
         preds = np.array([1, 1])
         truth = np.array([1, 0])
         measure.update(preds, truth)

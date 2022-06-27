@@ -1,10 +1,12 @@
+import os
 import unittest
 
 from pyTigerGraph import TigerGraphConnection
+from pyTigerGraph.gds.featurizer import Featurizer
+from pyTigerGraph.gds.utilities import is_query_installed
+
 from pyTigerGraphUnitTest import pyTigerGraphUnitTest
-from pyTigerGraph.gds import featurizer
-from pyTigerGraph.gds.featurizer import Featurizer 
-import os
+
 
 class test_pyTigerGraphGSQL(pyTigerGraphUnitTest):
     # conn = None
@@ -20,21 +22,41 @@ class test_pyTigerGraphGSQL(pyTigerGraphUnitTest):
         self.assertIsInstance(res, str)
         res = res.split("\n")
         self.assertEqual("---- Graph " + self.conn.graphname, res[0])
-    
+
     def test_01_installUDF(self):
-        conn = TigerGraphConnection(host="http://localhost", 
-                                username="tigergraph", 
-                                password="tigergraph", 
-                                graphname="Cora")
-    
+        conn = TigerGraphConnection(
+            host="http://localhost",
+            username="tigergraph",
+            password="tigergraph",
+            graphname="Cora")
+
         path = os.path.dirname(os.path.realpath(__file__))
-        ExprFunctions = os.path.join(path,"ExprFunctions.hpp")
-        ExprUtil = os.path.join(path,"ExprUtil.hpp")
-        conn.installUDF(ExprFunctions,ExprUtil)
+        ExprFunctions = os.path.join(path, "fixtures", "ExprFunctions.hpp")
+        ExprUtil = os.path.join(path, "fixtures", "ExprUtil.hpp")
+        conn.installUDF(ExprFunctions, ExprUtil)
         f = Featurizer(conn)
-        self.assertEqual(f.installAlgorithm("tg_fastRP"),"tg_fastRP")
+        self.assertEqual(f.installAlgorithm("tg_fastRP"), "tg_fastRP")
+
+    def test_04_installUDFRemote(self):
+        conn = TigerGraphConnection(
+            host="http://localhost",
+            username="tigergraph",
+            password="tigergraph",
+            graphname="Cora"
+        )
+
+        ExprFunctions = "https://tg-mlworkbench.s3.us-west-1.amazonaws.com/udf/1.0/ExprFunctions.hpp"
+        conn.installUDF(ExprFunctions=ExprFunctions)
+        loader = conn.gds.vertexLoader(
+            attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
+            batch_size=16,
+            shuffle=True,
+            filter_by="train_mask",
+            loader_id=None,
+            buffer_size=4,
+        )
+        self.assertTrue(is_query_installed(conn, loader.query_name))
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
