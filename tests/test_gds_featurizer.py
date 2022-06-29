@@ -55,7 +55,7 @@ class test_Featurizer(unittest.TestCase):
                 pass
         except:
             pass
-        self.assertEqual( self.featurizer._add_attribute("VERTEX","FLOAT","attr1"),'Global schema change succeeded.')
+        self.assertEqual( self.featurizer._add_attribute("VERTEX","FLOAT","attr1", global_change=True),'Schema change succeeded.')
 
     def test02_add_attribute(self):
         try:
@@ -72,10 +72,10 @@ class test_Featurizer(unittest.TestCase):
                 pass
         except:
             pass
-        self.assertEqual(self.featurizer._add_attribute("Edge","BOOL","attr2"),'Global schema change succeeded.')
+        self.assertEqual(self.featurizer._add_attribute("Edge","BOOL","attr2", global_change=True),'Schema change succeeded.')
     
     def test03_add_attribute(self):
-        self.assertEqual(self.featurizer._add_attribute("Vertex","BOOL","attr1"),'Attribute already exists')
+        self.assertEqual(self.featurizer._add_attribute("Vertex","BOOL","attr1", global_change=True),'Attribute already exists')
 
     def test04_add_attribute(self):
         with self.assertRaises(Exception) as context:
@@ -97,7 +97,7 @@ class test_Featurizer(unittest.TestCase):
                 pass
         except:
             pass
-        self.assertEqual(self.featurizer._add_attribute("VERTEX","BOOL","attr4",['Customer']),'Global schema change succeeded.')
+        self.assertEqual(self.featurizer._add_attribute("VERTEX","BOOL","attr4",['Paper2'], global_change=True),'Schema change succeeded.')
 
     def test01_installAlgorithm(self):
        self.assertEqual(self.featurizer.installAlgorithm("tg_pagerank").strip(),"tg_pagerank")
@@ -132,7 +132,7 @@ class test_Featurizer(unittest.TestCase):
             'file_path': '',
             'display_edges': True}
         message = "Test value is not none."
-        self.assertIsNotNone(self.featurizer.runAlgorithm("tg_pagerank",params=params,feat_name="pagerank",timeout=2147480),message)
+        self.assertIsNotNone(self.featurizer.runAlgorithm("tg_pagerank",params=params,feat_name="pagerank",timeout=2147480, global_schema=True),message)
 
     
     def test02_runAlgorithm(self):
@@ -143,13 +143,13 @@ class test_Featurizer(unittest.TestCase):
         params = {'v_type': 'Paper', 'e_type': ['Cite','reverse_Cite'], 'weights': '1,1,2', 'beta': -0.85, 'k': 3, 'reduced_dim': 128, 
           'sampling_constant': 1, 'random_seed': 42, 'print_accum': False,'result_attr':"",'file_path' :""}
         with self.assertRaises(Exception):
-            self.featurizer.runAlgorithm("tg_fastRP",params=params,feat_name="fastrp_embedding",timeout=1)
+            self.featurizer.runAlgorithm("tg_fastRP",params=params,feat_name="fastrp_embedding",timeout=1, global_schema=True)
 
     def test04_runAlgorithm(self):
         params = {'v_type': 'Paper', 'e_type': ['Cite','reverse_Cite'], 'weights': '1,1,2', 'beta': -0.85, 'k': 3, 'reduced_dim': 128, 
           'sampling_constant': 1, 'random_seed': 42, 'print_accum': False,'result_attr':"",'file_path' :""}
         with self.assertRaises(Exception):
-            self.featurizer.runAlgorithm("tg_fastRP",params=params,feat_name="fastrp_embedding",sizeLimit=1)
+            self.featurizer.runAlgorithm("tg_fastRP",params=params,feat_name="fastrp_embedding",sizeLimit=1, global_schema=True)
     
     def test05_runAlgorithm(self):
         params = {'v_type': 'Paper',
@@ -162,7 +162,7 @@ class test_Featurizer(unittest.TestCase):
             'file_path': '',
             'display_edges': True}
         message = "Test value is not none."
-        self.assertIsNotNone(self.featurizer.runAlgorithm("tg_pagerank",params=params,timeout=2147480),message)
+        self.assertIsNotNone(self.featurizer.runAlgorithm("tg_pagerank",params=params,timeout=2147480, global_schema=True),message)
 
     
 
