@@ -140,11 +140,7 @@ class test_Featurizer(unittest.TestCase):
         params = {'v_type': 'Paper2', 'e_type': ['Cite2'], 'weights': '1,1,2', 'beta': -0.85, 'k': 3, 'reduced_dim': 128,
           'sampling_constant': 1, 'random_seed': 42, 'print_accum': False,'result_attr':"",'file_path' :""}
         with self.assertRaises(Exception):
-<<<<<<< HEAD
-            self.featurizer.runAlgorithm("tg_fastRP",params=params,feat_name="fastrp_embedding",timeout=1, global_schema=True)
-=======
-            self.featurizer.runAlgorithm("tg_fastRP",params=params,feat_name="fastrp_embedding",timeout=1, global_change=True)
->>>>>>> b87d8ffc4ad91a9f27467515780291beaf7074f9
+            self.featurizer.runAlgorithm("tg_fastRP",params=params,feat_name="fastrp_embedding",timeout=1,global_schema=True)
 
     def test04_runAlgorithm(self):
         params = {'v_type': 'Paper2', 'e_type': ['Cite2'], 'weights': '1,1,2', 'beta': -0.85, 'k': 3, 'reduced_dim': 128, 
