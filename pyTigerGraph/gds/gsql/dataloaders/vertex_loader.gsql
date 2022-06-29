@@ -1,10 +1,16 @@
-CREATE QUERY vertex_kloader_{QUERYSUFFIX}(
+CREATE QUERY vertex_loader_{QUERYSUFFIX}(
     SET<VERTEX> input_vertices,
     INT num_batches=1, 
     BOOL shuffle=FALSE,
     STRING filter_by,
+    SET<STRING> v_types,
     STRING kafka_address,
-    STRING kafka_topic
+    STRING kafka_topic,
+    STRING security_protocol,
+    STRING sasl_mechanism,
+    STRING sasl_username,
+    STRING sasl_password,
+    STRING ssl_ca_location
 ) SYNTAX V2 {
     /*
     This query generates batches of vertices. If `input_vertices` is given, it will generate 
@@ -17,15 +23,21 @@ CREATE QUERY vertex_kloader_{QUERYSUFFIX}(
       shuffle        : Whether to shuffle vertices before collecting data.
       filter_by      : A Boolean attribute to determine which vertices are included.
                        Only effective when `input_vertices` is NULL.
+      v_types        : Vertex types to be included.
       kafka_address  : Address of the Kafka cluster to send data to.
-      kafka_topic    : The kafka topic to send data to.
+      kafka_topic    : The Kafka topic to send data to.
+      security_protocol : Security prototol for Kafka.
+      sasl_mechanism : Authentication mechanism for Kafka.
+      sasl_username  : SASL username for Kafka. 
+      sasl_password  : SASL password for Kafka. 
+      ssl_ca_location: Path to CA certificate for verifying the Kafka broker key.
     */
     INT num_vertices;
     SumAccum<INT> @tmp_id;
     SumAccum<STRING> @@kafka_error;
 
     # Shuffle vertex ID if needed
-    start = {ANY};
+    start = {v_types};
     IF shuffle THEN
         num_vertices = start.size();
         res = SELECT s 
@@ -41,28 +53,45 @@ CREATE QUERY vertex_kloader_{QUERYSUFFIX}(
     FOREACH batch_id IN RANGE[0, num_batches-1] DO
         SumAccum<STRING> @@v_batch;
         IF input_vertices.size()==0 THEN
-            start = {ANY};
+            start = {v_types};
             IF filter_by IS NOT NULL THEN
                 seeds = SELECT s 
                         FROM start:s 
                         WHERE s.getAttr(filter_by, "BOOL") and s.@tmp_id % num_batches == batch_id
-                        POST-ACCUM @@v_batch += (int_to_string(getvid(s)) + "," + {VERTEXATTRS} + "\n");
+                        POST-ACCUM 
+                            {VERTEXATTRS};
             ELSE
                 seeds = SELECT s 
                         FROM start:s 
                         WHERE s.@tmp_id % num_batches == batch_id
-                        POST-ACCUM @@v_batch += (int_to_string(getvid(s)) + "," + {VERTEXATTRS} + "\n");
+                        POST-ACCUM 
+                            {VERTEXATTRS};
             END;
         ELSE
             start = input_vertices;
             seeds = SELECT s 
                     FROM start:s 
-                    POST-ACCUM @@v_batch += (int_to_string(getvid(s)) + "," + {VERTEXATTRS} + "\n");
+                    POST-ACCUM 
+                        {VERTEXATTRS};
         END;
-        # Export batch
-        IF write_to_kafka(kafka_address, kafka_topic, "vertex_batch_" + int_to_string(batch_id), @@v_batch)!=0 THEN
-            @@kafka_error += ("Failed sending vertex batch " + int_to_string(batch_id) + "\n");
+        
+        IF kafka_address IS NOT NULL THEN
+            # Write to kafka
+            IF security_protocol IS NOT NULL THEN
+                IF write_to_kafka(kafka_address, kafka_topic, "vertex_batch_" + int_to_string(batch_id), @@v_batch, security_protocol, sasl_mechanism, sasl_username, sasl_password, ssl_ca_location)!=0 THEN
+                    @@kafka_error += ("Failed sending vertex batch " + int_to_string(batch_id) + "\n");
+                END;
+            ELSE 
+                IF write_to_kafka(kafka_address, kafka_topic, "vertex_batch_" + int_to_string(batch_id), @@v_batch, "", "", "", "", "")!=0 THEN
+                    @@kafka_error += ("Failed sending vertex batch " + int_to_string(batch_id) + "\n");
+                END;
+            END;
+        ELSE
+            # Add to response
+            PRINT @@v_batch AS vertex_batch;  
         END;
+    END;
+    IF kafka_address IS NOT NULL THEN
         PRINT @@kafka_error as kafkaError;
     END;
 }
