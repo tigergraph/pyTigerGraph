@@ -137,7 +137,7 @@ class test_Featurizer(unittest.TestCase):
             self.featurizer.runAlgorithm("tg_pagerank",timeout=2147480)
 
     def test03_runAlgorithm(self):
-        params = {'v_type': 'Paper2', 'e_type': ['Cite2'], 'weights': '1,1,2', 'beta': -0.85, 'k': 3, 'reduced_dim': 128, 
+        params = {'v_type': 'Paper2', 'e_type': ['Cite2'], 'weights': '1,1,2', 'beta': -0.85, 'k': 3, 'reduced_dim': 128,
           'sampling_constant': 1, 'random_seed': 42, 'print_accum': False,'result_attr':"",'file_path' :""}
         with self.assertRaises(Exception):
             self.featurizer.runAlgorithm("tg_fastRP",params=params,feat_name="fastrp_embedding",timeout=1, global_change=True)

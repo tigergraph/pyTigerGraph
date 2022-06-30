@@ -36,10 +36,12 @@ from .dataloaders import (EdgeLoader, EdgeNeighborLoader, GraphLoader,
                           NeighborLoader, VertexLoader)
 from .featurizer import Featurizer
 from .splitters import RandomEdgeSplitter, RandomVertexSplitter
+# from ..pyTigerGraph import pyTigerGraphGSQL
+from pyTigerGraph.pyTigerGraphGSQL import pyTigerGraphGSQL
 
 
 class GDS:
-    def __init__(self, conn: "TigerGraphConnection") -> None:
+    def __init__(self, conn: "TigerGraphConnection") -> None: 
         """NO DOC: Initiate a GDS object.
             Args:
                 conn (TigerGraphConnection):
@@ -49,6 +51,80 @@ class GDS:
                 None
         """
         self.conn = conn
+        self.kafkaConfig = None
+
+    def configureKafka(self,
+        kafka_address: str = None,
+        kafka_max_msg_size: int = 104857600,
+        kafka_num_partitions: int = 1,
+        kafka_replica_factor: int = 1,
+        kafka_retention_ms: int = 60000,
+        kafka_auto_del_topic: bool = True,
+        kafka_address_consumer: str = None,
+        kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None
+    ) -> None:
+        """Configure the Kafka connection. Will override any configuration that is defined in factory functions.
+        Args:
+            kafka_address (str, optional):
+                Address of the Kafka broker. Defaults to None.
+            kafka_max_msg_size (int, optional):
+                Maximum size of a Kafka message in bytes.
+                Defaults to 104857600.
+            kafka_num_partitions (int, optional):
+                Number of partitions for the topic created by this loader.
+                Defaults to 1.
+            kafka_replica_factor (int, optional):
+                Number of replications for the topic created by this
+                loader. Defaults to 1.
+            kafka_retention_ms (int, optional):
+                Retention time for messages in the topic created by this
+                loader in milliseconds. Defaults to 60000.
+            kafka_auto_del_topic (bool, optional):
+                Whether to delete the Kafka topic once the
+                loader finishes pulling data. Defaults to True.
+            kafka_address_consumer (str, optional):
+                Address of the Kafka broker that a consumer
+                should use. Defaults to be the same as `kafkaAddress`.
+            kafka_address_producer (str, optional):
+                Address of the Kafka broker that a producer
+                should use. Defaults to be the same as `kafkaAddress`.
+            kafka_security_protocol (str, optional):
+                Security prototol for Kafka. Defaults to None.
+            kafka_sasl_mechanism (str, optional):
+                Authentication mechanism for Kafka. Defaults to None.
+            kafka_sasl_plain_username (str, optional):
+                SASL username for Kafka. Defaults to None.
+            kafka_sasl_plain_password (str, optional):
+                SASL password for Kafka. Defaults to None.
+            kafka_producer_ca_location (str, optional):
+                Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
+            kafka_consumer_ca_location (str, optional):
+                Path to CA certificate on client machine for verifying the broker's key. 
+        """
+        self.kafkaConfig = {
+            "kafka_address": kafka_address,
+            "kafka_max_msg_size": kafka_max_msg_size,
+            "kafka_num_partitions": kafka_num_partitions,
+            "kafka_replica_factor": kafka_replica_factor,
+            "kafka_retention_ms": kafka_retention_ms,
+            "kafka_auto_del_topic": kafka_auto_del_topic,
+            "kafka_address_consumer": kafka_address_consumer,
+            "kafka_address_producer": kafka_address_producer,
+            "kafka_security_protocol": kafka_security_protocol,
+            "kafka_sasl_mechanism": kafka_sasl_mechanism,
+            "kafka_sasl_plain_username": kafka_sasl_plain_username,
+            "kafka_sasl_plain_password": kafka_sasl_plain_password,
+            "kafka_producer_ca_location": kafka_producer_ca_location,
+            "kafka_consumer_ca_location": kafka_consumer_ca_location
+        }
+
+
 
     def neighborLoader(
         self,
@@ -76,6 +152,12 @@ class GDS:
         kafka_auto_del_topic: bool = True,
         kafka_address_consumer: str = None,
         kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
         timeout: int = 300000,
     ) -> NeighborLoader:
         """Returns a `NeighborLoader` instance.
@@ -189,7 +271,7 @@ class GDS:
             buffer_size (int, optional):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
             kafka_address (str, optional):
-                Address of the kafka broker. Defaults to None.
+                Address of the Kafka broker. Defaults to None.
             kafka_max_msg_size (int, optional):
                 Maximum size of a Kafka message in bytes.
                 Defaults to 104857600.
@@ -206,42 +288,66 @@ class GDS:
                 Whether to delete the Kafka topic once the
                 loader finishes pulling data. Defaults to True.
             kafka_address_consumer (str, optional):
-                Address of the kafka broker that a consumer
+                Address of the Kafka broker that a consumer
                 should use. Defaults to be the same as `kafkaAddress`.
             kafka_address_producer (str, optional):
-                Address of the kafka broker that a producer
+                Address of the Kafka broker that a producer
                 should use. Defaults to be the same as `kafkaAddress`.
+            kafka_security_protocol (str, optional):
+                Security prototol for Kafka. Defaults to None.
+            kafka_sasl_mechanism (str, optional):
+                Authentication mechanism for Kafka. Defaults to None.
+            kafka_sasl_plain_username (str, optional):
+                SASL username for Kafka. Defaults to None.
+            kafka_sasl_plain_password (str, optional):
+                SASL password for Kafka. Defaults to None.
+            kafka_producer_ca_location (str, optional):
+                Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
+            kafka_consumer_ca_location (str, optional):
+                Path to CA certificate on client machine for verifying the broker's key. 
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
         """
-        return NeighborLoader(
-            self.conn,
-            v_in_feats,
-            v_out_labels,
-            v_extra_feats,
-            e_in_feats,
-            e_out_labels,
-            e_extra_feats,
-            batch_size,
-            num_batches,
-            num_neighbors,
-            num_hops,
-            shuffle,
-            filter_by,
-            output_format,
-            add_self_loop,
-            loader_id,
-            buffer_size,
-            kafka_address,
-            kafka_max_msg_size,
-            kafka_num_partitions,
-            kafka_replica_factor,
-            kafka_retention_ms,
-            kafka_auto_del_topic,
-            kafka_address_consumer,
-            kafka_address_producer,
-            timeout,
-        )
+        params = {
+            "graph": self.conn,
+            "v_in_feats": v_in_feats,
+            "v_out_labels": v_out_labels,
+            "v_extra_feats": v_extra_feats,
+            "e_in_feats": e_in_feats,
+            "e_out_labels": e_out_labels,
+            "e_extra_feats": e_extra_feats,
+            "batch_size": batch_size,
+            "num_batches": num_batches,
+            "num_neighbors": num_neighbors,
+            "num_hops": num_hops,
+            "shuffle": shuffle,
+            "filter_by": filter_by,
+            "output_format": output_format,
+            "add_self_loop": add_self_loop,
+            "loader_id": loader_id,
+            "buffer_size": buffer_size,
+            "kafka_address": kafka_address,
+            "kafka_max_msg_size": kafka_max_msg_size,
+            "kafka_num_partitions": kafka_num_partitions,
+            "kafka_replica_factor": kafka_replica_factor,
+            "kafka_retention_ms": kafka_retention_ms,
+            "kafka_auto_del_topic": kafka_auto_del_topic,
+            "kafka_address_consumer": kafka_address_consumer,
+            "kafka_address_producer": kafka_address_producer,
+            "kafka_security_protocol": kafka_security_protocol,
+            "kafka_sasl_mechanism": kafka_sasl_mechanism,
+            "kafka_sasl_plain_username": kafka_sasl_plain_username,
+            "kafka_sasl_plain_password": kafka_sasl_plain_password,
+            "kafka_producer_ca_location": kafka_producer_ca_location,
+            "kafka_consumer_ca_location": kafka_consumer_ca_location,
+            "timeout": timeout
+        }
+
+        if self.kafkaConfig:
+            params.update(self.kafkaConfig)
+            return NeighborLoader(**params)
+        else:
+            return NeighborLoader(**params)
 
     def edgeLoader(
         self,
@@ -261,6 +367,12 @@ class GDS:
         kafka_auto_del_topic: bool = True,
         kafka_address_consumer: str = None,
         kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
         timeout: int = 300000,
     ) -> EdgeLoader:
         """Returns an `EdgeLoader` instance. 
@@ -319,7 +431,7 @@ class GDS:
             buffer_size (int, optional):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
             kafka_address (str, optional):
-                Address of the kafka broker. Defaults to None.
+                Address of the Kafka broker. Defaults to None.
             kafka_max_msg_size (int, optional):
                 Maximum size of a Kafka message in bytes.
                 Defaults to 104857600.
@@ -336,37 +448,60 @@ class GDS:
                 Whether to delete the Kafka topic once the
                 loader finishes pulling data. Defaults to True.
             kafka_address_consumer (str, optional):
-                Address of the kafka broker that a consumer
+                Address of the Kafka broker that a consumer
                 should use. Defaults to be the same as `kafkaAddress`.
             kafka_address_producer (str, optional):
-                Address of the kafka broker that a producer
+                Address of the Kafka broker that a producer
                 should use. Defaults to be the same as `kafkaAddress`.
+            kafka_security_protocol (str, optional):
+                Security prototol for Kafka. Defaults to None.
+            kafka_sasl_mechanism (str, optional):
+                Authentication mechanism for Kafka. Defaults to None.
+            kafka_sasl_plain_username (str, optional):
+                SASL username for Kafka. Defaults to None.
+            kafka_sasl_plain_password (str, optional):
+                SASL password for Kafka. Defaults to None.
+            kafka_producer_ca_location (str, optional):
+                Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
+            kafka_consumer_ca_location (str, optional):
+                Path to CA certificate on client machine for verifying the broker's key. 
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
 
         See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_edgeloader.ipynb[the ML Workbench edge loader tutorial notebook]
         for examples.
         """
-        return EdgeLoader(
-            self.conn,
-            attributes,
-            batch_size,
-            num_batches,
-            shuffle,
-            filter_by,
-            output_format,
-            loader_id,
-            buffer_size,
-            kafka_address,
-            kafka_max_msg_size,
-            kafka_num_partitions,
-            kafka_replica_factor,
-            kafka_retention_ms,
-            kafka_auto_del_topic,
-            kafka_address_consumer,
-            kafka_address_producer,
-            timeout,
-        )
+        params = {
+            "graph": self.conn,
+            "attributes": attributes,
+            "batch_size": batch_size,
+            "num_batches": num_batches,
+            "shuffle": shuffle,
+            "filter_by": filter_by,
+            "output_format": output_format,
+            "loader_id": loader_id,
+            "buffer_size": buffer_size,
+            "kafka_address": kafka_address,
+            "kafka_max_msg_size": kafka_max_msg_size,
+            "kafka_num_partitions": kafka_num_partitions,
+            "kafka_replica_factor": kafka_replica_factor,
+            "kafka_retention_ms": kafka_retention_ms,
+            "kafka_auto_del_topic": kafka_auto_del_topic,
+            "kafka_address_consumer": kafka_address_consumer,
+            "kafka_address_producer": kafka_address_producer,
+            "kafka_security_protocol": kafka_security_protocol,
+            "kafka_sasl_mechanism": kafka_sasl_mechanism,
+            "kafka_sasl_plain_username": kafka_sasl_plain_username,
+            "kafka_sasl_plain_password": kafka_sasl_plain_password,
+            "kafka_producer_ca_location": kafka_producer_ca_location,
+            "kafka_consumer_ca_location": kafka_consumer_ca_location,
+            "timeout": timeout,
+        }
+        if self.kafkaConfig:
+            params.update(self.kafkaConfig)
+            return EdgeLoader(**params)
+        else:
+            return EdgeLoader(**params)
 
     def vertexLoader(
             self,
@@ -386,6 +521,12 @@ class GDS:
             kafka_auto_del_topic: bool = True,
             kafka_address_consumer: str = None,
             kafka_address_producer: str = None,
+            kafka_security_protocol: str = "PLAINTEXT",
+            kafka_sasl_mechanism: str = None,
+            kafka_sasl_plain_username: str = None,
+            kafka_sasl_plain_password: str = None,
+            kafka_producer_ca_location: str = None,
+            kafka_consumer_ca_location: str = None,
             timeout: int = 300000,
     ) -> VertexLoader:
         """Returns a `VertexLoader` instance.
@@ -444,7 +585,7 @@ class GDS:
             buffer_size (int, optional):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
             kafka_address (str, optional):
-                Address of the kafka broker. Defaults to None.
+                Address of the Kafka broker. Defaults to None.
             kafka_max_msg_size (int, optional):
                 Maximum size of a Kafka message in bytes.
                 Defaults to 104857600.
@@ -461,37 +602,61 @@ class GDS:
                 Whether to delete the Kafka topic once the
                 loader finishes pulling data. Defaults to True.
             kafka_address_consumer (str, optional):
-                Address of the kafka broker that a consumer
+                Address of the Kafka broker that a consumer
                 should use. Defaults to be the same as `kafkaAddress`.
             kafka_address_producer (str, optional):
-                Address of the kafka broker that a producer
+                Address of the Kafka broker that a producer
                 should use. Defaults to be the same as `kafkaAddress`.
+            kafka_security_protocol (str, optional):
+                Security prototol for Kafka. Defaults to None.
+            kafka_sasl_mechanism (str, optional):
+                Authentication mechanism for Kafka. Defaults to None.
+            kafka_sasl_plain_username (str, optional):
+                SASL username for Kafka. Defaults to None.
+            kafka_sasl_plain_password (str, optional):
+                SASL password for Kafka. Defaults to None.
+            kafka_producer_ca_location (str, optional):
+                Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
+            kafka_consumer_ca_location (str, optional):
+                Path to CA certificate on client machine for verifying the broker's key. 
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
 
         See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_vertexloader.ipynb[the ML Workbench tutorial notebook]
         for examples.
         """
-        return VertexLoader(
-            self.conn,
-            attributes,
-            batch_size,
-            num_batches,
-            shuffle,
-            filter_by,
-            output_format,
-            loader_id,
-            buffer_size,
-            kafka_address,
-            kafka_max_msg_size,
-            kafka_num_partitions,
-            kafka_replica_factor,
-            kafka_retention_ms,
-            kafka_auto_del_topic,
-            kafka_address_consumer,
-            kafka_address_producer,
-            timeout,
-        )
+        params = {
+            "graph": self.conn,
+            "attributes": attributes,
+            "batch_size": batch_size,
+            "num_batches": num_batches,
+            "shuffle": shuffle,
+            "filter_by": filter_by,
+            "output_format": output_format,
+            "loader_id": loader_id,
+            "buffer_size": buffer_size,
+            "kafka_address": kafka_address,
+            "kafka_max_msg_size": kafka_max_msg_size,
+            "kafka_num_partitions": kafka_num_partitions,
+            "kafka_replica_factor": kafka_replica_factor,
+            "kafka_retention_ms": kafka_retention_ms,
+            "kafka_auto_del_topic": kafka_auto_del_topic,
+            "kafka_address_consumer": kafka_address_consumer,
+            "kafka_address_producer": kafka_address_producer,
+            "kafka_security_protocol": kafka_security_protocol,
+            "kafka_sasl_mechanism": kafka_sasl_mechanism,
+            "kafka_sasl_plain_username": kafka_sasl_plain_username,
+            "kafka_sasl_plain_password": kafka_sasl_plain_password,
+            "kafka_producer_ca_location": kafka_producer_ca_location,
+            "kafka_consumer_ca_location": kafka_consumer_ca_location,
+            "timeout": timeout
+        }
+
+        if self.kafkaConfig:
+            params.update(self.kafkaConfig)
+            return VertexLoader(**params)
+        else:
+            return VertexLoader(**params)
 
     def graphLoader(
         self,
@@ -517,6 +682,12 @@ class GDS:
         kafka_auto_del_topic: bool = True,
         kafka_address_consumer: str = None,
         kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
         timeout: int = 300000,
     ) -> GraphLoader:
         """Returns a `GraphLoader`instance.
@@ -620,7 +791,7 @@ class GDS:
             buffer_size (int, optional):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
             kafka_address (str, optional):
-                Address of the kafka broker. Defaults to None.
+                Address of the Kafka broker. Defaults to None.
             kafka_max_msg_size (int, optional):
                 Maximum size of a Kafka message in bytes.
                 Defaults to 104857600.
@@ -637,43 +808,67 @@ class GDS:
                 Whether to delete the Kafka topic once the
                 loader finishes pulling data. Defaults to True.
             kafka_address_consumer (str, optional):
-                Address of the kafka broker that a consumer
+                Address of the Kafka broker that a consumer
                 should use. Defaults to be the same as `kafkaAddress`.
             kafka_address_producer (str, optional):
-                Address of the kafka broker that a producer
+                Address of the Kafka broker that a producer
                 should use. Defaults to be the same as `kafkaAddress`.
+            kafka_security_protocol (str, optional):
+                Security prototol for Kafka. Defaults to None.
+            kafka_sasl_mechanism (str, optional):
+                Authentication mechanism for Kafka. Defaults to None.
+            kafka_sasl_plain_username (str, optional):
+                SASL username for Kafka. Defaults to None.
+            kafka_sasl_plain_password (str, optional):
+                SASL password for Kafka. Defaults to None.
+            kafka_producer_ca_location (str, optional):
+                Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
+            kafka_consumer_ca_location (str, optional):
+                Path to CA certificate on client machine for verifying the broker's key. 
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
 
         See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_graphloader.ipynb[the ML Workbench tutorial notebook for graph loaders]
          for examples.
         """
-        return GraphLoader(
-            self.conn,
-            v_in_feats,
-            v_out_labels,
-            v_extra_feats,
-            e_in_feats,
-            e_out_labels,
-            e_extra_feats,
-            batch_size,
-            num_batches,
-            shuffle,
-            filter_by,
-            output_format,
-            add_self_loop,
-            loader_id,
-            buffer_size,
-            kafka_address,
-            kafka_max_msg_size,
-            kafka_num_partitions,
-            kafka_replica_factor,
-            kafka_retention_ms,
-            kafka_auto_del_topic,
-            kafka_address_consumer,
-            kafka_address_producer,
-            timeout,
-        )
+        params = {
+            "graph": self.conn,
+            "v_in_feats": v_in_feats,
+            "v_out_labels": v_out_labels,
+            "v_extra_feats": v_extra_feats,
+            "e_in_feats": e_in_feats,
+            "e_out_labels": e_out_labels,
+            "e_extra_feats": e_extra_feats,
+            "batch_size": batch_size,
+            "num_batches": num_batches,
+            "shuffle": shuffle,
+            "filter_by": filter_by,
+            "output_format": output_format,
+            "add_self_loop": add_self_loop,
+            "loader_id": loader_id,
+            "buffer_size": buffer_size,
+            "kafka_address": kafka_address,
+            "kafka_max_msg_size": kafka_max_msg_size,
+            "kafka_num_partitions": kafka_num_partitions,
+            "kafka_replica_factor": kafka_replica_factor,
+            "kafka_retention_ms": kafka_retention_ms,
+            "kafka_auto_del_topic": kafka_auto_del_topic,
+            "kafka_address_consumer": kafka_address_consumer,
+            "kafka_address_producer": kafka_address_producer,
+            "kafka_security_protocol": kafka_security_protocol,
+            "kafka_sasl_mechanism": kafka_sasl_mechanism,
+            "kafka_sasl_plain_username": kafka_sasl_plain_username,
+            "kafka_sasl_plain_password": kafka_sasl_plain_password,
+            "kafka_producer_ca_location": kafka_producer_ca_location,
+            "kafka_consumer_ca_location": kafka_consumer_ca_location,
+            "timeout": timeout
+        }
+
+        if self.kafkaConfig:
+            params.update(self.kafkaConfig)
+            return GraphLoader(**params)
+        else:
+            return GraphLoader(**params)
 
     def edgeNeighborLoader(
         self,
@@ -701,6 +896,12 @@ class GDS:
         kafka_auto_del_topic: bool = True,
         kafka_address_consumer: str = None,
         kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
         timeout: int = 300000,
     ) -> EdgeNeighborLoader:
         """Returns an `EdgeNeighborLoader` instance.
@@ -814,7 +1015,7 @@ class GDS:
             buffer_size (int, optional):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
             kafka_address (str, optional):
-                Address of the kafka broker. Defaults to None.
+                Address of the Kafka broker. Defaults to None.
             kafka_max_msg_size (int, optional):
                 Maximum size of a Kafka message in bytes.
                 Defaults to 104857600.
@@ -831,42 +1032,67 @@ class GDS:
                 Whether to delete the Kafka topic once the
                 loader finishes pulling data. Defaults to True.
             kafka_address_consumer (str, optional):
-                Address of the kafka broker that a consumer
+                Address of the Kafka broker that a consumer
                 should use. Defaults to be the same as `kafkaAddress`.
             kafka_address_producer (str, optional):
-                Address of the kafka broker that a producer
+                Address of the Kafka broker that a producer
                 should use. Defaults to be the same as `kafkaAddress`.
+            kafka_security_protocol (str, optional):
+                Security prototol for Kafka. Defaults to None.
+            kafka_sasl_mechanism (str, optional):
+                Authentication mechanism for Kafka. Defaults to None.
+            kafka_sasl_plain_username (str, optional):
+                SASL username for Kafka. Defaults to None.
+            kafka_sasl_plain_password (str, optional):
+                SASL password for Kafka. Defaults to None.
+            kafka_producer_ca_location (str, optional):
+                Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
+            kafka_consumer_ca_location (str, optional):
+                Path to CA certificate on client machine for verifying the broker's key. 
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
         """
-        return EdgeNeighborLoader(
-            self.conn,
-            v_in_feats,
-            v_out_labels,
-            v_extra_feats,
-            e_in_feats,
-            e_out_labels,
-            e_extra_feats,
-            batch_size,
-            num_batches,
-            num_neighbors,
-            num_hops,
-            shuffle,
-            filter_by,
-            output_format,
-            add_self_loop,
-            loader_id,
-            buffer_size,
-            kafka_address,
-            kafka_max_msg_size,
-            kafka_num_partitions,
-            kafka_replica_factor,
-            kafka_retention_ms,
-            kafka_auto_del_topic,
-            kafka_address_consumer,
-            kafka_address_producer,
-            timeout,
-        )
+
+        params = {
+            "graph": self.conn,
+            "v_in_feats": v_in_feats,
+            "v_out_labels": v_out_labels,
+            "v_extra_feats": v_extra_feats,
+            "e_in_feats": e_in_feats,
+            "e_out_labels": e_out_labels,
+            "e_extra_feats": e_extra_feats,
+            "batch_size": batch_size,
+            "num_batches": num_batches,
+            "num_neighbors": num_neighbors,
+            "num_hops": num_hops,
+            "shuffle": shuffle,
+            "filter_by": filter_by,
+            "output_format": output_format,
+            "add_self_loop": add_self_loop,
+            "loader_id": loader_id,
+            "buffer_size": buffer_size,
+            "kafka_address": kafka_address,
+            "kafka_max_msg_size": kafka_max_msg_size,
+            "kafka_num_partitions": kafka_num_partitions,
+            "kafka_replica_factor": kafka_replica_factor,
+            "kafka_retention_ms": kafka_retention_ms,
+            "kafka_auto_del_topic": kafka_auto_del_topic,
+            "kafka_address_consumer": kafka_address_consumer,
+            "kafka_address_producer": kafka_address_producer,
+            "kafka_security_protocol": kafka_security_protocol,
+            "kafka_sasl_mechanism": kafka_sasl_mechanism,
+            "kafka_sasl_plain_username": kafka_sasl_plain_username,
+            "kafka_sasl_plain_password": kafka_sasl_plain_password,
+            "kafka_producer_ca_location": kafka_producer_ca_location,
+            "kafka_consumer_ca_location": kafka_consumer_ca_location,
+            "timeout": timeout
+        }
+
+        if self.kafkaConfig:
+            params.update(self.kafkaConfig)
+            return EdgeNeighborLoader(**params)
+        else:
+            return EdgeNeighborLoader(**params)
 
     def featurizer(self) -> Featurizer:
         """Get a featurizer.

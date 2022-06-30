@@ -41,7 +41,8 @@ class TestGDSBaseLoader(unittest.TestCase):
                     "FromVertexTypeName": "Paper",
                     "ToVertexTypeName": "Paper",
                     "time": "INT",
-                    "is_train": "BOOL"
+                    "is_train": "BOOL",
+                    "is_val": "BOOL"
                 }
             },
         )
