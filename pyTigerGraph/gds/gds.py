@@ -1107,6 +1107,8 @@ class GDS:
         The split results are stored in the provided vertex attributes. Each boolean attribute
         indicates which part a vertex belongs to.
 
+        Make sure to create the appropriate attributes in the graph before using these functions.
+
         Usage:
 
             * A random 60% of vertices will have their attribute `attr_name` set to True, and
@@ -1153,6 +1155,8 @@ class GDS:
 
         The split results are stored in the provided edge attributes. Each boolean attribute
         indicates which part an edge belongs to.
+
+        Make sure to create the appropriate attributes in the graph before using these functions.
 
         Usage:
             
