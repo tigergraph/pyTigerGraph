@@ -83,36 +83,6 @@ class pyTigerGraphBase(object):
         self.password = password
         self.graphname = graphname
 
-        if gsqlVersion != "":
-            self.majorVersion = gsqlVersion.split(".")[0]
-            self.minorVersion = gsqlVersion.split(".")[1]
-            self.patchVersion = gsqlVersion.split(".")[2]
-
-            is36 = self.majorVersion == "3" and self.minorVersion == "6"
-
-        if((gsqlVersion == "") and tgCloud):
-            raise(TigerGraphException("TigerGraph Cloud requires a GSQL version."))
-        else:
-            self.tgCloud = (tgCloud and is36) or gcp
-        restppPort = str(restppPort)
-        if self.tgCloud and (restppPort == "9000" or restppPort == "443"):
-            # TODO Should not `sslPort` be used instead of hard coded value?
-            self.restppPort = "443"
-            self.restppUrl = self.host + ":443" + "/restpp"
-        else:
-            self.restppPort = restppPort
-            self.restppUrl = self.host + ":" + self.restppPort
-        self.gsPort = ""
-        gsPort = str(gsPort)
-        if self.tgCloud and (gsPort == "14240" or gsPort == "443"):
-            # TODO Should not `sslPort` be used instead of hard coded value?
-            self.gsPort = "443"
-            self.gsUrl = self.host + ":443"
-        else:
-            self.gsPort = gsPort
-            self.gsUrl = self.host + ":" + self.gsPort
-        self.url = ""
-
         self.apiToken = apiToken
         # TODO Eliminate version and use gsqlVersion only, meaning TigerGraph server version
         if gsqlVersion != "":
@@ -148,6 +118,32 @@ class pyTigerGraphBase(object):
         self.gsqlInitiated = False
 
         self.Client = None
+
+        self.tgCloud = tgCloud or gcp
+        if "tgcloud" in self.netloc.lower():
+            try: # if get request succeeds, using TG Cloud instance provisioned before 6/20/2022
+                self._get(self.host + ":" + str(restppPort) + "/echo/" + graphname, resKey="message")
+            except: # if get request fails, using TG Cloud instance provisioned after 6/20/2022, after new firewall config
+                self.tgCloud = True
+        
+        restppPort = str(restppPort)
+        if self.tgCloud and (restppPort == "9000" or restppPort == "443"):
+            # TODO Should not `sslPort` be used instead of hard coded value?
+            self.restppPort = "443"
+            self.restppUrl = self.host + ":443" + "/restpp"
+        else:
+            self.restppPort = restppPort
+            self.restppUrl = self.host + ":" + self.restppPort
+        self.gsPort = ""
+        gsPort = str(gsPort)
+        if self.tgCloud and (gsPort == "14240" or gsPort == "443"):
+            # TODO Should not `sslPort` be used instead of hard coded value?
+            self.gsPort = "443"
+            self.gsUrl = self.host + ":443"
+        else:
+            self.gsPort = gsPort
+            self.gsUrl = self.host + ":" + self.gsPort
+        self.url = ""
 
     def _errorCheck(self, res: dict):
         """Checks if the JSON document returned by an endpoint has contains `error: true`. If so,
