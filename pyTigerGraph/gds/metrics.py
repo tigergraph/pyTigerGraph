@@ -6,7 +6,7 @@ Utility for gathering metrics for GNN predictions.
 
 from numpy import ndarray
 
-__all__ = ["Accumulator", "Accuracy", "Precision", "Recall"]
+__all__ = ["Accumulator", "Accuracy", "BinaryPrecision", "BinaryRecall"]
 
 
 class Accumulator:
@@ -95,10 +95,12 @@ class Accuracy(Accumulator):
             return None
 
 
-class Recall(Accumulator):
+class BinaryRecall(Accumulator):
     """Recall Metric.
 
     Recall = stem:[\frac{\sum(preds * labels)}{\sum(labels)}]
+
+    This metric is for binary classifications, i.e., both preds and labels are arrays of 0's and 1's.
 
     Usage:
 
@@ -133,10 +135,12 @@ class Recall(Accumulator):
             return None
 
 
-class Precision(Accumulator):
+class BinaryPrecision(Accumulator):
     """Precision Metric.
 
     Precision = stem:[\frac{\sum(preds * labels)}{\sum(preds)}]
+
+    This metric is for binary classifications, i.e., both preds and labels are arrays of 0's and 1's.
 
     Usage:
 

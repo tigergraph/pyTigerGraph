@@ -45,7 +45,8 @@ class pyTigerGraphBase(object):
             password:
                 The password for that user.
             tgCloud:
-                Set to `True` if using TigerGraph Cloud.
+                Set to `True` if using TigerGraph Cloud. If your hostname contains `tgcloud`, then this is
+                automatically set to `True`, and you do not need to set this argument.
             restppPort:
                 The port for REST++ queries.
             gsPort:
@@ -71,7 +72,6 @@ class pyTigerGraphBase(object):
         Raises:
             TigerGraphException: In case on invalid URL scheme.
 
-        TODO Rename/generalise `gcp`
         """
         inputHost = urlparse(host)
         if inputHost.scheme not in ["http", "https"]:
@@ -205,7 +205,7 @@ class pyTigerGraphBase(object):
             _auth = None
         if headers:
             _headers.update(headers)
-        if method == "POST":
+        if method == "POST" or method == "PUT":
             _data = data
         else:
             _data = None

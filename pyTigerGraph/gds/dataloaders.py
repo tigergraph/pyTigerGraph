@@ -15,7 +15,7 @@ from collections import defaultdict
 from queue import Empty, Queue
 from threading import Event, Thread
 from time import sleep
-from typing import (TYPE_CHECKING, Any, Iterator, Literal, NoReturn, Tuple,
+from typing import (TYPE_CHECKING, Any, Iterator, NoReturn, Tuple,
                     Union)
 
 if TYPE_CHECKING:
@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     import torch
     import dgl
     import torch_geometric as pyg
+    from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -53,18 +54,24 @@ class BaseLoader:
     def __init__(
         self,
         graph: "TigerGraphConnection",
-        loaderID: str = None,
-        numBatches: int = 1,
-        bufferSize: int = 4,
-        outputFormat: str = "dataframe",
-        kafkaAddress: str = "",
-        KafkaMaxMsgSize: int = 104857600,
-        kafkaNumPartitions: int = 1,
-        kafkaReplicaFactor: int = 1,
-        kafkaRetentionMS: int = 60000,
-        kafkaAutoDelTopic: bool = True,
-        kafkaAddressForConsumer: str = None,
-        kafkaAddressForProducer: str = None,
+        loader_id: str = None,
+        num_batches: int = 1,
+        buffer_size: int = 4,
+        output_format: str = "dataframe",
+        kafka_address: str = "",
+        Kafka_max_msg_size: int = 104857600,
+        kafka_num_partitions: int = 1,
+        kafka_replica_factor: int = 1,
+        kafka_retention_ms: int = 60000,
+        kafka_auto_del_topic: bool = True,
+        kafka_consumer_address: str = None,
+        kafka_producer_address: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
         timeout: int = 300000,
     ) -> None:
         """Base Class for data loaders.
@@ -83,91 +90,54 @@ class BaseLoader:
         Args:
             graph (TigerGraphConnection):
                 Connection to the TigerGraph database.
-            loaderID (str):
+            loader_iD (str):
                 An identifier of the loader which can be any string. It is
                 also used as the Kafka topic name. If `None`, a random string
                 will be generated for it. Defaults to None.
-            numBatches (int):
+            num_batches (int):
                 Number of batches to divide the desired data into. Defaults to 1.
-            bufferSize (int):
+            buffer_size (int):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
-            outputFormat (str):
+            output_format (str):
                 Format of the output data of the loader. Defaults to dataframe.
-            kafkaAddress (str):
-                Address of the kafka broker. Defaults to localhost:9092.
-            maxKafkaMsgSize (int, optional):
+            kafka_address (str):
+                Address of the Kafka broker. Defaults to localhost:9092.
+            max_kafka_msg_size (int, optional):
                 Maximum size of a Kafka message in bytes.
                 Defaults to 104857600.
-            kafkaNumPartitions (int, optional):
+            kafka_num_partitions (int, optional):
                 Number of partitions for the topic created by this loader.
                 Defaults to 1.
-            kafkaReplicaFactor (int, optional):
+            kafka_replica_factor (int, optional):
                 Number of replications for the topic created by this loader.
                 Defaults to 1.
-            kafkaRetentionMS (int, optional):
+            kafka_retention_ms (int, optional):
                 Retention time for messages in the topic created by this
                 loader in milliseconds. Defaults to 60000.
-            kafkaAutoDelTopic (bool, optional):
+            kafka_auto_del_topic (bool, optional):
                 Whether to delete the Kafka topic once the
                 loader finishes pulling data. Defaults to True.
-            kafkaAddressForConsumer (str, optional):
-                Address of the kafka broker that a consumer
+            kafka_consumer_address (str, optional):
+                Address of the Kafka broker that a consumer
                 should use. Defaults to be the same as `kafkaAddress`.
-            kafkaAddressForProducer (str, optional):
-                Address of the kafka broker that a producer
+            kafka_producer_address (str, optional):
+                Address of the Kafka broker that a producer
                 should use. Defaults to be the same as `kafkaAddress`.
+            kafka_security_protocol (str, optional):
+                Security prototol for Kafka. Defaults to None.
+            kafka_sasl_mechanism (str, optional):
+                Authentication mechanism for Kafka. Defaults to None.
+            kafka_sasl_plain_username (str, optional):
+                SASL username for Kafka. Defaults to None.
+            kafka_sasl_plain_password (str, optional):
+                SASL password for Kafka. Defaults to None.
+            kafka_producer_ca_location (str, optional):
+                Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
+            kafka_consumer_ca_location (str, optional):
+                Path to CA certificate on client machine for verifying the broker's key. 
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
         """
-        # Get graph info
-        self._graph = graph
-        self._v_schema, self._e_schema = self._get_schema()
-        # Initialize basic params
-        if not loaderID:
-            self.loader_id = random_string(6)
-        else:
-            self.loader_id = loaderID
-        self.num_batches = numBatches
-        self.output_format = outputFormat
-        self.buffer_size = bufferSize
-        self.timeout = timeout
-        self._iterations = 0
-        self._iterator = False
-        # Kafka consumer and admin
-        self.max_kafka_msg_size = KafkaMaxMsgSize
-        self.kafka_address_consumer = (
-            kafkaAddressForConsumer if kafkaAddressForConsumer else kafkaAddress
-        )
-        self.kafka_address_producer = (
-            kafkaAddressForProducer if kafkaAddressForProducer else kafkaAddress
-        )
-        if self.kafka_address_consumer:
-            try:
-                from kafka import KafkaAdminClient, KafkaConsumer
-            except ImportError:
-                raise ImportError(
-                    "kafka-python is not installed. Please install it to use kafka streaming."
-                )
-            try:
-                self._kafka_consumer = KafkaConsumer(
-                    bootstrap_servers=self.kafka_address_consumer,
-                    client_id=self.loader_id,
-                    max_partition_fetch_bytes=KafkaMaxMsgSize,
-                    fetch_max_bytes=KafkaMaxMsgSize,
-                    auto_offset_reset="earliest"
-                )
-                self._kafka_admin = KafkaAdminClient(
-                    bootstrap_servers=self.kafka_address_consumer,
-                    client_id=self.loader_id,
-                )
-            except:
-                raise ConnectionError(
-                    "Cannot reach Kafka broker. Please check Kafka settings."
-                )
-        self.kafka_partitions = kafkaNumPartitions
-        self.kafka_replica = kafkaReplicaFactor
-        self.kafka_retention_ms = kafkaRetentionMS
-        self.delete_kafka_topic = kafkaAutoDelTopic
         # Thread to send requests, download and load data
         self._requester = None
         self._downloader = None
@@ -182,6 +152,90 @@ class BaseLoader:
         self._exit_event = None
         # In-memory data cache. Only used if num_batches=1
         self._data = None
+        # Kafka topic configs
+        self.kafka_partitions = kafka_num_partitions
+        self.kafka_replica = kafka_replica_factor
+        self.kafka_retention_ms = kafka_retention_ms
+        self.delete_kafka_topic = kafka_auto_del_topic
+        # Get graph info
+        self._graph = graph
+        self._v_schema, self._e_schema = self._get_schema()
+        # Initialize basic params
+        if not loader_id:
+            self.loader_id = random_string(6)
+        else:
+            self.loader_id = loader_id
+        self.num_batches = num_batches
+        self.output_format = output_format
+        self.buffer_size = buffer_size
+        self.timeout = timeout
+        self._iterations = 0
+        self._iterator = False
+        # Kafka consumer and admin
+        self.max_kafka_msg_size = Kafka_max_msg_size
+        self.kafka_address_consumer = (
+            kafka_consumer_address if kafka_consumer_address else kafka_address
+        )
+        self.kafka_address_producer = (
+            kafka_producer_address if kafka_producer_address else kafka_address
+        )
+        if self.kafka_address_consumer:
+            try:
+                from kafka import KafkaAdminClient, KafkaConsumer
+            except ImportError:
+                raise ImportError(
+                    "kafka-python is not installed. Please install it to use kafka streaming."
+                )
+            try:
+                self._kafka_consumer = KafkaConsumer(
+                    bootstrap_servers=self.kafka_address_consumer,
+                    client_id=self.loader_id,
+                    max_partition_fetch_bytes=Kafka_max_msg_size,
+                    fetch_max_bytes=Kafka_max_msg_size,
+                    auto_offset_reset="earliest",
+                    security_protocol=kafka_security_protocol,
+                    sasl_mechanism=kafka_sasl_mechanism,
+                    sasl_plain_username=kafka_sasl_plain_username,
+                    sasl_plain_password=kafka_sasl_plain_password,
+                    ssl_cafile=kafka_consumer_ca_location if kafka_consumer_ca_location else None
+                )
+                self._kafka_admin = KafkaAdminClient(
+                    bootstrap_servers=self.kafka_address_consumer,
+                    client_id=self.loader_id,
+                    security_protocol=kafka_security_protocol,
+                    sasl_mechanism=kafka_sasl_mechanism,
+                    sasl_plain_username=kafka_sasl_plain_username,
+                    sasl_plain_password=kafka_sasl_plain_password,
+                    ssl_cafile=kafka_consumer_ca_location if kafka_consumer_ca_location else None
+                )
+            except:
+                raise ConnectionError(
+                    "Cannot reach Kafka broker. Please check Kafka settings."
+                )
+        # Initialize parameters for the query
+        self._payload = {}
+        if self.kafka_address_producer:
+            self._payload["kafka_address"] = self.kafka_address_producer
+            if kafka_security_protocol == "PLAINTEXT":
+                pass
+            elif kafka_security_protocol in ("SASL_PLAINTEXT", "SASL_SSL"):
+                self._payload["security_protocol"] = kafka_security_protocol
+                if kafka_sasl_mechanism == "PLAIN":
+                    self._payload["sasl_mechanism"] = kafka_sasl_mechanism
+                    if kafka_sasl_plain_username and kafka_sasl_plain_password:
+                        self._payload["sasl_username"] = kafka_sasl_plain_username
+                        self._payload["sasl_password"] = kafka_sasl_plain_password
+                    else:
+                        raise ValueError("Please provide kafka_sasl_plain_username and kafka_sasl_plain_password for Kafka.")
+                    if kafka_producer_ca_location:
+                        self._payload["ssl_ca_location"] = kafka_producer_ca_location
+                    else:
+                        self._payload["ssl_ca_location"] = ""
+                else:
+                    raise NotImplementedError("Only PLAIN mechanism is supported for SASL.")
+            else:
+                raise NotImplementedError("Only SASL_PLAINTEXT and SASL_SSL are supported for Kafka authentication.")
+            # kafka_topic will be filled in later.
         # Implement `_install_query()` that installs your query
         # self._install_query()
 
@@ -235,7 +289,7 @@ class BaseLoader:
     def _validate_attributes(
         self, 
         attributes: Union[None, list, dict], 
-        schema_type: Literal["vertex", "edge"], 
+        schema_type: 'Literal["vertex", "edge"]', 
         is_hetero: bool = False
     ) -> Union[list, dict]:
         if schema_type == "vertex":
@@ -385,7 +439,7 @@ class BaseLoader:
         read_task_q: Queue,
         timeout: int = 600000,
         payload: dict = {},
-        resp_type: Literal["both", "vertex", "edge"] = "both",
+        resp_type: 'Literal["both", "vertex", "edge"]' = "both",
     ) -> NoReturn:
         # Run query
         resp = tgraph.runInstalledQuery(
@@ -497,7 +551,7 @@ class BaseLoader:
     @staticmethod
     def _parse_data(
         raw: Union[str, Tuple[str, str]],
-        in_format: Literal["vertex", "edge", "graph"] = "vertex",
+        in_format: 'Literal["vertex", "edge", "graph"]' = "vertex",
         out_format: str = "dataframe",
         v_in_feats: Union[list, dict] = [],
         v_out_labels: Union[list, dict] = [],
@@ -539,7 +593,7 @@ class BaseLoader:
 
         def add_attributes(attr_names: list, attr_types: dict, attr_df: pd.DataFrame, 
                            graph, is_hetero: bool, mode: str, feat_name: str, 
-                           target: Literal["edge", "vertex"], vetype: str = None) -> None:
+                           target: 'Literal["edge", "vertex"]', vetype: str = None) -> None:
             """Add multiple attributes as a single feature to edges or vertices.
             """                    
             if is_hetero:
@@ -568,7 +622,7 @@ class BaseLoader:
         
         def add_sep_attr(attr_names: list, attr_types: dict, attr_df: pd.DataFrame, 
                          graph, is_hetero: bool, mode: str,
-                         target: Literal["edge", "vertex"], vetype: str = None) -> None:
+                         target: 'Literal["edge", "vertex"]', vetype: str = None) -> None:
             """Add each attribute as a single feature to edges or vertices.
             """
             if is_hetero:
@@ -1048,6 +1102,12 @@ class NeighborLoader(BaseLoader):
         kafka_auto_del_topic: bool = True,
         kafka_address_consumer: str = None,
         kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
         timeout: int = 300000,
     ) -> None:
         """NO DOC"""
@@ -1066,6 +1126,12 @@ class NeighborLoader(BaseLoader):
             kafka_auto_del_topic,
             kafka_address_consumer,
             kafka_address_producer,
+            kafka_security_protocol,
+            kafka_sasl_mechanism,
+            kafka_sasl_plain_username,
+            kafka_sasl_plain_password,
+            kafka_producer_ca_location,
+            kafka_consumer_ca_location,
             timeout,
         )
         # Resolve attributes
@@ -1123,7 +1189,6 @@ class NeighborLoader(BaseLoader):
             self._seed_types = self._vtypes if ((not filter_by) or isinstance(filter_by, str)) else list(filter_by.keys())
             self.num_batches = num_batches
         # Initialize parameters for the query
-        self._payload = {}
         self._payload["num_batches"] = self.num_batches
         self._payload["num_neighbors"] = num_neighbors
         self._payload["num_hops"] = num_hops
@@ -1139,9 +1204,6 @@ class NeighborLoader(BaseLoader):
         self._payload["v_types"] = self._vtypes
         self._payload["e_types"] = self._etypes
         self._payload["seed_types"] = self._seed_types
-        if self.kafka_address_producer:
-            self._payload["kafka_address"] = self.kafka_address_producer
-        # kafka_topic will be filled in later.
         # Output
         self.add_self_loop = add_self_loop
         # Install query
@@ -1521,6 +1583,12 @@ class EdgeLoader(BaseLoader):
         kafka_auto_del_topic: bool = True,
         kafka_address_consumer: str = None,
         kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
         timeout: int = 300000,
     ) -> None:
         """
@@ -1540,6 +1608,12 @@ class EdgeLoader(BaseLoader):
             kafka_auto_del_topic,
             kafka_address_consumer,
             kafka_address_producer,
+            kafka_security_protocol,
+            kafka_sasl_mechanism,
+            kafka_sasl_plain_username,
+            kafka_sasl_plain_password,
+            kafka_producer_ca_location,
+            kafka_consumer_ca_location,
             timeout,
         )
         # Resolve attributes
@@ -1553,7 +1627,6 @@ class EdgeLoader(BaseLoader):
         else:
             self._etypes = list(self._e_schema.keys())
         # Initialize parameters for the query
-        self._payload = {}
         if batch_size:
             # If batch_size is given, calculate the number of batches
             if filter_by:
@@ -1571,9 +1644,6 @@ class EdgeLoader(BaseLoader):
             self._payload["filter_by"] = filter_by
         self._payload["shuffle"] = shuffle
         self._payload["e_types"] = self._etypes
-        if self.kafka_address_producer:
-            self._payload["kafka_address"] = self.kafka_address_producer
-        # kafka_topic will be filled in later.
         # Output
         # Install query
         self.query_name = self._install_query()
@@ -1744,7 +1814,7 @@ class VertexLoader(BaseLoader):
     --
     [.wrap,python]
     ----
-    edge_loader = conn.gds.edgeLoader(
+    vertex_loader = conn.gds.vertexLoader(
         num_batches=10,
         attributes=["time", "is_train"],
         shuffle=True,
@@ -1820,6 +1890,12 @@ class VertexLoader(BaseLoader):
         kafka_auto_del_topic: bool = True,
         kafka_address_consumer: str = None,
         kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
         timeout: int = 300000,
     ) -> None:
         """
@@ -1839,6 +1915,12 @@ class VertexLoader(BaseLoader):
             kafka_auto_del_topic,
             kafka_address_consumer,
             kafka_address_producer,
+            kafka_security_protocol,
+            kafka_sasl_mechanism,
+            kafka_sasl_plain_username,
+            kafka_sasl_plain_password,
+            kafka_producer_ca_location,
+            kafka_consumer_ca_location,
             timeout,
         )
         # Resolve attributes
@@ -1852,7 +1934,6 @@ class VertexLoader(BaseLoader):
         else:
             self._vtypes = list(self._v_schema.keys())
         # Initialize parameters for the query
-        self._payload = {}
         if batch_size:
             # If batch_size is given, calculate the number of batches
             num_vertices_by_type = self._graph.getVertexCount(self._vtypes)
@@ -1872,9 +1953,6 @@ class VertexLoader(BaseLoader):
             self._payload["filter_by"] = filter_by
         self._payload["shuffle"] = shuffle
         self._payload["v_types"] = self._vtypes
-        if self.kafka_address_producer:
-            self._payload["kafka_address"] = self.kafka_address_producer
-        # kafka_topic will be filled in later.
         # Install query
         self.query_name = self._install_query()
 
@@ -2126,6 +2204,12 @@ class GraphLoader(BaseLoader):
         kafka_auto_del_topic: bool = True,
         kafka_address_consumer: str = None,
         kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
         timeout: int = 300000,
     ) -> None:
         """
@@ -2145,6 +2229,12 @@ class GraphLoader(BaseLoader):
             kafka_auto_del_topic,
             kafka_address_consumer,
             kafka_address_producer,
+            kafka_security_protocol,
+            kafka_sasl_mechanism,
+            kafka_sasl_plain_username,
+            kafka_sasl_plain_password,
+            kafka_producer_ca_location,
+            kafka_consumer_ca_location,
             timeout,
         )
         # Resolve attributes
@@ -2177,7 +2267,6 @@ class GraphLoader(BaseLoader):
             self._vtypes = list(self._v_schema.keys())
             self._etypes = list(self._e_schema.keys())
         # Initialize parameters for the query
-        self._payload = {}
         if batch_size:
             # If batch_size is given, calculate the number of batches
             if filter_by:
@@ -2195,9 +2284,6 @@ class GraphLoader(BaseLoader):
         self._payload["shuffle"] = shuffle
         self._payload["v_types"] = self._vtypes
         self._payload["e_types"] = self._etypes
-        if self.kafka_address_producer:
-            self._payload["kafka_address"] = self.kafka_address_producer
-        # kafka_topic will be filled in later.
         # Output
         self.add_self_loop = add_self_loop
         # Install query
@@ -2450,6 +2536,12 @@ class EdgeNeighborLoader(BaseLoader):
         kafka_auto_del_topic: bool = True,
         kafka_address_consumer: str = None,
         kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
         timeout: int = 300000,
     ) -> None:
         """NO DOC"""
@@ -2468,6 +2560,12 @@ class EdgeNeighborLoader(BaseLoader):
             kafka_auto_del_topic,
             kafka_address_consumer,
             kafka_address_producer,
+            kafka_security_protocol,
+            kafka_sasl_mechanism,
+            kafka_sasl_plain_username,
+            kafka_sasl_plain_password,
+            kafka_producer_ca_location,
+            kafka_consumer_ca_location,
             timeout,
         )
         # Resolve attributes
@@ -2514,7 +2612,6 @@ class EdgeNeighborLoader(BaseLoader):
             # Otherwise, take the number of batches as is.
             self.num_batches = num_batches
         # Initialize parameters for the query
-        self._payload = {}
         self._payload["num_batches"] = self.num_batches
         self._payload["num_neighbors"] = num_neighbors
         self._payload["num_hops"] = num_hops
@@ -2530,9 +2627,6 @@ class EdgeNeighborLoader(BaseLoader):
         self._payload["v_types"] = self._vtypes
         self._payload["e_types"] = self._etypes
         self._payload["seed_types"] = self._seed_types
-        if self.kafka_address_producer:
-            self._payload["kafka_address"] = self.kafka_address_producer
-        # kafka_topic will be filled in later.
         # Output
         self.add_self_loop = add_self_loop
         # Install query

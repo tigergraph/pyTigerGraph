@@ -5,7 +5,12 @@ CREATE QUERY vertex_loader_{QUERYSUFFIX}(
     STRING filter_by,
     SET<STRING> v_types,
     STRING kafka_address,
-    STRING kafka_topic
+    STRING kafka_topic,
+    STRING security_protocol,
+    STRING sasl_mechanism,
+    STRING sasl_username,
+    STRING sasl_password,
+    STRING ssl_ca_location
 ) SYNTAX V2 {
     /*
     This query generates batches of vertices. If `input_vertices` is given, it will generate 
@@ -20,7 +25,12 @@ CREATE QUERY vertex_loader_{QUERYSUFFIX}(
                        Only effective when `input_vertices` is NULL.
       v_types        : Vertex types to be included.
       kafka_address  : Address of the Kafka cluster to send data to.
-      kafka_topic    : The kafka topic to send data to.
+      kafka_topic    : The Kafka topic to send data to.
+      security_protocol : Security prototol for Kafka.
+      sasl_mechanism : Authentication mechanism for Kafka.
+      sasl_username  : SASL username for Kafka. 
+      sasl_password  : SASL password for Kafka. 
+      ssl_ca_location: Path to CA certificate for verifying the Kafka broker key.
     */
     INT num_vertices;
     SumAccum<INT> @tmp_id;
@@ -66,10 +76,18 @@ CREATE QUERY vertex_loader_{QUERYSUFFIX}(
         END;
         
         IF kafka_address IS NOT NULL THEN
-            IF write_to_kafka(kafka_address, kafka_topic, "vertex_batch_" + int_to_string(batch_id), @@v_batch)!=0 THEN
-                @@kafka_error += ("Failed sending vertex batch " + int_to_string(batch_id) + "\n");
+            # Write to kafka
+            IF security_protocol IS NOT NULL THEN
+                IF write_to_kafka(kafka_address, kafka_topic, "vertex_batch_" + int_to_string(batch_id), @@v_batch, security_protocol, sasl_mechanism, sasl_username, sasl_password, ssl_ca_location)!=0 THEN
+                    @@kafka_error += ("Failed sending vertex batch " + int_to_string(batch_id) + "\n");
+                END;
+            ELSE 
+                IF write_to_kafka(kafka_address, kafka_topic, "vertex_batch_" + int_to_string(batch_id), @@v_batch, "", "", "", "", "")!=0 THEN
+                    @@kafka_error += ("Failed sending vertex batch " + int_to_string(batch_id) + "\n");
+                END;
             END;
         ELSE
+            # Add to response
             PRINT @@v_batch AS vertex_batch;  
         END;
     END;
