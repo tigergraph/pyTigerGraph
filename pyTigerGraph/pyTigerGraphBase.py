@@ -123,8 +123,10 @@ class pyTigerGraphBase(object):
         if "tgcloud" in self.netloc.lower():
             try: # if get request succeeds, using TG Cloud instance provisioned before 6/20/2022
                 self._get(self.host + ":" + str(restppPort) + "/echo/" + graphname, resKey="message")
-            except: # if get request fails, using TG Cloud instance provisioned after 6/20/2022, after new firewall config
+            except requests.exceptions.RequestException: # if get request fails, using TG Cloud instance provisioned after 6/20/2022, after new firewall config
                 self.tgCloud = True
+            except TigerGraphException:
+                raise(TigerGraphException("Incorrect graphname."))
         
         restppPort = str(restppPort)
         if self.tgCloud and (restppPort == "9000" or restppPort == "443"):
