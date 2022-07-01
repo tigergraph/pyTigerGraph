@@ -26,8 +26,8 @@ def excepthook(type, value, traceback):
 
 class pyTigerGraphBase(object):
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
-            username: str = "tigergraph", password: str = "tigergraph", tgCloud: bool = False,
-            restppPort: Union[int, str] = "9000", gsPort: Union[int, str] = "14240",
+            gsqlSecret: str = "", username: str = "tigergraph", password: str = "tigergraph", 
+            tgCloud: bool = False, restppPort: Union[int, str] = "9000", gsPort: Union[int, str] = "14240",
             gsqlVersion: str = "", version: str = "", apiToken: str = "", useCert: bool = True,
             certPath: str = None, debug: bool = False, sslPort: Union[int, str] = "443",
             gcp: bool = False):
@@ -40,6 +40,9 @@ class pyTigerGraphBase(object):
                 a self-signed certificate will be used.
             graphname:
                 The default graph for running queries.
+            gsqlSecret:
+                The secret key for GSQL. Created in AdminPortal of GraphStudio for the graph you wish to use.
+                Required for GSQL authentication on TigerGraph Cloud instances created after July 5, 2022.
             username:
                 The username on the TigerGraph server.
             password:
@@ -79,32 +82,13 @@ class pyTigerGraphBase(object):
                 "E-0003")
         self.netloc = inputHost.netloc
         self.host = "{0}://{1}".format(inputHost.scheme, self.netloc)
-        self.username = username
-        self.password = password
+        if gsqlSecret != "":
+            self.username = "__GSQL__secret"
+            self.password = gsqlSecret
+        else:
+            self.username = username
+            self.password = password
         self.graphname = graphname
-
-        if "tgcloud" in self.netloc.lower():
-            self.tgCloud = True
-
-        self.tgCloud = tgCloud or gcp
-        restppPort = str(restppPort)
-        if self.tgCloud and (restppPort == "9000" or restppPort == "443"):
-            # TODO Should not `sslPort` be used instead of hard coded value?
-            self.restppPort = "443"
-            self.restppUrl = self.host + ":443" + "/restpp"
-        else:
-            self.restppPort = restppPort
-            self.restppUrl = self.host + ":" + self.restppPort
-        self.gsPort = ""
-        gsPort = str(gsPort)
-        if self.tgCloud and (gsPort == "14240" or gsPort == "443"):
-            # TODO Should not `sslPort` be used instead of hard coded value?
-            self.gsPort = "443"
-            self.gsUrl = self.host + ":443"
-        else:
-            self.gsPort = gsPort
-            self.gsUrl = self.host + ":" + self.gsPort
-        self.url = ""
 
         self.apiToken = apiToken
         # TODO Eliminate version and use gsqlVersion only, meaning TigerGraph server version
@@ -141,6 +125,34 @@ class pyTigerGraphBase(object):
         self.gsqlInitiated = False
 
         self.Client = None
+
+        self.tgCloud = tgCloud or gcp
+        if "tgcloud" in self.netloc.lower():
+            try: # if get request succeeds, using TG Cloud instance provisioned before 6/20/2022
+                self._get(self.host + ":" + str(restppPort) + "/echo/" + graphname, resKey="message")
+            except requests.exceptions.RequestException: # if get request fails, using TG Cloud instance provisioned after 6/20/2022, after new firewall config
+                self.tgCloud = True
+            except TigerGraphException:
+                raise(TigerGraphException("Incorrect graphname."))
+        
+        restppPort = str(restppPort)
+        if self.tgCloud and (restppPort == "9000" or restppPort == "443"):
+            # TODO Should not `sslPort` be used instead of hard coded value?
+            self.restppPort = "443"
+            self.restppUrl = self.host + ":443" + "/restpp"
+        else:
+            self.restppPort = restppPort
+            self.restppUrl = self.host + ":" + self.restppPort
+        self.gsPort = ""
+        gsPort = str(gsPort)
+        if self.tgCloud and (gsPort == "14240" or gsPort == "443"):
+            # TODO Should not `sslPort` be used instead of hard coded value?
+            self.gsPort = "443"
+            self.gsUrl = self.host + ":443"
+        else:
+            self.gsPort = gsPort
+            self.gsUrl = self.host + ":" + self.gsPort
+        self.url = ""
 
     def _errorCheck(self, res: dict):
         """Checks if the JSON document returned by an endpoint has contains `error: true`. If so,

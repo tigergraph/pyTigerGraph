@@ -24,13 +24,13 @@ class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT
     pyTigerGraphLoading, pyTigerGraphPath, object):
     """Python wrapper for TigerGraph's REST++ and GSQL APIs"""
 
-    def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
+    def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph", gsqlSecret: str = "",
             username: str = "tigergraph", password: str = "tigergraph", tgCloud: bool = False,
             restppPort: Union[int, str] = "9000", gsPort: Union[int, str] = "14240",
             gsqlVersion: str = "", version: str = "", apiToken: str = "", useCert: bool = True,
             certPath: str = None, debug: bool = False, sslPort: Union[int, str] = "443",
             gcp: bool = False):
-        super().__init__(host, graphname, username, password, tgCloud, restppPort, gsPort, gsqlVersion,
+        super().__init__(host, graphname, gsqlSecret, username, password, tgCloud, restppPort, gsPort, gsqlVersion,
             version, apiToken, useCert, certPath, debug, sslPort, gcp)
 
         self.gds = None
