@@ -193,7 +193,7 @@ class Featurizer:
             self.listAlgorithms()
             raise ValueError("The query name is not included in the list of queries.")
 
-    def _install_query_file(self, query_name: str, replace: dict = None, query_path: str = None):
+    def _install_query_file(self, query_name: str, replace: dict = None,  query_path: str = None, global_change:bool = False):
         '''
         Reads the first line of the query file to get the query name, e.g, CREATE QUERY query_name ...
 
@@ -202,6 +202,10 @@ class Featurizer:
                 The name of the query
             replace (dict): 
                 If the suffix name needs to be replaced 
+            global_change (bool):
+                False by default. Set to true if you want to run `GLOBAL SCHEMA_CHANGE JOB`. For Algorithms that are not schema free we need to specify this argument.
+                See https://docs.tigergraph.com/gsql-ref/current/ddl-and-loading/modifying-a-graph-schema#_global_vs_local_schema_changes
+                for more details.
         '''
         if query_path:
             with open(query_path, 'r') as f:
@@ -223,7 +227,7 @@ class Featurizer:
         if query_name == "tg_fastRP":
             # Drop all jobs on the graph
             self.conn.gsql("USE GRAPH {}\n".format(self.conn.graphname) + "drop job *")
-            res = self._add_attribute(schema_type="VERTEX",attr_type="LIST<DOUBLE>",attr_name="fastrp_embedding")
+            res = self._add_attribute(schema_type="VERTEX",attr_type=" LIST<DOUBLE>",attr_name="fastrp_embedding",global_change=global_change)
         # TODO: Check if Distributed query is needed.
         query = ("USE GRAPH {}\n".format(self.conn.graphname) + query + "\nINSTALL QUERY {}\n".format(query_name))
         print("Installing and optimizing the queries, it might take a minute")
@@ -233,25 +237,29 @@ class Featurizer:
             raise ConnectionError(status)
         return query_name 
 
-    def installAlgorithm(self, query_name: str, query_path: str = None) -> str:
+    def installAlgorithm(self,query_name:str, query_path: str = None, global_change:bool = False) -> str:
         '''
         Checks if the query is already installed. 
         If the query is not installed, it installs the query and changes the schema if an attribute needs to be added.
         
         Args:
-            query_name (str):
-                The name of query to be installed.
+            query_name (str): 
+                The name of query to be installed
             query_path (str):
                 If using a custom query, the path to the `.gsql` file that contains the query.
                 Note: you must have the `query_name` parameter match the name of the query in the file.
         
+            global_change (bool):
+                False by default. Set to true if you want to run `GLOBAL SCHEMA_CHANGE JOB`. For Algorithms that are not schema free we need to specify this argument.
+                See https://docs.tigergraph.com/gsql-ref/current/ddl-and-loading/modifying-a-graph-schema#_global_vs_local_schema_changes
+                for more details.
         Returns:
-            String of query name installed.
+            String of query name installed.    
         '''
-        resp = self._install_query_file(query_name, query_path=query_path)
+        resp = self._install_query_file(query_name=query_name, query_path=query_path,global_change=global_change)
         return resp.strip() 
 
-    def _add_attribute(self, schema_type:str, attr_type:str, attr_name:str=None, schema_name:List[str]=None, global_change:bool = False):
+    def _add_attribute(self, schema_type: str, attr_type: str, attr_name: str=None, schema_name: List[str]=None, global_change:bool = False):
         '''
         If the current attribute is not already added to the schema, it will create the schema job to do that.
         Check whether to add the attribute to vertex(vertices) or edge(s).
@@ -266,6 +274,9 @@ class Featurizer:
             schema_name:
                 List of Vertices/Edges that the attr_name need to added to them.
             global_change (bool):
+                False by default. Set to true if you want to run `GLOBAL SCHEMA_CHANGE JOB`.
+                See https://docs.tigergraph.com/gsql-ref/current/ddl-and-loading/modifying-a-graph-schema#_global_vs_local_schema_changes
+                for more details.
                 If the schema change should be global or local.
         '''
         # Check whether to add the attribute to vertex(vertices) or edge(s)
@@ -371,11 +382,12 @@ class Featurizer:
                 Type of attribute that needs to be added to the vertex/edge. Only needed if `custom_query` is set to `True`.
             custom_query (bool):
                 If the query is a custom query. Defaults to False. 
-            schema_name (list[str]):
-                List of Vertices/Edges that the attr_name need to added to them.
+            schema_name:
+                List of Vertices/Edges that the attr_name need to added to them.  
             global_schema (bool):
                 False by default. Set to true if you want to run `GLOBAL SCHEMA_CHANGE JOB`.
                 See https://docs.tigergraph.com/gsql-ref/current/ddl-and-loading/modifying-a-graph-schema#_global_vs_local_schema_changes
+                for more details.  
             timeout (int):
                 Maximum duration for successful query execution (in milliseconds).
             sizeLimit (int):
