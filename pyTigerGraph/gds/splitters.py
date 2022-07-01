@@ -1,5 +1,6 @@
 """Data Splitting Functions
-This class contains functions for data splitting.
+This class contains functions for data splitting. 
+Make sure to create the appropriate attributes in the graph before using these functions.
 """
 
 import os.path
@@ -111,6 +112,8 @@ class RandomVertexSplitter(BaseRandomSplitter):
     Args:
         conn (TigerGraphConnection):
             Connection to TigerGraph database.
+        v_types (List[str], optional):
+            List of vertex types to split. If not provided, all vertex types are used.
         timeout (int, optional):
             Timeout value for the operation. Defaults to 600000.
     """
@@ -196,6 +199,8 @@ class RandomEdgeSplitter(BaseRandomSplitter):
     Args:
         conn (TigerGraphConnection):
             Connection to TigerGraph database.
+        e_types (List[str], optional):
+            List of edge types to split. If not provided, all edge types are used.
         timeout (int, optional):
             Timeout value for the operation. Defaults to 600000.
     """
