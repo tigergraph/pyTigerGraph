@@ -139,9 +139,9 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
 
         Args:
             ExprFunctions (str, optional): 
-                Path to the file for ExprFunctions. Defaults to '' (a blank path).
+                Path or URL to the file for ExprFunctions. Defaults to '' (a blank path/URL).
             ExprUtil (str, optional): 
-                Path to the file for ExprUtil. Defaults to '' (a blank path).
+                Path or URL to the file for ExprUtil. Defaults to '' (a blank path/URL).
 
         Returns:
             Status of the installation.
