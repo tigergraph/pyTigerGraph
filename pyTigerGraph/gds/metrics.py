@@ -138,7 +138,7 @@ class BinaryRecall(Accumulator):
 class BinaryPrecision(Accumulator):
     """Precision Metric.
 
-    Precision = stem:[\frac{\sum(predictionss * labels)}{\sum(predictions)}]
+    Precision = stem:[\frac{\sum(predictions * labels)}{\sum(predictions)}]
 
     This metric is for binary classifications, i.e., both predictions and labels are arrays of 0's and 1's.
 
