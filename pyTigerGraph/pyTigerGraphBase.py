@@ -41,7 +41,7 @@ class pyTigerGraphBase(object):
             graphname:
                 The default graph for running queries.
             gsqlSecret:
-                The secret key for GSQL. Created in AdminPortal of GraphStudio for the graph you wish to use.
+                The secret key for GSQL. See https://docs.tigergraph.com/tigergraph-server/current/user-access/managing-credentials#_secrets for more information.
                 Required for GSQL authentication on TigerGraph Cloud instances created after July 5, 2022.
             username:
                 The username on the TigerGraph server.

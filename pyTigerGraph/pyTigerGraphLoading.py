@@ -14,7 +14,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         The file will first be uploaded to the TigerGraph server and the value of the appropriate
         FILENAME definition will be updated to point to the freshly uploaded file.
 
-        **Note:** The argument `USING HEADER="true"` in the GSQL loading job may not be enough to 
+        NOTE: The argument `USING HEADER="true"` in the GSQL loading job may not be enough to 
         load the file correctly. Remove the header from the data file before using this function.
 
         Args:
