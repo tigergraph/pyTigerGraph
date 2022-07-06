@@ -883,7 +883,6 @@ class BaseLoader:
                         data[e_attr_types[etype]["FromVertexTypeName"], 
                              etype,
                              e_attr_types[etype]["ToVertexTypeName"]].edge_index = edgelist[etype]
-                    del edgelist[etype]
                 del edgelist
                 # Deal with edge attributes
                 if e_in_feats:
