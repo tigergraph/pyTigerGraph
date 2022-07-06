@@ -58,6 +58,7 @@ class BaseLoader:
         num_batches: int = 1,
         buffer_size: int = 4,
         output_format: str = "dataframe",
+        reverse_edge: bool = False,
         kafka_address: str = "",
         Kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -100,6 +101,8 @@ class BaseLoader:
                 Number of data batches to prefetch and store in memory. Defaults to 4.
             output_format (str):
                 Format of the output data of the loader. Defaults to dataframe.
+            reverse_edge (bool, optional):
+                Whether to traverse along reverse edge types. Defaults to False.
             kafka_address (str):
                 Address of the Kafka broker. Defaults to localhost:9092.
             max_kafka_msg_size (int, optional):
@@ -158,6 +161,7 @@ class BaseLoader:
         self.kafka_retention_ms = kafka_retention_ms
         self.delete_kafka_topic = kafka_auto_del_topic
         # Get graph info
+        self.reverse_edge = reverse_edge
         self._graph = graph
         self._v_schema, self._e_schema = self._get_schema()
         # Initialize basic params
@@ -274,6 +278,12 @@ class BaseLoader:
                     ]
                 else:
                     e_schema[e][attr["AttributeName"]] = attr["AttributeType"]["Name"]
+            if self.reverse_edge and ("REVERSE_EDGE" in etype["Config"]):
+                re = etype["Config"]["REVERSE_EDGE"]
+                e_schema[re] = {}
+                e_schema[re].update(e_schema[e])
+                e_schema[re]["FromVertexTypeName"] = etype["ToVertexTypeName"]
+                e_schema[re]["ToVertexTypeName"] = etype["FromVertexTypeName"]
         return v_schema, e_schema
 
     def _validate_vertex_attributes(
@@ -1094,6 +1104,7 @@ class NeighborLoader(BaseLoader):
         add_self_loop: bool = False,
         loader_id: str = None,
         buffer_size: int = 4,
+        reverse_edge: bool = False,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -1118,6 +1129,7 @@ class NeighborLoader(BaseLoader):
             num_batches,
             buffer_size,
             output_format,
+            reverse_edge,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
@@ -1575,6 +1587,7 @@ class EdgeLoader(BaseLoader):
         output_format: str = "dataframe",
         loader_id: str = None,
         buffer_size: int = 4,
+        reverse_edge: bool = False,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -1600,6 +1613,7 @@ class EdgeLoader(BaseLoader):
             num_batches,
             buffer_size,
             output_format,
+            reverse_edge,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
@@ -1882,6 +1896,7 @@ class VertexLoader(BaseLoader):
         output_format: str = "dataframe",
         loader_id: str = None,
         buffer_size: int = 4,
+        reverse_edge: bool = False,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -1907,6 +1922,7 @@ class VertexLoader(BaseLoader):
             num_batches,
             buffer_size,
             output_format,
+            reverse_edge,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
@@ -2196,6 +2212,7 @@ class GraphLoader(BaseLoader):
         add_self_loop: bool = False,
         loader_id: str = None,
         buffer_size: int = 4,
+        reverse_edge: bool = False,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -2221,6 +2238,7 @@ class GraphLoader(BaseLoader):
             num_batches,
             buffer_size,
             output_format,
+            reverse_edge,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
@@ -2528,6 +2546,7 @@ class EdgeNeighborLoader(BaseLoader):
         add_self_loop: bool = False,
         loader_id: str = None,
         buffer_size: int = 4,
+        reverse_edge: bool = False,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -2552,6 +2571,7 @@ class EdgeNeighborLoader(BaseLoader):
             num_batches,
             buffer_size,
             output_format,
+            reverse_edge,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
