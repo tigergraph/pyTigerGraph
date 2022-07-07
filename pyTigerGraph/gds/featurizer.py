@@ -269,7 +269,7 @@ class Featurizer:
             attr_name (str): 
                 An attribute name that needs to be added to the vertex/edge
             schema_name (List[str]):
-                List of Vertices/Edges that the `attr_name` need to added to them.
+                List of Vertices/Edges that need the `attr_name` added to them.
             global_change (bool):
                 False by default. Set to true if you want to run `GLOBAL SCHEMA_CHANGE JOB`.
                 See https://docs.tigergraph.com/gsql-ref/current/ddl-and-loading/modifying-a-graph-schema#_global_vs_local_schema_changes.
