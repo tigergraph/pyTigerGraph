@@ -30,6 +30,8 @@ CREATE QUERY graph_loader_{QUERYSUFFIX}(
       ssl_ca_location: Path to CA certificate for verifying the Kafka broker key.
     */
     INT num_vertices;
+    INT temp_v;
+    INT temp_e;
     SumAccum<INT> @tmp_id;
     SumAccum<STRING> @@kafka_error;
 

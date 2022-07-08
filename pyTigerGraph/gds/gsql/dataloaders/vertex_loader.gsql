@@ -33,6 +33,7 @@ CREATE QUERY vertex_loader_{QUERYSUFFIX}(
       ssl_ca_location: Path to CA certificate for verifying the Kafka broker key.
     */
     INT num_vertices;
+    INT temp;
     SumAccum<INT> @tmp_id;
     SumAccum<STRING> @@kafka_error;
 
