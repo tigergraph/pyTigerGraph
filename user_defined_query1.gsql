@@ -1,4 +1,0 @@
-
-CREATE QUERY user_defined_query1() FOR GRAPH Cora { 
-  PRINT "user_defined_query works!"; 
-}
