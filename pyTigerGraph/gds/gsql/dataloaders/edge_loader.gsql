@@ -68,11 +68,20 @@ CREATE QUERY edge_loader_{QUERYSUFFIX}(
             # Write to kafka
             IF security_protocol IS NOT NULL THEN
                 IF write_to_kafka(kafka_address, kafka_topic, "edge_batch_" + int_to_string(batch_id), @@e_batch, security_protocol, sasl_mechanism, sasl_username, sasl_password, ssl_ca_location)!=0 THEN 
-                    @@kafka_error += ("Failed sending edge batch " + int_to_string(batch_id) + "\n");
+                    # If user is using the free version of UDF then add an error to inform the user they need to upgrade to use Kafka streaming function  
+                    IF write_to_kafka(kafka_address, kafka_topic, "edge_batch_" + int_to_string(batch_id), @@e_batch, security_protocol, sasl_mechanism, sasl_username, sasl_password, ssl_ca_location)==777 THEN
+                        @@kafka_error += ("Failed, you need to upgrade to use Kafka streaming function."+ "\n");
+                    ELSE
+                        @@kafka_error += ("Failed sending edge batch " + int_to_string(batch_id) + "\n");
+                    END;
                 END;
             ELSE 
                 IF write_to_kafka(kafka_address, kafka_topic, "edge_batch_" + int_to_string(batch_id), @@e_batch, "", "", "", "", "")!=0 THEN 
-                    @@kafka_error += ("Failed sending edge batch " + int_to_string(batch_id) + "\n");
+                    IF write_to_kafka(kafka_address, kafka_topic, "edge_batch_" + int_to_string(batch_id), @@e_batch, "", "", "", "", "")==777 THEN 
+                        @@kafka_error += ("Failed, you need to upgrade to use Kafka streaming function."+ "\n");
+                    ELSE
+                        @@kafka_error += ("Failed sending edge batch " + int_to_string(batch_id) + "\n");
+                    END;
                 END;
             END;
         ELSE
