@@ -162,7 +162,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                 resKey=None
             )
             if res["error"] == False:
-                print("ExprFunctions installed succesfully")
+                print("ExprFunctions installed successfully")
             else:
                 print("Failed to install ExprFunctions")
 
@@ -182,6 +182,6 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                 resKey=None
             )
             if res["error"] == False:
-                print("ExprUtil installed succesfully")
+                print("ExprUtil installed successfully")
             else:
                 print("Failed to install ExprUtil")
