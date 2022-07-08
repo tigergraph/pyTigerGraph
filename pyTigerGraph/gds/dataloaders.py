@@ -1228,7 +1228,7 @@ class NeighborLoader(BaseLoader):
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(s.{})".format(_udf_funcs[v_attr_types[attr]], attr)
+                        "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
                         for attr in v_attr_names
                     )
                     print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + ",1\\n")\n'.format(
@@ -1256,7 +1256,7 @@ class NeighborLoader(BaseLoader):
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(e.{})".format(_udf_funcs[e_attr_types[attr]], attr)
+                        "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
                         for attr in e_attr_names
                     )
                     print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")\n'.format(
@@ -1274,7 +1274,7 @@ class NeighborLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(s.{})".format(_udf_funcs[v_attr_types[attr]], attr)
+                    "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
                     for attr in v_attr_names
                 )
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + ",1\\n")'.format(
@@ -1296,7 +1296,7 @@ class NeighborLoader(BaseLoader):
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(e.{})".format(_udf_funcs[e_attr_types[attr]], attr)
+                    "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
                     for attr in e_attr_names
                 )
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")'.format(
@@ -1662,7 +1662,7 @@ class EdgeLoader(BaseLoader):
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(e.{})".format(_udf_funcs[e_attr_types[attr]], attr)
+                        "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
                         for attr in e_attr_names
                     )
                     print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")\n'.format(
@@ -1680,7 +1680,7 @@ class EdgeLoader(BaseLoader):
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(e.{})".format(_udf_funcs[e_attr_types[attr]], attr)
+                    "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
                     for attr in e_attr_names
                 )
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")'.format(
@@ -1970,7 +1970,7 @@ class VertexLoader(BaseLoader):
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(s.{})".format(_udf_funcs[v_attr_types[attr]], attr)
+                        "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
                         for attr in v_attr_names
                     )
                     print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + "\\n")\n'.format(
@@ -1988,7 +1988,7 @@ class VertexLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(s.{})".format(_udf_funcs[v_attr_types[attr]], attr)
+                    "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
                     for attr in v_attr_names
                 )
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + "\\n")'.format(
@@ -2307,7 +2307,7 @@ class GraphLoader(BaseLoader):
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(s.{})".format(_udf_funcs[v_attr_types[attr]], attr)
+                        "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
                         for attr in v_attr_names
                     )
                     print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + "\\n")\n'.format(
@@ -2329,7 +2329,7 @@ class GraphLoader(BaseLoader):
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(e.{})".format(_udf_funcs[e_attr_types[attr]], attr)
+                        "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
                         for attr in e_attr_names
                     )
                     print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")\n'.format(
@@ -2347,7 +2347,7 @@ class GraphLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(s.{})".format(_udf_funcs[v_attr_types[attr]], attr)
+                    "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
                     for attr in v_attr_names
                 )
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + "\\n")'.format(
@@ -2362,7 +2362,7 @@ class GraphLoader(BaseLoader):
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(e.{})".format(_udf_funcs[e_attr_types[attr]], attr)
+                    "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
                     for attr in e_attr_names
                 )
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")'.format(
@@ -2650,7 +2650,7 @@ class EdgeNeighborLoader(BaseLoader):
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(s.{})".format(_udf_funcs[v_attr_types[attr]], attr)
+                        "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
                         for attr in v_attr_names
                     )
                     print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + "\\n")\n'.format(
@@ -2673,7 +2673,7 @@ class EdgeNeighborLoader(BaseLoader):
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(e.{})".format(_udf_funcs[e_attr_types[attr]], attr)
+                        "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
                         for attr in e_attr_names
                     )
                     print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + ",1\\n")\n'.format(
@@ -2697,7 +2697,7 @@ class EdgeNeighborLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(s.{})".format(_udf_funcs[v_attr_types[attr]], attr)
+                    "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
                     for attr in v_attr_names
                 )
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + "\\n")'.format(
@@ -2713,7 +2713,7 @@ class EdgeNeighborLoader(BaseLoader):
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(e.{})".format(_udf_funcs[e_attr_types[attr]], attr)
+                    "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
                     for attr in e_attr_names
                 )
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + ",1\\n")'.format(

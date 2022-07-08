@@ -298,6 +298,32 @@ class TestGDSGraphLoaderREST(unittest.TestCase):
             num_batches += 1
         self.assertEqual(num_batches, 11)
 
+    def test_string_attr(self):
+        conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora2")
+        loader = GraphLoader(
+            graph=conn,
+            v_in_feats=["x"],
+            v_out_labels=["y"],
+            v_extra_feats=["train_mask", "val_mask", "test_mask", "name"],
+            num_batches=1,
+            shuffle=False,
+            filter_by="train_mask",
+            output_format="PyG",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4,
+        )
+        data = loader.data
+        # print(data)
+        # print(data.name)
+        self.assertIsInstance(data, pygData)
+        self.assertIn("x", data)
+        self.assertIn("y", data)
+        self.assertIn("train_mask", data)
+        self.assertIn("val_mask", data)
+        self.assertIn("test_mask", data)
+        self.assertIn("name", data)
+
 
 class TestGDSHeteroGraphLoaderREST(unittest.TestCase):
     @classmethod
@@ -429,6 +455,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSGraphLoaderREST("test_iterate_pyg"))
     suite.addTest(TestGDSGraphLoaderREST("test_iterate_df"))
     suite.addTest(TestGDSGraphLoaderREST("test_edge_attr"))
+    suite.addTest(TestGDSGraphLoaderREST("test_string_attr"))
     suite.addTest(TestGDSHeteroGraphLoaderREST("test_init"))
     suite.addTest(TestGDSHeteroGraphLoaderREST("test_iterate_pyg"))
     suite.addTest(TestGDSHeteroGraphLoaderREST("test_iterate_df"))

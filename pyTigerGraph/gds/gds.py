@@ -216,7 +216,7 @@ class GDS:
                 certain attribute doesn't exist in all vertex types. If it is a dict, keys of the 
                 dict are vertex types to be selected, and values are lists of attributes to be 
                 selected for each vertex type. 
-                All types of attributes are allowed. Defaults to None.
+                Numeric, boolean and string attributes are allowed. Defaults to None.
             e_in_feats (list or dict, optional):
                 Edge attributes to be used as input features. 
                 If it is a list, then the attributes
@@ -239,7 +239,7 @@ class GDS:
                 selected. An error will be thrown if certain attribute doesn't exist in all 
                 edge types. If it is a dict, keys of the dict are edge types to be selected, 
                 and values are lists of attributes to be selected for each edge type.
-                All types of attributes are allowed. Defaults to None.
+                Numeric, boolean and string attributes are allowed. Defaults to None.
             batch_size (int, optional):
                 Number of vertices as seeds in each batch.
                 Defaults to None.
@@ -409,7 +409,8 @@ class GDS:
                 in the list from all edge types will be selected. An error will be thrown if
                 certain attribute doesn't exist in all edge types. If it is a dict, keys of the 
                 dict are edge types to be selected, and values are lists of attributes to be 
-                selected for each edge type. Defaults to None.
+                selected for each edge type. Numeric, boolean and string attributes are allowed.
+                Defaults to None.
             batch_size (int, optional):
                 Number of edges in each batch.
                 Defaults to None.
@@ -562,7 +563,8 @@ class GDS:
                 in the list from all vertex types will be selected. An error will be thrown if
                 certain attribute doesn't exist in all vertex types. If it is a dict, keys of the 
                 dict are vertex types to be selected, and values are lists of attributes to be 
-                selected for each vertex type. Defaults to None.
+                selected for each vertex type. Numeric, boolean and string attributes are allowed.
+                Defaults to None.
             batch_size (int, optional):
                 Number of vertices in each batch.
                 Defaults to None.
@@ -743,7 +745,7 @@ class GDS:
                 certain attribute doesn't exist in all vertex types. If it is a dict, keys of the 
                 dict are vertex types to be selected, and values are lists of attributes to be 
                 selected for each vertex type. 
-                All types of attributes are allowed. Defaults to None.
+                Numeric, boolean and string attributes are allowed. Defaults to None.
             e_in_feats (list or dict, optional):
                 Edge attributes to be used as input features. 
                 If it is a list, then the attributes
@@ -766,7 +768,7 @@ class GDS:
                 selected. An error will be thrown if certain attribute doesn't exist in all 
                 edge types. If it is a dict, keys of the dict are edge types to be selected, 
                 and values are lists of attributes to be selected for each edge type.
-                All types of attributes are allowed. Defaults to None.
+                Numeric, boolean and string attributes are allowed. Defaults to None.
             batch_size (int, optional):
                 Number of edges in each batch.
                 Defaults to None.
@@ -960,7 +962,7 @@ class GDS:
                 certain attribute doesn't exist in all vertex types. If it is a dict, keys of the 
                 dict are vertex types to be selected, and values are lists of attributes to be 
                 selected for each vertex type. 
-                All types of attributes are allowed. Defaults to None.
+                Numeric, boolean and string attributes are allowed. Defaults to None.
             e_in_feats (list or dict, optional):
                 Edge attributes to be used as input features. 
                 If it is a list, then the attributes
@@ -983,7 +985,7 @@ class GDS:
                 selected. An error will be thrown if certain attribute doesn't exist in all 
                 edge types. If it is a dict, keys of the dict are edge types to be selected, 
                 and values are lists of attributes to be selected for each edge type.
-                All types of attributes are allowed. Defaults to None.
+                Numeric, boolean and string attributes are allowed. Defaults to None.
             batch_size (int, optional):
                 Number of vertices as seeds in each batch.
                 Defaults to None.
