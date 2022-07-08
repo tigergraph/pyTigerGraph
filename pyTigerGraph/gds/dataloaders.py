@@ -597,6 +597,8 @@ class BaseLoader:
                 elif dtype.startswith("set") or dtype.startswith("map") or dtype.startswith("date"):
                     raise NotImplementedError(
                         "{} type not supported for input and output features yet.".format(dtype))
+                elif dtype == "bool":
+                    x.append(df[[col]].astype("int8").to_numpy().astype(dtype))
                 else:
                     x.append(df[[col]].to_numpy().astype(dtype))
             return torch.tensor(np.hstack(x)).squeeze(dim=1)

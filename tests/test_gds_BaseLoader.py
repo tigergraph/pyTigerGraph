@@ -327,6 +327,51 @@ class TestGDSBaseLoader(unittest.TestCase):
         data = data_q.get()
         self.assertIsNone(data)
 
+    def test_read_bool_label(self):
+        read_task_q = Queue()
+        data_q = Queue(4)
+        exit_event = Event()
+        raw = (
+            "99,1 0 0 1 ,1,0,Alex,1\n8,1 0 0 1 ,1,1,Bill,0\n",
+            "99,8,0.1,2021,1,0\n8,99,1.5,2020,0,1\n"
+        )
+        read_task_q.put(raw)
+        read_task_q.put(None)
+        self.loader._read_data(
+            exit_event,
+            read_task_q,
+            data_q,
+            "graph",
+            "pyg",
+            ["x"],
+            ["y"],
+            ["train_mask", "name", "is_seed"],
+            {
+                "x": "LIST:INT",
+                "y": "BOOL",
+                "train_mask": "BOOL",
+                "name": "STRING",
+                "is_seed": "BOOL",
+            },
+            ["x", "time"], ["y"], ["is_train"], 
+            {"x": "DOUBLE", "time": "INT", "y": "BOOL", "is_train": "BOOL"} 
+        )
+        data = data_q.get()
+        self.assertIsInstance(data, pygData)
+        assert_close_torch(data["edge_index"], torch.tensor([[0, 1], [1, 0]]))
+        assert_close_torch(data["edge_feat"], 
+            torch.tensor([[0.1, 2021], [1.5, 2020]], dtype=torch.double))
+        assert_close_torch(data["edge_label"], torch.tensor([True, False]))
+        assert_close_torch(data["is_train"], torch.tensor([False, True]))
+        assert_close_torch(data["x"], torch.tensor([[1, 0, 0, 1], [1, 0, 0, 1]]))
+        assert_close_torch(data["y"], torch.tensor([True, True]))
+        assert_close_torch(data["train_mask"], torch.tensor([False, True]))
+        assert_close_torch(data["is_seed"], torch.tensor([True, False]))
+        self.assertListEqual(data["name"], ["Alex", "Bill"])
+        data = data_q.get()
+        self.assertIsNone(data)
+
+
 if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(TestGDSBaseLoader("test_get_schema"))
@@ -338,5 +383,6 @@ if __name__ == "__main__":
     suite.addTest(TestGDSBaseLoader("test_read_graph_out_pyg"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_no_attr"))
     suite.addTest(TestGDSBaseLoader("test_read_hetero_graph_out_pyg"))
+    suite.addTest(TestGDSBaseLoader("test_read_bool_label"))
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)
