@@ -144,6 +144,7 @@ class GDS:
         add_self_loop: bool = False,
         loader_id: str = None,
         buffer_size: int = 4,
+        reverse_edge: bool = False,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -270,6 +271,8 @@ class GDS:
                 for it. Defaults to None.
             buffer_size (int, optional):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
+            reverse_edge (bool, optional):
+                Whether to traverse along reverse edge types. Defaults to False.
             kafka_address (str, optional):
                 Address of the Kafka broker. Defaults to None.
             kafka_max_msg_size (int, optional):
@@ -326,6 +329,7 @@ class GDS:
             "add_self_loop": add_self_loop,
             "loader_id": loader_id,
             "buffer_size": buffer_size,
+            "reverse_edge": reverse_edge,
             "kafka_address": kafka_address,
             "kafka_max_msg_size": kafka_max_msg_size,
             "kafka_num_partitions": kafka_num_partitions,
@@ -359,6 +363,7 @@ class GDS:
         output_format: str = "dataframe",
         loader_id: str = None,
         buffer_size: int = 4,
+        reverse_edge: bool = False,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -430,6 +435,8 @@ class GDS:
                 for it. Defaults to None.
             buffer_size (int, optional):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
+            reverse_edge (bool, optional):
+                Whether to traverse along reverse edge types. Defaults to False.
             kafka_address (str, optional):
                 Address of the Kafka broker. Defaults to None.
             kafka_max_msg_size (int, optional):
@@ -481,6 +488,7 @@ class GDS:
             "output_format": output_format,
             "loader_id": loader_id,
             "buffer_size": buffer_size,
+            "reverse_edge": reverse_edge,
             "kafka_address": kafka_address,
             "kafka_max_msg_size": kafka_max_msg_size,
             "kafka_num_partitions": kafka_num_partitions,
@@ -513,6 +521,7 @@ class GDS:
             output_format: str = "dataframe",
             loader_id: str = None,
             buffer_size: int = 4,
+            reverse_edge: bool = False,
             kafka_address: str = None,
             kafka_max_msg_size: int = 104857600,
             kafka_num_partitions: int = 1,
@@ -584,6 +593,8 @@ class GDS:
                 for it. Defaults to None.
             buffer_size (int, optional):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
+            reverse_edge (bool, optional):
+                Whether to traverse along reverse edge types. Defaults to False.
             kafka_address (str, optional):
                 Address of the Kafka broker. Defaults to None.
             kafka_max_msg_size (int, optional):
@@ -635,6 +646,7 @@ class GDS:
             "output_format": output_format,
             "loader_id": loader_id,
             "buffer_size": buffer_size,
+            "reverse_edge": reverse_edge,
             "kafka_address": kafka_address,
             "kafka_max_msg_size": kafka_max_msg_size,
             "kafka_num_partitions": kafka_num_partitions,
@@ -674,6 +686,7 @@ class GDS:
         add_self_loop: bool = False,
         loader_id: str = None,
         buffer_size: int = 4,
+        reverse_edge: bool = False,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -790,6 +803,8 @@ class GDS:
                 for it. Defaults to None.
             buffer_size (int, optional):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
+            reverse_edge (bool, optional):
+                Whether to traverse along reverse edge types. Defaults to False.
             kafka_address (str, optional):
                 Address of the Kafka broker. Defaults to None.
             kafka_max_msg_size (int, optional):
@@ -847,6 +862,7 @@ class GDS:
             "add_self_loop": add_self_loop,
             "loader_id": loader_id,
             "buffer_size": buffer_size,
+            "reverse_edge": reverse_edge,
             "kafka_address": kafka_address,
             "kafka_max_msg_size": kafka_max_msg_size,
             "kafka_num_partitions": kafka_num_partitions,
@@ -888,6 +904,7 @@ class GDS:
         add_self_loop: bool = False,
         loader_id: str = None,
         buffer_size: int = 4,
+        reverse_edge: bool = False,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -1014,6 +1031,8 @@ class GDS:
                 for it. Defaults to None.
             buffer_size (int, optional):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
+            reverse_edge (bool, optional):
+                Whether to traverse along reverse edge types. Defaults to False.
             kafka_address (str, optional):
                 Address of the Kafka broker. Defaults to None.
             kafka_max_msg_size (int, optional):
@@ -1071,6 +1090,7 @@ class GDS:
             "add_self_loop": add_self_loop,
             "loader_id": loader_id,
             "buffer_size": buffer_size,
+            "reverse_edge": reverse_edge,
             "kafka_address": kafka_address,
             "kafka_max_msg_size": kafka_max_msg_size,
             "kafka_num_partitions": kafka_num_partitions,
