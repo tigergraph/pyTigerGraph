@@ -204,8 +204,7 @@ class Featurizer:
                 If the suffix name needs to be replaced 
             global_change (bool):
                 False by default. Set to true if you want to run `GLOBAL SCHEMA_CHANGE JOB`. For Algorithms that are not schema free we need to specify this argument.
-                See https://docs.tigergraph.com/gsql-ref/current/ddl-and-loading/modifying-a-graph-schema#_global_vs_local_schema_changes
-                for more details.
+                See https://docs.tigergraph.com/gsql-ref/current/ddl-and-loading/modifying-a-graph-schema#_global_vs_local_schema_changes.
         '''
         if query_path:
             with open(query_path, 'r') as f:
@@ -244,15 +243,13 @@ class Featurizer:
         
         Args:
             query_name (str): 
-                The name of query to be installed
+                The name of query to be installed.
             query_path (str):
                 If using a custom query, the path to the `.gsql` file that contains the query.
                 Note: you must have the `query_name` parameter match the name of the query in the file.
-        
             global_change (bool):
-                False by default. Set to true if you want to run `GLOBAL SCHEMA_CHANGE JOB`. For Algorithms that are not schema free we need to specify this argument.
-                See https://docs.tigergraph.com/gsql-ref/current/ddl-and-loading/modifying-a-graph-schema#_global_vs_local_schema_changes
-                for more details.
+                False by default. Set to true if you want to run `GLOBAL SCHEMA_CHANGE JOB`. For algorithms that are not schema free we need to specify this argument.
+                See https://docs.tigergraph.com/gsql-ref/current/ddl-and-loading/modifying-a-graph-schema#_global_vs_local_schema_changes.
         Returns:
             String of query name installed.    
         '''
@@ -271,12 +268,11 @@ class Featurizer:
                 Type of attribute which can be INT, DOUBLE,FLOAT,BOOL, or LIST
             attr_name (str): 
                 An attribute name that needs to be added to the vertex/edge
-            schema_name:
-                List of Vertices/Edges that the attr_name need to added to them.
+            schema_name (List[str]):
+                List of Vertices/Edges that need the `attr_name` added to them.
             global_change (bool):
                 False by default. Set to true if you want to run `GLOBAL SCHEMA_CHANGE JOB`.
-                See https://docs.tigergraph.com/gsql-ref/current/ddl-and-loading/modifying-a-graph-schema#_global_vs_local_schema_changes
-                for more details.
+                See https://docs.tigergraph.com/gsql-ref/current/ddl-and-loading/modifying-a-graph-schema#_global_vs_local_schema_changes.
                 If the schema change should be global or local.
         '''
         # Check whether to add the attribute to vertex(vertices) or edge(s)
@@ -386,8 +382,7 @@ class Featurizer:
                 List of Vertices/Edges that the attr_name need to added to them.  
             global_schema (bool):
                 False by default. Set to true if you want to run `GLOBAL SCHEMA_CHANGE JOB`.
-                See https://docs.tigergraph.com/gsql-ref/current/ddl-and-loading/modifying-a-graph-schema#_global_vs_local_schema_changes
-                for more details.  
+                See https://docs.tigergraph.com/gsql-ref/current/ddl-and-loading/modifying-a-graph-schema#_global_vs_local_schema_changes.
             timeout (int):
                 Maximum duration for successful query execution (in milliseconds).
             sizeLimit (int):

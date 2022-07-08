@@ -60,7 +60,7 @@ class Accumulator:
 class Accuracy(Accumulator):
     """Accuracy Metric.
 
-    Accuracy = sum(preds == labels) / len(labels)
+    Accuracy = sum(predictions == labels) / len(labels)
 
     Usage:
 
@@ -98,9 +98,9 @@ class Accuracy(Accumulator):
 class BinaryRecall(Accumulator):
     """Recall Metric.
 
-    Recall = stem:[\frac{\sum(preds * labels)}{\sum(labels)}]
+    Recall = stem:[\frac{\sum(predictions * labels)}{\sum(labels)}]
 
-    This metric is for binary classifications, i.e., both preds and labels are arrays of 0's and 1's.
+    This metric is for binary classifications, i.e., both predictions and labels are arrays of 0's and 1's.
 
     Usage:
 
@@ -138,9 +138,9 @@ class BinaryRecall(Accumulator):
 class BinaryPrecision(Accumulator):
     """Precision Metric.
 
-    Precision = stem:[\frac{\sum(preds * labels)}{\sum(preds)}]
+    Precision = stem:[\frac{\sum(predictions * labels)}{\sum(predictions)}]
 
-    This metric is for binary classifications, i.e., both preds and labels are arrays of 0's and 1's.
+    This metric is for binary classifications, i.e., both predictions and labels are arrays of 0's and 1's.
 
     Usage:
 

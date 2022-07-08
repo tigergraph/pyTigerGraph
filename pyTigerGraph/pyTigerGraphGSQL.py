@@ -134,7 +134,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             sys.exit(1)
 
     def installUDF(self, ExprFunctions: str = "", ExprUtil: str = "") -> None:
-        """Install User Defined Function (UDF) to the database. 
+        """Install user defined functions (UDF) to the database. 
         See https://docs.tigergraph.com/gsql-ref/current/querying/func/query-user-defined-functions for details on UDFs.
 
         Args:
