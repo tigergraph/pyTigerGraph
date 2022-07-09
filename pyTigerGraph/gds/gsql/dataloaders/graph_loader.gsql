@@ -105,7 +105,7 @@ CREATE QUERY graph_loader_{QUERYSUFFIX}(
                 END;
             ELSE
                 temp_v = write_to_kafka(kafka_address, kafka_topic, "vertex_batch_" + int_to_string(batch_id), @@v_batch, "", "", "", "", ""); 
-                IF temp_v=0 THEN
+                IF temp_v!=0 THEN
                     IF temp_v==777 THEN
                         @@kafka_error += ("Failed, you need to upgrade to use Kafka streaming function."+ "\n");
                     ELSE
