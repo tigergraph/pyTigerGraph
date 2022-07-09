@@ -137,7 +137,7 @@ CREATE QUERY edge_nei_loader_{QUERYSUFFIX}(
                         @@kafka_error += ("Failed, you need to upgrade to use Kafka streaming function."+ "\n");
                     ELSE
                         @@kafka_error += ("Failed sending vertex batch " + int_to_string(batch_id) + "\n");
-                    END:
+                    END;
                 END;
                 temp_e = write_to_kafka(kafka_address, kafka_topic, "edge_batch_" + int_to_string(batch_id), @@e_batch, "", "", "", "", "");
                 IF temp_e!=0 THEN 
@@ -145,7 +145,7 @@ CREATE QUERY edge_nei_loader_{QUERYSUFFIX}(
                         @@kafka_error += ("Failed, you need to upgrade to use Kafka streaming function."+ "\n");
                     ELSE
                         @@kafka_error += ("Failed sending edge batch " + int_to_string(batch_id) + "\n");
-                    END:
+                    END;
                 END;
             END;
         ELSE
