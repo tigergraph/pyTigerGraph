@@ -46,7 +46,7 @@ setup(
         'validators',
         'requests'],
     classifiers=[
-        'Development Status :: 4 - Beta',  # 3 - Alpha, 4 - Beta or 5 - Production/Stable
+        'Development Status :: 5 - Production/Stable',  # 3 - Alpha, 4 - Beta or 5 - Production/Stable
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Build Tools',
         'License :: OSI Approved :: Apache Software License',
