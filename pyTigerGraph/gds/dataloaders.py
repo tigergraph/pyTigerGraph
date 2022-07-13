@@ -261,7 +261,7 @@ class BaseLoader:
                     ]
                 else:
                     v_schema[v][attr["AttributeName"]] = attr["AttributeType"]["Name"]
-            if vtype["PrimaryId"]["PrimaryIdAsAttribute"]:
+            if vtype["PrimaryId"].get("PrimaryIdAsAttribute"):
                 v_schema[v][vtype["PrimaryId"]["AttributeName"]] = vtype["PrimaryId"][
                     "AttributeType"
                 ]["Name"]
