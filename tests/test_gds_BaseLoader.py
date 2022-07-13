@@ -47,6 +47,31 @@ class TestGDSBaseLoader(unittest.TestCase):
             },
         )
 
+    def test_get_schema_no_primary_id_attr(self):
+        conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora3")
+        loader = BaseLoader(conn)
+        self.assertDictEqual(
+            loader._v_schema,
+            {
+                "Paper3": {
+                    "x": "LIST:INT",
+                    "y": "INT",
+                    "train_mask": "BOOL",
+                    "val_mask": "BOOL",
+                    "test_mask": "BOOL"
+                }
+            },
+        )
+        self.assertDictEqual(
+            loader._e_schema,
+            {
+                "Cite3": {
+                    "FromVertexTypeName": "Paper3",
+                    "ToVertexTypeName": "Paper3"
+                }
+            },
+        )
+
     def test_validate_vertex_attributes(self):
         # Empty input
         self.assertListEqual(self.loader._validate_vertex_attributes(None), [])
@@ -375,6 +400,7 @@ class TestGDSBaseLoader(unittest.TestCase):
 if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(TestGDSBaseLoader("test_get_schema"))
+    suite.addTest(TestGDSBaseLoader("test_get_schema_no_primary_id_attr"))
     suite.addTest(TestGDSBaseLoader("test_validate_vertex_attributes"))
     suite.addTest(TestGDSBaseLoader("test_validate_edge_attributes"))
     suite.addTest(TestGDSBaseLoader("test_read_vertex"))
