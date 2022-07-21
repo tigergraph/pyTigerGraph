@@ -56,14 +56,23 @@ class test_pyTigerGraphPath(pyTigerGraphUnitTest):
             res = self.conn.dropSecret("non_existent_secret", False)
 
     def test_05_getToken(self):
-        pass
+        res = self.conn.createSecret("secret5", True)
+        token = self.conn.getToken(res)
+        self.assertIsInstance(token, tuple)
+        self.conn.dropSecret("secret6")
 
     def test_06_refreshToken(self):
-        pass
+        res = self.conn.createSecret("secret6", True)
+        token = self.conn.getToken(res)
+        refreshed = self.conn.refreshToken(res, token)
+        self.assertIsInstance(refreshed, tuple)
+        self.conn.dropSecret("secret6")
 
     def test_07_deleteToken(self):
-        pass
-
+        res = self.conn.createSecret("secret7", True)
+        token = self.conn.getToken(res)
+        self.assertTrue(self.conn.deleteToken(res, token))
+        self.conn.dropSecret("secret7")
 
 if __name__ == '__main__':
     unittest.main()
