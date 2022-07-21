@@ -172,7 +172,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
         if self.version:
             s, m, i = self.version.split(".")
         success = False
-        if int(s) < 3 or (int(s) >= 3 and int(m) < 5):
+        if int(s) < 3 or (int(s) == 3 and int(m) < 5):
             try:
                 if self.useCert and self.certPath:
                     res = json.loads(requests.request("GET", self.restppUrl +
@@ -254,23 +254,51 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                 See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_refresh_a_token
         TODO Rework lifetime parameter handling the same as in getToken()
         """
+        s, m, i = (0, 0, 0)
+        res = {}
+        if self.version:
+            s, m, i = self.version.split(".")
+        success = False
+
         if not token:
             token = self.apiToken
-        if self.useCert and self.certPath:
-            res = json.loads(requests.request("PUT", self.restppUrl + "/requesttoken?secret=" +
-                secret + "&token=" + token + ("&lifetime=" + str(lifetime) if lifetime else ""),
-                verify=False).text)
-        else:
-            res = json.loads(requests.request("PUT", self.restppUrl + "/requesttoken?secret=" +
-                secret + "&token=" + token + ("&lifetime=" + str(lifetime) if lifetime else "")
-                ).text)
-        if not res["error"]:
+
+        if int(s) < 3 or (int(s) == 3 and int(m) < 5):
+            if self.useCert and self.certPath:
+                res = json.loads(requests.request("PUT", self.restppUrl + "/requesttoken?secret=" +
+                    secret + "&token=" + token + ("&lifetime=" + str(lifetime) if lifetime else ""),
+                    verify=False).text)
+            else:
+                res = json.loads(requests.request("PUT", self.restppUrl + "/requesttoken?secret=" +
+                    secret + "&token=" + token + ("&lifetime=" + str(lifetime) if lifetime else "")
+                    ).text)
+            if not res["error"]:
+                success = True
+            if "Endpoint is not found from url = /requesttoken" in res["message"]:
+                raise TigerGraphException("REST++ authentication is not enabled, can't refresh token.",
+                    None)
+            
+        if not success:
+            data = {"secret": secret, "token": token}
+            if lifetime:
+                data["lifetime"] = str(lifetime)
+            if self.useCert is True and self.certPath is not None:
+                res = json.loads(requests.post(self.restppUrl + "/requesttoken",
+                    data=json.dumps(data)).text)
+            else:
+                res = json.loads(requests.post(self.restppUrl + "/requesttoken",
+                    data=json.dumps(data), verify=False).text)
+            if not res["error"]:
+                success = True
+            if "Endpoint is not found from url = /requesttoken" in res["message"]:
+                raise TigerGraphException("REST++ authentication is not enabled, can't refresh token.",
+                    None)
+
+        if success:
             exp = time.time() + res["expiration"]
             return res["token"], int(exp), datetime.utcfromtimestamp(exp).strftime(
-                '%Y-%m-%d %H:%M:%S')
-        if "Endpoint is not found from url = /requesttoken" in res["message"]:
-            raise TigerGraphException("REST++ authentication is not enabled, can't refresh token.",
-                None)
+                    '%Y-%m-%d %H:%M:%S')
+
         raise TigerGraphException(res["message"], (res["code"] if "code" in res else None))
 
     def deleteToken(self, secret, token=None, skipNA=True) -> bool:
@@ -302,22 +330,44 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             - `DELETE /requesttoken`
                 See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_delete_a_token
         """
+        s, m, i = (0, 0, 0)
+        res = {}
+        if self.version:
+            s, m, i = self.version.split(".")
+        success = False
+
         if not token:
             token = self.apiToken
-        if self.useCert is True and self.certPath is not None:
-            res = json.loads(
-                requests.request("DELETE",
-                    self.restppUrl + "/requesttoken?secret=" + secret + "&token=" + token,
-                    verify=False).text)
-        else:
-            res = json.loads(
-                requests.request("DELETE",
-                    self.restppUrl + "/requesttoken?secret=" + secret + "&token=" + token).text)
+
+        if int(s) < 3 or (int(s) == 3 and int(m) < 5):
+            if self.useCert is True and self.certPath is not None:
+                res = json.loads(
+                    requests.request("DELETE",
+                        self.restppUrl + "/requesttoken?secret=" + secret + "&token=" + token,
+                        verify=False).text)
+            else:
+                res = json.loads(
+                    requests.request("DELETE",
+                        self.restppUrl + "/requesttoken?secret=" + secret + "&token=" + token).text)
+            if not res["error"]:
+                success = True
+                
+        if not success:
+            data = {"secret": secret, "token": token}
+            if self.useCert is True and self.certPath is not None:
+                res = json.loads(requests.delete(self.restppUrl + "/requesttoken",
+                    data=json.dumps(data)).text)
+            else:
+                res = json.loads(requests.delete(self.restppUrl + "/requesttoken",
+                    data=json.dumps(data), verify=False).text)
+
+        
+        if "Endpoint is not found from url = /requesttoken" in res["message"]:
+            raise TigerGraphException("REST++ authentication is not enabled, can't delete token.",
+                None)
         if not res["error"]:
             return True
         if res["code"] == "REST-3300" and skipNA:
             return True
-        if "Endpoint is not found from url = /requesttoken" in res["message"]:
-            raise TigerGraphException("REST++ authentication is not enabled, can't delete token.",
-                None)
+
         raise TigerGraphException(res["message"], (res["code"] if "code" in res else None))

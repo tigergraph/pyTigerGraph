@@ -13,6 +13,7 @@ class pyTigerGraphUnitTest(unittest.TestCase):
             "graphname": "tests",
             "username": "tigergraph",
             "password": "tigergraph",
+            "gsqlSecret": "",
             "restppPort": "9000",
             "gsPort": "14240",
             "gsqlVersion": "",
