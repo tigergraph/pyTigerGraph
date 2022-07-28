@@ -271,6 +271,7 @@ class BaseLoader:
             e_schema[e] = {}
             e_schema[e]["FromVertexTypeName"] = etype["FromVertexTypeName"]
             e_schema[e]["ToVertexTypeName"] = etype["ToVertexTypeName"]
+            e_schema[e]["IsDirected"] = etype["IsDirected"]
             for attr in etype["Attributes"]:
                 if attr["AttributeType"]["Name"] == "LIST":
                     e_schema[e][attr["AttributeName"]] = "LIST:" + attr["AttributeType"][
@@ -858,17 +859,32 @@ class BaseLoader:
                 # Deal with edgelist first
                 edgelist = {}
                 if reindex:
-                    id_map = []
+                    id_map = {}
                     for vtype in vertices:
                         vertices[vtype]["tmp_id"] = range(len(vertices[vtype]))
-                        id_map.append(vertices[vtype][["vid", "tmp_id"]])
-                    id_map = pd.concat(id_map)
+                        id_map[vtype] = vertices[vtype][["vid", "tmp_id"]]
                     for etype in edges:
-                        edges[etype] = edges[etype].merge(id_map, left_on="source", right_on="vid")
-                        edges[etype].drop(columns=["source", "vid"], inplace=True)
-                        edges[etype] = edges[etype].merge(id_map, left_on="target", right_on="vid")
-                        edges[etype].drop(columns=["target", "vid"], inplace=True)
-                        edgelist[etype] = edges[etype][["tmp_id_x", "tmp_id_y"]]
+                        source_type = e_attr_types[etype]["FromVertexTypeName"]
+                        target_type = e_attr_types[etype]["ToVertexTypeName"]
+                        if e_attr_types[etype]["IsDirected"] or source_type==target_type:
+                            edges[etype] = edges[etype].merge(id_map[source_type], left_on="source", right_on="vid")
+                            edges[etype].drop(columns=["source", "vid"], inplace=True)
+                            edges[etype] = edges[etype].merge(id_map[target_type], left_on="target", right_on="vid")
+                            edges[etype].drop(columns=["target", "vid"], inplace=True)
+                            edgelist[etype] = edges[etype][["tmp_id_x", "tmp_id_y"]]
+                        else:
+                            subdf1 = edges[etype].merge(id_map[source_type], left_on="source", right_on="vid")
+                            subdf1.drop(columns=["source", "vid"], inplace=True)
+                            subdf1 = subdf1.merge(id_map[target_type], left_on="target", right_on="vid")
+                            subdf1.drop(columns=["target", "vid"], inplace=True)
+                            if len(subdf1) < len(edges[etype]):
+                                subdf2 = edges[etype].merge(id_map[source_type], left_on="target", right_on="vid")
+                                subdf2.drop(columns=["target", "vid"], inplace=True)
+                                subdf2 = subdf2.merge(id_map[target_type], left_on="source", right_on="vid")
+                                subdf2.drop(columns=["source", "vid"], inplace=True)
+                                subdf1 = pd.concat((subdf1, subdf2), ignore_index=True)
+                            edges[etype] = subdf1
+                            edgelist[etype] = edges[etype][["tmp_id_x", "tmp_id_y"]]
                 else:
                     for etype in edges:
                         edgelist[etype] = edges[etype][["source", "target"]]
