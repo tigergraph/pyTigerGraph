@@ -421,11 +421,12 @@ class BaseLoader:
                 "requestid": resp["request_id"],
             }
         except KeyError:
-            if res[0]["kafkaError"]:
+            print(resp)
+            if resp["results"][0]["kafkaError"] != '':
                 raise TigerGraphException(
                     "Error writing to Kafka: {}".format(res[0]["kafkaError"])
                 )
-                
+
         while not exit_event.is_set():
             status = tgraph._get(
                 tgraph.restppUrl + "/query_status", params=_stat_payload
