@@ -119,7 +119,6 @@ class pyTigerGraphBase(object):
             self.downloadCert = True
             self.useCert = True
             self.certPath = certPath
-        self.downloadJar = False
         self.sslPort = sslPort
 
         self.gsqlInitiated = False
@@ -128,10 +127,11 @@ class pyTigerGraphBase(object):
 
         self.tgCloud = tgCloud or gcp
         if "tgcloud" in self.netloc.lower():
-            try: # if get request succeeds, using TG Cloud instance provisioned before 6/20/2022
-                self._get(self.host + ":" + str(restppPort) + "/echo/" + graphname, resKey="message")
-            except requests.exceptions.RequestException: # if get request fails, using TG Cloud instance provisioned after 6/20/2022, after new firewall config
+            try: # if get request succeeds, using TG Cloud instance provisioned after 6/20/2022
+                self._get(self.host + "/api/ping", resKey="message")
                 self.tgCloud = True
+            except requests.exceptions.RequestException: # if get request fails, using TG Cloud instance provisioned before 6/20/2022, before new firewall config
+                self.tgCloud = False
             except TigerGraphException:
                 raise(TigerGraphException("Incorrect graphname."))
         
