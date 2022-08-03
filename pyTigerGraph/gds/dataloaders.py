@@ -249,7 +249,7 @@ class BaseLoader:
     def _get_schema(self) -> Tuple[dict, dict]:
         v_schema = {}
         e_schema = {}
-        schema = self._graph.getSchema()
+        schema = self._graph.getSchema(force=True)
         # Get vertex schema
         for vtype in schema["VertexTypes"]:
             v = vtype["Name"]
@@ -415,10 +415,18 @@ class BaseLoader:
             resKey=None
         )
         # Check status
-        _stat_payload = {
-            "graph_name": tgraph.graphname,
-            "requestid": resp["request_id"],
-        }
+        try:
+            _stat_payload = {
+                "graph_name": tgraph.graphname,
+                "requestid": resp["request_id"],
+            }
+        except KeyError:
+            if resp["results"][0]["kafkaError"] != '':
+                raise TigerGraphException(
+                    "Error writing to Kafka: {}".format(resp["results"][0]["kafkaError"])
+                )
+            return
+
         while not exit_event.is_set():
             status = tgraph._get(
                 tgraph.restppUrl + "/query_status", params=_stat_payload
