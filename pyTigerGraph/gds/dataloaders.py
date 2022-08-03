@@ -423,7 +423,7 @@ class BaseLoader:
         except KeyError:
             if resp["results"][0]["kafkaError"] != '':
                 raise TigerGraphException(
-                    "Error writing to Kafka: {}".format(res[0]["kafkaError"])
+                    "Error writing to Kafka: {}".format(resp["results"][0]["kafkaError"])
                 )
             return
 
