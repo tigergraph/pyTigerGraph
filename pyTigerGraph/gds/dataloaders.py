@@ -2876,3 +2876,327 @@ class EdgeNeighborLoader(BaseLoader):
         The `data` property stores all data if all data is loaded in a single batch.
         If there are multiple batches of data, the `data` property returns the instance itself"""
         return super().data
+
+
+class NodePieceLoader(BaseLoader):
+    """NodePieceLoader.
+    """
+    def __init__(
+        self,
+        graph: "TigerGraphConnection",
+        anchor_attr: str,
+        max_distance: int = 5,
+        max_relational_context: int = 10,
+        sampling_percentage: float = 0.1,
+        v_types: list = None,
+        e_types: list = None,
+        v_out_labels: Union[list, dict] = None,
+        v_extra_feats: Union[list, dict] = None,
+        batch_size: int = None,
+        num_batches: int = 1,
+        shuffle: bool = False,
+        filter_by: Union[str, dict] = None,
+        loader_id: str = None,
+        buffer_size: int = 4,
+        reverse_edge: bool = False,
+        kafka_address: str = None,
+        kafka_max_msg_size: int = 104857600,
+        kafka_num_partitions: int = 1,
+        kafka_replica_factor: int = 1,
+        kafka_retention_ms: int = 60000,
+        kafka_auto_del_topic: bool = True,
+        kafka_address_consumer: str = None,
+        kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
+        timeout: int = 300000,
+    ) -> None:
+        """NO DOC"""
+
+        super().__init__(
+            graph,
+            loader_id,
+            num_batches,
+            buffer_size,
+            reverse_edge,
+            kafka_address,
+            kafka_max_msg_size,
+            kafka_num_partitions,
+            kafka_replica_factor,
+            kafka_retention_ms,
+            kafka_auto_del_topic,
+            kafka_address_consumer,
+            kafka_address_producer,
+            kafka_security_protocol,
+            kafka_sasl_mechanism,
+            kafka_sasl_plain_username,
+            kafka_sasl_plain_password,
+            kafka_producer_ca_location,
+            kafka_consumer_ca_location,
+            timeout,
+        )
+        # Resolve attributes
+        is_hetero = any(map(lambda x: isinstance(x, dict), 
+                        (v_out_labels, v_extra_feats)))
+        self.is_hetero = is_hetero
+        self.v_out_labels = self._validate_vertex_attributes(v_out_labels, is_hetero)
+        self.v_extra_feats = self._validate_vertex_attributes(v_extra_feats, is_hetero)
+        if is_hetero:
+            self._vtypes = list(
+                    set(self.v_in_feats.keys())
+                    | set(self.v_out_labels.keys())
+                    | set(self.v_extra_feats.keys())
+                )
+            if not self._vtypes:
+                self._vtypes = list(self._v_schema.keys())
+            self._etypes = list(
+                set(self.e_in_feats.keys())
+                | set(self.e_out_labels.keys())
+                | set(self.e_extra_feats.keys())
+            )
+            if not self._etypes:
+                self._etypes = list(self._e_schema.keys())
+        else:
+            self._vtypes = list(self._v_schema.keys())
+            self._etypes = list(self._e_schema.keys())
+        # Resolve seeds
+        self._seed_types = self._etypes if ((not filter_by) or isinstance(filter_by, str)) else list(filter_by.keys())
+        # Resolve number of batches
+        if batch_size:
+            # If batch_size is given, calculate the number of batches
+            if filter_by:
+                self._num_batches = math.ceil(len(self._seed_types) / batch_size)
+            else:
+                num_edges = sum(self._graph.getEdgeCount(i) for i in self._etypes)
+            self.num_batches = math.ceil(num_edges / batch_size)
+        else:
+            # Otherwise, take the number of batches as is.
+            self.num_batches = num_batches
+        # Initialize parameters for the query
+        self._payload["num_batches"] = self.num_batches
+        if filter_by:
+            if isinstance(filter_by, str):
+                self._payload["filter_by"] = filter_by
+            else:
+                attr = set(filter_by.values())
+                if len(attr) != 1:
+                    raise NotImplementedError("Filtering by different attributes for different edge types is not supported. Please use the same attribute for different types.")
+                self._payload["filter_by"] = attr.pop()
+        self._payload["shuffle"] = shuffle
+        self._payload["v_types"] = self._vtypes
+        self._payload["e_types"] = self._etypes
+        self._payload["seed_types"] = self._seed_types
+        # Install query
+        self.query_name = self._install_query()
+
+    def _install_query(self):
+        # Install the right GSQL query for the loader.
+        query_suffix = []
+        query_replace = {}
+
+        if self.is_hetero:
+            # Multiple vertex types
+            print_query = ""
+            for idx, vtype in enumerate(self._vtypes):
+                v_attr_names = (
+                    self.v_in_feats.get(vtype, [])
+                    + self.v_out_labels.get(vtype, [])
+                    + self.v_extra_feats.get(vtype, [])
+                )
+                query_suffix.extend(v_attr_names)
+                v_attr_types = self._v_schema[vtype]
+                if v_attr_names:
+                    print_attr = '+","+'.join(
+                        "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
+                        for attr in v_attr_names
+                    )
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + "\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", vtype, print_attr)
+                else:
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", vtype)
+            print_query += "END"
+            query_replace["{VERTEXATTRS}"] = print_query
+            # Multiple edge types
+            print_query_seed = ""
+            print_query_other = ""
+            for idx, etype in enumerate(self._etypes):
+                e_attr_names = (
+                    self.e_in_feats.get(etype, [])
+                    + self.e_out_labels.get(etype, [])
+                    + self.e_extra_feats.get(etype, [])
+                )
+                query_suffix.extend(e_attr_names)
+                e_attr_types = self._e_schema[etype]
+                if e_attr_names:
+                    print_attr = '+","+'.join(
+                        "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
+                        for attr in e_attr_names
+                    )
+                    print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + ",1\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", etype, print_attr)
+                    print_query_other += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + ",0\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", etype, print_attr)
+                else:
+                    print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + ",1\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", etype)
+                    print_query_other += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + ",0\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", etype)
+            print_query_seed += "END"
+            print_query_other += "END"
+            query_replace["{SEEDEDGEATTRS}"] = print_query_seed
+            query_replace["{OTHEREDGEATTRS}"] = print_query_other
+            query_suffix = list(dict.fromkeys(query_suffix))
+        else:
+            # Ignore vertex types
+            v_attr_names = self.v_in_feats + self.v_out_labels + self.v_extra_feats
+            query_suffix.extend(v_attr_names)
+            v_attr_types = next(iter(self._v_schema.values()))
+            if v_attr_names:
+                print_attr = '+","+'.join(
+                    "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
+                    for attr in v_attr_names
+                )
+                print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + "\\n")'.format(
+                    print_attr
+                )
+                query_replace["{VERTEXATTRS}"] = print_query
+            else:
+                print_query = '@@v_batch += (int_to_string(getvid(s)) + "\\n")'
+                query_replace["{VERTEXATTRS}"] = print_query
+            # Ignore edge types
+            e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
+            query_suffix.extend(e_attr_names)
+            e_attr_types = next(iter(self._e_schema.values()))
+            if e_attr_names:
+                print_attr = '+","+'.join(
+                    "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
+                    for attr in e_attr_names
+                )
+                print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + ",1\\n")'.format(
+                    print_attr
+                )
+                query_replace["{SEEDEDGEATTRS}"] = print_query
+                print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + ",0\\n")'.format(
+                    print_attr
+                )
+                query_replace["{OTHEREDGEATTRS}"] = print_query
+            else:
+                print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + ",1\\n")'
+                query_replace["{SEEDEDGEATTRS}"] = print_query
+                print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + ",0\\n")'
+                query_replace["{OTHEREDGEATTRS}"] = print_query
+        query_replace["{QUERYSUFFIX}"] = "_".join(query_suffix)
+        # Install query
+        query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "dataloaders",
+                "edge_nei_loader.gsql",
+        )
+        return install_query_file(self._graph, query_path, query_replace)
+
+    def _start(self) -> None:
+        # Create task and result queues
+        self._read_task_q = Queue(self.buffer_size * 2)
+        self._data_q = Queue(self.buffer_size)
+        self._exit_event = Event()
+
+        # Start requesting thread.
+        if self.kafka_address_consumer:
+            # If using kafka
+            self._kafka_topic = "{}_{}".format(self.loader_id, self._iterations)
+            self._payload["kafka_topic"] = self._kafka_topic
+            self._requester = Thread(
+                target=self._request_kafka,
+                args=(
+                    self._exit_event,
+                    self._graph,
+                    self.query_name,
+                    self._kafka_consumer,
+                    self._kafka_admin,
+                    self._kafka_topic,
+                    self.kafka_partitions,
+                    self.kafka_replica,
+                    self.max_kafka_msg_size,
+                    self.kafka_retention_ms,
+                    self.timeout,
+                    self._payload,
+                ),
+            )
+        else:
+            # Otherwise, use rest api
+            self._requester = Thread(
+                target=self._request_rest,
+                args=(
+                    self._graph,
+                    self.query_name,
+                    self._read_task_q,
+                    self.timeout,
+                    self._payload,
+                    "both",
+                ),
+            )
+        self._requester.start()
+
+        # If using Kafka, start downloading thread.
+        if self.kafka_address_consumer:
+            self._downloader = Thread(
+                target=self._download_from_kafka,
+                args=(
+                    self._exit_event,
+                    self._read_task_q,
+                    self.num_batches,
+                    True,
+                    self._kafka_consumer,
+                ),
+            )
+            self._downloader.start()
+
+        # Start reading thread.
+        if not self.is_hetero:
+            e_extra_feats = self.e_extra_feats + ["is_seed"]
+            e_attr_types = next(iter(self._e_schema.values()))
+            e_attr_types["is_seed"] = "bool"
+            v_attr_types = next(iter(self._v_schema.values()))
+        else:
+            e_extra_feats = {}
+            for etype in self._etypes:
+                e_extra_feats[etype] = self.e_extra_feats.get(etype, []) + ["is_seed"]
+            e_attr_types = self._e_schema
+            for etype in e_attr_types:
+                e_attr_types[etype]["is_seed"] = "bool"
+            v_attr_types = self._v_schema
+        self._reader = Thread(
+            target=self._read_data,
+            args=(
+                self._exit_event,
+                self._read_task_q,
+                self._data_q,
+                "graph",
+                self.output_format,
+                self.v_in_feats,
+                self.v_out_labels,
+                self.v_extra_feats,
+                v_attr_types,
+                self.e_in_feats,
+                self.e_out_labels,
+                e_extra_feats,
+                e_attr_types,
+                self.add_self_loop,
+                True,
+                self.is_hetero
+            ),
+        )
+        self._reader.start()
+
+    @property
+    def data(self) -> Any:
+        """A property of the instance.
+        The `data` property stores all data if all data is loaded in a single batch.
+        If there are multiple batches of data, the `data` property returns the instance itself"""
+        return super().data
