@@ -23,6 +23,9 @@ if TYPE_CHECKING:
     from kafka import KafkaAdminClient, KafkaConsumer
     import torch
     import dgl
+    import tensorflow as tf
+    import spektral
+    import scipy
     import torch_geometric as pyg
     from typing import Literal
 
@@ -249,7 +252,7 @@ class BaseLoader:
     def _get_schema(self) -> Tuple[dict, dict]:
         v_schema = {}
         e_schema = {}
-        schema = self._graph.getSchema(force=True)
+        schema = self._graph.getSchema()
         # Get vertex schema
         for vtype in schema["VertexTypes"]:
             v = vtype["Name"]
@@ -271,7 +274,6 @@ class BaseLoader:
             e_schema[e] = {}
             e_schema[e]["FromVertexTypeName"] = etype["FromVertexTypeName"]
             e_schema[e]["ToVertexTypeName"] = etype["ToVertexTypeName"]
-            e_schema[e]["IsDirected"] = etype["IsDirected"]
             for attr in etype["Attributes"]:
                 if attr["AttributeType"]["Name"] == "LIST":
                     e_schema[e][attr["AttributeName"]] = "LIST:" + attr["AttributeType"][
@@ -415,18 +417,10 @@ class BaseLoader:
             resKey=None
         )
         # Check status
-        try:
-            _stat_payload = {
-                "graph_name": tgraph.graphname,
-                "requestid": resp["request_id"],
-            }
-        except KeyError:
-            if resp["results"][0]["kafkaError"] != '':
-                raise TigerGraphException(
-                    "Error writing to Kafka: {}".format(resp["results"][0]["kafkaError"])
-                )
-            return
-
+        _stat_payload = {
+            "graph_name": tgraph.graphname,
+            "requestid": resp["request_id"],
+        }
         while not exit_event.is_set():
             status = tgraph._get(
                 tgraph.restppUrl + "/query_status", params=_stat_payload
@@ -584,14 +578,14 @@ class BaseLoader:
         reindex: bool = True,
         primary_id: dict = {},
         is_hetero: bool = False
-    ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, pd.DataFrame], "dgl.DGLGraph", "pyg.data.Data",
+    ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, pd.DataFrame], "dgl.DGLGraph", "pyg.data.Data", "spektral.data.graph.Graph",
                dict, Tuple[dict, dict], "pyg.data.HeteroData"]:
         """Parse raw data into dataframes, DGL graphs, or PyG graphs.
         """    
         def attr_to_tensor(
             attributes: list, attr_types: dict, df: pd.DataFrame
         ) -> "torch.Tensor":
-            """Turn multiple columes of a dataframe into a tensor.
+            """Turn multiple columns of a dataframe into a tensor.
             """        
             x = []
             for col in attributes:
@@ -610,7 +604,10 @@ class BaseLoader:
                     x.append(df[[col]].astype("int8").to_numpy().astype(dtype))
                 else:
                     x.append(df[[col]].to_numpy().astype(dtype))
-            return torch.tensor(np.hstack(x)).squeeze(dim=1)
+            if mode == "pyg" or mode == "dgl":
+                return torch.tensor(np.hstack(x)).squeeze(dim=1)
+            elif mode == "spektral":
+                return tf.tensor(np.hstack(x)).squeeze(axis=1)
 
         def add_attributes(attr_names: list, attr_types: dict, attr_df: pd.DataFrame, 
                            graph, is_hetero: bool, mode: str, feat_name: str, 
@@ -631,7 +628,7 @@ class BaseLoader:
                 elif mode == "dgl":
                     raise NotImplementedError
             else:
-                if mode == "pyg":
+                if mode == "pyg" or mode == "spektral":
                     data = graph
                 elif mode == "dgl":
                     if target == "edge":
@@ -660,7 +657,7 @@ class BaseLoader:
                 elif mode == "dgl":
                     raise NotImplementedError
             else:
-                if mode == "pyg":
+                if mode == "pyg" or mode == "spektral":
                     data = graph
                 elif mode == "dgl":
                     if target == "edge":
@@ -673,27 +670,45 @@ class BaseLoader:
                 if dtype.startswith("str"):
                     if mode == "dgl":
                         graph.extra_data[col] = attr_df[col].to_list()
-                    elif mode == "pyg":
+                    elif mode == "pyg" or mode == "spektral":
                         data[col] = attr_df[col].to_list()
                 elif dtype.startswith("list"):
                     dtype2 = dtype.split(":")[1]
-                    data[col] = torch.tensor(
-                        attr_df[col]
-                        .str.split(expand=True)
-                        .to_numpy()
-                        .astype(dtype2)
-                    )
+                    if mode == "pyg" or mode == "dgl":
+                        data[col] = torch.tensor(
+                            attr_df[col]
+                            .str.split(expand=True)
+                            .to_numpy()
+                            .astype(dtype2)
+                        )
+                    elif mode == "spektral":
+                        data[col] = tf.tensor(
+                            attr_df[col]
+                            .str.split(expand=True)
+                            .to_numpy()
+                            .astype(dtype2)
+                        )
                 elif dtype.startswith("set") or dtype.startswith("map") or dtype.startswith("date"):
                     raise NotImplementedError(
                         "{} type not supported for extra features yet.".format(dtype))
                 elif dtype == "bool":
-                    data[col] = torch.tensor(
-                        attr_df[col].astype("int8").astype(dtype)
-                    )
+                    if mode == "pyg" or mode == "dgl":
+                        data[col] = torch.tensor(
+                            attr_df[col].astype("int8").astype(dtype)
+                        )
+                    elif mode == "spektral":
+                        data[col] = tf.tensor(
+                            attr_df[col].astype("int8").astype(dtype)
+                        )
                 else:
-                    data[col] = torch.tensor(
-                        attr_df[col].astype(dtype)
-                    )
+                    if mode == "pyg" or mode == "dgl":
+                        data[col] = torch.tensor(
+                            attr_df[col].astype(dtype)
+                        )
+                    elif mode == "spektral":
+                        data[col] = tf.tensor(
+                            attr_df[col].astype(dtype)
+                        )
         # Read in vertex and edge CSVs as dataframes              
         vertices, edges = None, None
         if in_format == "vertex":
@@ -747,6 +762,7 @@ class BaseLoader:
                     v_extra_feats.append("primary_id")
                 edges = pd.read_csv(io.StringIO(e_file), header=None, names=e_attributes, dtype="object")
                 data = (vertices, edges)
+
             else:
                 v_file = (line.split(',') for line in v_file.split('\n') if line)
                 v_file_dict = defaultdict(list)
@@ -791,7 +807,7 @@ class BaseLoader:
                 )
             if vertices is None or edges is None:
                 raise ValueError(
-                    "PyG or DGL format can only be used with (sub)graph loaders."
+                    "Spektral, PyG, or DGL format can only be used with (sub)graph loaders."
                 )
             if out_format.lower() == "dgl":
                 try:
@@ -812,8 +828,33 @@ class BaseLoader:
                     raise ImportError(
                         "PyG is not installed. Please install PyG to use PyG format."
                     )
-            else:
-                raise NotImplementedError
+        elif out_format.lower() == "spektral":
+            if vertices is None or edges is None:
+                raise ValueError(
+                    "Spektral, PyG, or DGL format can only be used with (sub)graph loaders."
+                )
+            try:
+                import tensorflow as tf
+            except ImportError:
+                raise ImportError(
+                    "Tensorflow is not installed. Please install it to use spektral output."
+                )
+            try:
+                import scipy
+            except ImportError:
+                raise ImportError(
+                    "scipy is not installed. Please install it to use spektral output."
+                )
+            try:
+                import spektral
+                mode = "spektral"
+            except ImportError:
+                raise ImportError(
+                    "Spektral is not installed. Please install it to use spektral output."
+                )
+
+            # else:
+            #     raise NotImplementedError
             # Reformat as a graph.
             # Need to have a pair of tables for edges and vertices.
             if not is_hetero:
@@ -828,22 +869,56 @@ class BaseLoader:
                     edgelist = edges[["tmp_id_x", "tmp_id_y"]]
                 else:
                     edgelist = edges[["source", "target"]]
-                edgelist = torch.tensor(edgelist.to_numpy().T, dtype=torch.long)
-                if mode == "dgl":
-                    data = dgl.graph(data=(edgelist[0], edgelist[1]))
+                
+                # with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+                #     print("line 826")
+                #     print("edgelist:")
+                #     print()
+                #     print(edgelist)
+                #     print()
+                #     print("edges:") 
+                #     print(edges)
+                #     print()
+                #     print("vertices:")
+                #     print(vertices)
+                #     print()
+                #     print("-----------")
+
+                if mode == "dgl" or mode == "pyg":
+                    edgelist = torch.tensor(edgelist.to_numpy().T, dtype=torch.long)
+                    if mode == "dgl":
+                        data = dgl.graph(data=(edgelist[0], edgelist[1]))
+                        if add_self_loop:
+                            data = dgl.add_self_loop(data)
+                        data.extra_data = {}
+                    elif mode == "pyg":
+                        data = pygData()
+                        if add_self_loop:
+                            edgelist = add_self_loops(edgelist)[0]
+                        data["edge_index"] = edgelist
+                elif mode == "spektral":
+                    n_edges = len(edgelist)
+                    adjacency_data = [1 for i in range(n_edges)] #spektral adjacency format requires weights for each edge to initialize
+                    adjacency = scipy.sparse.coo_matrix((adjacency_data, (edgelist["tmp_id_x"], edgelist["tmp_id_y"])), shape=(n_edges, n_edges))
                     if add_self_loop:
-                        data = dgl.add_self_loop(data)
-                    data.extra_data = {}
-                elif mode == "pyg":
-                    data = pygData()
-                    if add_self_loop:
-                        edgelist = add_self_loops(edgelist)[0]
-                    data["edge_index"] = edgelist
+                        adjacency = spektral.utils.add_self_loops(adjacency, value=1)
+                    edge_index = np.stack((adjacency.row, adjacency.col), axis=-1)
+                    data = spektral.data.graph.Graph(A=adjacency)
                 del edgelist
-                # Deal with edge attributes
+                # Deal with edge attributes        
+
                 if e_in_feats:
                     add_attributes(e_in_feats, e_attr_types, edges, 
                                    data, is_hetero, mode, "edge_feat", "edge")
+                    if mode == "spektral":
+                        edge_data = data["edge_feat"]
+                        edge_index, edge_data = spektral.utils.reorder(edge_index, edge_features=edge_data)
+                        n_edges = len(edge_index)
+                        data["e"] = scipy.sparse.coo_matrix((edge_data, (edge_index[:, 0], edgelist[:, 1])), shape=(n_edges, n_edges)) #if something breaks when you add self-loops it's here
+                        
+                        adjacency_data = [1 for i in range(n_edges)]
+                        data["a"] = scipy.sparse.coo_matrix((adjacency_data, (edge_index[:, 0], edgelist[:, 1])), shape=(n_edges, n_edges))
+
                 if e_out_labels:
                     add_attributes(e_out_labels, e_attr_types, edges, 
                                    data, is_hetero, mode, "edge_label", "edge")
@@ -867,32 +942,17 @@ class BaseLoader:
                 # Deal with edgelist first
                 edgelist = {}
                 if reindex:
-                    id_map = {}
+                    id_map = []
                     for vtype in vertices:
                         vertices[vtype]["tmp_id"] = range(len(vertices[vtype]))
-                        id_map[vtype] = vertices[vtype][["vid", "tmp_id"]]
+                        id_map.append(vertices[vtype][["vid", "tmp_id"]])
+                    id_map = pd.concat(id_map)
                     for etype in edges:
-                        source_type = e_attr_types[etype]["FromVertexTypeName"]
-                        target_type = e_attr_types[etype]["ToVertexTypeName"]
-                        if e_attr_types[etype]["IsDirected"] or source_type==target_type:
-                            edges[etype] = edges[etype].merge(id_map[source_type], left_on="source", right_on="vid")
-                            edges[etype].drop(columns=["source", "vid"], inplace=True)
-                            edges[etype] = edges[etype].merge(id_map[target_type], left_on="target", right_on="vid")
-                            edges[etype].drop(columns=["target", "vid"], inplace=True)
-                            edgelist[etype] = edges[etype][["tmp_id_x", "tmp_id_y"]]
-                        else:
-                            subdf1 = edges[etype].merge(id_map[source_type], left_on="source", right_on="vid")
-                            subdf1.drop(columns=["source", "vid"], inplace=True)
-                            subdf1 = subdf1.merge(id_map[target_type], left_on="target", right_on="vid")
-                            subdf1.drop(columns=["target", "vid"], inplace=True)
-                            if len(subdf1) < len(edges[etype]):
-                                subdf2 = edges[etype].merge(id_map[source_type], left_on="target", right_on="vid")
-                                subdf2.drop(columns=["target", "vid"], inplace=True)
-                                subdf2 = subdf2.merge(id_map[target_type], left_on="source", right_on="vid")
-                                subdf2.drop(columns=["source", "vid"], inplace=True)
-                                subdf1 = pd.concat((subdf1, subdf2), ignore_index=True)
-                            edges[etype] = subdf1
-                            edgelist[etype] = edges[etype][["tmp_id_x", "tmp_id_y"]]
+                        edges[etype] = edges[etype].merge(id_map, left_on="source", right_on="vid")
+                        edges[etype].drop(columns=["source", "vid"], inplace=True)
+                        edges[etype] = edges[etype].merge(id_map, left_on="target", right_on="vid")
+                        edges[etype].drop(columns=["target", "vid"], inplace=True)
+                        edgelist[etype] = edges[etype][["tmp_id_x", "tmp_id_y"]]
                 else:
                     for etype in edges:
                         edgelist[etype] = edges[etype][["source", "target"]]
