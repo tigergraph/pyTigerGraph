@@ -279,10 +279,10 @@ class Featurizer:
         self.result_attr = attr_name
         v_type = False
         if schema_type.upper() == "VERTEX":
-            target = self.conn.getVertexTypes()
+            target = self.conn.getVertexTypes(force=True)
             v_type = True
         elif schema_type.upper() == "EDGE":
-            target = self.conn.getEdgeTypes()
+            target = self.conn.getEdgeTypes(force=True)
         else:
             raise Exception('schema_type has to be VERTEX or EDGE')
         # If attribute should be added to a specific vertex/edge name
@@ -294,9 +294,9 @@ class Featurizer:
         for t in target:
             attributes = []
             if v_type:
-                meta_data =  self.conn.getVertexType(t)
+                meta_data =  self.conn.getVertexType(t, force=True)
             else:
-                meta_data = self.conn.getEdgeType(t)
+                meta_data = self.conn.getEdgeType(t, force=True)
             for i in range(len(meta_data['Attributes'])):
                 attributes.append(meta_data['Attributes'][i]['AttributeName'])
             # If attribute is not in list of vertex attributes, do the schema change to add it
