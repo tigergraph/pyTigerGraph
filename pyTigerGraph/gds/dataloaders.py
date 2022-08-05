@@ -607,7 +607,10 @@ class BaseLoader:
             if mode == "pyg" or mode == "dgl":
                 return torch.tensor(np.hstack(x)).squeeze(dim=1)
             elif mode == "spektral":
-                return tf.squeeze(tf.constant(np.hstack(x)), axis=1)
+                try:
+                    return np.squeeze(np.hstack(x), axis=1) #throws an error if axis isn't 1
+                except:
+                    return np.hstack(x)
 
         def add_attributes(attr_names: list, attr_types: dict, attr_df: pd.DataFrame, 
                            graph, is_hetero: bool, mode: str, feat_name: str, 
@@ -682,12 +685,8 @@ class BaseLoader:
                             .astype(dtype2)
                         )
                     elif mode == "spektral":
-                        data[col] = tf.tensor(
-                            attr_df[col]
-                            .str.split(expand=True)
-                            .to_numpy()
-                            .astype(dtype2)
-                        )
+                        data[col] = attr_df[col].str.split(expand=True).to_numpy().astype(dtype2)
+                        
                 elif dtype.startswith("set") or dtype.startswith("map") or dtype.startswith("date"):
                     raise NotImplementedError(
                         "{} type not supported for extra features yet.".format(dtype))
@@ -697,18 +696,14 @@ class BaseLoader:
                             attr_df[col].astype("int8").astype(dtype)
                         )
                     elif mode == "spektral":
-                        data[col] = tf.tensor(
-                            attr_df[col].astype("int8").astype(dtype)
-                        )
+                        data[col] = attr_df[col].astype("int8").astype(dtype)
                 else:
                     if mode == "pyg" or mode == "dgl":
                         data[col] = torch.tensor(
                             attr_df[col].astype(dtype)
                         )
                     elif mode == "spektral":
-                        data[col] = tf.tensor(
-                            attr_df[col].astype(dtype)
-                        )
+                        data[col] = attr_df[col].astype(dtype)
         # Read in vertex and edge CSVs as dataframes              
         vertices, edges = None, None
         if in_format == "vertex":
@@ -884,8 +879,9 @@ class BaseLoader:
                     data["edge_index"] = edgelist
             elif mode == "spektral":
                 n_edges = len(edgelist)
+                n_vertices = len(vertices)
                 adjacency_data = [1 for i in range(n_edges)] #spektral adjacency format requires weights for each edge to initialize
-                adjacency = scipy.sparse.coo_matrix((adjacency_data, (edgelist["tmp_id_x"], edgelist["tmp_id_y"])), shape=(n_edges, n_edges))
+                adjacency = scipy.sparse.coo_matrix((adjacency_data, (edgelist["tmp_id_x"], edgelist["tmp_id_y"])), shape=(n_vertices, n_vertices))
                 if add_self_loop:
                     adjacency = spektral.utils.add_self_loops(adjacency, value=1)
                 edge_index = np.stack((adjacency.row, adjacency.col), axis=-1)
@@ -900,10 +896,9 @@ class BaseLoader:
                     edge_data = data["edge_feat"]
                     edge_index, edge_data = spektral.utils.reorder(edge_index, edge_features=edge_data)
                     n_edges = len(edge_index)
-                    data["e"] = scipy.sparse.coo_matrix((edge_data, (edge_index[:, 0], edgelist[:, 1])), shape=(n_edges, n_edges)) #if something breaks when you add self-loops it's here
-                    
+                    data["e"] = np.array([[i] for i in edge_data]) #if something breaks when you add self-loops it's here
                     adjacency_data = [1 for i in range(n_edges)]
-                    data["a"] = scipy.sparse.coo_matrix((adjacency_data, (edge_index[:, 0], edgelist[:, 1])), shape=(n_edges, n_edges))
+                    data["a"] = scipy.sparse.coo_matrix((adjacency_data, (edge_index[:, 0], edge_index[:, 1])), shape=(n_vertices, n_vertices))
 
             if e_out_labels:
                 add_attributes(e_out_labels, e_attr_types, edges, 
@@ -955,6 +950,8 @@ class BaseLoader:
                     data[e_attr_types[etype]["FromVertexTypeName"], 
                           etype,
                           e_attr_types[etype]["ToVertexTypeName"]].edge_index = edgelist[etype]
+            elif mode == "spektral":
+                raise NotImplementedError
             del edgelist
             # Deal with edge attributes
             if e_in_feats:
