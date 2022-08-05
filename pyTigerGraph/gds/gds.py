@@ -262,7 +262,7 @@ class GDS:
                 can be included as seeds. Defaults to None.
             output_format (str, optional):
                 Format of the output data of the loader. Only
-                "PyG", "DGL" and "dataframe" are supported. Defaults to "PyG".
+                "PyG", "DGL", "spektral", and "dataframe" are supported. Defaults to "PyG".
             add_self_loop (bool, optional):
                 Whether to add self-loops to the graph. Defaults to False.
             loader_id (str, optional):
@@ -796,7 +796,7 @@ class GDS:
                 Defaults to None.
             output_format (str, optional):
                 Format of the output data of the loader.
-                Only "PyG", "DGL" and "dataframe" are supported. Defaults to "dataframe".
+                Only "PyG", "DGL", "spektral", and "dataframe" are supported. Defaults to "dataframe".
             add_self_loop (bool, optional):
                 Whether to add self-loops to the graph. Defaults to False.
             loader_id (str, optional):
@@ -1024,7 +1024,7 @@ class GDS:
                 can be included as seeds. Defaults to None.
             output_format (str, optional):
                 Format of the output data of the loader. Only
-                "PyG", "DGL" and "dataframe" are supported. Defaults to "PyG".
+                "PyG", "DGL", "Spektral", and "dataframe" are supported. Defaults to "PyG".
             add_self_loop (bool, optional):
                 Whether to add self-loops to the graph. Defaults to False.
             loader_id (str, optional):
