@@ -629,7 +629,10 @@ class BaseLoader:
                     elif target == "vertex":
                         data = graph[vetype]
                 elif mode == "dgl":
-                    raise NotImplementedError
+                    if target == "edge":
+                        data = graph.edges[vetype].data
+                    elif target == "vertex":
+                        data = graph.nodes[vetype].data
             else:
                 if mode == "pyg":
                     data = graph
@@ -658,7 +661,10 @@ class BaseLoader:
                     elif target == "vertex":
                         data = graph[vetype]
                 elif mode == "dgl":
-                    raise NotImplementedError
+                    if target == "edge":
+                        data = graph.edges[vetype].data
+                    elif target == "vertex":
+                        data = graph.nodes[vetype].data
             else:
                 if mode == "pyg":
                     data = graph
@@ -899,8 +905,11 @@ class BaseLoader:
                 for etype in edges:
                     edgelist[etype] = torch.tensor(edgelist[etype].to_numpy().T, dtype=torch.long)
                 if mode == "dgl":
+                    data = dgl.heterograph({
+                        (e_attr_types[etype]["FromVertexTypeName"], etype, e_attr_types[etype]["ToVertexTypeName"]): (edgelist[etype][0], edgelist[etype][1]) for etype in edgelist})
+                    if add_self_loop:
+                        data = dgl.add_self_loop(data)
                     data.extra_data = {}
-                    raise NotImplementedError
                 elif mode == "pyg":
                     data = pygHeteroData()
                     for etype in edgelist:
