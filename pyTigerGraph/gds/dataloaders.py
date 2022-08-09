@@ -400,8 +400,9 @@ class BaseLoader:
                     )
                 )
         # Subscribe to the topic
+        while kafka_topic not in kafka_consumer.topics():
+            sleep(0.5)
         kafka_consumer.subscribe([kafka_topic])
-        _ = kafka_consumer.topics() # Call this to refresh metadata. Or the new subscription seems to be delayed.
         # Run query async
         # TODO: change to runInstalledQuery when it supports async mode
         _headers = {"GSQL-ASYNC": "true", "GSQL-TIMEOUT": str(timeout)}
