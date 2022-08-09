@@ -383,6 +383,7 @@ class BaseLoader:
                 "kafka-python is not installed. Please install it to use kafka streaming."
             )
         if kafka_topic not in kafka_consumer.topics():
+            print("Creating topic {}".format(kafka_topic))
             new_topic = NewTopic(
                 kafka_topic,
                 kafka_partitions,
@@ -399,9 +400,13 @@ class BaseLoader:
                         kafka_topic, kafka_consumer.config["bootstrap_servers"]
                     )
                 )
+        else:
+            print("Topic {} already exists".format(kafka_topic))
         # Subscribe to the topic
         while kafka_topic not in kafka_consumer.topics():
+            print("Checking if topic {} is ready".format(kafka_topic))
             sleep(0.5)
+        print("Using topic {}".format(kafka_topic))
         kafka_consumer.subscribe([kafka_topic])
         _ = kafka_consumer.topics() # Call this to refresh metadata. Or the new subscription seems to be delayed.
         # Run query async
