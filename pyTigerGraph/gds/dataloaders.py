@@ -196,7 +196,6 @@ class BaseLoader:
                     client_id=self.loader_id,
                     max_partition_fetch_bytes=Kafka_max_msg_size,
                     fetch_max_bytes=Kafka_max_msg_size,
-                    auto_offset_reset="earliest",
                     security_protocol=kafka_security_protocol,
                     sasl_mechanism=kafka_sasl_mechanism,
                     sasl_plain_username=kafka_sasl_plain_username,
@@ -359,56 +358,52 @@ class BaseLoader:
         self.query_name = ""
         raise NotImplementedError
 
+    def _set_kafka_topic(self) -> None:
+        # Generate kafka topic, add it to payload and consumer
+        # Generate topic
+        kafka_topic = "{}_{}".format(self.loader_id, self._iterations)
+        self._kafka_topic = kafka_topic
+        self._payload["kafka_topic"] = kafka_topic
+        # Create topic if not exist
+        if kafka_topic not in self._kafka_consumer.topics():
+            try:
+                from kafka.admin import NewTopic
+            except ImportError:
+                raise ImportError(
+                    "kafka-python is not installed. Please install it to use kafka streaming."
+                )
+            new_topic = NewTopic(
+                kafka_topic,
+                self.kafka_partitions,
+                self.kafka_replica,
+                topic_configs={
+                    "retention.ms": str(self.kafka_retention_ms),
+                    "max.message.bytes": str(self.max_kafka_msg_size),
+                },
+            )
+            resp = self._kafka_admin.create_topics([new_topic])
+            if resp.to_object()["topic_errors"][0]["error_code"] != 0:
+                raise ConnectionError(
+                    "Failed to create Kafka topic {} at {}.".format(
+                        kafka_topic, self._kafka_consumer.config["bootstrap_servers"]
+                    )
+                )
+            # Double check the topic is created
+            while kafka_topic not in self._kafka_consumer.topics():
+                sleep(0.5)
+        # Subscribe to the topic
+        self._kafka_consumer.subscribe([kafka_topic])
+        _ = self._kafka_consumer.topics() # Call this to refresh metadata. Or the new subscription seems to be delayed.
+
     @staticmethod
     def _request_kafka(
         exit_event: Event,
         tgraph: "TigerGraphConnection",
         query_name: str,
-        kafka_consumer: "KafkaConsumer",
-        kafka_admin: "KafkaAdminClient",
-        kafka_topic: str,
-        kafka_partitions: int = 1,
-        kafka_replica: int = 1,
-        kafka_topic_size: int = 100000000,
-        kafka_retention_ms: int = 60000,
         timeout: int = 600000,
         payload: dict = {},
         headers: dict = {},
     ) -> NoReturn:
-        # Create topic if not exist
-        try:
-            from kafka.admin import NewTopic
-        except ImportError:
-            raise ImportError(
-                "kafka-python is not installed. Please install it to use kafka streaming."
-            )
-        if kafka_topic not in kafka_consumer.topics():
-            print("Creating topic {}".format(kafka_topic))
-            new_topic = NewTopic(
-                kafka_topic,
-                kafka_partitions,
-                kafka_replica,
-                topic_configs={
-                    "retention.ms": str(kafka_retention_ms),
-                    "max.message.bytes": str(kafka_topic_size),
-                },
-            )
-            resp = kafka_admin.create_topics([new_topic])
-            if resp.to_object()["topic_errors"][0]["error_code"] != 0:
-                raise ConnectionError(
-                    "Failed to create Kafka topic {} at {}.".format(
-                        kafka_topic, kafka_consumer.config["bootstrap_servers"]
-                    )
-                )
-        else:
-            print("Topic {} already exists".format(kafka_topic))
-        # Subscribe to the topic
-        while kafka_topic not in kafka_consumer.topics():
-            print("Checking if topic {} is ready".format(kafka_topic))
-            sleep(0.5)
-        print("Using topic {}".format(kafka_topic))
-        kafka_consumer.subscribe([kafka_topic])
-        _ = kafka_consumer.topics() # Call this to refresh metadata. Or the new subscription seems to be delayed.
         # Run query async
         # TODO: change to runInstalledQuery when it supports async mode
         _headers = {"GSQL-ASYNC": "true", "GSQL-TIMEOUT": str(timeout)}
@@ -1374,24 +1369,29 @@ class NeighborLoader(BaseLoader):
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
-        # Start requesting thread.
+        # If using kafka
         if self.kafka_address_consumer:
-            # If using kafka
-            self._kafka_topic = "{}_{}".format(self.loader_id, self._iterations)
-            self._payload["kafka_topic"] = self._kafka_topic
+            # Generate topic
+            self._set_kafka_topic()
+            # Start consumer thread
+            self._downloader = Thread(
+                target=self._download_from_kafka,
+                args=(
+                    self._exit_event,
+                    self._read_task_q,
+                    self.num_batches,
+                    True,
+                    self._kafka_consumer,
+                ),
+            )
+            self._downloader.start()
+            # Start requester thread
             self._requester = Thread(
                 target=self._request_kafka,
                 args=(
                     self._exit_event,
                     self._graph,
                     self.query_name,
-                    self._kafka_consumer,
-                    self._kafka_admin,
-                    self._kafka_topic,
-                    self.kafka_partitions,
-                    self.kafka_replica,
-                    self.max_kafka_msg_size,
-                    self.kafka_retention_ms,
                     self.timeout,
                     self._payload,
                 ),
@@ -1410,20 +1410,6 @@ class NeighborLoader(BaseLoader):
                 ),
             )
         self._requester.start()
-
-        # If using Kafka, start downloading thread.
-        if self.kafka_address_consumer:
-            self._downloader = Thread(
-                target=self._download_from_kafka,
-                args=(
-                    self._exit_event,
-                    self._read_task_q,
-                    self.num_batches,
-                    True,
-                    self._kafka_consumer,
-                ),
-            )
-            self._downloader.start()
 
         # Start reading thread.
         if not self.is_hetero:
@@ -1760,24 +1746,29 @@ class EdgeLoader(BaseLoader):
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
-        # Start requesting thread.
+        # If using kafka
         if self.kafka_address_consumer:
-            # If using kafka
-            self._kafka_topic = "{}_{}".format(self.loader_id, self._iterations)
-            self._payload["kafka_topic"] = self._kafka_topic
+            # Generate topic
+            self._set_kafka_topic()
+            # Start consumer thread
+            self._downloader = Thread(
+                target=self._download_from_kafka,
+                args=(
+                    self._exit_event,
+                    self._read_task_q,
+                    self.num_batches,
+                    False,
+                    self._kafka_consumer,
+                ),
+            )
+            self._downloader.start()
+            # Start requester thread
             self._requester = Thread(
                 target=self._request_kafka,
                 args=(
                     self._exit_event,
                     self._graph,
                     self.query_name,
-                    self._kafka_consumer,
-                    self._kafka_admin,
-                    self._kafka_topic,
-                    self.kafka_partitions,
-                    self.kafka_replica,
-                    self.max_kafka_msg_size,
-                    self.kafka_retention_ms,
                     self.timeout,
                     self._payload,
                 ),
@@ -1796,20 +1787,6 @@ class EdgeLoader(BaseLoader):
                 ),
             )
         self._requester.start()
-
-        # If using Kafka, start downloading thread.
-        if self.kafka_address_consumer:
-            self._downloader = Thread(
-                target=self._download_from_kafka,
-                args=(
-                    self._exit_event,
-                    self._read_task_q,
-                    self.num_batches,
-                    False,
-                    self._kafka_consumer,
-                ),
-            )
-            self._downloader.start()
 
         # Start reading thread.
         if not self.is_hetero:
@@ -2070,24 +2047,29 @@ class VertexLoader(BaseLoader):
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
-        # Start requesting thread.
+        # If using kafka
         if self.kafka_address_consumer:
-            # If using kafka
-            self._kafka_topic = "{}_{}".format(self.loader_id, self._iterations)
-            self._payload["kafka_topic"] = self._kafka_topic
+            # Generate topic
+            self._set_kafka_topic()
+            # Start consumer thread
+            self._downloader = Thread(
+                target=self._download_from_kafka,
+                args=(
+                    self._exit_event,
+                    self._read_task_q,
+                    self.num_batches,
+                    False,
+                    self._kafka_consumer,
+                ),
+            )
+            self._downloader.start()
+            # Start requester thread
             self._requester = Thread(
                 target=self._request_kafka,
                 args=(
                     self._exit_event,
                     self._graph,
                     self.query_name,
-                    self._kafka_consumer,
-                    self._kafka_admin,
-                    self._kafka_topic,
-                    self.kafka_partitions,
-                    self.kafka_replica,
-                    self.max_kafka_msg_size,
-                    self.kafka_retention_ms,
                     self.timeout,
                     self._payload,
                 ),
@@ -2106,21 +2088,7 @@ class VertexLoader(BaseLoader):
                 ),
             )
         self._requester.start()
-
-        # If using Kafka, start downloading thread.
-        if self.kafka_address_consumer:
-            self._downloader = Thread(
-                target=self._download_from_kafka,
-                args=(
-                    self._exit_event,
-                    self._read_task_q,
-                    self.num_batches,
-                    False,
-                    self._kafka_consumer,
-                ),
-            )
-            self._downloader.start()
-
+            
         # Start reading thread.
         if not self.is_hetero:
             v_attr_types = next(iter(self._v_schema.values()))
@@ -2446,24 +2414,29 @@ class GraphLoader(BaseLoader):
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
-        # Start requesting thread.
+        # If using kafka
         if self.kafka_address_consumer:
-            # If using kafka
-            self._kafka_topic = "{}_{}".format(self.loader_id, self._iterations)
-            self._payload["kafka_topic"] = self._kafka_topic
+            # Generate topic
+            self._set_kafka_topic()
+            # Start consumer thread
+            self._downloader = Thread(
+                target=self._download_from_kafka,
+                args=(
+                    self._exit_event,
+                    self._read_task_q,
+                    self.num_batches,
+                    True,
+                    self._kafka_consumer,
+                ),
+            )
+            self._downloader.start()
+            # Start requester thread
             self._requester = Thread(
                 target=self._request_kafka,
                 args=(
                     self._exit_event,
                     self._graph,
                     self.query_name,
-                    self._kafka_consumer,
-                    self._kafka_admin,
-                    self._kafka_topic,
-                    self.kafka_partitions,
-                    self.kafka_replica,
-                    self.max_kafka_msg_size,
-                    self.kafka_retention_ms,
                     self.timeout,
                     self._payload,
                 ),
@@ -2482,20 +2455,6 @@ class GraphLoader(BaseLoader):
                 ),
             )
         self._requester.start()
-
-        # If using Kafka, start downloading thread.
-        if self.kafka_address_consumer:
-            self._downloader = Thread(
-                target=self._download_from_kafka,
-                args=(
-                    self._exit_event,
-                    self._read_task_q,
-                    self.num_batches,
-                    True,
-                    self._kafka_consumer,
-                ),
-            )
-            self._downloader.start()
 
         # Start reading thread.
         if not self.is_hetero:
@@ -2806,24 +2765,29 @@ class EdgeNeighborLoader(BaseLoader):
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
-        # Start requesting thread.
+        # If using kafka
         if self.kafka_address_consumer:
-            # If using kafka
-            self._kafka_topic = "{}_{}".format(self.loader_id, self._iterations)
-            self._payload["kafka_topic"] = self._kafka_topic
+            # Generate topic
+            self._set_kafka_topic()
+            # Start consumer thread
+            self._downloader = Thread(
+                target=self._download_from_kafka,
+                args=(
+                    self._exit_event,
+                    self._read_task_q,
+                    self.num_batches,
+                    True,
+                    self._kafka_consumer,
+                ),
+            )
+            self._downloader.start()
+            # Start requester thread
             self._requester = Thread(
                 target=self._request_kafka,
                 args=(
                     self._exit_event,
                     self._graph,
                     self.query_name,
-                    self._kafka_consumer,
-                    self._kafka_admin,
-                    self._kafka_topic,
-                    self.kafka_partitions,
-                    self.kafka_replica,
-                    self.max_kafka_msg_size,
-                    self.kafka_retention_ms,
                     self.timeout,
                     self._payload,
                 ),
@@ -2842,20 +2806,6 @@ class EdgeNeighborLoader(BaseLoader):
                 ),
             )
         self._requester.start()
-
-        # If using Kafka, start downloading thread.
-        if self.kafka_address_consumer:
-            self._downloader = Thread(
-                target=self._download_from_kafka,
-                args=(
-                    self._exit_event,
-                    self._read_task_q,
-                    self.num_batches,
-                    True,
-                    self._kafka_consumer,
-                ),
-            )
-            self._downloader.start()
 
         # Start reading thread.
         if not self.is_hetero:
