@@ -67,7 +67,8 @@ class GDS:
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
-        kafka_consumer_ca_location: str = None
+        kafka_consumer_ca_location: str = None,
+        kafka_skip_produce: bool = None
     ) -> None:
         """Configure the Kafka connection. Will override any configuration that is defined in factory functions.
         Args:
@@ -106,6 +107,8 @@ class GDS:
                 Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
             kafka_consumer_ca_location (str, optional):
                 Path to CA certificate on client machine for verifying the broker's key. 
+            kafka_skip_produce (bool, optional):
+                Whether or not to skip calling the producer.
         """
         self.kafkaConfig = {
             "kafka_address": kafka_address,
@@ -121,7 +124,8 @@ class GDS:
             "kafka_sasl_plain_username": kafka_sasl_plain_username,
             "kafka_sasl_plain_password": kafka_sasl_plain_password,
             "kafka_producer_ca_location": kafka_producer_ca_location,
-            "kafka_consumer_ca_location": kafka_consumer_ca_location
+            "kafka_consumer_ca_location": kafka_consumer_ca_location,
+            "kafka_skip_produce": kafka_skip_produce
         }
 
 
@@ -145,6 +149,7 @@ class GDS:
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -159,7 +164,7 @@ class GDS:
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        timeout: int = 300000,
+        kafka_skip_produce: bool = None,
     ) -> NeighborLoader:
         """Returns a `NeighborLoader` instance.
         A `NeighborLoader` instance performs neighbor sampling from vertices in the graph in batches in the following manner:
@@ -310,6 +315,8 @@ class GDS:
                 Path to CA certificate on client machine for verifying the broker's key. 
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
+            kafka_skip_produce (bool, optional):
+                Whether or not to skip calling the producer.
         """
         params = {
             "graph": self.conn,
@@ -344,7 +351,8 @@ class GDS:
             "kafka_sasl_plain_password": kafka_sasl_plain_password,
             "kafka_producer_ca_location": kafka_producer_ca_location,
             "kafka_consumer_ca_location": kafka_consumer_ca_location,
-            "timeout": timeout
+            "timeout": timeout,
+            "kafka_skip_produce": kafka_skip_produce
         }
 
         if self.kafkaConfig:
@@ -364,6 +372,7 @@ class GDS:
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -378,7 +387,7 @@ class GDS:
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        timeout: int = 300000,
+        kafka_skip_produce: bool = None,
     ) -> EdgeLoader:
         """Returns an `EdgeLoader` instance. 
         An `EdgeLoader` instance loads all edges in the graph in batches.
@@ -475,6 +484,8 @@ class GDS:
                 Path to CA certificate on client machine for verifying the broker's key. 
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
+            kafka_skip_produce (bool, optional):
+                Whether or not to skip calling the producer.
 
         See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_edgeloader.ipynb[the ML Workbench edge loader tutorial notebook]
         for examples.
@@ -505,6 +516,7 @@ class GDS:
             "kafka_producer_ca_location": kafka_producer_ca_location,
             "kafka_consumer_ca_location": kafka_consumer_ca_location,
             "timeout": timeout,
+            "kafka_skip_produce": kafka_skip_produce
         }
         if self.kafkaConfig:
             params.update(self.kafkaConfig)
@@ -523,6 +535,7 @@ class GDS:
             loader_id: str = None,
             buffer_size: int = 4,
             reverse_edge: bool = False,
+            timeout: int = 300000,
             kafka_address: str = None,
             kafka_max_msg_size: int = 104857600,
             kafka_num_partitions: int = 1,
@@ -537,7 +550,7 @@ class GDS:
             kafka_sasl_plain_password: str = None,
             kafka_producer_ca_location: str = None,
             kafka_consumer_ca_location: str = None,
-            timeout: int = 300000,
+            kafka_skip_produce: bool = None,
     ) -> VertexLoader:
         """Returns a `VertexLoader` instance.
         A `VertexLoader` can load all vertices of a graph in batches.
@@ -634,6 +647,8 @@ class GDS:
                 Path to CA certificate on client machine for verifying the broker's key. 
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
+            kafka_skip_produce (bool, optional):
+                Whether or not to skip calling the producer.
 
         See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_vertexloader.ipynb[the ML Workbench tutorial notebook]
         for examples.
@@ -663,7 +678,8 @@ class GDS:
             "kafka_sasl_plain_password": kafka_sasl_plain_password,
             "kafka_producer_ca_location": kafka_producer_ca_location,
             "kafka_consumer_ca_location": kafka_consumer_ca_location,
-            "timeout": timeout
+            "timeout": timeout,
+            "kafka_skip_produce": kafka_skip_produce
         }
 
         if self.kafkaConfig:
@@ -689,6 +705,7 @@ class GDS:
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -703,7 +720,7 @@ class GDS:
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        timeout: int = 300000,
+        kafka_skip_produce: bool = None,
     ) -> GraphLoader:
         """Returns a `GraphLoader`instance.
         A `GraphLoader` instance loads all edges from the graph in batches, along with the vertices that are connected with each edge.
@@ -844,6 +861,8 @@ class GDS:
                 Path to CA certificate on client machine for verifying the broker's key. 
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
+            kafka_skip_produce (bool, optional):
+                Whether or not to skip calling the producer.
 
         See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_graphloader.ipynb[the ML Workbench tutorial notebook for graph loaders]
          for examples.
@@ -879,7 +898,8 @@ class GDS:
             "kafka_sasl_plain_password": kafka_sasl_plain_password,
             "kafka_producer_ca_location": kafka_producer_ca_location,
             "kafka_consumer_ca_location": kafka_consumer_ca_location,
-            "timeout": timeout
+            "timeout": timeout,
+            "kafka_skip_produce": kafka_skip_produce
         }
 
         if self.kafkaConfig:
@@ -907,6 +927,7 @@ class GDS:
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -921,7 +942,7 @@ class GDS:
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        timeout: int = 300000,
+        kafka_skip_produce: bool = None,
     ) -> EdgeNeighborLoader:
         """Returns an `EdgeNeighborLoader` instance.
         An `EdgeNeighborLoader` instance performs neighbor sampling from all edges in the graph in batches in the following manner:
@@ -1072,6 +1093,8 @@ class GDS:
                 Path to CA certificate on client machine for verifying the broker's key. 
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
+            kafka_skip_produce (bool, optional):
+                Whether or not to skip calling the producer.
         """
 
         params = {
@@ -1107,7 +1130,8 @@ class GDS:
             "kafka_sasl_plain_password": kafka_sasl_plain_password,
             "kafka_producer_ca_location": kafka_producer_ca_location,
             "kafka_consumer_ca_location": kafka_consumer_ca_location,
-            "timeout": timeout
+            "timeout": timeout,
+            "kafka_skip_produce": kafka_skip_produce
         }
 
         if self.kafkaConfig:

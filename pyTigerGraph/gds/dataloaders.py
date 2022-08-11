@@ -59,6 +59,7 @@ class BaseLoader:
         buffer_size: int = 4,
         output_format: str = "dataframe",
         reverse_edge: bool = False,
+        timeout: int = 300000,
         kafka_address: str = "",
         Kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -73,7 +74,7 @@ class BaseLoader:
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        timeout: int = 300000,
+        kafka_skip_produce: bool = None,
     ) -> None:
         """Base Class for data loaders.
 
@@ -103,9 +104,11 @@ class BaseLoader:
                 Format of the output data of the loader. Defaults to dataframe.
             reverse_edge (bool, optional):
                 Whether to traverse along reverse edge types. Defaults to False.
+            timeout (int, optional):
+                Timeout value for GSQL queries, in ms. Defaults to 300000.
             kafka_address (str):
                 Address of the Kafka broker. Defaults to localhost:9092.
-            max_kafka_msg_size (int, optional):
+            kafka_max_msg_size (int, optional):
                 Maximum size of a Kafka message in bytes.
                 Defaults to 104857600.
             kafka_num_partitions (int, optional):
@@ -138,8 +141,8 @@ class BaseLoader:
                 Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
             kafka_consumer_ca_location (str, optional):
                 Path to CA certificate on client machine for verifying the broker's key. 
-            timeout (int, optional):
-                Timeout value for GSQL queries, in ms. Defaults to 300000.
+            kafka_skip_produce (bool, optional):
+                Whether or not to skip calling the producer. 
         """
         # Thread to send requests, download and load data
         self._requester = None
@@ -160,6 +163,7 @@ class BaseLoader:
         self.kafka_replica = kafka_replica_factor
         self.kafka_retention_ms = kafka_retention_ms
         self.delete_kafka_topic = kafka_auto_del_topic
+        self.kafka_skip_produce = kafka_skip_produce
         # Get graph info
         self.reverse_edge = reverse_edge
         self._graph = graph
@@ -365,7 +369,7 @@ class BaseLoader:
         self._kafka_topic = kafka_topic
         self._payload["kafka_topic"] = kafka_topic
         # Create topic if not exist
-        if kafka_topic not in self._kafka_consumer.topics():
+        if kafka_topic not in self._kafka_admin.list_topics():
             try:
                 from kafka.admin import NewTopic
             except ImportError:
@@ -389,8 +393,13 @@ class BaseLoader:
                     )
                 )
             # Double check the topic is created
-            while kafka_topic not in self._kafka_consumer.topics():
+            while kafka_topic not in self._kafka_admin.list_topics():
                 sleep(0.5)
+        else:
+            # Topic exists. This means there might be data in kafka already. Skip 
+            # calling producer as default unless explicitely set otherwise.
+            if self.kafka_skip_produce is None:
+                self.kafka_skip_produce = True
         # Subscribe to the topic
         self._kafka_consumer.subscribe([kafka_topic])
         _ = self._kafka_consumer.topics() # Call this to refresh metadata. Or the new subscription seems to be delayed.
@@ -968,6 +977,51 @@ class BaseLoader:
 
         return data
 
+    def _start_request(self, out_tuple: bool, resp_type: str):
+        # If using kafka
+        if self.kafka_address_consumer:
+            # Generate topic
+            self._set_kafka_topic()
+            # Start consumer thread
+            self._downloader = Thread(
+                target=self._download_from_kafka,
+                args=(
+                    self._exit_event,
+                    self._read_task_q,
+                    self.num_batches,
+                    out_tuple,
+                    self._kafka_consumer,
+                ),
+            )
+            self._downloader.start()
+            # Start requester thread
+            if not self.kafka_skip_produce:
+                self._requester = Thread(
+                    target=self._request_kafka,
+                    args=(
+                        self._exit_event,
+                        self._graph,
+                        self.query_name,
+                        self.timeout,
+                        self._payload,
+                    ),
+                )
+                self._requester.start()
+        else:
+            # Otherwise, use rest api
+            self._requester = Thread(
+                target=self._request_rest,
+                args=(
+                    self._graph,
+                    self.query_name,
+                    self._read_task_q,
+                    self.timeout,
+                    self._payload,
+                    resp_type,
+                ),
+            )
+            self._requester.start()
+
     def _start(self) -> None:
         # This is a template. Implement your own logics here.
         # Create task and result queues
@@ -1141,6 +1195,7 @@ class NeighborLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -1155,7 +1210,7 @@ class NeighborLoader(BaseLoader):
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        timeout: int = 300000,
+        kafka_skip_produce: bool = None,
     ) -> None:
         """NO DOC"""
 
@@ -1166,6 +1221,7 @@ class NeighborLoader(BaseLoader):
             buffer_size,
             output_format,
             reverse_edge,
+            timeout,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
@@ -1180,7 +1236,7 @@ class NeighborLoader(BaseLoader):
             kafka_sasl_plain_password,
             kafka_producer_ca_location,
             kafka_consumer_ca_location,
-            timeout,
+            kafka_skip_produce,
         )
         # Resolve attributes
         is_hetero = any(map(lambda x: isinstance(x, dict), 
@@ -1369,47 +1425,7 @@ class NeighborLoader(BaseLoader):
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
-        # If using kafka
-        if self.kafka_address_consumer:
-            # Generate topic
-            self._set_kafka_topic()
-            # Start consumer thread
-            self._downloader = Thread(
-                target=self._download_from_kafka,
-                args=(
-                    self._exit_event,
-                    self._read_task_q,
-                    self.num_batches,
-                    True,
-                    self._kafka_consumer,
-                ),
-            )
-            self._downloader.start()
-            # Start requester thread
-            self._requester = Thread(
-                target=self._request_kafka,
-                args=(
-                    self._exit_event,
-                    self._graph,
-                    self.query_name,
-                    self.timeout,
-                    self._payload,
-                ),
-            )
-        else:
-            # Otherwise, use rest api
-            self._requester = Thread(
-                target=self._request_rest,
-                args=(
-                    self._graph,
-                    self.query_name,
-                    self._read_task_q,
-                    self.timeout,
-                    self._payload,
-                    "both",
-                ),
-            )
-        self._requester.start()
+        self._start_request(True, "both")
 
         # Start reading thread.
         if not self.is_hetero:
@@ -1615,6 +1631,7 @@ class EdgeLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -1629,7 +1646,7 @@ class EdgeLoader(BaseLoader):
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        timeout: int = 300000,
+        kafka_skip_produce: bool = None, 
     ) -> None:
         """
         NO DOC.
@@ -1641,6 +1658,7 @@ class EdgeLoader(BaseLoader):
             buffer_size,
             output_format,
             reverse_edge,
+            timeout,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
@@ -1655,7 +1673,7 @@ class EdgeLoader(BaseLoader):
             kafka_sasl_plain_password,
             kafka_producer_ca_location,
             kafka_consumer_ca_location,
-            timeout,
+            kafka_skip_produce,
         )
         # Resolve attributes
         is_hetero = isinstance(attributes, dict)
@@ -1746,47 +1764,7 @@ class EdgeLoader(BaseLoader):
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
-        # If using kafka
-        if self.kafka_address_consumer:
-            # Generate topic
-            self._set_kafka_topic()
-            # Start consumer thread
-            self._downloader = Thread(
-                target=self._download_from_kafka,
-                args=(
-                    self._exit_event,
-                    self._read_task_q,
-                    self.num_batches,
-                    False,
-                    self._kafka_consumer,
-                ),
-            )
-            self._downloader.start()
-            # Start requester thread
-            self._requester = Thread(
-                target=self._request_kafka,
-                args=(
-                    self._exit_event,
-                    self._graph,
-                    self.query_name,
-                    self.timeout,
-                    self._payload,
-                ),
-            )
-        else:
-            # Otherwise, use rest api
-            self._requester = Thread(
-                target=self._request_rest,
-                args=(
-                    self._graph,
-                    self.query_name,
-                    self._read_task_q,
-                    self.timeout,
-                    self._payload,
-                    "edge",
-                ),
-            )
-        self._requester.start()
+        self._start_request(False, "edge")
 
         # Start reading thread.
         if not self.is_hetero:
@@ -1915,6 +1893,7 @@ class VertexLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -1929,7 +1908,7 @@ class VertexLoader(BaseLoader):
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        timeout: int = 300000,
+        kafka_skip_produce: bool = None,
     ) -> None:
         """
         NO DOC
@@ -1941,6 +1920,7 @@ class VertexLoader(BaseLoader):
             buffer_size,
             output_format,
             reverse_edge,
+            timeout,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
@@ -1955,7 +1935,7 @@ class VertexLoader(BaseLoader):
             kafka_sasl_plain_password,
             kafka_producer_ca_location,
             kafka_consumer_ca_location,
-            timeout,
+            kafka_skip_produce,
         )
         # Resolve attributes
         is_hetero = isinstance(attributes, dict)
@@ -2047,47 +2027,7 @@ class VertexLoader(BaseLoader):
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
-        # If using kafka
-        if self.kafka_address_consumer:
-            # Generate topic
-            self._set_kafka_topic()
-            # Start consumer thread
-            self._downloader = Thread(
-                target=self._download_from_kafka,
-                args=(
-                    self._exit_event,
-                    self._read_task_q,
-                    self.num_batches,
-                    False,
-                    self._kafka_consumer,
-                ),
-            )
-            self._downloader.start()
-            # Start requester thread
-            self._requester = Thread(
-                target=self._request_kafka,
-                args=(
-                    self._exit_event,
-                    self._graph,
-                    self.query_name,
-                    self.timeout,
-                    self._payload,
-                ),
-            )
-        else:
-            # Otherwise, use rest api
-            self._requester = Thread(
-                target=self._request_rest,
-                args=(
-                    self._graph,
-                    self.query_name,
-                    self._read_task_q,
-                    self.timeout,
-                    self._payload,
-                    "vertex",
-                ),
-            )
-        self._requester.start()
+        self._start_request(False, "vertex")
             
         # Start reading thread.
         if not self.is_hetero:
@@ -2222,6 +2162,7 @@ class GraphLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -2236,7 +2177,7 @@ class GraphLoader(BaseLoader):
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        timeout: int = 300000,
+        kafka_skip_produce: bool = None,
     ) -> None:
         """
         NO DOC
@@ -2248,6 +2189,7 @@ class GraphLoader(BaseLoader):
             buffer_size,
             output_format,
             reverse_edge,
+            timeout,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
@@ -2262,7 +2204,7 @@ class GraphLoader(BaseLoader):
             kafka_sasl_plain_password,
             kafka_producer_ca_location,
             kafka_consumer_ca_location,
-            timeout,
+            kafka_skip_produce,
         )
         # Resolve attributes
         is_hetero = any(map(lambda x: isinstance(x, dict), 
@@ -2414,47 +2356,7 @@ class GraphLoader(BaseLoader):
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
-        # If using kafka
-        if self.kafka_address_consumer:
-            # Generate topic
-            self._set_kafka_topic()
-            # Start consumer thread
-            self._downloader = Thread(
-                target=self._download_from_kafka,
-                args=(
-                    self._exit_event,
-                    self._read_task_q,
-                    self.num_batches,
-                    True,
-                    self._kafka_consumer,
-                ),
-            )
-            self._downloader.start()
-            # Start requester thread
-            self._requester = Thread(
-                target=self._request_kafka,
-                args=(
-                    self._exit_event,
-                    self._graph,
-                    self.query_name,
-                    self.timeout,
-                    self._payload,
-                ),
-            )
-        else:
-            # Otherwise, use rest api
-            self._requester = Thread(
-                target=self._request_rest,
-                args=(
-                    self._graph,
-                    self.query_name,
-                    self._read_task_q,
-                    self.timeout,
-                    self._payload,
-                    "both",
-                ),
-            )
-        self._requester.start()
+        self._start_request(True, "both")
 
         # Start reading thread.
         if not self.is_hetero:
@@ -2547,6 +2449,7 @@ class EdgeNeighborLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -2561,7 +2464,7 @@ class EdgeNeighborLoader(BaseLoader):
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        timeout: int = 300000,
+        kafka_skip_produce: bool = None,
     ) -> None:
         """NO DOC"""
 
@@ -2572,6 +2475,7 @@ class EdgeNeighborLoader(BaseLoader):
             buffer_size,
             output_format,
             reverse_edge,
+            timeout,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
@@ -2586,7 +2490,7 @@ class EdgeNeighborLoader(BaseLoader):
             kafka_sasl_plain_password,
             kafka_producer_ca_location,
             kafka_consumer_ca_location,
-            timeout,
+            kafka_skip_produce,
         )
         # Resolve attributes
         is_hetero = any(map(lambda x: isinstance(x, dict), 
@@ -2765,47 +2669,7 @@ class EdgeNeighborLoader(BaseLoader):
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
-        # If using kafka
-        if self.kafka_address_consumer:
-            # Generate topic
-            self._set_kafka_topic()
-            # Start consumer thread
-            self._downloader = Thread(
-                target=self._download_from_kafka,
-                args=(
-                    self._exit_event,
-                    self._read_task_q,
-                    self.num_batches,
-                    True,
-                    self._kafka_consumer,
-                ),
-            )
-            self._downloader.start()
-            # Start requester thread
-            self._requester = Thread(
-                target=self._request_kafka,
-                args=(
-                    self._exit_event,
-                    self._graph,
-                    self.query_name,
-                    self.timeout,
-                    self._payload,
-                ),
-            )
-        else:
-            # Otherwise, use rest api
-            self._requester = Thread(
-                target=self._request_rest,
-                args=(
-                    self._graph,
-                    self.query_name,
-                    self._read_task_q,
-                    self.timeout,
-                    self._payload,
-                    "both",
-                ),
-            )
-        self._requester.start()
+        self._start_request(True, "both")
 
         # Start reading thread.
         if not self.is_hetero:
