@@ -75,6 +75,7 @@ class BaseLoader:
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
         kafka_skip_produce: bool = None,
+        kafka_auto_offset_reset: str = "earliest"
     ) -> None:
         """Base Class for data loaders.
 
@@ -200,6 +201,7 @@ class BaseLoader:
                     client_id=self.loader_id,
                     max_partition_fetch_bytes=Kafka_max_msg_size,
                     fetch_max_bytes=Kafka_max_msg_size,
+                    auto_offset_reset=auto_offset_reset,
                     security_protocol=kafka_security_protocol,
                     sasl_mechanism=kafka_sasl_mechanism,
                     sasl_plain_username=kafka_sasl_plain_username,
