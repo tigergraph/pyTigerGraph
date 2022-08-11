@@ -201,7 +201,7 @@ class BaseLoader:
                     client_id=self.loader_id,
                     max_partition_fetch_bytes=Kafka_max_msg_size,
                     fetch_max_bytes=Kafka_max_msg_size,
-                    auto_offset_reset=auto_offset_reset,
+                    auto_offset_reset=kafka_auto_offset_reset,
                     security_protocol=kafka_security_protocol,
                     sasl_mechanism=kafka_sasl_mechanism,
                     sasl_plain_username=kafka_sasl_plain_username,
