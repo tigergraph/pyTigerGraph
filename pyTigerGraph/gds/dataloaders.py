@@ -1271,6 +1271,8 @@ class NeighborLoader(BaseLoader):
         else:
             self._vtypes = list(self._v_schema.keys())
             self._etypes = list(self._e_schema.keys())
+        self._vtypes = sorted(self._vtypes)
+        self._etypes = sorted(self._etypes)
         # Resolve seeds
         if batch_size:
             # If batch_size is given, calculate the number of batches
@@ -1689,6 +1691,7 @@ class EdgeLoader(BaseLoader):
                 self._etypes = list(self._e_schema.keys())
         else:
             self._etypes = list(self._e_schema.keys())
+        self._etypes = sorted(self._etypes)
         # Initialize parameters for the query
         if batch_size:
             # If batch_size is given, calculate the number of batches
@@ -1951,6 +1954,7 @@ class VertexLoader(BaseLoader):
                 self._vtypes = list(self._v_schema.keys())
         else:
             self._vtypes = list(self._v_schema.keys())
+        self._vtypes = sorted(self._vtypes)
         # Initialize parameters for the query
         if batch_size:
             # If batch_size is given, calculate the number of batches
@@ -2239,6 +2243,8 @@ class GraphLoader(BaseLoader):
         else:
             self._vtypes = list(self._v_schema.keys())
             self._etypes = list(self._e_schema.keys())
+        self._vtypes = sorted(self._vtypes)
+        self._etypes = sorted(self._etypes)
         # Initialize parameters for the query
         if batch_size:
             # If batch_size is given, calculate the number of batches
@@ -2525,6 +2531,8 @@ class EdgeNeighborLoader(BaseLoader):
         else:
             self._vtypes = list(self._v_schema.keys())
             self._etypes = list(self._e_schema.keys())
+        self._vtypes = sorted(self._vtypes)
+        self._etypes = sorted(self._etypes)
         # Resolve seeds
         self._seed_types = self._etypes if ((not filter_by) or isinstance(filter_by, str)) else list(filter_by.keys())
         # Resolve number of batches
