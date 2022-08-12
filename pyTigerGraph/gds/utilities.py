@@ -98,7 +98,10 @@ def is_query_installed(
     queries = conn.getInstalledQueries()
     is_installed = target in queries
     if return_status:
-        is_enabled = queries[target]["enabled"]
+        if is_installed:
+            is_enabled = queries[target]["enabled"]
+        else:
+            is_enabled = None
         return is_installed, is_enabled
     else:
         return is_installed
@@ -128,7 +131,7 @@ def install_query_file(
     is_installed, is_enabled = is_query_installed(conn, query_name, return_status=True)
     if is_installed:
         if force or (not is_enabled):
-            query = "USE GRAPH {}\nDROP QUERY {}".format(conn.graphname, query_name)
+            query = "USE GRAPH {}\nDROP QUERY {}\n".format(conn.graphname, query_name)
             resp = conn.gsql(query)
             if "Failed" in status:
                 raise ConnectionError(status)
