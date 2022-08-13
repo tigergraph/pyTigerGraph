@@ -133,6 +133,7 @@ def install_query_file(
         if force or (not is_enabled):
             query = "USE GRAPH {}\nDROP QUERY {}\n".format(conn.graphname, query_name)
             resp = conn.gsql(query)
+            status = resp.splitlines()[-1]
             if "Failed" in status:
                 raise ConnectionError(status)
         else:
