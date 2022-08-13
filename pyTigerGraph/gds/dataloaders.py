@@ -48,6 +48,8 @@ _udf_funcs = {
     "LIST:DOUBLE": "float_to_string",
 }
 
+RANDOM_TOPIC_LEN = 8
+
 
 class BaseLoader:
     """NO DOC: Base Dataloader Class."""
@@ -179,7 +181,7 @@ class BaseLoader:
         self._v_schema, self._e_schema = self._get_schema()
         # Initialize basic params
         if not loader_id:
-            self.loader_id = random_string(6)
+            self.loader_id = random_string(RANDOM_TOPIC_LEN)
         else:
             self.loader_id = loader_id
         self.num_batches = num_batches
