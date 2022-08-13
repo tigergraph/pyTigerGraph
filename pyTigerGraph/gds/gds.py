@@ -68,7 +68,10 @@ class GDS:
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        kafka_skip_produce: bool = None
+        kafka_skip_produce: bool = None,
+        kafka_auto_offset_reset: str = "latest",
+        kafka_del_topic_per_epoch: bool = False,
+        kafka_add_topic_per_epoch: bool = False
     ) -> None:
         """Configure the Kafka connection. Will override any configuration that is defined in factory functions.
         Args:
@@ -125,7 +128,10 @@ class GDS:
             "kafka_sasl_plain_password": kafka_sasl_plain_password,
             "kafka_producer_ca_location": kafka_producer_ca_location,
             "kafka_consumer_ca_location": kafka_consumer_ca_location,
-            "kafka_skip_produce": kafka_skip_produce
+            "kafka_skip_produce": kafka_skip_produce,
+            "kafka_auto_offset_reset": kafka_auto_offset_reset,
+            "kafka_del_topic_per_epoch": kafka_del_topic_per_epoch,
+            "kafka_add_topic_per_epoch": kafka_add_topic_per_epoch
         }
 
 
@@ -150,21 +156,6 @@ class GDS:
         buffer_size: int = 4,
         reverse_edge: bool = False,
         timeout: int = 300000,
-        kafka_address: str = None,
-        kafka_max_msg_size: int = 104857600,
-        kafka_num_partitions: int = 1,
-        kafka_replica_factor: int = 1,
-        kafka_retention_ms: int = 60000,
-        kafka_auto_del_topic: bool = True,
-        kafka_address_consumer: str = None,
-        kafka_address_producer: str = None,
-        kafka_security_protocol: str = "PLAINTEXT",
-        kafka_sasl_mechanism: str = None,
-        kafka_sasl_plain_username: str = None,
-        kafka_sasl_plain_password: str = None,
-        kafka_producer_ca_location: str = None,
-        kafka_consumer_ca_location: str = None,
-        kafka_skip_produce: bool = None,
     ) -> NeighborLoader:
         """Returns a `NeighborLoader` instance.
         A `NeighborLoader` instance performs neighbor sampling from vertices in the graph in batches in the following manner:
@@ -337,22 +328,7 @@ class GDS:
             "loader_id": loader_id,
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
-            "kafka_address": kafka_address,
-            "kafka_max_msg_size": kafka_max_msg_size,
-            "kafka_num_partitions": kafka_num_partitions,
-            "kafka_replica_factor": kafka_replica_factor,
-            "kafka_retention_ms": kafka_retention_ms,
-            "kafka_auto_del_topic": kafka_auto_del_topic,
-            "kafka_address_consumer": kafka_address_consumer,
-            "kafka_address_producer": kafka_address_producer,
-            "kafka_security_protocol": kafka_security_protocol,
-            "kafka_sasl_mechanism": kafka_sasl_mechanism,
-            "kafka_sasl_plain_username": kafka_sasl_plain_username,
-            "kafka_sasl_plain_password": kafka_sasl_plain_password,
-            "kafka_producer_ca_location": kafka_producer_ca_location,
-            "kafka_consumer_ca_location": kafka_consumer_ca_location,
             "timeout": timeout,
-            "kafka_skip_produce": kafka_skip_produce
         }
 
         if self.kafkaConfig:
@@ -373,21 +349,6 @@ class GDS:
         buffer_size: int = 4,
         reverse_edge: bool = False,
         timeout: int = 300000,
-        kafka_address: str = None,
-        kafka_max_msg_size: int = 104857600,
-        kafka_num_partitions: int = 1,
-        kafka_replica_factor: int = 1,
-        kafka_retention_ms: int = 60000,
-        kafka_auto_del_topic: bool = True,
-        kafka_address_consumer: str = None,
-        kafka_address_producer: str = None,
-        kafka_security_protocol: str = "PLAINTEXT",
-        kafka_sasl_mechanism: str = None,
-        kafka_sasl_plain_username: str = None,
-        kafka_sasl_plain_password: str = None,
-        kafka_producer_ca_location: str = None,
-        kafka_consumer_ca_location: str = None,
-        kafka_skip_produce: bool = None,
     ) -> EdgeLoader:
         """Returns an `EdgeLoader` instance. 
         An `EdgeLoader` instance loads all edges in the graph in batches.
@@ -501,22 +462,7 @@ class GDS:
             "loader_id": loader_id,
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
-            "kafka_address": kafka_address,
-            "kafka_max_msg_size": kafka_max_msg_size,
-            "kafka_num_partitions": kafka_num_partitions,
-            "kafka_replica_factor": kafka_replica_factor,
-            "kafka_retention_ms": kafka_retention_ms,
-            "kafka_auto_del_topic": kafka_auto_del_topic,
-            "kafka_address_consumer": kafka_address_consumer,
-            "kafka_address_producer": kafka_address_producer,
-            "kafka_security_protocol": kafka_security_protocol,
-            "kafka_sasl_mechanism": kafka_sasl_mechanism,
-            "kafka_sasl_plain_username": kafka_sasl_plain_username,
-            "kafka_sasl_plain_password": kafka_sasl_plain_password,
-            "kafka_producer_ca_location": kafka_producer_ca_location,
-            "kafka_consumer_ca_location": kafka_consumer_ca_location,
             "timeout": timeout,
-            "kafka_skip_produce": kafka_skip_produce
         }
         if self.kafkaConfig:
             params.update(self.kafkaConfig)
@@ -536,21 +482,6 @@ class GDS:
             buffer_size: int = 4,
             reverse_edge: bool = False,
             timeout: int = 300000,
-            kafka_address: str = None,
-            kafka_max_msg_size: int = 104857600,
-            kafka_num_partitions: int = 1,
-            kafka_replica_factor: int = 1,
-            kafka_retention_ms: int = 60000,
-            kafka_auto_del_topic: bool = True,
-            kafka_address_consumer: str = None,
-            kafka_address_producer: str = None,
-            kafka_security_protocol: str = "PLAINTEXT",
-            kafka_sasl_mechanism: str = None,
-            kafka_sasl_plain_username: str = None,
-            kafka_sasl_plain_password: str = None,
-            kafka_producer_ca_location: str = None,
-            kafka_consumer_ca_location: str = None,
-            kafka_skip_produce: bool = None,
     ) -> VertexLoader:
         """Returns a `VertexLoader` instance.
         A `VertexLoader` can load all vertices of a graph in batches.
@@ -664,22 +595,7 @@ class GDS:
             "loader_id": loader_id,
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
-            "kafka_address": kafka_address,
-            "kafka_max_msg_size": kafka_max_msg_size,
-            "kafka_num_partitions": kafka_num_partitions,
-            "kafka_replica_factor": kafka_replica_factor,
-            "kafka_retention_ms": kafka_retention_ms,
-            "kafka_auto_del_topic": kafka_auto_del_topic,
-            "kafka_address_consumer": kafka_address_consumer,
-            "kafka_address_producer": kafka_address_producer,
-            "kafka_security_protocol": kafka_security_protocol,
-            "kafka_sasl_mechanism": kafka_sasl_mechanism,
-            "kafka_sasl_plain_username": kafka_sasl_plain_username,
-            "kafka_sasl_plain_password": kafka_sasl_plain_password,
-            "kafka_producer_ca_location": kafka_producer_ca_location,
-            "kafka_consumer_ca_location": kafka_consumer_ca_location,
             "timeout": timeout,
-            "kafka_skip_produce": kafka_skip_produce
         }
 
         if self.kafkaConfig:
@@ -706,21 +622,6 @@ class GDS:
         buffer_size: int = 4,
         reverse_edge: bool = False,
         timeout: int = 300000,
-        kafka_address: str = None,
-        kafka_max_msg_size: int = 104857600,
-        kafka_num_partitions: int = 1,
-        kafka_replica_factor: int = 1,
-        kafka_retention_ms: int = 60000,
-        kafka_auto_del_topic: bool = True,
-        kafka_address_consumer: str = None,
-        kafka_address_producer: str = None,
-        kafka_security_protocol: str = "PLAINTEXT",
-        kafka_sasl_mechanism: str = None,
-        kafka_sasl_plain_username: str = None,
-        kafka_sasl_plain_password: str = None,
-        kafka_producer_ca_location: str = None,
-        kafka_consumer_ca_location: str = None,
-        kafka_skip_produce: bool = None,
     ) -> GraphLoader:
         """Returns a `GraphLoader`instance.
         A `GraphLoader` instance loads all edges from the graph in batches, along with the vertices that are connected with each edge.
@@ -884,22 +785,7 @@ class GDS:
             "loader_id": loader_id,
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
-            "kafka_address": kafka_address,
-            "kafka_max_msg_size": kafka_max_msg_size,
-            "kafka_num_partitions": kafka_num_partitions,
-            "kafka_replica_factor": kafka_replica_factor,
-            "kafka_retention_ms": kafka_retention_ms,
-            "kafka_auto_del_topic": kafka_auto_del_topic,
-            "kafka_address_consumer": kafka_address_consumer,
-            "kafka_address_producer": kafka_address_producer,
-            "kafka_security_protocol": kafka_security_protocol,
-            "kafka_sasl_mechanism": kafka_sasl_mechanism,
-            "kafka_sasl_plain_username": kafka_sasl_plain_username,
-            "kafka_sasl_plain_password": kafka_sasl_plain_password,
-            "kafka_producer_ca_location": kafka_producer_ca_location,
-            "kafka_consumer_ca_location": kafka_consumer_ca_location,
             "timeout": timeout,
-            "kafka_skip_produce": kafka_skip_produce
         }
 
         if self.kafkaConfig:
@@ -928,21 +814,6 @@ class GDS:
         buffer_size: int = 4,
         reverse_edge: bool = False,
         timeout: int = 300000,
-        kafka_address: str = None,
-        kafka_max_msg_size: int = 104857600,
-        kafka_num_partitions: int = 1,
-        kafka_replica_factor: int = 1,
-        kafka_retention_ms: int = 60000,
-        kafka_auto_del_topic: bool = True,
-        kafka_address_consumer: str = None,
-        kafka_address_producer: str = None,
-        kafka_security_protocol: str = "PLAINTEXT",
-        kafka_sasl_mechanism: str = None,
-        kafka_sasl_plain_username: str = None,
-        kafka_sasl_plain_password: str = None,
-        kafka_producer_ca_location: str = None,
-        kafka_consumer_ca_location: str = None,
-        kafka_skip_produce: bool = None,
     ) -> EdgeNeighborLoader:
         """Returns an `EdgeNeighborLoader` instance.
         An `EdgeNeighborLoader` instance performs neighbor sampling from all edges in the graph in batches in the following manner:
@@ -1116,22 +987,7 @@ class GDS:
             "loader_id": loader_id,
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
-            "kafka_address": kafka_address,
-            "kafka_max_msg_size": kafka_max_msg_size,
-            "kafka_num_partitions": kafka_num_partitions,
-            "kafka_replica_factor": kafka_replica_factor,
-            "kafka_retention_ms": kafka_retention_ms,
-            "kafka_auto_del_topic": kafka_auto_del_topic,
-            "kafka_address_consumer": kafka_address_consumer,
-            "kafka_address_producer": kafka_address_producer,
-            "kafka_security_protocol": kafka_security_protocol,
-            "kafka_sasl_mechanism": kafka_sasl_mechanism,
-            "kafka_sasl_plain_username": kafka_sasl_plain_username,
-            "kafka_sasl_plain_password": kafka_sasl_plain_password,
-            "kafka_producer_ca_location": kafka_producer_ca_location,
-            "kafka_consumer_ca_location": kafka_consumer_ca_location,
             "timeout": timeout,
-            "kafka_skip_produce": kafka_skip_produce
         }
 
         if self.kafkaConfig:

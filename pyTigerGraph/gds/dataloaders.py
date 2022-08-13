@@ -1239,6 +1239,9 @@ class NeighborLoader(BaseLoader):
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
         kafka_skip_produce: bool = None,
+        kafka_auto_offset_reset: str = "latest",
+        kafka_del_topic_per_epoch: bool = False,
+        kafka_add_topic_per_epoch: bool = False
     ) -> None:
         """NO DOC"""
 
@@ -1265,6 +1268,9 @@ class NeighborLoader(BaseLoader):
             kafka_producer_ca_location,
             kafka_consumer_ca_location,
             kafka_skip_produce,
+            kafka_auto_offset_reset,
+            kafka_del_topic_per_epoch,
+            kafka_add_topic_per_epoch
         )
         # Resolve attributes
         is_hetero = any(map(lambda x: isinstance(x, dict), 
@@ -1676,7 +1682,10 @@ class EdgeLoader(BaseLoader):
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        kafka_skip_produce: bool = None, 
+        kafka_skip_produce: bool = None,
+        kafka_auto_offset_reset: str = "latest",
+        kafka_del_topic_per_epoch: bool = False,
+        kafka_add_topic_per_epoch: bool = False
     ) -> None:
         """
         NO DOC.
@@ -1704,6 +1713,9 @@ class EdgeLoader(BaseLoader):
             kafka_producer_ca_location,
             kafka_consumer_ca_location,
             kafka_skip_produce,
+            kafka_auto_offset_reset,
+            kafka_del_topic_per_epoch,
+            kafka_add_topic_per_epoch
         )
         # Resolve attributes
         is_hetero = isinstance(attributes, dict)
@@ -1940,6 +1952,9 @@ class VertexLoader(BaseLoader):
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
         kafka_skip_produce: bool = None,
+        kafka_auto_offset_reset: str = "latest",
+        kafka_del_topic_per_epoch: bool = False,
+        kafka_add_topic_per_epoch: bool = False
     ) -> None:
         """
         NO DOC
@@ -1967,6 +1982,9 @@ class VertexLoader(BaseLoader):
             kafka_producer_ca_location,
             kafka_consumer_ca_location,
             kafka_skip_produce,
+            kafka_auto_offset_reset,
+            kafka_del_topic_per_epoch,
+            kafka_add_topic_per_epoch
         )
         # Resolve attributes
         is_hetero = isinstance(attributes, dict)
@@ -2210,6 +2228,9 @@ class GraphLoader(BaseLoader):
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
         kafka_skip_produce: bool = None,
+        kafka_auto_offset_reset: str = "latest",
+        kafka_del_topic_per_epoch: bool = False,
+        kafka_add_topic_per_epoch: bool = False
     ) -> None:
         """
         NO DOC
@@ -2237,6 +2258,9 @@ class GraphLoader(BaseLoader):
             kafka_producer_ca_location,
             kafka_consumer_ca_location,
             kafka_skip_produce,
+            kafka_auto_offset_reset,
+            kafka_del_topic_per_epoch,
+            kafka_add_topic_per_epoch
         )
         # Resolve attributes
         is_hetero = any(map(lambda x: isinstance(x, dict), 
@@ -2499,6 +2523,9 @@ class EdgeNeighborLoader(BaseLoader):
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
         kafka_skip_produce: bool = None,
+        kafka_auto_offset_reset: str = "latest",
+        kafka_del_topic_per_epoch: bool = False,
+        kafka_add_topic_per_epoch: bool = False
     ) -> None:
         """NO DOC"""
 
@@ -2525,6 +2552,9 @@ class EdgeNeighborLoader(BaseLoader):
             kafka_producer_ca_location,
             kafka_consumer_ca_location,
             kafka_skip_produce,
+            kafka_auto_offset_reset,
+            kafka_del_topic_per_epoch,
+            kafka_add_topic_per_epoch
         )
         # Resolve attributes
         is_hetero = any(map(lambda x: isinstance(x, dict), 
