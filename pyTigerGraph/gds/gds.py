@@ -68,8 +68,8 @@ class GDS:
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        kafka_skip_produce: bool = None,
-        kafka_auto_offset_reset: str = "latest",
+        kafka_skip_produce: bool = False,
+        kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False
     ) -> None:

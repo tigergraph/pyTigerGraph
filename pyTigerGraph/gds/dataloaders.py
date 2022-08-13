@@ -74,7 +74,7 @@ class BaseLoader:
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        kafka_skip_produce: bool = None,
+        kafka_skip_produce: bool = False,
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False
@@ -417,8 +417,9 @@ class BaseLoader:
             if self.kafka_skip_produce is None:
                 self.kafka_skip_produce = True
         # Subscribe to the topic
-        self._kafka_consumer.subscribe([kafka_topic])
-        _ = self._kafka_consumer.topics() # Call this to refresh metadata. Or the new subscription seems to be delayed.
+        if (not self._kafka_consumer.subscription()) or kafka_topic not in self._kafka_consumer.subscription():
+            self._kafka_consumer.subscribe([kafka_topic])
+            _ = self._kafka_consumer.topics() # Call this to refresh metadata. Or the new subscription seems to be delayed.
 
     @staticmethod
     def _request_kafka(
@@ -1238,8 +1239,8 @@ class NeighborLoader(BaseLoader):
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        kafka_skip_produce: bool = None,
-        kafka_auto_offset_reset: str = "latest",
+        kafka_skip_produce: bool = False,
+        kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False
     ) -> None:
@@ -1682,8 +1683,8 @@ class EdgeLoader(BaseLoader):
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        kafka_skip_produce: bool = None,
-        kafka_auto_offset_reset: str = "latest",
+        kafka_skip_produce: bool = False,
+        kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False
     ) -> None:
@@ -1951,8 +1952,8 @@ class VertexLoader(BaseLoader):
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        kafka_skip_produce: bool = None,
-        kafka_auto_offset_reset: str = "latest",
+        kafka_skip_produce: bool = False,
+        kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False
     ) -> None:
@@ -2227,8 +2228,8 @@ class GraphLoader(BaseLoader):
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        kafka_skip_produce: bool = None,
-        kafka_auto_offset_reset: str = "latest",
+        kafka_skip_produce: bool = False,
+        kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False
     ) -> None:
@@ -2522,8 +2523,8 @@ class EdgeNeighborLoader(BaseLoader):
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        kafka_skip_produce: bool = None,
-        kafka_auto_offset_reset: str = "latest",
+        kafka_skip_produce: bool = False,
+        kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False
     ) -> None:
