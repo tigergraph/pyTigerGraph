@@ -75,7 +75,9 @@ class BaseLoader:
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
         kafka_skip_produce: bool = None,
-        kafka_auto_offset_reset: str = "earliest"
+        kafka_auto_offset_reset: str = "earliest",
+        kafka_del_topic_per_epoch: bool = False,
+        kafka_add_topic_per_epoch: bool = False
     ) -> None:
         """Base Class for data loaders.
 
@@ -155,6 +157,7 @@ class BaseLoader:
         self._read_task_q = None
         self._data_q = None
         self._kafka_topic = None
+        self._all_kafka_topics = set()
         # Exit signal to terminate threads
         self._exit_event = None
         # In-memory data cache. Only used if num_batches=1
@@ -163,8 +166,13 @@ class BaseLoader:
         self.kafka_partitions = kafka_num_partitions
         self.kafka_replica = kafka_replica_factor
         self.kafka_retention_ms = kafka_retention_ms
-        self.delete_kafka_topic = kafka_auto_del_topic
+        self.delete_all_topics = kafka_auto_del_topic
         self.kafka_skip_produce = kafka_skip_produce
+        self.add_epoch_topic = kafka_add_topic_per_epoch
+        if self.add_epoch_topic:
+            self.delete_epoch_topic = kafka_del_topic_per_epoch
+        else:
+            self.delete_epoch_topic = False
         # Get graph info
         self.reverse_edge = reverse_edge
         self._graph = graph
@@ -249,7 +257,7 @@ class BaseLoader:
         # self._install_query()
 
     def __del__(self) -> NoReturn:
-        self._reset()
+        self._reset(theend=True)
 
     def _get_schema(self) -> Tuple[dict, dict]:
         v_schema = {}
@@ -367,9 +375,13 @@ class BaseLoader:
     def _set_kafka_topic(self) -> None:
         # Generate kafka topic, add it to payload and consumer
         # Generate topic
-        kafka_topic = "{}_{}".format(self.loader_id, self._iterations)
+        if self.add_epoch_topic:
+            kafka_topic = "{}_{}".format(self.loader_id, self._iterations)
+        else:
+            kafka_topic = self.loader_id
         self._kafka_topic = kafka_topic
         self._payload["kafka_topic"] = kafka_topic
+        self._all_kafka_topics.add(kafka_topic)
         # Create topic if not exist
         if kafka_topic not in self._kafka_admin.list_topics():
             try:
@@ -1085,7 +1097,7 @@ class BaseLoader:
         else:
             return self
 
-    def _reset(self) -> None:
+    def _reset(self, theend=False) -> None:
         logging.debug("Resetting the loader")
         if self._exit_event:
             self._exit_event.set()
@@ -1121,9 +1133,21 @@ class BaseLoader:
             None,
             None,
         )
-        if self.delete_kafka_topic:
+        if theend:
             if self._kafka_topic:
                 self._kafka_consumer.unsubscribe()
+            if self.delete_all_topics:
+                topics_to_delete = self._all_kafka_topics.intersection(self._kafka_admin.list_topics())
+                resp = self._kafka_admin.delete_topics(list(topics_to_delete))
+                for del_res in resp.to_object()["topic_error_codes"]:
+                    if del_res["error_code"] != 0:
+                        raise TigerGraphException(
+                            "Failed to delete topic {}".format(del_res["topic"])
+                        )
+        else:
+            if self.delete_epoch_topic:
+                if self._kafka_topic:
+                    self._kafka_consumer.unsubscribe()
                 resp = self._kafka_admin.delete_topics([self._kafka_topic])
                 del_res = resp.to_object()["topic_error_codes"][0]
                 if del_res["error_code"] != 0:
