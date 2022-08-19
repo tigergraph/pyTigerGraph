@@ -21,8 +21,8 @@ class Accumulator:
 
     def __init__(self) -> None:
         '''Initialize the accumulator.'''
-        self._cumsum: float = 0.0
-        self._count: int = 0
+        self._cumsum = 0.0
+        self._count = 0
 
     def update(self, value: float, count: int = 1) -> None:
         """Add a value to the running sum.
