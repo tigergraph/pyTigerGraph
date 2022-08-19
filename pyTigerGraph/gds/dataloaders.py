@@ -147,7 +147,16 @@ class BaseLoader:
             kafka_consumer_ca_location (str, optional):
                 Path to CA certificate on client machine for verifying the broker's key. 
             kafka_skip_produce (bool, optional):
-                Whether or not to skip calling the producer. 
+                Whether or not to skip calling the producer.
+            kafka_auto_offset_reset (str, optional):
+                Where to start for a new consumer. "earliest" will move to the oldest available message, 
+                "latest" will move to the most recent. Any other value will raise the exception.
+                Defaults to "earliest".
+            kafka_del_topic_per_epoch (bool, optional): 
+                Whether to delete the topic after each epoch. It is effective only when
+                `kafka_add_topic_per_epoch` is True. Defaults to False.
+            kafka_add_topic_per_epoch (bool, optional):  
+                Whether to add a topic for each epoch. Defaults to False.
         """
         # Thread to send requests, download and load data
         self._requester = None

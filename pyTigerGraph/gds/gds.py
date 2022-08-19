@@ -12,7 +12,6 @@ conn = TigerGraphConnection(
     graphname="Cora",
     username="tigergraph",
     password="tigergraph",
-    useCert=False
 )
 edge_loader = conn.gds.edgeLoader(
     num_batches=1,
@@ -73,7 +72,7 @@ class GDS:
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False
     ) -> None:
-        """Configure the Kafka connection. Will override any configuration that is defined in factory functions.
+        """Configure the Kafka connection.
         Args:
             kafka_address (str, optional):
                 Address of the Kafka broker. Defaults to None.
@@ -90,8 +89,8 @@ class GDS:
                 Retention time for messages in the topic created by this
                 loader in milliseconds. Defaults to 60000.
             kafka_auto_del_topic (bool, optional):
-                Whether to delete the Kafka topic once the
-                loader finishes pulling data. Defaults to True.
+                Whether to delete the Kafka topics created by this loader when
+                it is destroyed. Defaults to True.
             kafka_address_consumer (str, optional):
                 Address of the Kafka broker that a consumer
                 should use. Defaults to be the same as `kafkaAddress`.
@@ -111,7 +110,16 @@ class GDS:
             kafka_consumer_ca_location (str, optional):
                 Path to CA certificate on client machine for verifying the broker's key. 
             kafka_skip_produce (bool, optional):
-                Whether or not to skip calling the producer.
+                Whether or not to skip calling the producer. Defaults to False.
+            kafka_auto_offset_reset (str, optional):
+                Where to start for a new consumer. "earliest" will move to the oldest available message, 
+                "latest" will move to the most recent. Any other value will raise the exception.
+                Defaults to "earliest".
+            kafka_del_topic_per_epoch (bool, optional): 
+                Whether to delete the topic after each epoch. It is effective only when
+                `kafka_add_topic_per_epoch` is True. Defaults to False.
+            kafka_add_topic_per_epoch (bool, optional):  
+                Whether to add a topic for each epoch. Defaults to False.
         """
         self.kafkaConfig = {
             "kafka_address": kafka_address,
@@ -269,45 +277,8 @@ class GDS:
                 Number of data batches to prefetch and store in memory. Defaults to 4.
             reverse_edge (bool, optional):
                 Whether to traverse along reverse edge types. Defaults to False.
-            kafka_address (str, optional):
-                Address of the Kafka broker. Defaults to None.
-            kafka_max_msg_size (int, optional):
-                Maximum size of a Kafka message in bytes.
-                Defaults to 104857600.
-            kafka_num_partitions (int, optional):
-                Number of partitions for the topic created by this loader.
-                Defaults to 1.
-            kafka_replica_factor (int, optional):
-                Number of replications for the topic created by this
-                loader. Defaults to 1.
-            kafka_retention_ms (int, optional):
-                Retention time for messages in the topic created by this
-                loader in milliseconds. Defaults to 60000.
-            kafka_auto_del_topic (bool, optional):
-                Whether to delete the Kafka topic once the
-                loader finishes pulling data. Defaults to True.
-            kafka_address_consumer (str, optional):
-                Address of the Kafka broker that a consumer
-                should use. Defaults to be the same as `kafkaAddress`.
-            kafka_address_producer (str, optional):
-                Address of the Kafka broker that a producer
-                should use. Defaults to be the same as `kafkaAddress`.
-            kafka_security_protocol (str, optional):
-                Security prototol for Kafka. Defaults to None.
-            kafka_sasl_mechanism (str, optional):
-                Authentication mechanism for Kafka. Defaults to None.
-            kafka_sasl_plain_username (str, optional):
-                SASL username for Kafka. Defaults to None.
-            kafka_sasl_plain_password (str, optional):
-                SASL password for Kafka. Defaults to None.
-            kafka_producer_ca_location (str, optional):
-                Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
-            kafka_consumer_ca_location (str, optional):
-                Path to CA certificate on client machine for verifying the broker's key. 
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
-            kafka_skip_produce (bool, optional):
-                Whether or not to skip calling the producer.
         """
         params = {
             "graph": self.conn,
@@ -408,45 +379,8 @@ class GDS:
                 Number of data batches to prefetch and store in memory. Defaults to 4.
             reverse_edge (bool, optional):
                 Whether to traverse along reverse edge types. Defaults to False.
-            kafka_address (str, optional):
-                Address of the Kafka broker. Defaults to None.
-            kafka_max_msg_size (int, optional):
-                Maximum size of a Kafka message in bytes.
-                Defaults to 104857600.
-            kafka_num_partitions (int, optional):
-                Number of partitions for the topic created by this loader.
-                Defaults to 1.
-            kafka_replica_factor (int, optional):
-                Number of replications for the topic created by this
-                loader. Defaults to 1.
-            kafka_retention_ms (int, optional):
-                Retention time for messages in the topic created by this
-                loader in milliseconds. Defaults to 60000.
-            kafka_auto_del_topic (bool, optional):
-                Whether to delete the Kafka topic once the
-                loader finishes pulling data. Defaults to True.
-            kafka_address_consumer (str, optional):
-                Address of the Kafka broker that a consumer
-                should use. Defaults to be the same as `kafkaAddress`.
-            kafka_address_producer (str, optional):
-                Address of the Kafka broker that a producer
-                should use. Defaults to be the same as `kafkaAddress`.
-            kafka_security_protocol (str, optional):
-                Security prototol for Kafka. Defaults to None.
-            kafka_sasl_mechanism (str, optional):
-                Authentication mechanism for Kafka. Defaults to None.
-            kafka_sasl_plain_username (str, optional):
-                SASL username for Kafka. Defaults to None.
-            kafka_sasl_plain_password (str, optional):
-                SASL password for Kafka. Defaults to None.
-            kafka_producer_ca_location (str, optional):
-                Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
-            kafka_consumer_ca_location (str, optional):
-                Path to CA certificate on client machine for verifying the broker's key. 
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
-            kafka_skip_produce (bool, optional):
-                Whether or not to skip calling the producer.
 
         See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_edgeloader.ipynb[the ML Workbench edge loader tutorial notebook]
         for examples.
@@ -541,45 +475,8 @@ class GDS:
                 Number of data batches to prefetch and store in memory. Defaults to 4.
             reverse_edge (bool, optional):
                 Whether to traverse along reverse edge types. Defaults to False.
-            kafka_address (str, optional):
-                Address of the Kafka broker. Defaults to None.
-            kafka_max_msg_size (int, optional):
-                Maximum size of a Kafka message in bytes.
-                Defaults to 104857600.
-            kafka_num_partitions (int, optional):
-                Number of partitions for the topic created by this loader.
-                Defaults to 1.
-            kafka_replica_factor (int, optional):
-                Number of replications for the topic created by this loader.
-                Defaults to 1.
-            kafka_retention_ms (int, optional):
-                Retention time for messages in the topic created by this
-                loader in milliseconds. Defaults to 60000.
-            kafka_auto_del_topic (bool, optional):
-                Whether to delete the Kafka topic once the
-                loader finishes pulling data. Defaults to True.
-            kafka_address_consumer (str, optional):
-                Address of the Kafka broker that a consumer
-                should use. Defaults to be the same as `kafkaAddress`.
-            kafka_address_producer (str, optional):
-                Address of the Kafka broker that a producer
-                should use. Defaults to be the same as `kafkaAddress`.
-            kafka_security_protocol (str, optional):
-                Security prototol for Kafka. Defaults to None.
-            kafka_sasl_mechanism (str, optional):
-                Authentication mechanism for Kafka. Defaults to None.
-            kafka_sasl_plain_username (str, optional):
-                SASL username for Kafka. Defaults to None.
-            kafka_sasl_plain_password (str, optional):
-                SASL password for Kafka. Defaults to None.
-            kafka_producer_ca_location (str, optional):
-                Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
-            kafka_consumer_ca_location (str, optional):
-                Path to CA certificate on client machine for verifying the broker's key. 
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
-            kafka_skip_produce (bool, optional):
-                Whether or not to skip calling the producer.
 
         See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_vertexloader.ipynb[the ML Workbench tutorial notebook]
         for examples.
@@ -725,45 +622,8 @@ class GDS:
                 Number of data batches to prefetch and store in memory. Defaults to 4.
             reverse_edge (bool, optional):
                 Whether to traverse along reverse edge types. Defaults to False.
-            kafka_address (str, optional):
-                Address of the Kafka broker. Defaults to None.
-            kafka_max_msg_size (int, optional):
-                Maximum size of a Kafka message in bytes.
-                Defaults to 104857600.
-            kafka_num_partitions (int, optional):
-                Number of partitions for the topic created by this loader.
-                Defaults to 1.
-            kafka_replica_factor (int, optional):
-                Number of replications for the topic created by this
-                loader. Defaults to 1.
-            kafka_retention_ms (int, optional):
-                Retention time for messages in the topic created by this
-                loader in milliseconds. Defaults to 60000.
-            kafka_auto_del_topic (bool, optional):
-                Whether to delete the Kafka topic once the
-                loader finishes pulling data. Defaults to True.
-            kafka_address_consumer (str, optional):
-                Address of the Kafka broker that a consumer
-                should use. Defaults to be the same as `kafkaAddress`.
-            kafka_address_producer (str, optional):
-                Address of the Kafka broker that a producer
-                should use. Defaults to be the same as `kafkaAddress`.
-            kafka_security_protocol (str, optional):
-                Security prototol for Kafka. Defaults to None.
-            kafka_sasl_mechanism (str, optional):
-                Authentication mechanism for Kafka. Defaults to None.
-            kafka_sasl_plain_username (str, optional):
-                SASL username for Kafka. Defaults to None.
-            kafka_sasl_plain_password (str, optional):
-                SASL password for Kafka. Defaults to None.
-            kafka_producer_ca_location (str, optional):
-                Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
-            kafka_consumer_ca_location (str, optional):
-                Path to CA certificate on client machine for verifying the broker's key. 
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
-            kafka_skip_produce (bool, optional):
-                Whether or not to skip calling the producer.
 
         See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_graphloader.ipynb[the ML Workbench tutorial notebook for graph loaders]
          for examples.
@@ -927,45 +787,8 @@ class GDS:
                 Number of data batches to prefetch and store in memory. Defaults to 4.
             reverse_edge (bool, optional):
                 Whether to traverse along reverse edge types. Defaults to False.
-            kafka_address (str, optional):
-                Address of the Kafka broker. Defaults to None.
-            kafka_max_msg_size (int, optional):
-                Maximum size of a Kafka message in bytes.
-                Defaults to 104857600.
-            kafka_num_partitions (int, optional):
-                Number of partitions for the topic created by this loader.
-                Defaults to 1.
-            kafka_replica_factor (int, optional):
-                Number of replications for the topic created by this
-                loader. Defaults to 1.
-            kafka_retention_ms (int, optional):
-                Retention time for messages in the topic created by this
-                loader in milliseconds. Defaults to 60000.
-            kafka_auto_del_topic (bool, optional):
-                Whether to delete the Kafka topic once the
-                loader finishes pulling data. Defaults to True.
-            kafka_address_consumer (str, optional):
-                Address of the Kafka broker that a consumer
-                should use. Defaults to be the same as `kafkaAddress`.
-            kafka_address_producer (str, optional):
-                Address of the Kafka broker that a producer
-                should use. Defaults to be the same as `kafkaAddress`.
-            kafka_security_protocol (str, optional):
-                Security prototol for Kafka. Defaults to None.
-            kafka_sasl_mechanism (str, optional):
-                Authentication mechanism for Kafka. Defaults to None.
-            kafka_sasl_plain_username (str, optional):
-                SASL username for Kafka. Defaults to None.
-            kafka_sasl_plain_password (str, optional):
-                SASL password for Kafka. Defaults to None.
-            kafka_producer_ca_location (str, optional):
-                Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
-            kafka_consumer_ca_location (str, optional):
-                Path to CA certificate on client machine for verifying the broker's key. 
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
-            kafka_skip_produce (bool, optional):
-                Whether or not to skip calling the producer.
         """
 
         params = {
