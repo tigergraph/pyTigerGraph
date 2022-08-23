@@ -747,6 +747,7 @@ class BaseLoader:
                         )
                     elif mode == "spektral":
                         data[col] = attr_df[col].astype(dtype)
+        
         # Read in vertex and edge CSVs as dataframes              
         vertices, edges = None, None
         if in_format == "vertex":
@@ -800,7 +801,6 @@ class BaseLoader:
                     v_extra_feats.append("primary_id")
                 edges = pd.read_csv(io.StringIO(e_file), header=None, names=e_attributes, dtype="object")
                 data = (vertices, edges)
-
             else:
                 v_file = (line.split(',') for line in v_file.split('\n') if line)
                 v_file_dict = defaultdict(list)
@@ -837,15 +837,15 @@ class BaseLoader:
             raise NotImplementedError
         # Convert dataframes into PyG or DGL graphs
         if out_format.lower() == "pyg" or out_format.lower() == "dgl":
+            if vertices is None or edges is None:
+                raise ValueError(
+                    "Spektral, PyG, or DGL format can only be used with (sub)graph loaders."
+                )
             try:
                 import torch
             except ImportError:
                 raise ImportError(
                     "PyTorch is not installed. Please install it to use PyG or DGL output."
-                )
-            if vertices is None or edges is None:
-                raise ValueError(
-                    "Spektral, PyG, or DGL format can only be used with (sub)graph loaders."
                 )
             if out_format.lower() == "dgl":
                 try:
@@ -890,10 +890,12 @@ class BaseLoader:
                 raise ImportError(
                     "Spektral is not installed. Please install it to use spektral output."
                 )
+        elif out_format.lower() == "dataframe":
+            return data
         else:
             raise NotImplementedError
-            # Reformat as a graph.
-            # Need to have a pair of tables for edges and vertices.
+        # Reformat as a graph.
+        # Need to have a pair of tables for edges and vertices.
         if not is_hetero:
             # Deal with edgelist first
             if reindex:
@@ -920,43 +922,51 @@ class BaseLoader:
                     if add_self_loop:
                         edgelist = add_self_loops(edgelist)[0]
                     data["edge_index"] = edgelist
-                elif mode == "spektral":
-                    n_edges = len(edgelist)
-                    n_vertices = len(vertices)
-                    adjacency_data = [1 for i in range(n_edges)] #spektral adjacency format requires weights for each edge to initialize
-                    adjacency = scipy.sparse.coo_matrix((adjacency_data, (edgelist["tmp_id_x"], edgelist["tmp_id_y"])), shape=(n_vertices, n_vertices))
-                    if add_self_loop:
-                        adjacency = spektral.utils.add_self_loops(adjacency, value=1)
-                    edge_index = np.stack((adjacency.row, adjacency.col), axis=-1)
-                    data = spektral.data.graph.Graph(A=adjacency)
-                del edgelist     
-                # Deal with edge attributes
-                if e_in_feats:
-                    add_attributes(e_in_feats, e_attr_types, edges, 
-                                   data, is_hetero, mode, "edge_feat", "edge")
-                if e_out_labels:
-                    add_attributes(e_out_labels, e_attr_types, edges, 
-                                   data, is_hetero, mode, "edge_label", "edge")
-                if e_extra_feats:
-                    add_sep_attr(e_extra_feats, e_attr_types, edges,
-                                 data, is_hetero, mode, "edge")            
-                del edges
-                # Deal with vertex attributes next
-                if v_in_feats:
-                    add_attributes(v_in_feats, v_attr_types, vertices, 
-                                   data, is_hetero, mode, "x", "vertex")
-                if v_out_labels:
-                    add_attributes(v_out_labels, v_attr_types, vertices, 
-                                   data, is_hetero, mode, "y", "vertex")
-                if v_extra_feats:
-                    add_sep_attr(v_extra_feats, v_attr_types, vertices,
-                                 data, is_hetero, mode, "vertex")
-                del vertices
-            else:
-                # Heterogeneous graph
-                # Deal with edgelist first
-                edgelist = {}
-                if reindex:
+            elif mode == "spektral":
+                n_edges = len(edgelist)
+                n_vertices = len(vertices)
+                adjacency_data = [1 for i in range(n_edges)] #spektral adjacency format requires weights for each edge to initialize
+                adjacency = scipy.sparse.coo_matrix((adjacency_data, (edgelist["tmp_id_x"], edgelist["tmp_id_y"])), shape=(n_vertices, n_vertices))
+                if add_self_loop:
+                    adjacency = spektral.utils.add_self_loops(adjacency, value=1)
+                edge_index = np.stack((adjacency.row, adjacency.col), axis=-1)
+                data = spektral.data.graph.Graph(A=adjacency)
+            del edgelist     
+            # Deal with edge attributes
+            if e_in_feats:
+                add_attributes(e_in_feats, e_attr_types, edges, 
+                                data, is_hetero, mode, "edge_feat", "edge")
+                if mode == "spektral":
+                    edge_data = data["edge_feat"]
+                    edge_index, edge_data = spektral.utils.reorder(edge_index, edge_features=edge_data)
+                    n_edges = len(edge_index)
+                    data["e"] = np.array([[i] for i in edge_data]) #if something breaks when you add self-loops it's here
+                    adjacency_data = [1 for i in range(n_edges)]
+                    data["a"] = scipy.sparse.coo_matrix((adjacency_data, (edge_index[:, 0], edge_index[:, 1])), shape=(n_vertices, n_vertices))
+
+            if e_out_labels:
+                add_attributes(e_out_labels, e_attr_types, edges, 
+                                data, is_hetero, mode, "edge_label", "edge")
+            if e_extra_feats:
+                add_sep_attr(e_extra_feats, e_attr_types, edges,
+                            data, is_hetero, mode, "edge")            
+            del edges
+            # Deal with vertex attributes next
+            if v_in_feats:
+                add_attributes(v_in_feats, v_attr_types, vertices, 
+                                data, is_hetero, mode, "x", "vertex")
+            if v_out_labels:
+                add_attributes(v_out_labels, v_attr_types, vertices, 
+                                data, is_hetero, mode, "y", "vertex")
+            if v_extra_feats:
+                add_sep_attr(v_extra_feats, v_attr_types, vertices,
+                            data, is_hetero, mode, "vertex")
+            del vertices
+        else:
+            # Heterogeneous graph
+            # Deal with edgelist first
+            edgelist = {}
+            if reindex:
                     id_map = {}
                     for vtype in vertices:
                         vertices[vtype]["tmp_id"] = range(len(vertices[vtype]))
@@ -983,116 +993,6 @@ class BaseLoader:
                                 subdf1 = pd.concat((subdf1, subdf2), ignore_index=True)
                             edges[etype] = subdf1
                             edgelist[etype] = edges[etype][["tmp_id_x", "tmp_id_y"]]
-                else:
-                    for etype in edges:
-                        edgelist[etype] = edges[etype][["source", "target"]]
-                for etype in edges:
-                    edgelist[etype] = torch.tensor(edgelist[etype].to_numpy().T, dtype=torch.long)
-                if mode == "dgl":
-                    data = dgl.heterograph({
-                        (e_attr_types[etype]["FromVertexTypeName"], etype, e_attr_types[etype]["ToVertexTypeName"]): (edgelist[etype][0], edgelist[etype][1]) for etype in edgelist})
-                    if add_self_loop:
-                        data = dgl.add_self_loop(data)
-                    data.extra_data = {}
-                elif mode == "pyg":
-                    data = pygHeteroData()
-                    for etype in edgelist:
-                        if add_self_loop:
-                            edgelist[etype] = add_self_loops(edgelist[etype])[0]
-                        data[e_attr_types[etype]["FromVertexTypeName"], 
-                             etype,
-                             e_attr_types[etype]["ToVertexTypeName"]].edge_index = edgelist[etype]
-                del edgelist
-                # Deal with edge attributes
-                if e_in_feats:
-                    for etype in edges:
-                        if etype not in e_in_feats:
-                            continue
-                        add_attributes(e_in_feats[etype], e_attr_types[etype], edges[etype], 
-                                       data, is_hetero, mode, "edge_feat", "edge", etype)
-                if e_out_labels:
-                    for etype in edges:
-                        if etype not in e_out_labels:
-                            continue
-                        add_attributes(e_out_labels[etype], e_attr_types[etype], edges[etype], 
-                                       data, is_hetero, mode, "edge_label", "edge", etype)
-                if e_extra_feats:
-                    for etype in edges:
-                        if etype not in e_extra_feats:
-                            continue
-                        add_sep_attr(e_extra_feats[etype], e_attr_types[etype], edges[etype],
-                                     data, is_hetero, mode, "edge", etype)   
-                del edges
-                # Deal with vertex attributes next
-                if v_in_feats:
-                    for vtype in vertices:
-                        if vtype not in v_in_feats:
-                            continue
-                        add_attributes(v_in_feats[vtype], v_attr_types[vtype], vertices[vtype], 
-                                       data, is_hetero, mode, "x", "vertex", vtype)
-                if v_out_labels:
-                    for vtype in vertices:
-                        if vtype not in v_out_labels:
-                            continue
-                        add_attributes(v_out_labels[vtype], v_attr_types[vtype], vertices[vtype], 
-                                       data, is_hetero, mode, "y", "vertex", vtype)
-                if v_extra_feats:
-                    for vtype in vertices:
-                        if vtype not in v_extra_feats:
-                            continue
-                        add_sep_attr(v_extra_feats[vtype], v_attr_types[vtype], vertices[vtype],
-                                     data, is_hetero, mode, "vertex", vtype)   
-                del vertices
-        elif out_format.lower() == "dataframe":
-            pass
-        else:
-            raise NotImplementedError
-
-            if e_in_feats:
-                add_attributes(e_in_feats, e_attr_types, edges, 
-                                data, is_hetero, mode, "edge_feat", "edge")
-                if mode == "spektral":
-                    edge_data = data["edge_feat"]
-                    edge_index, edge_data = spektral.utils.reorder(edge_index, edge_features=edge_data)
-                    n_edges = len(edge_index)
-                    data["e"] = np.array([[i] for i in edge_data]) #if something breaks when you add self-loops it's here
-                    adjacency_data = [1 for i in range(n_edges)]
-                    data["a"] = scipy.sparse.coo_matrix((adjacency_data, (edge_index[:, 0], edge_index[:, 1])), shape=(n_vertices, n_vertices))
-
-            if e_out_labels:
-                add_attributes(e_out_labels, e_attr_types, edges, 
-                                data, is_hetero, mode, "edge_label", "edge")
-            if e_extra_feats:
-                add_sep_attr(e_extra_feats, e_attr_types, edges,
-                              data, is_hetero, mode, "edge")            
-            del edges
-            # Deal with vertex attributes next
-            if v_in_feats:
-                add_attributes(v_in_feats, v_attr_types, vertices, 
-                                data, is_hetero, mode, "x", "vertex")
-            if v_out_labels:
-                add_attributes(v_out_labels, v_attr_types, vertices, 
-                                data, is_hetero, mode, "y", "vertex")
-            if v_extra_feats:
-                add_sep_attr(v_extra_feats, v_attr_types, vertices,
-                              data, is_hetero, mode, "vertex")
-            del vertices
-        else:
-            # Heterogeneous graph
-            # Deal with edgelist first
-            edgelist = {}
-            if reindex:
-                id_map = []
-                for vtype in vertices:
-                    vertices[vtype]["tmp_id"] = range(len(vertices[vtype]))
-                    id_map.append(vertices[vtype][["vid", "tmp_id"]])
-                id_map = pd.concat(id_map)
-                for etype in edges:
-                    edges[etype] = edges[etype].merge(id_map, left_on="source", right_on="vid")
-                    edges[etype].drop(columns=["source", "vid"], inplace=True)
-                    edges[etype] = edges[etype].merge(id_map, left_on="target", right_on="vid")
-                    edges[etype].drop(columns=["target", "vid"], inplace=True)
-                    edgelist[etype] = edges[etype][["tmp_id_x", "tmp_id_y"]]
             else:
                 for etype in edges:
                     edgelist[etype] = edges[etype][["source", "target"]]
@@ -1107,8 +1007,8 @@ class BaseLoader:
                     if add_self_loop:
                         edgelist[etype] = add_self_loops(edgelist[etype])[0]
                     data[e_attr_types[etype]["FromVertexTypeName"], 
-                          etype,
-                          e_attr_types[etype]["ToVertexTypeName"]].edge_index = edgelist[etype]
+                        etype,
+                        e_attr_types[etype]["ToVertexTypeName"]].edge_index = edgelist[etype]
             elif mode == "spektral":
                 raise NotImplementedError
             del edgelist
@@ -1130,7 +1030,7 @@ class BaseLoader:
                     if etype not in e_extra_feats:
                         continue
                     add_sep_attr(e_extra_feats[etype], e_attr_types[etype], edges[etype],
-                                  data, is_hetero, mode, "edge", etype)   
+                                data, is_hetero, mode, "edge", etype)   
             del edges
             # Deal with vertex attributes next
             if v_in_feats:
@@ -1150,9 +1050,8 @@ class BaseLoader:
                     if vtype not in v_extra_feats:
                         continue
                     add_sep_attr(v_extra_feats[vtype], v_attr_types[vtype], vertices[vtype],
-                                  data, is_hetero, mode, "vertex", vtype)   
+                                data, is_hetero, mode, "vertex", vtype)   
             del vertices
-        
         return data
 
     def _start_request(self, out_tuple: bool, resp_type: str):
