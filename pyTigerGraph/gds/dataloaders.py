@@ -36,20 +36,6 @@ from ..pyTigerGraphException import TigerGraphException
 from .utilities import install_query_file, random_string
 
 __all__ = ["VertexLoader", "EdgeLoader", "NeighborLoader", "GraphLoader", "EdgeNeighborLoader"]
-__pdoc__ = {}
-
-_udf_funcs = {
-    "UINT": "int_to_string",
-    "INT": "int_to_string",
-    "BOOL": "bool_to_string",
-    "FLOAT": "float_to_string",
-    "DOUBLE": "float_to_string",
-    "LIST:UINT": "int_to_string",
-    "LIST:INT": "int_to_string",
-    "LIST:BOOL": "bool_to_string",
-    "LIST:FLOAT": "float_to_string",
-    "LIST:DOUBLE": "float_to_string",
-}
 
 RANDOM_TOPIC_LEN = 8
 
@@ -177,6 +163,8 @@ class BaseLoader:
         # In-memory data cache. Only used if num_batches=1
         self._data = None
         # Kafka topic configs
+        self._kafka_admin = None
+        self._kafka_consumer = None
         self.kafka_partitions = kafka_num_partitions
         self.kafka_replica = kafka_replica_factor
         self.kafka_retention_ms = kafka_retention_ms
@@ -729,16 +717,21 @@ class BaseLoader:
                         data[col] = attr_df[col].to_list()
                 elif dtype.startswith("list"):
                     dtype2 = dtype.split(":")[1]
-                    if mode == "pyg" or mode == "dgl":
-                        data[col] = torch.tensor(
-                            attr_df[col]
-                            .str.split(expand=True)
-                            .to_numpy()
-                            .astype(dtype2)
-                        )
-                    elif mode == "spektral":
-                        data[col] = attr_df[col].str.split(expand=True).to_numpy().astype(dtype2)
-                        
+                    if dtype2.startswith("str"):
+                        if mode == "dgl":
+                            graph.extra_data[col] = attr_df[col].str.split().to_list()
+                        elif mode == "pyg" or mode == "spektral":
+                            data[col] = attr_df[col].str.split().to_list()
+                    else:
+                        if mode == "pyg" or mode == "dgl":
+                            data[col] = torch.tensor(
+                                attr_df[col]
+                                .str.split(expand=True)
+                                .to_numpy()
+                                .astype(dtype2)
+                            )
+                        elif mode == "spektral":
+                            data[col] = attr_df[col].str.split(expand=True).to_numpy().astype(dtype2)
                 elif dtype.startswith("set") or dtype.startswith("map") or dtype.startswith("date"):
                     raise NotImplementedError(
                         "{} type not supported for extra features yet.".format(dtype))
@@ -917,7 +910,6 @@ class BaseLoader:
                 edgelist = edges[["tmp_id_x", "tmp_id_y"]]
             else:
                 edgelist = edges[["source", "target"]]
-                
 
             if mode == "dgl" or mode == "pyg":
                 edgelist = torch.tensor(edgelist.to_numpy().T, dtype=torch.long)
@@ -1207,9 +1199,9 @@ class BaseLoader:
             None,
         )
         if theend:
-            if self._kafka_topic:
+            if self._kafka_topic and self._kafka_consumer:
                 self._kafka_consumer.unsubscribe()
-            if self.delete_all_topics:
+            if self.delete_all_topics and self._kafka_admin:
                 topics_to_delete = self._all_kafka_topics.intersection(self._kafka_admin.list_topics())
                 resp = self._kafka_admin.delete_topics(list(topics_to_delete))
                 for del_res in resp.to_object()["topic_error_codes"]:
@@ -1218,8 +1210,8 @@ class BaseLoader:
                             "Failed to delete topic {}".format(del_res["topic"])
                         )
         else:
-            if self.delete_epoch_topic:
-                if self._kafka_topic:
+            if self.delete_epoch_topic and self._kafka_admin:
+                if self._kafka_topic and self._kafka_consumer:
                     self._kafka_consumer.unsubscribe()
                 resp = self._kafka_admin.delete_topics([self._kafka_topic])
                 del_res = resp.to_object()["topic_error_codes"][0]
@@ -1441,7 +1433,7 @@ class NeighborLoader(BaseLoader):
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
+                        "stringify(s.{})".format(attr)
                         for attr in v_attr_names
                     )
                     print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + ",1\\n")\n'.format(
@@ -1469,7 +1461,7 @@ class NeighborLoader(BaseLoader):
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
+                        "stringify(e.{})".format(attr)
                         for attr in e_attr_names
                     )
                     print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")\n'.format(
@@ -1487,7 +1479,7 @@ class NeighborLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
+                    "stringify(s.{})".format(attr)
                     for attr in v_attr_names
                 )
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + ",1\\n")'.format(
@@ -1509,7 +1501,7 @@ class NeighborLoader(BaseLoader):
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
+                    "stringify(e.{})".format(attr)
                     for attr in e_attr_names
                 )
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")'.format(
@@ -1837,7 +1829,7 @@ class EdgeLoader(BaseLoader):
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
+                        "stringify(e.{})".format(attr)
                         for attr in e_attr_names
                     )
                     print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")\n'.format(
@@ -1855,7 +1847,7 @@ class EdgeLoader(BaseLoader):
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
+                    "stringify(e.{})".format(attr)
                     for attr in e_attr_names
                 )
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")'.format(
@@ -2107,7 +2099,7 @@ class VertexLoader(BaseLoader):
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
+                        "stringify(s.{})".format(attr)
                         for attr in v_attr_names
                     )
                     print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + "\\n")\n'.format(
@@ -2125,7 +2117,7 @@ class VertexLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
+                    "stringify(s.{})".format(attr)
                     for attr in v_attr_names
                 )
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + "\\n")'.format(
@@ -2407,7 +2399,7 @@ class GraphLoader(BaseLoader):
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
+                        "stringify(s.{})".format(attr)
                         for attr in v_attr_names
                     )
                     print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + "\\n")\n'.format(
@@ -2429,7 +2421,7 @@ class GraphLoader(BaseLoader):
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
+                        "stringify(e.{})".format(attr)
                         for attr in e_attr_names
                     )
                     print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")\n'.format(
@@ -2447,7 +2439,7 @@ class GraphLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
+                    "stringify(s.{})".format(attr)
                     for attr in v_attr_names
                 )
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + "\\n")'.format(
@@ -2462,7 +2454,7 @@ class GraphLoader(BaseLoader):
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
+                    "stringify(e.{})".format(attr)
                     for attr in e_attr_names
                 )
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")'.format(
@@ -2713,7 +2705,7 @@ class EdgeNeighborLoader(BaseLoader):
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
+                        "stringify(s.{})".format(attr)
                         for attr in v_attr_names
                     )
                     print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + "\\n")\n'.format(
@@ -2736,7 +2728,7 @@ class EdgeNeighborLoader(BaseLoader):
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
+                        "stringify(e.{})".format(attr)
                         for attr in e_attr_names
                     )
                     print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + ",1\\n")\n'.format(
@@ -2760,7 +2752,7 @@ class EdgeNeighborLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
+                    "stringify(s.{})".format(attr)
                     for attr in v_attr_names
                 )
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + "\\n")'.format(
@@ -2776,7 +2768,7 @@ class EdgeNeighborLoader(BaseLoader):
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
+                    "stringify(e.{})".format(attr)
                     for attr in e_attr_names
                 )
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + ",1\\n")'.format(
