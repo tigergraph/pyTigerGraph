@@ -276,7 +276,7 @@ class BaseLoader:
     def _get_schema(self) -> Tuple[dict, dict]:
         v_schema = {}
         e_schema = {}
-        schema = self._graph.getSchema()
+        schema = self._graph.getSchema(force=True)
         # Get vertex schema
         for vtype in schema["VertexTypes"]:
             v = vtype["Name"]
