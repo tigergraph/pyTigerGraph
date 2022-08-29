@@ -17,11 +17,12 @@ from dgl import DGLGraph
 class TestGDSBaseLoader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora")
-        cls.loader = BaseLoader(conn)
-        # conn.gsql("drop query all")
+        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
+        cls.loader = BaseLoader(cls.conn)
 
     def test_get_schema(self):
+        self.conn.graphname = "Cora"
+        self.loader = BaseLoader(self.conn)
         self.assertDictEqual(
             self.loader._v_schema,
             {
@@ -50,27 +51,28 @@ class TestGDSBaseLoader(unittest.TestCase):
         )
 
     def test_get_schema_no_primary_id_attr(self):
-        conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora3")
-        loader = BaseLoader(conn)
+        self.conn.graphname = "Social"
+        self.loader = BaseLoader(self.conn)
         self.assertDictEqual(
-            loader._v_schema,
+            self.loader._v_schema,
             {
-                "Paper3": {
-                    "x": "LIST:INT",
-                    "y": "INT",
-                    "train_mask": "BOOL",
-                    "val_mask": "BOOL",
-                    "test_mask": "BOOL",
+                "Person": {
+                    "name": "STRING",
+                    "age": "INT",
+                    "gender": "STRING",
+                    "state": "STRING",
                 }
             },
         )
         self.assertDictEqual(
-            loader._e_schema,
+            self.loader._e_schema,
             {
-                "Cite3": {
-                    "FromVertexTypeName": "Paper3",
-                    "ToVertexTypeName": "Paper3",
-                    "IsDirected": True,
+                "Friendship": {
+                    "FromVertexTypeName": "Person",
+                    "ToVertexTypeName": "Person",
+                    "connect_day": "DATETIME",
+                    "duration": "LIST:STRING",
+                    "IsDirected": False,
                 }
             },
         )
@@ -247,7 +249,7 @@ class TestGDSBaseLoader(unittest.TestCase):
         exit_event = Event()
         raw = (
             "99,1 0 0 1 ,1,0,Alex,1\n8,1 0 0 1 ,1,1,Bill,0\n",
-            "99,8,0.1,2021,1,0\n8,99,1.5,2020,0,1\n",
+            "99,8,0.1,2021,1,0,a b \n8,99,1.5,2020,0,1,c d \n",
         )
         read_task_q.put(raw)
         read_task_q.put(None)
@@ -269,8 +271,8 @@ class TestGDSBaseLoader(unittest.TestCase):
             },
             ["x", "time"],
             ["y"],
-            ["is_train"],
-            {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL"},
+            ["is_train", "category"],
+            {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL", "category": "LIST:STRING"},
         )
         data = data_q.get()
         self.assertIsInstance(data, pygData)
@@ -286,6 +288,7 @@ class TestGDSBaseLoader(unittest.TestCase):
         assert_close_torch(data["train_mask"], torch.tensor([False, True]))
         assert_close_torch(data["is_seed"], torch.tensor([True, False]))
         self.assertListEqual(data["name"], ["Alex", "Bill"])
+        self.assertListEqual(data["category"], [['a', 'b'], ['c', 'd']])
         data = data_q.get()
         self.assertIsNone(data)
 
@@ -295,7 +298,7 @@ class TestGDSBaseLoader(unittest.TestCase):
         exit_event = Event()
         raw = (
             "99,1 0 0 1 ,1,0,Alex,1\n8,1 0 0 1 ,1,1,Bill,0\n",
-            "99,8,0.1,2021,1,0\n8,99,1.5,2020,0,1\n",
+            "99,8,0.1,2021,1,0,a b \n8,99,1.5,2020,0,1,c d \n",
         )
         read_task_q.put(raw)
         read_task_q.put(None)
@@ -317,8 +320,8 @@ class TestGDSBaseLoader(unittest.TestCase):
             },
             ["x", "time"],
             ["y"],
-            ["is_train"],
-            {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL"},
+            ["is_train", "category"],
+            {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL", "category": "LIST:STRING"},
         )
         data = data_q.get()
         self.assertIsInstance(data, DGLGraph)
@@ -334,6 +337,7 @@ class TestGDSBaseLoader(unittest.TestCase):
         assert_close_torch(data.ndata["train_mask"], torch.tensor([False, True]))
         assert_close_torch(data.ndata["is_seed"], torch.tensor([True, False]))
         self.assertListEqual(data.extra_data["name"], ["Alex", "Bill"])
+        self.assertListEqual(data.extra_data["category"], [['a', 'b'], ['c', 'd']])
         data = data_q.get()
         self.assertIsNone(data)
 
@@ -369,6 +373,51 @@ class TestGDSBaseLoader(unittest.TestCase):
         self.assertIsInstance(data, pygData)
         assert_close_torch(data["edge_index"], torch.tensor([[0, 1], [1, 0]]))
         assert_close_torch(data["is_seed"], torch.tensor([True, False]))
+        data = data_q.get()
+        self.assertIsNone(data)
+
+    def test_read_graph_no_edge(self):
+        read_task_q = Queue()
+        data_q = Queue(4)
+        exit_event = Event()
+        raw = (
+            "99,1 0 0 1 ,1,0,Alex,1\n8,1 0 0 1 ,1,1,Bill,0\n",
+            "",
+        )
+        read_task_q.put(raw)
+        read_task_q.put(None)
+        self.loader._read_data(
+            exit_event,
+            read_task_q,
+            data_q,
+            "graph",
+            "pyg",
+            ["x"],
+            ["y"],
+            ["train_mask", "name", "is_seed"],
+            {
+                "x": "LIST:INT",
+                "y": "INT",
+                "train_mask": "BOOL",
+                "name": "STRING",
+                "is_seed": "BOOL",
+            },
+            ["x", "time"],
+            ["y"],
+            ["is_train"],
+            {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL"},
+        )
+        data = data_q.get()
+        self.assertIsInstance(data, pygData)
+        self.assertListEqual(list(data["edge_index"].shape), [2,0])
+        self.assertListEqual(list(data["edge_feat"].shape), [0,2])
+        self.assertListEqual(list(data["edge_label"].shape), [0,])
+        self.assertListEqual(list(data["is_train"].shape), [0,])
+        assert_close_torch(data["x"], torch.tensor([[1, 0, 0, 1], [1, 0, 0, 1]]))
+        assert_close_torch(data["y"], torch.tensor([1, 1]))
+        assert_close_torch(data["train_mask"], torch.tensor([False, True]))
+        assert_close_torch(data["is_seed"], torch.tensor([True, False]))
+        self.assertListEqual(data["name"], ["Alex", "Bill"])
         data = data_q.get()
         self.assertIsNone(data)
 
@@ -449,6 +498,76 @@ class TestGDSBaseLoader(unittest.TestCase):
         assert_close_torch(
             data["Work"]["edge_index"], torch.tensor([[0, 1], [0, 0]])
         )
+        data = data_q.get()
+        self.assertIsNone(data)
+
+    def test_read_hetero_graph_no_edge(self):
+        read_task_q = Queue()
+        data_q = Queue(4)
+        exit_event = Event()
+        raw = (
+            "People,99,1 0 0 1 ,1,0,Alex,1\nPeople,8,1 0 0 1 ,1,1,Bill,0\nCompany,2,0.3,0\n",
+            "",
+        )
+        read_task_q.put(raw)
+        read_task_q.put(None)
+        self.loader._read_data(
+            exit_event,
+            read_task_q,
+            data_q,
+            "graph",
+            "pyg",
+            {"People": ["x"], "Company": ["x"]},
+            {"People": ["y"]},
+            {"People": ["train_mask", "name", "is_seed"], "Company": ["is_seed"]},
+            {
+                "People": {
+                    "x": "LIST:INT",
+                    "y": "INT",
+                    "train_mask": "BOOL",
+                    "name": "STRING",
+                    "is_seed": "BOOL",
+                },
+                "Company": {"x": "FLOAT", "is_seed": "BOOL"},
+            },
+            {"Colleague": ["x", "time"]},
+            {"Colleague": ["y"]},
+            {"Colleague": ["is_train"]},
+            {
+                "Colleague": {
+                    "FromVertexTypeName": "People",
+                    "ToVertexTypeName": "People",
+                    "IsDirected": False,
+                    "x": "DOUBLE",
+                    "time": "INT",
+                    "y": "INT",
+                    "is_train": "BOOL",
+                },
+                "Work": {
+                    "FromVertexTypeName": "People",
+                    "ToVertexTypeName": "Company",
+                    "IsDirected": False,
+                }
+            },
+            False,
+            True,
+            True,
+        )
+        data = data_q.get()
+        self.assertIsInstance(data, pygHeteroData)
+        self.assertNotIn("Colleague", data)
+        assert_close_torch(
+            data["People"]["x"], torch.tensor([[1, 0, 0, 1], [1, 0, 0, 1]])
+        )
+        assert_close_torch(data["People"]["y"], torch.tensor([1, 1]))
+        assert_close_torch(data["People"]["train_mask"], torch.tensor([False, True]))
+        assert_close_torch(data["People"]["is_seed"], torch.tensor([True, False]))
+        self.assertListEqual(data["People"]["name"], ["Alex", "Bill"])
+        assert_close_torch(
+            data["Company"]["x"], torch.tensor([0.3], dtype=torch.double)
+        )
+        assert_close_torch(data["Company"]["is_seed"], torch.tensor([False]))
+        self.assertNotIn("Work", data)
         data = data_q.get()
         self.assertIsNone(data)
 
@@ -593,7 +712,9 @@ if __name__ == "__main__":
     suite.addTest(TestGDSBaseLoader("test_read_graph_out_pyg"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_out_dgl"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_no_attr"))
+    suite.addTest(TestGDSBaseLoader("test_read_graph_no_edge"))
     suite.addTest(TestGDSBaseLoader("test_read_hetero_graph_out_pyg"))
+    suite.addTest(TestGDSBaseLoader("test_read_hetero_graph_no_edge"))
     suite.addTest(TestGDSBaseLoader("test_read_hetero_graph_out_dgl"))
     suite.addTest(TestGDSBaseLoader("test_read_bool_label"))
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
