@@ -90,19 +90,30 @@ def validate_attributes_input(attributes: str) -> str:
     return attributes
 
 
-def is_query_installed(conn: "TigerGraphConnection", query_name: str) -> bool:
-    #If the query already installed return true
+def is_query_installed(
+    conn: "TigerGraphConnection", query_name: str, return_status: bool = False
+) -> bool:
+    # If the query already installed return true
     target = "GET /query/{}/{}".format(conn.graphname, query_name)
     queries = conn.getInstalledQueries()
-    return target in queries
+    is_installed = target in queries
+    if return_status:
+        if is_installed:
+            is_enabled = queries[target]["enabled"]
+        else:
+            is_enabled = None
+        return is_installed, is_enabled
+    else:
+        return is_installed
 
 
 def install_query_file(
     conn: "TigerGraphConnection",
-    file_path: str, 
-    replace: dict = None, 
-    distributed: bool = False, 
-    force: bool = False) -> str:
+    file_path: str,
+    replace: dict = None,
+    distributed: bool = False,
+    force: bool = False,
+) -> str:
     # Read the first line of the file to get query name. The first line should be
     # something like CREATE QUERY query_name (...
     with open(file_path) as infile:
@@ -117,10 +128,14 @@ def install_query_file(
     if replace and ("{QUERYSUFFIX}" in replace):
         query_name = query_name.replace("{QUERYSUFFIX}", replace["{QUERYSUFFIX}"])
     # If query is already installed, skip unless force install.
-    if is_query_installed(conn, query_name):
-        if force:
-            #TODO: Drop query.
-            raise NotImplementedError
+    is_installed, is_enabled = is_query_installed(conn, query_name, return_status=True)
+    if is_installed:
+        if force or (not is_enabled):
+            query = "USE GRAPH {}\nDROP QUERY {}\n".format(conn.graphname, query_name)
+            resp = conn.gsql(query)
+            status = resp.splitlines()[-1]
+            if "Failed" in status:
+                raise ConnectionError(status)
         else:
             return query_name
     # Otherwise, install the query from file

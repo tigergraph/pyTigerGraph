@@ -4,12 +4,14 @@ from pandas import DataFrame
 from pyTigerGraph import TigerGraphConnection
 from pyTigerGraph.gds.utilities import is_query_installed
 from torch_geometric.data import Data as pygData
+from spektral.data.graph import Graph as spData
 
 
 class TestGDSNeighborLoader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora")
+        cls.conn.gds.configureKafka(kafka_address="34.82.171.137:9092")
         # cls.conn.gsql("drop query all")
 
     def test_init(self):
@@ -26,7 +28,6 @@ class TestGDSNeighborLoader(unittest.TestCase):
             add_self_loop=False,
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.82.171.137:9092",
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
         self.assertEqual(loader.num_batches, 9)
@@ -44,13 +45,40 @@ class TestGDSNeighborLoader(unittest.TestCase):
             output_format="PyG",
             add_self_loop=False,
             loader_id=None,
-            buffer_size=4,
-            kafka_address="34.82.171.137:9092",
+            buffer_size=4
         )
         num_batches = 0
         for data in loader:
             # print(num_batches, data)
             self.assertIsInstance(data, pygData)
+            self.assertIn("x", data)
+            self.assertIn("y", data)
+            self.assertIn("train_mask", data)
+            self.assertIn("val_mask", data)
+            self.assertIn("test_mask", data)
+            self.assertIn("is_seed", data)
+            num_batches += 1
+        self.assertEqual(num_batches, 9)
+
+    def test_iterate_spektral(self):
+        loader = self.conn.gds.neighborLoader(
+            v_in_feats=["x"],
+            v_out_labels=["y"],
+            v_extra_feats=["train_mask", "val_mask", "test_mask"],
+            batch_size=16,
+            num_neighbors=10,
+            num_hops=2,
+            shuffle=True,
+            filter_by="train_mask",
+            output_format="spektral",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4
+        )
+        num_batches = 0
+        for data in loader:
+            # print(num_batches, data)
+            self.assertIsInstance(data, spData)
             self.assertIn("x", data)
             self.assertIn("y", data)
             self.assertIn("train_mask", data)
@@ -74,11 +102,35 @@ class TestGDSNeighborLoader(unittest.TestCase):
             add_self_loop=False,
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.82.171.137:9092",
         )
         data = loader.data
         # print(data)
         self.assertIsInstance(data, pygData)
+        self.assertIn("x", data)
+        self.assertIn("y", data)
+        self.assertIn("train_mask", data)
+        self.assertIn("val_mask", data)
+        self.assertIn("test_mask", data)
+        self.assertIn("is_seed", data)
+
+    def test_whole_graph_spektral(self):
+        loader = self.conn.gds.neighborLoader(
+            v_in_feats=["x"],
+            v_out_labels=["y"],
+            v_extra_feats=["train_mask", "val_mask", "test_mask"],
+            num_batches=1,
+            num_neighbors=10,
+            num_hops=2,
+            shuffle=False,
+            filter_by="train_mask",
+            output_format="spektral",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4,
+        )
+        data = loader.data
+        # print(data)
+        self.assertIsInstance(data, spData)
         self.assertIn("x", data)
         self.assertIn("y", data)
         self.assertIn("train_mask", data)
@@ -139,6 +191,34 @@ class TestGDSNeighborLoaderREST(unittest.TestCase):
             num_batches += 1
         self.assertEqual(num_batches, 9)
 
+    def test_iterate_spektral(self):
+        loader = self.conn.gds.neighborLoader(
+            v_in_feats=["x"],
+            v_out_labels=["y"],
+            v_extra_feats=["train_mask", "val_mask", "test_mask"],
+            batch_size=16,
+            num_neighbors=10,
+            num_hops=2,
+            shuffle=True,
+            filter_by="train_mask",
+            output_format="spektral",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4,
+        )
+        num_batches = 0
+        for data in loader:
+            # print(num_batches, data)
+            self.assertIsInstance(data, spData)
+            self.assertIn("x", data)
+            self.assertIn("y", data)
+            self.assertIn("train_mask", data)
+            self.assertIn("val_mask", data)
+            self.assertIn("test_mask", data)
+            self.assertIn("is_seed", data)
+            num_batches += 1
+        self.assertEqual(num_batches, 9)
+
     def test_whole_graph_pyg(self):
         loader = self.conn.gds.neighborLoader(
             v_in_feats=["x"],
@@ -164,11 +244,37 @@ class TestGDSNeighborLoaderREST(unittest.TestCase):
         self.assertIn("test_mask", data)
         self.assertIn("is_seed", data)
 
+    def test_whole_graph_pyg(self):
+        loader = self.conn.gds.neighborLoader(
+            v_in_feats=["x"],
+            v_out_labels=["y"],
+            v_extra_feats=["train_mask", "val_mask", "test_mask"],
+            num_batches=1,
+            num_neighbors=10,
+            num_hops=2,
+            shuffle=False,
+            filter_by="train_mask",
+            output_format="spektral",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4,
+        )
+        data = loader.data
+        # print(data)
+        self.assertIsInstance(data, spData)
+        self.assertIn("x", data)
+        self.assertIn("y", data)
+        self.assertIn("train_mask", data)
+        self.assertIn("val_mask", data)
+        self.assertIn("test_mask", data)
+        self.assertIn("is_seed", data)
+
 
 class TestGDSGraphLoader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora")
+        cls.conn.gds.configureKafka(kafka_address="34.82.171.137:9092")
         # cls.conn.gsql("drop query all")
 
     def test_init(self):
@@ -183,7 +289,6 @@ class TestGDSGraphLoader(unittest.TestCase):
             add_self_loop=False,
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.82.171.137:9092",
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
         self.assertEqual(loader.num_batches, 11)
@@ -200,12 +305,36 @@ class TestGDSGraphLoader(unittest.TestCase):
             add_self_loop=False,
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.82.171.137:9092",
         )
         num_batches = 0
         for data in loader:
             # print(num_batches, data)
             self.assertIsInstance(data, pygData)
+            self.assertIn("x", data)
+            self.assertIn("y", data)
+            self.assertIn("train_mask", data)
+            self.assertIn("val_mask", data)
+            self.assertIn("test_mask", data)
+            num_batches += 1
+        self.assertEqual(num_batches, 11)
+
+    def test_iterate_spektral(self):
+        loader = self.conn.gds.graphLoader(
+            v_in_feats=["x"],
+            v_out_labels=["y"],
+            v_extra_feats=["train_mask", "val_mask", "test_mask"],
+            batch_size=1024,
+            shuffle=True,
+            filter_by=None,
+            output_format="spektral",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4,
+        )
+        num_batches = 0
+        for data in loader:
+            # print(num_batches, data)
+            self.assertIsInstance(data, spData)
             self.assertIn("x", data)
             self.assertIn("y", data)
             self.assertIn("train_mask", data)
@@ -226,7 +355,6 @@ class TestGDSGraphLoader(unittest.TestCase):
             add_self_loop=False,
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.82.171.137:9092",
         )
         num_batches = 0
         for data in loader:
@@ -289,6 +417,31 @@ class TestGDSGraphLoaderREST(unittest.TestCase):
             num_batches += 1
         self.assertEqual(num_batches, 11)
 
+    def test_iterate_spektral(self):
+        loader = self.conn.gds.graphLoader(
+            v_in_feats=["x"],
+            v_out_labels=["y"],
+            v_extra_feats=["train_mask", "val_mask", "test_mask"],
+            batch_size=1024,
+            shuffle=True,
+            filter_by=None,
+            output_format="spektral",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4,
+        )
+        num_batches = 0
+        for data in loader:
+            # print(num_batches, data)
+            self.assertIsInstance(data, spData)
+            self.assertIn("x", data)
+            self.assertIn("y", data)
+            self.assertIn("train_mask", data)
+            self.assertIn("val_mask", data)
+            self.assertIn("test_mask", data)
+            num_batches += 1
+        self.assertEqual(num_batches, 11)
+
     def test_iterate_df(self):
         loader = self.conn.gds.graphLoader(
             v_in_feats=["x"],
@@ -320,6 +473,7 @@ class TestGDSVertexLoader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora")
+        cls.conn.gds.configureKafka(kafka_address="34.82.171.137:9092")
         # cls.conn.gsql("drop query all")
 
     def test_init(self):
@@ -330,7 +484,6 @@ class TestGDSVertexLoader(unittest.TestCase):
             filter_by="train_mask",
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.82.171.137:9092",
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
         self.assertEqual(loader.num_batches, 9)
@@ -343,7 +496,6 @@ class TestGDSVertexLoader(unittest.TestCase):
             filter_by="train_mask",
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.82.171.137:9092",
         )
         num_batches = 0
         for data in loader:
@@ -365,7 +517,6 @@ class TestGDSVertexLoader(unittest.TestCase):
             filter_by="train_mask",
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.82.171.137:9092",
         )
         data = loader.data
         # print(data)
@@ -439,6 +590,7 @@ class TestGDSEdgeLoader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora")
+        cls.conn.gds.configureKafka(kafka_address="34.82.171.137:9092")
         # cls.conn.gsql("drop query all")
 
     def test_init(self):
@@ -448,7 +600,6 @@ class TestGDSEdgeLoader(unittest.TestCase):
             filter_by=None,
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.82.171.137:9092",
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
         self.assertEqual(loader.num_batches, 11)
@@ -460,7 +611,6 @@ class TestGDSEdgeLoader(unittest.TestCase):
             filter_by=None,
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.82.171.137:9092",
         )
         num_batches = 0
         for data in loader:
@@ -476,7 +626,6 @@ class TestGDSEdgeLoader(unittest.TestCase):
             filter_by=None,
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.82.171.137:9092",
         )
         data = loader.data
         # print(data)
@@ -536,16 +685,22 @@ if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(TestGDSNeighborLoader("test_init"))
     suite.addTest(TestGDSNeighborLoader("test_iterate_pyg"))
+    suite.addTest(TestGDSNeighborLoader("test_iterate_spektral"))
     suite.addTest(TestGDSNeighborLoader("test_whole_graph_pyg"))
+    suite.addTest(TestGDSNeighborLoader("test_whole_graph_spektral"))
     suite.addTest(TestGDSNeighborLoaderREST("test_init"))
     suite.addTest(TestGDSNeighborLoaderREST("test_iterate_pyg"))
+    suite.addTest(TestGDSNeighborLoaderREST("test_iterate_spektral"))
     suite.addTest(TestGDSNeighborLoaderREST("test_whole_graph_pyg"))
+    suite.addTest(TestGDSNeighborLoaderREST("test_whole_graph_spektral"))
 
     suite.addTest(TestGDSGraphLoader("test_init"))
     suite.addTest(TestGDSGraphLoader("test_iterate_pyg"))
+    suite.addTest(TestGDSGraphLoader("test_iterate_spektral"))
     suite.addTest(TestGDSGraphLoader("test_iterate_df"))
     suite.addTest(TestGDSGraphLoaderREST("test_init"))
     suite.addTest(TestGDSGraphLoaderREST("test_iterate_pyg"))
+    suite.addTest(TestGDSGraphLoaderREST("test_iterate_spektral"))
     suite.addTest(TestGDSGraphLoaderREST("test_iterate_df"))
 
     suite.addTest(TestGDSVertexLoader("test_init"))
