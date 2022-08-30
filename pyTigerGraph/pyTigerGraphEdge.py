@@ -1,9 +1,10 @@
 """Edge Functions
 
 Functions to upsert, retrieve and delete edges.
-All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object]. 
+All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object].
 """
 import json
+import warnings
 
 from typing import TYPE_CHECKING, Union
 
@@ -519,7 +520,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
 
     def getEdgesDataFrame(self, sourceVertexType: str, sourceVertexId: str, edgeType: str = "",
             targetVertexType: str = "", targetVertexId: str = "", select: str = "", where: str = "",
-            limit: str = "", sort: str = "", timeout: int = 0) -> 'pd.DataFrame':
+            limit: Union[int, str] = None, sort: str = "", timeout: int = 0) -> 'pd.DataFrame':
         """Retrieves edges of the given edge type originating from a specific source vertex.
 
         This is a shortcut to ``getEdges(..., fmt="df", withId=True, withType=False)``.
@@ -559,13 +560,14 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
 
     def getEdgesDataframe(self, sourceVertexType: str, sourceVertexId: str, edgeType: str = "",
             targetVertexType: str = "", targetVertexId: str = "", select: str = "", where: str = "",
-            limit: str = "", sort: str = "", timeout: int = 0) -> 'pd.DataFrame':
+            limit: Union[int, str] = None, sort: str = "", timeout: int = 0) -> 'pd.DataFrame':
         """DEPRECATED
 
         Use `getEdgesDataFrame()` instead.
-
-        TODO Proper deprecation
         """
+        warnings.warn(
+            "The `getEdgesDataframe()` function is deprecated; use `getEdgesDataFrame()` instead.",
+            DeprecationWarning)
         return self.getEdgesDataFrame(sourceVertexType, sourceVertexId, edgeType, targetVertexType,
             targetVertexId, select, where, limit, sort, timeout)
 

@@ -2,9 +2,10 @@
 
 Functions to upsert, retrieve and delete vertices.
 
-All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object]. 
+All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object].
 """
 import json
+import warnings
 
 from typing import TYPE_CHECKING, Union
 
@@ -302,7 +303,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         return ret
 
     def getVertexDataFrame(self, vertexType: str, select: str = "", where: str = "",
-            limit: str = "", sort: str = "", timeout: int = 0) -> 'pd.DataFrame':
+            limit: Union[int, str] = None, sort: str = "", timeout: int = 0) -> 'pd.DataFrame':
         """Retrieves vertices of the given vertex type and returns them as pandas DataFrame.
 
         This is a shortcut to `getVertices(..., fmt="df", withId=True, withType=False)`.
@@ -338,19 +339,20 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             fmt="df", withId=True, withType=False, timeout=timeout)
 
     def getVertexDataframe(self, vertexType: str, select: str = "", where: str = "",
-            limit: str = "", sort: str = "", timeout: int = 0) -> 'pd.DataFrame':
+            limit: Union[int, str] = None, sort: str = "", timeout: int = 0) -> 'pd.DataFrame':
         """DEPRECATED
 
         Use `getVertexDataFrame()` instead.
-
-        TODO Proper deprecation
         """
+        warnings.warn(
+            "The `getVertexDataframe()` function is deprecated; use `getVertexDataFrame()` instead.",
+            DeprecationWarning)
         return self.getVertexDataFrame(vertexType, select=select, where=where, limit=limit,
             sort=sort, timeout=timeout)
 
     def getVerticesById(self, vertexType: str, vertexIds: Union[int, str, list], select: str = "",
             fmt: str = "py", withId: bool = True, withType: bool = False,
-            timeout: int = 0) -> Union[dict, str, 'pd.DataFrame']:
+            timeout: int = 0) -> Union[list, str, 'pd.DataFrame']:
         """Retrieves vertices of the given vertex type, identified by their ID.
 
         Args:
@@ -362,7 +364,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
                 Comma separated list of vertex attributes to be retrieved.
             fmt:
                 Format of the results:
-                    "py":   Python objects
+                    "py":   Python objects (in a list)
                     "json": JSON document
                     "df":   pandas DataFrame
             withId:

@@ -1,20 +1,21 @@
 """Loading Job Functions
 
 The functions on this page run loading jobs on the TigerGraph server.
-All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object]. 
+All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object].
 """
+from typing import Union
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
 
 class pyTigerGraphLoading(pyTigerGraphBase):
     def runLoadingJobWithFile(self, filePath: str, fileTag: str, jobName: str, sep: str = None,
-            eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000) -> dict:
+            eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000) -> Union[dict, None]:
         """Execute a loading job with the referenced file.
 
         The file will first be uploaded to the TigerGraph server and the value of the appropriate
         FILENAME definition will be updated to point to the freshly uploaded file.
 
-        NOTE: The argument `USING HEADER="true"` in the GSQL loading job may not be enough to 
+        NOTE: The argument `USING HEADER="true"` in the GSQL loading job may not be enough to
         load the file correctly. Remove the header from the data file before using this function.
 
         Args:
