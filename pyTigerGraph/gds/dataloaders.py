@@ -712,14 +712,18 @@ class BaseLoader:
                 dtype = attr_types[col].lower()
                 if dtype.startswith("str"):
                     if mode == "dgl":
-                        graph.extra_data[col] = attr_df[col].to_list()
+                        if vetype not in graph.extra_data:
+                            graph.extra_data[vetype] = {}
+                        graph.extra_data[vetype][col] = attr_df[col].to_list()
                     elif mode == "pyg" or mode == "spektral":
                         data[col] = attr_df[col].to_list()
                 elif dtype.startswith("list"):
                     dtype2 = dtype.split(":")[1]
                     if dtype2.startswith("str"):
                         if mode == "dgl":
-                            graph.extra_data[col] = attr_df[col].str.split().to_list()
+                            if vetype not in graph.extra_data:
+                                graph.extra_data[vetype] = {}
+                            graph.extra_data[vetype][col] = attr_df[col].str.split().to_list()
                         elif mode == "pyg" or mode == "spektral":
                             data[col] = attr_df[col].str.split().to_list()
                     else:
