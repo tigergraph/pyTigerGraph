@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1] - 2022-09-06
+
+Release of pyTigerGraph version 1.1. 
+
+## Added:
+* TensorFlow support for homogeneous GNNs via the Spektral library.
+* Heterogeneous Graph Dataloading support for DGL.
+* Support of lists of strings in dataloaders.
+
+## Changed:
+* Fixed KeyError when creating a data loader on a graph where PrimaryIdAsAttribute is False.
+* Error catch if Kafka dataloader doesn't run in async mode.
+* Refresh schema during dataloader instantiation and featurizer attribute addition.
+* Reduce connection instantiation time.
+* Reinstall query if it is disabled.
+* Confirm Kafka topic is created before subscription.
+* More efficient use of Kafka resources.
+* Allow multiple consumers on the same data.
+* Improved deprecation warnings.
+
+## [1.0] - 2022-07-11
+
+Release of pyTigerGraph version 1.0, in conjunction with version 1.0 of the link:https://docs.tigergraph.com/ml-workbench/current/overview/[TigerGraph Machine Learning Workbench]. 
+
+## Added:
+* Kafka authentication support for ML Workbench enterprise users.
+* Custom query support for Featurizer, allowing developers to generate their own graph-based features as well as use our link:https://docs.tigergraph.com/graph-ml/current/intro/[built-in Graph Data Science algorithms].
+
+## Changed:
+* Additional testing of GDS functionality
+* More demos and tutorials for TigerGraph ML Workbench, found link:https://github.com/TigerGraph-DevLabs/mlworkbench-docs[here].
+* Various bug fixes.
+
 ## [0.9] - 2022-05-16
 We are excited to announce the pyTigerGraph v0.9 release! This release adds many new features for graph machine learning and graph data science, a refactoring of core code, and more robust testing. Additionally, we have officially “graduated” it to an official TigerGraph product. This means brand-new documentation, a new GitHub repository, and future feature enhancements. While becoming an official product, we are committed to keeping pyTigerGraph true to its roots as an open-source project. Check out the contributing page and GitHub issues if you want to help with pyTigerGraph’s development. 
 ## Changed
