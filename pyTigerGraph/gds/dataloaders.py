@@ -712,18 +712,32 @@ class BaseLoader:
                 dtype = attr_types[col].lower()
                 if dtype.startswith("str"):
                     if mode == "dgl":
-                        if vetype not in graph.extra_data:
+                        if vetype is None:
+                            # Homogeneous graph, add column directly to extra data
+                            graph.extra_data[col] = attr_df[col].to_list()
+                        elif vetype not in graph.extra_data:
+                            # Hetero graph, vetype doesn't exist in extra data
                             graph.extra_data[vetype] = {}
-                        graph.extra_data[vetype][col] = attr_df[col].to_list()
+                            graph.extra_data[vetype][col] = attr_df[col].to_list()
+                        else: 
+                            # Hetero graph and vetype already exists
+                            graph.extra_data[vetype][col] = attr_df[col].to_list()
                     elif mode == "pyg" or mode == "spektral":
                         data[col] = attr_df[col].to_list()
                 elif dtype.startswith("list"):
                     dtype2 = dtype.split(":")[1]
                     if dtype2.startswith("str"):
                         if mode == "dgl":
-                            if vetype not in graph.extra_data:
+                            if vetype is None:
+                                # Homogeneous graph, add column directly to extra data
+                                graph.extra_data[col] = attr_df[col].str.split().to_list()
+                            elif vetype not in graph.extra_data:
+                                # Hetero graph, vetype doesn't exist in extra data
                                 graph.extra_data[vetype] = {}
-                            graph.extra_data[vetype][col] = attr_df[col].str.split().to_list()
+                                graph.extra_data[vetype][col] = attr_df[col].str.split().to_list()
+                            else: 
+                                # Hetero graph and vetype already exists
+                                graph.extra_data[vetype][col] = attr_df[col].str.split().to_list()
                         elif mode == "pyg" or mode == "spektral":
                             data[col] = attr_df[col].str.split().to_list()
                     else:
