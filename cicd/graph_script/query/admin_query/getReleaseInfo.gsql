@@ -1,0 +1,19 @@
+DROP QUERY getReleaseInfo
+
+/*
+*  Get running release info of release branch
+*/
+CREATE QUERY getReleaseInfo(String branch) FOR GRAPH mwh_graph {
+  ListAccum<STRING> @user_name;
+  all_users = {user.*};
+
+  release_mwh = SELECT t
+          FROM all_users:s - (user_request_info:e) -> mwh_request:t
+          WHERE t.status == "SUCCESS" and t.base_branch == branch
+          ACCUM t.@user_name += s.user_name
+          ORDER BY s.start_t DESC;
+
+  PRINT release_mwh;
+}
+
+INSTALL QUERY getReleaseInfo

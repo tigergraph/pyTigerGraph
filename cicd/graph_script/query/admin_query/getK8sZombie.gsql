@@ -1,0 +1,36 @@
+CREATE QUERY getK8sZombie(STRING start_t = "", STRING end_t = "") FOR GRAPH mwh_graph { 
+  datetime start_dt, end_dt, pst_now;
+  int utc_pst_offset = 7;
+  pst_now = datetime_sub(now(),INTERVAL utc_pst_offset HOUR);
+	
+  IF end_t == "" THEN
+	   end_dt = pst_now;
+	ELSE
+	   end_dt = to_datetime(end_t);
+  END;
+  IF start_t == "" THEN
+	   start_dt = datetime_sub(pst_now,INTERVAL 5 DAY);
+	ELSE
+	   start_dt = to_datetime(start_t);
+  END;
+  all_nodes = {slave_node.*};
+	all_jobs = {test_job.*, build_job.*};
+	
+	zombie_jobs = select s from all_jobs:s
+#	where is_contains(s.message, "clean up zombie that could have been caused by server inaccessible")
+	where (
+        (s.status == "FAILURE" AND datetime_diff(s.debug_end, end_dt) <= 0 ) 
+        OR s.status == "ABORTED" 
+        OR s.status == "SUCCESS"
+        )
+  AND datetime_diff(s.start_t, start_dt) >= 0
+	AND datetime_diff(s.start_t, end_dt) <= 0; 
+  
+  zombie_nodes = SELECT t
+      FROM zombie_jobs:s - (test_node_info|build_node_info) -> slave_node:t 
+      where t.node_name like "k8s-%" AND t.status != "deleted";
+  #nodes_without_edge = SELECT s FROM all_nodes:s WHERE s.status == "offline" and s.outdegree() == 0 and s.node_name like "k8s-%";
+  #nodes = zombie_nodes union nodes_without_edge;
+  nodes = zombie_nodes;
+  PRINT nodes;
+}

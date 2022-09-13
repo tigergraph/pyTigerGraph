@@ -1,0 +1,120 @@
+DROP QUERY getTimeCost
+
+/*
+*  Get time cost of successfully mit/wip within a given period of time
+*/
+
+CREATE QUERY getTimeCost(STRING start_t = "", STRING end_t = "", INT num_hours = 0, STRING j_type = "all",
+    INT num_of_nodes = -1, STRING work_loc = "all", BOOL inc_customized = true) FOR GRAPH mwh_graph {
+
+  // Declare current datetime and datetime several days ago from now on.
+  datetime start_dt, end_dt;
+
+  MaxAccum<INT> @test_cost, @build_cost, @total_cost;
+  AvgAccum @@avg_end2end_cost, @@avg_running_cost, @@avg_real_cost, @@avg_build_cost;
+  MaxAccum<INT> @@max_end2end_cost, @@max_running_cost, @@max_real_cost, @@max_build_cost;
+  MinAccum<INT> @@min_end2end_cost, @@min_running_cost, @@min_real_cost, @@min_build_cost;
+  SumAccum<INT> @@total_count, @@passed_count, @@build_total_count, @@build_passed_count;
+
+
+  S = {user.*};
+
+  /*
+  *  Get start_dt and end_dt datetime
+  *  1. use num_hours ago to get time range: hous_ago_t --- now
+  *  2. specify time range: start_t --- end_t
+  *  now() will use UTC timezone and the diff between UTC and PDT timezone is 7 hour.
+  */
+  IF num_hours != 0 THEN
+      end_dt = datetime_sub(now(), INTERVAL 7 HOUR);
+      start_dt = datetime_sub(end_dt, INTERVAL num_hours HOUR);
+  ELSE
+      end_dt = to_datetime(end_t);
+      start_dt = to_datetime(start_t);
+  END;
+
+  users = SELECT s
+        FROM S:s
+        WHERE is_contains(work_loc, s.work_loc) OR work_loc == "all";
+
+  mwh = SELECT t
+       FROM users:s - (user_request_info) -> mwh_request:t
+       // if the job start time is large than start_dt, it is the target.
+       // do not calculate customized mwh_request
+       WHERE datetime_diff(t.start_t, start_dt) >= 0 AND datetime_diff(t.start_t, end_dt) <= 0
+             AND (t.num_of_nodes == num_of_nodes OR num_of_nodes == -1)
+             AND (is_contains(j_type, t.job_type) OR j_type == "all")
+             AND t.message != "ignore" AND t.status != "ABORTED"
+             AND (inc_customized == true OR (t.skip_build == "false"
+                AND t.unittests == "default" AND t.integrations == "default"))
+       ACCUM @@total_count += 1;
+
+
+  mwh_tmp = SELECT s
+    FROM mwh:s - (mwh_build_info:e) -> :t
+    ACCUM INT build_cost = get_minutes(t.timecost),
+          s.@build_cost += build_cost,
+          @@build_total_count += 1,
+          IF t.status == "SUCCESS" THEN
+              @@build_passed_count += 1,
+              @@avg_build_cost += build_cost,
+              @@max_build_cost += build_cost,
+              @@min_build_cost += build_cost
+          END;
+
+
+  passed_mwh = SELECT s
+       FROM mwh:s
+       WHERE s.status == "SUCCESS"
+       ACCUM INT cost_m = get_minutes(s.timecost),
+             INT real_cost_m = datetime_diff(s.end_t, s.start_t) / 60,
+             @@avg_end2end_cost += cost_m,
+             @@max_end2end_cost += cost_m,
+             @@min_end2end_cost += cost_m,
+             @@avg_real_cost += real_cost_m,
+             @@max_real_cost += real_cost_m,
+             @@min_real_cost += real_cost_m,
+             @@passed_count += 1;
+
+
+  mwh_with_info = SELECT s
+              FROM passed_mwh:s - (mwh_test_info:e) -> :t
+              ACCUM INT test_cost = get_minutes(t.timecost),
+                    INT build_cost = s.@build_cost,
+                    s.@test_cost += test_cost,
+                    IF build_cost < 0 THEN
+                        build_cost = 0
+                    END,
+                    s.@total_cost += test_cost + build_cost
+              POST-ACCUM @@avg_running_cost += s.@total_cost,
+                    @@max_running_cost += s.@total_cost,
+                    @@min_running_cost += s.@total_cost
+              ORDER BY get_minutes(s.timecost) DESC;
+
+  failed_mwh = mwh minus mwh_with_info;
+
+
+  PRINT @@avg_end2end_cost;
+  PRINT @@max_end2end_cost;
+  PRINT @@min_end2end_cost;
+  PRINT @@avg_real_cost;
+  PRINT @@max_real_cost;
+  PRINT @@min_real_cost;
+  PRINT @@avg_running_cost;
+  PRINT @@max_running_cost;
+  PRINT @@min_running_cost;
+
+  PRINT @@total_count;
+  PRINT @@passed_count;
+
+  PRINT @@avg_build_cost;
+  PRINT @@max_build_cost;
+  PRINT @@min_build_cost;
+  PRINT @@build_total_count;
+  PRINT @@build_passed_count;
+
+  PRINT mwh_with_info;
+  PRINT failed_mwh;
+}
+
+INSTALL QUERY getTimeCost

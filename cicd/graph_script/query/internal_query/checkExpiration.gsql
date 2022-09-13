@@ -1,0 +1,66 @@
+DROP QUERY checkExpiration
+
+CREATE QUERY checkExpiration(INT time_remain = 0) FOR GRAPH mwh_graph {
+  // declare accumulator to store the node info from other vertices
+  ListAccum<INT> @job_id;
+  ListAccum<STRING> @job_status, @job_message, @job_type, @job_log, @user_name, @debug_start, @debug_end;
+  ListAccum<BOOL> @debug_status;
+
+  // declare maxAccum to get latest job from one node
+  MaxAccum<INT> @latest_debug;
+  SumAccum<INT> @debug_num;
+  DATETIME cur_now, some_hours_later, some_hours_later2;
+  Nodes = {slave_node.*};
+
+  /*
+  *  Get current datetime, beacuse the now() will use UTC timezone
+  *  and the diff between UTC and PDT timezone is 7 hour.
+  */
+  cur_now = datetime_sub(now(), INTERVAL 7 HOUR);
+  some_hours_later = datetime_add(cur_now, INTERVAL time_remain HOUR);
+  IF time_remain == 0 THEN
+      some_hours_later2 = epoch_to_datetime(0);
+  ELSE
+      some_hours_later2 = datetime_sub(some_hours_later, INTERVAL 1 MINUTE);
+  END;
+
+  /*
+  *  The debug_status might not be reset to false by mistakes. So this query need
+  *  have error tolerance.
+  *  1. find all target jobs with debug_status = true
+  *  2. maxAccum to get latest job with largest debug_start among step 1
+  */
+  expired = SELECT s
+           FROM Nodes:s - ((build_node_info|test_node_info):e) -> :t
+           WHERE t.debug_status == true
+           ACCUM s.@latest_debug += datetime_to_epoch(t.debug_start);
+
+
+ /*
+ *  1. find the latest_debug job and check if it expires
+ *  2. attach info from job/user vertex to the node vertex
+ *     calling query getUser4Job to get the user who started the job.
+ */
+  expired_with_info = SELECT s
+            FROM expired:s - ((build_node_info|test_node_info):e) -> :t
+            WHERE t.debug_status == true AND datetime_to_epoch(t.debug_start) == s.@latest_debug
+                  AND datetime_diff(some_hours_later, t.debug_end) > 0
+                  AND datetime_diff(some_hours_later2, t.debug_end) < 0
+            ACCUM s.@debug_num += 1,
+                  s.@job_id += t.job_id,
+                  s.@job_status += t.status,
+                  s.@job_message += t.message,
+                  s.@job_type = t.type,
+                  s.@job_log = t.log_dir,
+                  s.@debug_status += t.debug_status,
+                  s.@debug_start += datetime_format(t.debug_start, "%Y-%m-%d %H:%M:%S"),
+                  s.@debug_end += datetime_format(t.debug_end, "%Y-%m-%d %H:%M:%S"),
+
+                  // get User4Job defined in internal_query/getUser4Job.gsql
+                  s.@user_name += getUser4Job(t)
+            HAVING s.@debug_num > 0;
+
+  PRINT expired_with_info;
+}
+
+INSTALL QUERY checkExpiration

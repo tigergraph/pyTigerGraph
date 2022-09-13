@@ -1,0 +1,49 @@
+#!/bin/groovy
+
+JOB_ID = "build_job"
+ALL_USER_NAME = USER_NAME
+USER_NAME = USER_NAME.split(",")[0].replaceAll(/@.*/,"")
+
+currentBuild.displayName = "#${currentBuild.number} ${USER_NAME} ${MACHINE} build job for" +
+      " ${T_JOB_ID}#${T_BUILD_NUMBER} ${BASE_BRANCH}"
+
+load("mit/jenkins_script/JenkinsFiles/src/init.groovy")
+
+timestamps {
+  wrap([$class: 'AnsiColorBuildWrapper']) {
+    // each slave machine can only have one runing testing instance
+    lock('end2end_' + env.NODE_NAME) {
+      def start_t = new Date()
+
+      try {
+        UTIL = load("mit/jenkins_script/JenkinsFiles/src/util.groovy")
+        UTIL.init()
+        JOB = load("mit/jenkins_script/JenkinsFiles/src/job.groovy")
+      } catch (java.lang.Throwable error) {
+        println "exception caught:"
+        println error
+        throw error
+      }
+
+      try {
+        UTIL.pre_pipeline()
+        UTIL.before_test()
+        JOB.pre_job()
+      } catch (err) {
+        if (UTIL.check_if_aborted() == false) {
+          echo 'Preparation before starting job failed'
+        }
+        throw err
+      }
+      try {
+        JOB.stage_gworkspace()
+        JOB.stage_build()
+        JOB.stage_packaging()
+      } catch (err) {
+        JOB.job_failed(err)
+        throw err
+      }
+      JOB.job_success(start_t)
+    }
+  } //AnsiColorBuildWrapper
+} //timestamps

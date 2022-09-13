@@ -1,0 +1,46 @@
+#!/bin/groovy
+
+JOB_ID = "MIT"
+T_JOB_ID = JOB_ID
+ALL_USER_NAME = USER_NAME
+USER_NAME = USER_NAME.split(",")[0].replaceAll(/@.*/,"")
+
+if (UNITTESTS != 'default' || INTEGRATION != 'default') {
+  currentBuild.displayName = "#${currentBuild.number} ${USER_NAME} MIT: " +
+      " customized for ${UNITTESTS} & ${INTEGRATION} & ${PARAM}"
+} else {
+  currentBuild.displayName = "#${currentBuild.number} ${USER_NAME} MIT: ${PARAM}"
+}
+
+load("mit/jenkins_script/JenkinsFiles/src/init.groovy")
+
+timestamps {
+  wrap([$class: 'AnsiColorBuildWrapper']) {
+    def start_t = new Date()
+
+    UTIL = load("mit/jenkins_script/JenkinsFiles/src/util.groovy")
+    UTIL.init()
+    STAGE = load("mit/jenkins_script/JenkinsFiles/src/stage.groovy")
+
+    try {
+      UTIL.pre_pipeline()
+
+      STAGE.stage_validate()
+      currentBuild.displayName = currentBuild.displayName.replaceAll("MIT:", "${BASE_BRANCH} MIT:")
+      STAGE.stage_QA_check()
+      UTIL.before_test()
+      STAGE.stage_build_pkg()
+      STAGE.stage_parallel_testing()
+
+      // notify user test pass, and let qa approve the pull request
+      UTIL.do_notification(PARAM, 'PASS', ["Result": 'MIT Test passed! Waiting for merging'])
+      STAGE.stage_validate(true)
+      STAGE.stage_merge()
+
+    } catch(err) {
+      STAGE.once_failed(err)
+      throw err
+    }
+    STAGE.once_success(start_t, 'MIT Merge succeed!!')
+  }
+}

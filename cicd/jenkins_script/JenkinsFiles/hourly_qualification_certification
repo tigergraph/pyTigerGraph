@@ -1,0 +1,40 @@
+#!/bin/groovy
+
+JOB_ID = "HOURLY"
+T_JOB_ID = JOB_ID
+ALL_USER_NAME = USER_NAME
+USER_NAME = USER_NAME.split(",")[0].replaceAll(/@.*/,"")
+
+currentBuild.displayName = "#${currentBuild.number}: ${JOB_ID} ${BASE_BRANCH}(${CLUSTER_TYPE})"
+
+timestamps {
+  wrap([$class: 'AnsiColorBuildWrapper']) {
+    def start_t = new Date()
+    
+    try {
+      UTIL = load("mit/jenkins_script/JenkinsFiles/src/util.groovy")
+      UTIL.init()
+      STAGE = load("mit/jenkins_script/JenkinsFiles/src/stage.groovy")
+    } catch (java.lang.Throwable error) {
+      println "exception caught:"
+      println error.getMessage()
+      throw error 
+    }
+
+    try {
+      UTIL.pre_pipeline()
+
+      STAGE.stage_QA_check()
+      UTIL.before_test()
+      STAGE.stage_build_pkg() 
+      STAGE.stage_parallel_testing()
+
+      STAGE.tag_stable()
+
+    } catch(err) {
+      STAGE.once_failed(err)
+      throw err
+    }
+    STAGE.once_success(start_t, 'Hourly Test passed!!!')
+  }
+}

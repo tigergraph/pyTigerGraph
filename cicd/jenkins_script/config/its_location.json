@@ -1,0 +1,19 @@
+{
+  "gle": {
+          "docExampleTest": "regress/test_case/end2end",
+          "gquery": "regress/test_case/end2end",
+          "loader": "regress/test_case/end2end",          
+          "shell":  "regress/test_case"
+         },
+  "cqrs": {
+           "shell":   "e2e/test_case",
+           "cluster": "e2e/test_case",
+           "mit":     "e2e/test_case"
+          },
+  "document": {
+           "tutorial": "gtest/test_case/shell"
+          },
+  "bigtest":  {
+           "gquery": "tests/gtest/test_case/gsql"
+          }
+}

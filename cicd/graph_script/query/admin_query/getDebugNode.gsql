@@ -1,0 +1,51 @@
+DROP QUERY getDebugNode
+
+/*
+*  Get all debugging nodes with job_id, user_name and expiration time.
+*/
+CREATE QUERY getDebugNode() FOR GRAPH mwh_graph {
+  // declare accumulator to store the node info from other vertices
+  SetAccum<EDGE> @@connected_edges_job, @@connected_edges_mwh, @@connected_edges_user;
+  SetAccum<VERTEX> @@connected_job;
+
+  SumAccum<INT> @debug_num;
+  DATETIME cur_now;
+  Nodes = {slave_node.*};
+
+  /*
+  *  Get current datetime, beacuse the now() will use UTC timezone
+  *  and the diff between UTC and PDT timezone is 7 hour.
+  */
+  cur_now = datetime_sub(now(), INTERVAL 7 HOUR);
+
+  /*
+  *  Get all debug nodes with debug_status = true (it might have false debugging nodes)
+  */
+  debugging_nodes = SELECT s
+           FROM Nodes:s - ((build_node_info|test_node_info):e) -> :t
+           WHERE t.debug_status == true AND datetime_diff(t.debug_end, cur_now) > 0
+           ACCUM s.@debug_num += 1,
+                 @@connected_job += t,
+                 @@connected_edges_job += e
+           HAVING s.@debug_num > 0;
+
+
+  connected_job = {@@connected_job};
+  connected_mwh = SELECT t
+            FROM connected_job:s - ((mwh_build_info|mwh_test_info):e) -> :t
+            ACCUM @@connected_edges_mwh += e;
+
+  connected_user = SELECT t
+            FROM connected_mwh:s - (user_request_info:e) -> user:t
+            ACCUM @@connected_edges_user += e;
+
+  PRINT debugging_nodes;
+  PRINT connected_job;
+  PRINT @@connected_edges_job;
+  PRINT connected_mwh;
+  PRINT @@connected_edges_mwh;
+  PRINT connected_user;
+  PRINT @@connected_edges_user;
+}
+
+INSTALL QUERY getDebugNode

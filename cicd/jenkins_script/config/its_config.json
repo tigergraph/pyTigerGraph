@@ -1,0 +1,15 @@
+{
+  "gle": ["shell", "loader", "gquery", "docExampleTest"],
+  "cqrs": ["cluster", "mit", "shell"], 
+  "document": ["tutorial"],
+  "bigtest": ["gquery"],
+  
+  "gap": [],
+  "gst": [],
+  "tools": [],
+
+  "shell": [],
+  "loader": [],
+  "gquery": [],
+  "docExampleTest": []
+}

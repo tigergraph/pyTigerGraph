@@ -1,0 +1,22 @@
+DROP QUERY checkExpiration
+DROP QUERY getDebugNode
+DROP QUERY getUser4Job
+
+/*
+*  Get user_name of the given job
+*/
+CREATE QUERY getUser4Job(VERTEX job) FOR GRAPH mwh_graph returns (STRING) {
+  STRING user_name;
+  Jobs = {job};
+
+  mwhs = SELECT t
+      FROM Jobs:s - ((mwh_build_info|mwh_test_info):e) -> mwh_request:t;
+
+  users = SELECT t
+      FROM mwhs:s - (user_request_info) -> user:t
+      ACCUM user_name = t.user_name;
+
+  return user_name;
+}
+
+INSTALL QUERY getUser4Job

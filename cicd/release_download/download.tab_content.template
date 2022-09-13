@@ -1,0 +1,22 @@
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph $EDITION $VERSION $SUBTITLE </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">$LINUX</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="$FORM_ID" method="get" action="$LINK">
+               <a href="javascript:{}" onclick="document.getElementById('$FORM_ID').submit();"><span class="oew-table-text-inner">  $PRODUCT $VERSION ($EDITION)   <i class="fa fa-angle-down"></i></span></a>$SIGN
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">$FILESIZE</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">$CHECKSUM</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>

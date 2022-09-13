@@ -1,0 +1,54 @@
+DROP QUERY getRepoHistory
+
+/*
+*  Get repo merged history for last num_days days.
+*/
+CREATE QUERY getRepoHistory(STRING start_t = "", STRING end_t = "", INT num_days) FOR GRAPH mwh_graph {
+
+  SumAccum<INT> @commit_count;
+  SetAccum<EDGE> @@connected_edges;
+
+  // Declare the datetime range
+  datetime start_dt, end_dt;
+
+  /*
+  *  Get start_dt and end_dt datetime
+  *  1. use num_days ago to get time range: days_ago_t --- now
+  *  2. specify time range: start_t --- end_t
+  *  now() will use UTC timezone and the diff between UTC and PDT timezone is 7 hour.
+  */
+  IF num_days != 0 THEN
+      end_dt = datetime_sub(now(), INTERVAL 7 HOUR);
+      start_dt = datetime_sub(end_dt, INTERVAL num_days DAY);
+  ELSE
+      end_dt = to_datetime(end_t);
+      start_dt = to_datetime(start_t);
+  END;
+
+  all_repos = {repo.*};
+
+  /*
+  * get all satisfied mwh_request from each repo:
+  *  1. job_type is "mit"
+  *  2. merged successfully(status == "SUCCESS")
+  *  3. end time is no more than n_days_ago since now
+  */
+  merged_mwh = SELECT t
+          FROM all_repos:s - (repo_request_info:e) -> mwh_request:t
+          WHERE t.job_type == "mit" AND t.status == "SUCCESS"
+                AND datetime_diff(t.start_t, start_dt) >= 0
+                AND datetime_diff(t.start_t, end_dt) <= 0
+          ACCUM @@connected_edges += e,
+                s.@commit_count += 1;
+
+  all_repos = SELECT s
+              FROM all_repos:s
+              ORDER BY s.@commit_count DESC;
+
+
+  PRINT all_repos;
+  PRINT merged_mwh;
+  PRINT @@connected_edges;
+}
+
+INSTALL QUERY getRepoHistory

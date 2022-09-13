@@ -1,0 +1,380 @@
+RUN QUERY topCoLiked("id1", 20)
+{
+  "error": false,
+  "message": "",
+  "version": {
+    "schema": 0,
+    "api": "v1"
+  },
+  "results": [
+    {
+      "v_set": "L2",
+      "v_id": "id4",
+      "v": {"@cnt": 2},
+      "v_type": "User"
+    },
+    {
+      "v_set": "L2",
+      "v_id": "id3",
+      "v": {"@cnt": 1},
+      "v_type": "User"
+    },
+    {
+      "v_set": "L2",
+      "v_id": "id2",
+      "v": {"@cnt": 1},
+      "v_type": "User"
+    }
+  ]
+}
+RUN QUERY pageRank(0.001, 100, 0.15)
+{
+  "error": false,
+  "message": "",
+  "version": {
+    "schema": 0,
+    "api": "v1"
+  },
+  "results": [
+    {"@@maxDifference": 0.425},
+    {"@@maxDifference": 0.36125},
+    {"@@maxDifference": 0.15353},
+    {"@@maxDifference": 0.19575},
+    {"@@maxDifference": 0.16639},
+    {"@@maxDifference": 0.09429},
+    {"@@maxDifference": 0.08014},
+    {"@@maxDifference": 0.05961},
+    {"@@maxDifference": 0.04705},
+    {"@@maxDifference": 0.03999},
+    {"@@maxDifference": 0.017},
+    {"@@maxDifference": 0.02},
+    {"@@maxDifference": 0.017},
+    {"@@maxDifference": 0.00953},
+    {"@@maxDifference": 0.0081},
+    {"@@maxDifference": 0.00616},
+    {"@@maxDifference": 0.00479},
+    {"@@maxDifference": 0.00407},
+    {"@@maxDifference": 0.00178},
+    {"@@maxDifference": 0.00205},
+    {"@@maxDifference": 0.00174},
+    {"@@maxDifference": 9.6E-4},
+    {
+      "v_set": "AllV",
+      "v_id": "2",
+      "v": {
+        "AllV.page_id": "2",
+        "AllV.@score": 0.93379
+      },
+      "v_type": "Page"
+    },
+    {
+      "v_set": "AllV",
+      "v_id": "4",
+      "v": {
+        "AllV.page_id": "4",
+        "AllV.@score": 1.18914
+      },
+      "v_type": "Page"
+    },
+    {
+      "v_set": "AllV",
+      "v_id": "1",
+      "v": {
+        "AllV.page_id": "1",
+        "AllV.@score": 0.65551
+      },
+      "v_type": "Page"
+    },
+    {
+      "v_set": "AllV",
+      "v_id": "3",
+      "v": {
+        "AllV.page_id": "3",
+        "AllV.@score": 1.22156
+      },
+      "v_type": "Page"
+    }
+  ]
+}
+RUN QUERY productSuggestion ("62abcax334", 1, 3)
+{
+  "error": false,
+  "message": "",
+  "version": {
+    "schema": 0,
+    "api": "v1"
+  },
+  "results": [
+    {
+      "v_set": "Results",
+      "v_id": "hp book",
+      "v": {
+        "@cnt": 3,
+        "image_hash": 29398439828
+      },
+      "v_type": "Product"
+    },
+    {
+      "v_set": "Results",
+      "v_id": "surface pro",
+      "v": {
+        "@cnt": 2,
+        "image_hash": 8439828
+      },
+      "v_type": "Product"
+    },
+    {
+      "v_set": "Results",
+      "v_id": "linux abc",
+      "v": {
+        "@cnt": 2,
+        "image_hash": 298439234
+      },
+      "v_type": "Product"
+    }
+  ]
+}
+RUN QUERY namesSimilar (0,"michael","jackson",100)
+{
+  "error": false,
+  "message": "",
+  "version": {
+    "schema": 0,
+    "api": "v1"
+  },
+  "results": [{"@@finalTopKUsers": [
+    {
+      "uid": "6",
+      "score": 651
+    },
+    {
+      "uid": "2",
+      "score": 451
+    },
+    {
+      "uid": "1",
+      "score": 451
+    },
+    {
+      "uid": "5",
+      "score": 404
+    },
+    {
+      "uid": "4",
+      "score": 351
+    },
+    {
+      "uid": "7",
+      "score": 303
+    },
+    {
+      "uid": "3",
+      "score": 151
+    }
+  ]}]
+}
+RUN QUERY videoRecommendation (0, 10, 10)
+{
+  "error": false,
+  "message": "",
+  "version": {
+    "schema": 0,
+    "api": "v1"
+  },
+  "results": [
+    {
+      "v_set": "Recommend",
+      "v_id": "1",
+      "v": {
+        "date_time": 0,
+        "@score": 5.2,
+        "@viewedBySeed": false,
+        "content": "v1"
+      },
+      "v_type": "Video"
+    },
+    {
+      "v_set": "Recommend",
+      "v_id": "4",
+      "v": {
+        "date_time": 0,
+        "@score": 17.2,
+        "@viewedBySeed": false,
+        "content": "v4"
+      },
+      "v_type": "Video"
+    }
+  ]
+}
+RUN QUERY peopleYouMayKnow (1, 10)
+{
+  "error": false,
+  "message": "",
+  "version": {
+    "schema": 0,
+    "api": "v1"
+  },
+  "results": [
+    {
+      "v_set": "L2",
+      "v_id": "3",
+      "v": {"L2.@score": 0.075},
+      "v_type": "Person"
+    },
+    {
+      "v_set": "L2",
+      "v_id": "6",
+      "v": {"L2.@score": 0.1},
+      "v_type": "Person"
+    }
+  ]
+}
+RUN QUERY socialFromUser("0", "true", 0, 147000000, 10)
+{
+  "error": false,
+  "message": "",
+  "version": {
+    "schema": 0,
+    "api": "v1"
+  },
+  "results": [
+    {
+      "v_set": "RESULT",
+      "v_id": "7",
+      "v": {
+        "registration_timestamp": 147000000,
+        "name": "james",
+        "isActive": true
+      },
+      "v_type": "SocialUser"
+    },
+    {
+      "v_set": "RESULT",
+      "v_id": "4",
+      "v": {
+        "registration_timestamp": 144000000,
+        "name": "paul",
+        "isActive": true
+      },
+      "v_type": "SocialUser"
+    },
+    {
+      "v_set": "RESULT",
+      "v_id": "3",
+      "v": {
+        "registration_timestamp": 143000000,
+        "name": "mark",
+        "isActive": true
+      },
+      "v_type": "SocialUser"
+    }
+  ]
+}
+RUN QUERY socialToUser("4", "true", 0, 150000000, 10)
+{
+  "error": false,
+  "message": "",
+  "version": {
+    "schema": 0,
+    "api": "v1"
+  },
+  "results": [
+    {
+      "v_set": "Result",
+      "v_id": "8",
+      "v": {
+        "registration_timestamp": 148000000,
+        "name": "joseph",
+        "isActive": true
+      },
+      "v_type": "SocialUser"
+    },
+    {
+      "v_set": "Result",
+      "v_id": "7",
+      "v": {
+        "registration_timestamp": 147000000,
+        "name": "james",
+        "isActive": true
+      },
+      "v_type": "SocialUser"
+    }
+  ]
+}
+RUN QUERY socialMutualConnections("1", "7", "false", 0, 2000000000, 10)
+{
+  "error": false,
+  "message": "",
+  "version": {
+    "schema": 0,
+    "api": "v1"
+  },
+  "results": [{
+    "v_set": "Result",
+    "v_id": "5",
+    "v": {
+      "registration_timestamp": 145000000,
+      "@cnt": 2,
+      "name": "steven",
+      "isActive": false
+    },
+    "v_type": "SocialUser"
+  }]
+}
+RUN QUERY socialOneWay(1,10)
+{
+  "error": false,
+  "message": "",
+  "version": {
+    "schema": 0,
+    "api": "v1"
+  },
+  "results": [
+    {
+      "v_set": "Result",
+      "v_id": "8",
+      "v": {
+        "registration_timestamp": 148000000,
+        "name": "joseph",
+        "isActive": true,
+        "@recList": [{
+          "name": "luke",
+          "cnt": 2,
+          "id": "0"
+        }]
+      },
+      "v_type": "SocialUser"
+    },
+    {
+      "v_set": "Result",
+      "v_id": "9",
+      "v": {
+        "registration_timestamp": 149000000,
+        "name": "thomas",
+        "isActive": true,
+        "@recList": [{
+          "name": "luke",
+          "cnt": 1,
+          "id": "0"
+        }]
+      },
+      "v_type": "SocialUser"
+    },
+    {
+      "v_set": "Result",
+      "v_id": "1",
+      "v": {
+        "registration_timestamp": 1410000000,
+        "name": "john",
+        "isActive": true,
+        "@recList": [{
+          "name": "luke",
+          "cnt": 3,
+          "id": "0"
+        }]
+      },
+      "v_type": "SocialUser"
+    }
+  ]
+}
+# Do not delete this line; the script needs an extra line after the last query

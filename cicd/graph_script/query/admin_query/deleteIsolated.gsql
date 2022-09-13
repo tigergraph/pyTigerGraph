@@ -1,0 +1,14 @@
+DROP QUERY deleteIsolated
+
+CREATE QUERY deleteIsolated() FOR GRAPH mwh_graph {
+  S = {test_job.*, build_job.*};
+
+  connected = SELECT s
+           FROM S:s - (ANY) -> mwh_request:t;
+
+  isolated = S MINUS connected;
+  PRINT isolated;
+  DELETE s from isolated:s;
+}
+
+INSTALL QUERY deleteIsolated

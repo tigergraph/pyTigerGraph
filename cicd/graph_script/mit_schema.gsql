@@ -1,0 +1,114 @@
+DROP ALL
+
+CREATE VERTEX user (
+  PRIMARY_ID user_name  string,
+  user_name             string,
+  email                 string,
+  jira_name             string,
+  hipchat_name          string,
+  work_loc              string
+)
+
+CREATE VERTEX repo (
+  PRIMARY_ID repo_name  string,
+  repo_name             string
+)
+
+CREATE VERTEX mwh_request (
+  PRIMARY_ID job_type_id     string,
+  job_id                uint,
+  job_type              string,
+  status                string,
+  start_t               datetime,
+  end_t                 datetime,
+  log_dir               string,
+  force                 bool,
+  pullreq               string,
+  unittests             string,
+  integrations          string,
+  base_branch           string,
+  bigtest_base_branch   string,
+  skip_build            string,
+  num_of_nodes          uint,
+  timecost              string,
+  message               string
+)
+
+CREATE VERTEX build_job (
+  PRIMARY_ID job_id          string,
+  job_id                     uint,
+  status                     string,
+  start_t                    datetime,
+  end_t                      datetime,
+  timecost                   string,
+  os                         string,
+  log_dir                    string,
+  message                    string,
+  debugger                   string,
+  debug_start                datetime,
+  debug_end                  datetime,
+  debug_status               bool,
+  local_package_url          string,
+  cloud_package_url          string,
+  gsql_client_url            string,
+  product_commit_information string,
+)
+
+CREATE VERTEX test_job (
+  PRIMARY_ID job_id     string,
+  job_id                uint,
+  status                string,
+  start_t               datetime,
+  end_t                 datetime,
+  timecost              string,
+  os                    string,
+  log_dir               string,
+  unittests             string,
+  integrations          string,
+  message               string,
+  debugger              string,
+  debug_start           datetime,
+  debug_end             datetime,
+  debug_status          bool
+)
+
+CREATE VERTEX slave_node (
+  PRIMARY_ID node_name  string,
+  node_name             string,
+  status                string,
+  label                 string,
+  os                    string,
+  offline_message       string,
+  ip                    string
+)
+
+CREATE UNDIRECTED EDGE user_request_info (
+  FROM user, TO mwh_request
+)
+
+CREATE UNDIRECTED EDGE repo_request_info (
+  FROM repo, TO mwh_request,
+  pullreq uint
+)
+
+CREATE UNDIRECTED EDGE mwh_build_info (
+  FROM mwh_request, TO build_job
+)
+
+CREATE UNDIRECTED EDGE mwh_test_info (
+  FROM mwh_request, TO test_job
+)
+
+CREATE UNDIRECTED EDGE build_test_info (
+  FROM build_job, TO test_job
+)
+
+CREATE UNDIRECTED EDGE build_node_info (
+  FROM slave_node, TO build_job
+)
+
+CREATE UNDIRECTED EDGE test_node_info (
+  FROM slave_node, TO test_job
+)
+
+CREATE GRAPH mwh_graph (*)

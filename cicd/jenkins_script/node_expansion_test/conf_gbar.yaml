@@ -1,0 +1,38 @@
+# Configure file for GBAR
+# you can specify storage method as either local or s3.
+
+# Assign True if you want to store backup files on local disk.
+# Assign False otherwise, in this case no need to set path.
+store_local: True
+path: ~/node_expansion
+
+# Assign True if you want to store backup files on AWS S3.
+# Assign False otherwise, in this case no need to set AWS key and bucket.
+# AWS access key and secret is optional. If not specified, it will use
+# attached IAM role of the instance.
+store_s3: False
+aws_access_key_id:
+aws_secret_access_key:
+bucket: YOUR_BUCKET_NAME
+
+# The maximum timeout value to wait for core modules(GPE/GSE) on backup/expansion.
+# As a roughly estimated number,
+# GPE & GSE backup throughoutput is about 2GB in one minute on HDD.
+# You can set this value according to your gstore size.
+# Interval string could be with format 1h2m3s, means 1 hour 2 minutes 3 seconds,
+# or 200m means 200 minutes.
+# You can set to 0 for endless waiting.
+core_timeout: 5h
+
+# Deprecated, keep it for backward compatible
+backup_core_timeout: 5h
+
+# The number of processes to be created during compressing backup archive.
+# Compressing in parallel can gain improved performance.
+# The same number of processes will be spawned for decompression on restore.
+compress_process_number: 8
+
+# Need to put gsql user/passwd here if gsql authentication is on
+gsql_user:
+gsql_passwd:
+

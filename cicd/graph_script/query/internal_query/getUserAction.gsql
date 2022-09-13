@@ -1,0 +1,55 @@
+DROP QUERY getUserAction
+
+/*
+*  Get user's current running job and current debugging job(with node info)
+*/
+
+CREATE QUERY getUserAction(VERTEX<user> the_user, STRING j_type = "all") FOR GRAPH mwh_graph {
+  ListAccum<STRING> @node_name, @ip, @node_status, @offline_message;
+  // Declare current datetime
+  DATETIME cur_now;
+  Users = {the_user};
+
+  /*
+  *  get current datetime, beacuse the now() will use UTC timezone
+  *  and the diff between UTC and PDT timezone is 7 hour.
+  */
+  cur_now = datetime_sub(now(), INTERVAL 7 HOUR);
+
+  /*
+  *  get running mwh_request started by the_user
+  */
+  running_mwh = SELECT t
+      FROM Users:s - (user_request_info) -> :t
+      WHERE t.status == "RUNNING" AND (is_contains(j_type, t.job_type) OR j_type == "all");
+
+  /*
+  *  get failed mwh_request started by the_user
+  */
+  failed_mwh = SELECT t
+      FROM Users:s - (user_request_info) -> :t
+      WHERE t.status != "SUCCESS" AND (is_contains(j_type, t.job_type) OR j_type == "all");
+
+  /*
+  *  get debugging jobs from the failed_mwh
+  *  1. debug_status == true  2. It is still debugging. (debug_end > cur_now)
+  */
+  debugging_jobs = SELECT t
+      FROM failed_mwh:s - (ANY) -> :t
+      WHERE t.debug_status == true AND datetime_diff(t.debug_end, cur_now) > 0;
+
+  /*
+  *  attach some node info to job vertex
+  */
+  debugging_jobs_with_info = SELECT s
+      FROM debugging_jobs:s - ((build_node_info|test_node_info):e) -> :t
+      ACCUM s.@node_name += t.node_name,
+            s.@ip += t.ip,
+            s.@node_status += t.status,
+            s.@offline_message += t.offline_message;
+
+  PRINT running_mwh;
+  PRINT debugging_jobs_with_info;
+}
+
+INSTALL QUERY getUserAction

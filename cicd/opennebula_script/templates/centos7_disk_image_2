@@ -1,0 +1,17 @@
+CONTEXT = [
+  NETWORK = "YES",
+  SSH_PUBLIC_KEY = "$USER[SSH_PUBLIC_KEY]" ]
+CPU = "8"
+DISK = [
+  IMAGE = "centos7_disk_image_2",
+  IMAGE_UNAME = "oneadmin" ]
+GRAPHICS = [
+  LISTEN = "0.0.0.0",
+  TYPE = "VNC" ]
+HYPERVISOR = "kvm"
+LOGO = "images/logos/centos.png"
+MEMORY = "40960"
+NIC = [
+  NETWORK = "VM_network",
+  NETWORK_UNAME = "oneadmin" ]
+VCPU = "8"

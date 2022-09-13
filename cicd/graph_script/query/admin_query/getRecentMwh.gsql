@@ -1,0 +1,101 @@
+DROP QUERY getRecentMwh
+
+/*
+*  Get recent mwh_request
+*/
+CREATE QUERY getRecentMwh(INT num_hours, String node_name, String user_name,
+    String repo_name) FOR GRAPH mwh_graph {
+  SetAccum<EDGE> @@mwh_job_edge, @@job_node_edge, @@user_request_edge, @@repo_request_edge;
+  SetAccum<VERTEX> @@recent_mwh_set;
+
+  // declare current datetime
+  DATETIME cur_now, n_hours_ago;
+  all_mwh = {mwh_request.*};
+  all_users = {user.*};
+  all_repos = {repo.*};
+  all_nodes = {slave_node.*};
+
+  /*
+  *  Get current datetime, beacuse the now() will use UTC timezone
+  *  and the diff between UTC and PDT timezone is 7 hour.
+  */
+  cur_now = datetime_sub(now(), INTERVAL 7 HOUR);
+  n_hours_ago = datetime_sub(cur_now, INTERVAL num_hours HOUR);
+
+  recent_mwh = SELECT s
+            FROM all_mwh:s
+            WHERE datetime_diff(s.start_t, n_hours_ago) > 0
+            ORDER BY s.start_t DESC;
+
+  // user filter for recent_mwh
+  IF user_name != "" THEN
+      filter_by_user = SELECT t
+            FROM all_users:s - (user_request_info:e) -> mwh_request:t
+            WHERE s.user_name == user_name
+            ORDER BY t.start_t DESC;
+      recent_mwh = recent_mwh INTERSECT filter_by_user;
+  END;
+
+  // repo filter for recent_mwh
+  IF repo_name != "" THEN
+      filter_by_repo = SELECT t
+            FROM all_repos:s - (repo_request_info:e) -> mwh_request:t
+            WHERE s.repo_name == repo_name
+            ORDER BY t.start_t DESC;
+      recent_mwh = recent_mwh INTERSECT filter_by_repo;
+  END;
+
+  // node filter for recent_mwh and print associated vertices and edges for node
+  IF node_name != "" THEN
+      jobs_on_node = SELECT t
+            FROM all_nodes:s - ((test_node_info|build_node_info):e) -> :t
+            WHERE s.node_name == node_name
+            ORDER BY t.start_t DESC;
+
+      recent_jobs = SELECT t
+            FROM recent_mwh:s - ((mwh_test_info|mwh_build_info):e) -> :t
+            ORDER BY t.start_t DESC;
+
+      recent_jobs = recent_jobs INTERSECT jobs_on_node;
+
+      tmp_nodes = SELECT t
+            FROM recent_jobs:s - ((test_node_info|build_node_info):e) -> :t
+            ACCUM @@job_node_edge += e;
+
+      filter_by_node = SELECT t
+            FROM recent_jobs:s - ((mwh_test_info|mwh_build_info):e) -> mwh_request:t
+            ACCUM @@mwh_job_edge += e
+            ORDER BY t.start_t DESC;
+
+      recent_mwh = recent_mwh INTERSECT filter_by_node;
+
+      PRINT recent_jobs;
+      PRINT @@job_node_edge;
+      PRINT tmp_nodes;
+      PRINT @@mwh_job_edge;
+  END;
+
+
+  // print associated vertices and edges for user
+  IF user_name != "" THEN
+      tmp_users = SELECT t
+            FROM recent_mwh:s - (user_request_info:e) -> user:t
+            ACCUM @@user_request_edge += e;
+      PRINT @@user_request_edge;
+      PRINT tmp_users;
+  END;
+
+  // print associated vertices and edges for repo
+  IF repo_name != "" THEN
+      tmp_repos = SELECT t
+            FROM recent_mwh:s - (repo_request_info:e) -> repo:t
+            WHERE t.repo_name == repo_name
+            ACCUM @@repo_request_edge += e;
+      PRINT @@repo_request_edge;
+      PRINT tmp_repos;
+  END;
+
+  PRINT recent_mwh;
+}
+
+INSTALL QUERY getRecentMwh

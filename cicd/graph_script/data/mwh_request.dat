@@ -1,0 +1,7 @@
+1554,mit,FAIL,2017/08/24 14:02:13,2017/08/24 14:02:22,,false,gle#494,default,default,master,master,false,0,1,MIT#1554 FAIL: Reason: pull reuqest gle#494 feature branch was not merged with the base
+1553,mit,SUCCESS,2017/08/24 13:42:33,2017/08/24 15:49:50,,false,gium#182,default,default,master,master,false,4,127,MIT#1553 SUCCESS
+871,hourly,SUCCESS,2017/08/23 18:37:47,2017/08/25 19:42:32,,false,,default,default,master,master,false,4,2944,HOURLY#871 SUCCESS
+427,wip,FAIL,2017/08/14 15:59:00,2017/08/14 15:59:06,,false,gle#292,default,default,master,QA-487,hourly_qualification_certification_845,0,1,WIP#427 FAIL: Reason: pull request gle#292 is not open
+440,wip,SUCCESS,2017/08/18 15:47:04,2017/08/18 17:40:11,,false,er#51,default,default,master,master,false,4,113,WIP#440 SUCCESS
+462,wip,FAIL,2017/08/28 19:48:53,2017/08/28 21:09:03,,false,gle#497,none,default,master,master,false,8,81,
+1573,mit,SUCCESS,2017/08/28 09:28:52,2017/08/28 16:55:49,,false,utility#200,default,default,master,master,false,8,446,MIT#1573 SUCCESS

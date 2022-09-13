@@ -1,0 +1,28 @@
+{
+  "tigergraph.user.name": "tigergraph",
+  "tigergraph.user.password": "tigergraph",
+  "tigergraph.root.dir": "/home/tigergraph/tigergraph",
+  "license.key": "Replace_With_Trial_Or_Official_License_Key_String",
+  "nodes.ip": {
+    "m1": "192.168.55.201",
+    "m2": "192.168.55.202"
+  },
+  "nodes.login": {
+    "supported.methods (this is a comment)": "P. SSH with password; K. SSH with key file (e.g. ec2_key.pem)",
+    "notes (this is a comment)": "All nodes must use the same ssh port, same sudo user, same password, or same key file",
+    "ssh.port": "22",
+    "chosen.method": "P",
+    "P": {
+        "sudo.user.name": "root",
+        "sudo.user.password": "graphsql"
+    },
+    "K": {
+      "sudo.user.name": "sudoUserName",
+      "ssh.key.file": "/path/to/my_key.pem (if empty, the installer will use default ssh key file such as ~/.ssh/id_rsa)"
+    }
+  },
+  "HA.option": {
+    "Notes of HA.option (this is a comment)": "option to install high-availability cluster (with at least 3 nodes), default value false",
+    "enable.HA": "false (or true)"
+  }
+}

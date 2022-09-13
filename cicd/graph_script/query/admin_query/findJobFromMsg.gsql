@@ -1,0 +1,39 @@
+DROP QUERY findJobFromMsg
+
+/*
+*  find MIT/WIP/HOURLY from Message
+*/
+CREATE QUERY findJobFromMsg(STRING start_t = "", STRING end_t = "", INT num_days = 0,
+    STRING message = "", STRING user_name = "all", STRING job_type = "all") FOR GRAPH mwh_graph {
+
+  // Declare the datetime range
+  datetime start_dt, end_dt;
+
+  /*
+  *  Get start_dt and end_dt datetime
+  *  1. use num_days ago to get time range: days_ago_t --- now
+  *  2. specify time range: start_t --- end_t
+  *  now() will use UTC timezone and the diff between UTC and PDT timezone is 7 hour.
+  */
+  IF num_days != 0 THEN
+      end_dt = datetime_sub(now(), INTERVAL 7 HOUR);
+      start_dt = datetime_sub(end_dt, INTERVAL num_days DAY);
+  ELSE
+      end_dt = to_datetime(end_t);
+      start_dt = to_datetime(start_t);
+  END;
+
+  all_users = {user.*};
+
+  mwh = SELECT t
+        FROM all_users:s - (user_request_info:e) -> mwh_request:t
+        WHERE (user_name == "all" OR s.user_name == user_name)
+              AND (job_type == "all" OR t.job_type == job_type)
+              AND is_contains(t.message, message)
+              AND datetime_diff(t.start_t, start_dt) >= 0
+              AND datetime_diff(t.start_t, end_dt) <= 0
+        ORDER BY t.start_t DESC;
+  PRINT mwh;
+}
+
+INSTALL QUERY findJobFromMsg

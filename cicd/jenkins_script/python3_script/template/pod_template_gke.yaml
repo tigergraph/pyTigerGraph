@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    job: job_id
+  name: node-expansion
+spec:
+  nodeSelector:
+    group: mit-test
+  containers:
+  - image: 192.168.55.21/jnlp-centos8
+    imagePullPolicy: IfNotPresent
+    name: tigergraph
+    resources:
+      limits:
+        cpu: 10000m
+      requests:
+        memory: 16Gi
+        cpu: 4000m
+    stdin: true
+    tty: true
+    ports:
+    - containerPort: 22
+    volumeMounts:
+    - mountPath: "/mnt/nfs_datapool"
+      name: "volume-1"
+      readOnly: false
+    - mountPath: /var/lib/docker
+      name: varlibdocker
+    securityContext:
+      privileged: true
+  volumes:
+  - name: "volume-1"
+    persistentVolumeClaim:
+      claimName: "nfs-datapool-claim"
+      readOnly: false
+  - name: varlibdocker
+    emptyDir: {}
+  restartPolicy: Never

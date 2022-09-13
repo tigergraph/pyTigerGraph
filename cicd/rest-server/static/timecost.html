@@ -1,0 +1,185 @@
+<!doctype html>
+<html>
+
+<head>
+  <title>Line Chart</title>
+  <link href='https://fonts.googleapis.com/css?family=Lato:300,400,700,900' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" href="http://fontawesome.io/assets/font-awesome/css/font-awesome.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.19.1/moment.min.js"></script>
+
+  <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <link href="files/timecost.css" rel='stylesheet' type='text/css'>
+</head>
+
+<body>
+  <div class="header">
+    <div class="header_left">
+      <button class="header_box legend_btn legend_btn_choose" id="system">System Info</button>
+      <button class="header_box legend_btn" id="component">Component Info</button>
+      <button class="header_box legend_btn" id="repo">Repo Info</button>
+    </div>
+    <div class="dividing_line"></div>
+    <div class="header_right">
+      <select class="header_box header_select_box" id="step_box">
+        <option value="1">daily average</option>
+        <option value="2">2-day average</option>
+        <option value="3">3-day average</option>
+        <option value="7">weekly average</option>
+      </select>
+      <select class="header_box header_select_box" id="show_box">
+        <option value="duration">average duration</option>
+        <option value="count">pipeline count</option>
+      </select>
+      <button class="header_box specail_btn" id="null_ctr">show days with no data</button>
+      <input class="header_box date_box" type="text" name="start_box" value="2017-10-22">
+      <input class="header_box date_box" type="text" name="end_box" value="now">
+    </div>
+  </div>
+  <div class="body_container">
+    <br>
+    <br>
+    <div class="figure_container system_info" style="width:75%;">
+      <canvas id="canvas_mit"></canvas>
+      <canvas id="canvas_wip"></canvas>
+      <canvas id="canvas_hourly"></canvas>
+    </div>
+    <div class="figure_container component_info" style="width:75%;">
+    </div>
+  </div>
+  <script src="files/timecost.js"> </script>
+  <script>
+    let cur_legend = "duration";
+    let cur_start_t = moment().subtract(14, "day"), cur_end_t = moment(), cur_stepSize = 1;
+
+    window.myData = {
+      mit: [],
+      wip: [],
+      hourly: [],
+      unittest: {},
+      x_axis: []
+    };
+    window.myLine = {
+      system: {},
+      component: {}
+    };
+
+    let promise_arr = getPipelineData(cur_stepSize, cur_start_t, cur_end_t);
+
+    Promise.all(promise_arr).then((resolve, reject) => {
+  		console.log('done');
+
+      setPipelineChart('mit', 'canvas_mit', cur_legend);
+      setPipelineChart('wip', 'canvas_wip', cur_legend);
+      setPipelineChart('hourly', 'canvas_hourly', cur_legend);
+
+      getComponentData('component_info', cur_legend);
+      for (let cur_ut in window.myData.unittest) {
+        let canvas_name = "ut_" + cur_ut;
+        setComponentChart(cur_ut, canvas_name, cur_legend);
+      }
+      $('.component_info').addClass('info_box_hide');
+  	});
+
+    $('#system').click(function() {
+      $('.component_info').addClass('info_box_hide');
+      $('.system_info').removeClass('info_box_hide');
+    });
+
+    $('#component').click(function() {
+      $('.system_info').addClass('info_box_hide');
+      $('.component_info').removeClass('info_box_hide');
+    });
+
+    $('.specail_btn').click(function() {
+      let spanGaps = false;
+      if ($(this).hasClass("specail_btn_disable")) {
+        $(this).removeClass("specail_btn_disable");
+        $(this).text("show days with no data");
+        spanGaps = true;
+      } else {
+        $(this).addClass("specail_btn_disable");
+        $(this).text("hide days with no data");
+        spanGaps = false;
+      }
+      for (let info_type in window.myLine) {
+        for (let chart_name in window.myLine[info_type]) {
+          window.myLine[info_type][chart_name].chart.config.data.datasets.forEach(function(dataset) {
+            for (let i in dataset.data) {
+              if (spanGaps && dataset.data[i] == 0) {
+                dataset.data[i] = null;
+              } else if (!spanGaps && dataset.data[i] == null) {
+                dataset.data[i] = 0;
+              }
+            }
+          });
+          window.myLine[info_type][chart_name].chart.update();
+        }
+      }
+    });
+
+    $('.legend_btn').click(function() {
+      if ($(this).hasClass('legend_btn_choose')) return;
+      $('.legend_btn').removeClass('legend_btn_choose');
+      $(this).addClass('legend_btn_choose');
+    });
+
+    $('#show_box').change(function() {
+      cur_legend = $(this).val();
+      if (cur_legend.includes("count")) {
+        $('.specail_btn').addClass("specail_btn_hide");
+      } else {
+        $('.specail_btn').removeClass("specail_btn_hide");
+      }
+      for (let info_type in window.myLine) {
+        for (let chart_name in window.myLine[info_type]) {
+          window.myLine[info_type][chart_name].chart.config.data.datasets.forEach(function(dataset) {
+            dataset["hidden"] = !dataset["d_name"].endsWith(cur_legend);
+            window.myLine[info_type][chart_name].chart.getDatasetMeta(dataset["d_index"])["hidden"] =
+                !dataset["d_name"].endsWith(cur_legend);
+          });
+          window.myLine[info_type][chart_name].chart.update();
+        }
+      }
+    });
+
+    $('#step_box').change(function() {
+      let old_stepSize = cur_stepSize;
+      cur_stepSize = parseInt($(this).val());
+      let promise_arr = getPipelineData(cur_stepSize, cur_start_t, cur_end_t);
+
+      Promise.all(promise_arr).then((resolve, reject) => {
+        console.log('done');
+
+        setPipelineChart('mit', 'canvas_mit', cur_legend);
+        setPipelineChart('wip', 'canvas_wip', cur_legend);
+        setPipelineChart('hourly', 'canvas_hourly', cur_legend);
+
+        getComponentData('component_info', cur_legend);
+        for (let cur_ut in window.myData.unittest) {
+          let canvas_name = "ut_" + cur_ut;
+          setComponentChart(cur_ut, canvas_name, cur_legend);
+        }
+        for (let info_type in window.myLine) {
+          for (let chart_name in window.myLine[info_type]) {
+            let real_count_ticks = window.myLine[info_type][chart_name]
+                .chart.scales.count.options.ticks;
+            real_count_ticks.stepSize = Math.ceil(cur_stepSize * real_count_ticks.stepSize
+                  / old_stepSize);
+            real_count_ticks.max = real_count_ticks.stepSize * 10;
+
+            let count_ticks = window.myLine[info_type][chart_name]
+                .chart.config.options["scales"]["yAxes"][1]["ticks"];
+            count_ticks["stepSize"] = count_ticks["stepSize"];
+            count_ticks["max"] = count_ticks["max"];
+
+
+            window.myLine[info_type][chart_name].chart.update();
+          }
+        }
+      });
+    });
+  </script>
+</body>
+
+</html>

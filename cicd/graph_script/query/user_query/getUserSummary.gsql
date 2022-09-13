@@ -1,0 +1,57 @@
+DROP QUERY getUserSummary
+
+/*
+*  Get user weekly summary: how many success/failure mit/wip
+*/
+
+CREATE QUERY getUserSummary(STRING start_t = "", STRING end_t = "", INT num_days) FOR GRAPH mwh_graph {
+
+  // Declare sum accumulator to count mit/wip failure/success times
+  SumAccum<INT> @mitCount, @mitSuccessCount, @mitFailureCount;
+  SumAccum<INT> @wipCount, @wipSuccessCount, @wipFailureCount;
+
+  // Declare the datetime range
+  datetime start_dt, end_dt;
+
+  /*
+  *  Get start_dt and end_dt datetime
+  *  1. use num_days ago to get time range: days_ago_t --- now
+  *  2. specify time range: start_t --- end_t
+  *  now() will use UTC timezone and the diff between UTC and PDT timezone is 7 hour.
+  */
+  IF num_days != 0 THEN
+      end_dt = datetime_sub(now(), INTERVAL 7 HOUR);
+      start_dt = datetime_sub(end_dt, INTERVAL num_days DAY);
+  ELSE
+      end_dt = to_datetime(end_t);
+      start_dt = to_datetime(start_t);
+  END;
+
+  all_users = {user.*};
+
+  users = SELECT s
+           FROM all_users:s - (user_request_info) -> mwh_request:t
+           WHERE datetime_diff(t.start_t, start_dt) >= 0
+                 AND datetime_diff(t.start_t, end_dt) <= 0
+           ACCUM
+               CASE WHEN t.job_type == "mit" THEN
+                        CASE WHEN t.status == "SUCCESS" THEN
+                                s.@mitSuccessCount += 1
+                             WHEN t.status == "FAILURE" THEN
+                                s.@mitFailureCount += 1
+                        END,
+                        s.@mitCount += 1
+                    WHEN t.job_type == "wip" THEN
+                        CASE WHEN t.status == "SUCCESS" THEN
+                                s.@wipSuccessCount += 1
+                             WHEN t.status == "FAILURE" THEN
+                                s.@wipFailureCount += 1
+                        END,
+                        s.@wipCount += 1
+               END
+  ;
+
+  PRINT users;
+}
+
+INSTALL QUERY getUserSummary

@@ -1,0 +1,27 @@
+{"diskImage2Id": {
+  "centos7_disk_image_1":"99",
+  "centos7_disk_image_2":"134",
+  "centos7_disk_image_3":"135",
+  "centos7_disk_image_4":"136",
+  "centos7_disk_image_5":"137",
+  "centos7_disk_image_6":"138",
+  "centos7_disk_image_7":"139",
+  "centos7_disk_image_8":"140",
+  "ubuntu14_disk_image_1":"106",
+  "ubuntu14_disk_image_2":"120",
+  "ubuntu14_disk_image_3":"121",
+  "ubuntu14_disk_image_4":"122",
+  "ubuntu14_disk_image_5":"123",
+  "ubuntu14_disk_image_6":"124",
+  "ubuntu14_disk_image_7":"125",
+  "ubuntu14_disk_image_8":"126",
+  "ubuntu16_disk_image_1":"91",
+  "ubuntu16_disk_image_2":"127",
+  "ubuntu16_disk_image_3":"128",
+  "ubuntu16_disk_image_4":"129",
+  "ubuntu16_disk_image_5":"130",
+  "ubuntu16_disk_image_6":"131",
+  "ubuntu16_disk_image_7":"132",
+  "ubuntu16_disk_image_8":"133"
+  }
+}

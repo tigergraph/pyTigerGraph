@@ -1,0 +1,3 @@
+leak:ia_deserialize_string
+leak:deserialize_String_vector
+leak:__interceptor_calloc

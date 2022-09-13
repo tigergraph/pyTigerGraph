@@ -1,0 +1,43 @@
+DROP QUERY checkExpirationV2
+
+CREATE QUERY checkExpirationV2(INT time_remain = 0) FOR GRAPH mwh_graph {
+  // declare accumulator to store the job info
+  ListAccum<STRING> @user_name, @debug_start, @debug_end;
+
+  DATETIME cur_now, some_hours_later, some_hours_later2;
+  Jobs = {build_job.*, test_job.*};
+
+  /*
+  *  Get current datetime, beacuse the now() will use UTC timezone
+  *  and the diff between UTC and PDT timezone is 7 hour.
+  */
+  cur_now = datetime_sub(now(), INTERVAL 7 HOUR);
+  some_hours_later = datetime_add(cur_now, INTERVAL time_remain HOUR);
+  IF time_remain == 0 THEN
+      some_hours_later2 = epoch_to_datetime(0);
+  ELSE
+      some_hours_later2 = datetime_sub(some_hours_later, INTERVAL 1 MINUTE);
+  END;
+
+ /*
+ *  1. find the debug job and check if it expires
+ *  2. attach info from user vertex to the job vertex
+ *     calling query getUser4Job to get the user who started the job.
+ */
+  expiredJobs = SELECT s
+            FROM Jobs:s
+            WHERE s.debug_status == true
+                  AND datetime_diff(some_hours_later, s.debug_end) > 0
+                  AND datetime_diff(some_hours_later2, s.debug_end) < 0
+            ACCUM
+                  s.@debug_start += datetime_format(s.debug_start, "%Y-%m-%d %H:%M:%S"),
+                  s.@debug_end += datetime_format(s.debug_end, "%Y-%m-%d %H:%M:%S"),
+
+                  // get User4Job defined in internal_query/getUser4Job.gsql
+                  s.@user_name += getUser4Job(s)
+            ;
+
+  PRINT expiredJobs;
+}
+
+INSTALL QUERY checkExpirationV2

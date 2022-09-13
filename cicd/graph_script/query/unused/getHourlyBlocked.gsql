@@ -1,0 +1,36 @@
+DROP QUERY getHourlyBlocked
+
+/*
+*  print successful mit/wip ordered by timecost within a given period of time
+*/
+
+CREATE QUERY getHourlyBlocked(INT num_days) FOR GRAPH mwh_graph {
+
+  // Declare current datetime and datetime several days ago from now on.
+  datetime cur_now, several_days_ago;
+
+  /*
+  *  Get time cost of successfully mit/wip within a given period of time
+  */
+  S = {mwh_request.*};
+
+  /* Get current datetime, beacuse the now() will use UTC timezone
+  *  and the diff between UTC and PDT timezone is 7 hour.
+  */
+  cur_now = datetime_sub(now(), INTERVAL 7 HOUR);
+  several_days_ago = datetime_sub(cur_now, INTERVAL num_days DAY);
+
+
+  mwh = SELECT s
+       FROM S:s
+       // if the job start time is large than several_days_ago, it is the target.
+       WHERE s.status == "SUCCESS"
+            AND datetime_diff(s.start_t, several_days_ago) > 0
+            AND (s.job_type == "mit" OR s.job_type == "wip")
+            AND get_minutes(s.timecost) != datetime_diff(s.end_t, s.start_t) / 60
+       ORDER BY datetime_diff(s.end_t, s.start_t) DESC;
+
+  PRINT mwh;
+}
+
+INSTALL QUERY getHourlyBlocked

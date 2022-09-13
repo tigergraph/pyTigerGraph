@@ -1,0 +1,40 @@
+DROP QUERY getRunning
+
+/*
+*  Get running mwh_request
+*/
+CREATE QUERY getRunning() FOR GRAPH mwh_graph {
+  SetAccum<EDGE> @@connected_edges_job, @@connected_edges_user;
+
+  // declare current datetime
+  DATETIME cur_now;
+  all_mwh = {mwh_request.*};
+  all_jobs = {test_job.*, build_job.*};
+
+  /*
+  *  Get current datetime, beacuse the now() will use UTC timezone
+  *  and the diff between UTC and PDT timezone is 7 hour.
+  */
+  cur_now = datetime_sub(now(), INTERVAL 7 HOUR);
+
+  running_mwh = SELECT s
+          FROM all_mwh:s
+          WHERE s.status == "RUNNING";
+
+  running_job = SELECT s
+          FROM all_jobs:s - ((mwh_test_info|mwh_build_info):e) -> mwh_request:t
+          WHERE s.status == "RUNNING"
+          ACCUM @@connected_edges_job += e;
+
+  connected_user = SELECT t
+          FROM running_mwh:s - (user_request_info:e) -> user:t
+          ACCUM @@connected_edges_user += e;
+
+  PRINT running_mwh;
+  PRINT running_job;
+  PRINT @@connected_edges_job;
+  PRINT connected_user;
+  PRINT @@connected_edges_user;
+}
+
+INSTALL QUERY getRunning

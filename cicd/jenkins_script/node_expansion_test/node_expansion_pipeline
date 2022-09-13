@@ -1,0 +1,124 @@
+#!/bin/groovy
+//Covert map to list to be used in for loop due to Jenkins serialization issue with maps
+//issue: https://stackoverflow.com/questions/40159258/impossibility-to-iterate-over-a-map-using-groovy-within-jenkins-pipeline?rq=1
+@NonCPS
+def mapToList(depmap) {
+    println "In mapToList"
+    def dlist = []
+    for (def entry2 in depmap) {
+        dlist.add(new java.util.AbstractMap.SimpleImmutableEntry(entry2.key, entry2.value))
+    }
+    dlist
+}
+
+//update local repository
+def pull_from_github(directory, branch){
+  println "In pull_from_github"
+  sh """
+    pwd
+    set -ex
+    cd ${directory}
+    git reset --hard
+    git fetch --all
+    git checkout ${branch}
+    git pull
+  """
+}
+
+//setup cluster for node expansion test
+def setup_node_exp(tmd_dir, node_exp_dir, tmd_base_branch, log_dir, installation_url, os) {
+  println "In setup_node_exp"
+  pull_from_github(tmd_dir, tmd_base_branch)
+  sh """
+    set -ex
+    cd ${node_exp_dir}
+    mkdir -p ${log_dir}
+    if [ -n ${log_dir} ]; then
+      sudo rm -rf ${log_dir}/*
+    fi
+    sudo ./setup.sh -u "${installation_url}" -o ${os} -l ${log_dir} -t "tigergraph"
+  """
+}
+
+//cleanup environment on extra nodes
+def cleanup_extra_nodes(extraNodes, os, node_exp_dir, tmd_dir, tmd_base_branch) {
+  println "In cleanup_extra_nodes"
+  def extraNodes_array = extraNodes.tokenize(",")
+  println "extra nodes: ${extraNodes_array}"
+  for (def extr_node in extraNodes_array){
+    println "node: ${extr_node}"
+    node("expansion_${os}_${extr_node}") {
+      pull_from_github(tmd_dir, tmd_base_branch)
+      sh """
+         set -ex
+         if [ -f ~/.gium/guninstall ]; then
+           if [ -f ~/.gsql/gsql.cfg ]; then
+             ~/.gium/guninstall -sy
+           else
+             bash ${node_exp_dir}/remove_tigergraph.sh
+           fi
+         fi
+      """
+    }
+  }
+}
+
+//run node expansion test
+def run_exp_test(release_branch, log_dir, extra_nodes, node_exp_dir) {
+  println "In run_exp_test"
+  pull_from_github("~/product", release_branch)
+  sh """
+    set -ex
+    cd ~/product
+    ./gworkspace.sh -u >> ${log_dir}/gworkspace.log
+    cd ${node_exp_dir}
+    ./run.sh -c 2 -n ${extra_nodes} -u tigergraph -p tigergraph -l ${log_dir}
+  """
+}
+
+currentBuild.displayName = "#${currentBuild.number} EXPANSION"
+timestamps {
+  wrap([$class: 'AnsiColorBuildWrapper']) {
+    try {
+      println "In try"
+      def extraNodes = [
+        "centos7":"192.168.55.203,192.168.55.204,192.168.55.206",
+        "ubuntu16":"192.168.55.199,192.168.55.200,192.168.55.205"
+      ]
+      println "After define os and extraNodes"
+      def tests = [:]
+      println "Before for loop"
+      println "Extra nodes ${extraNodes}"
+      for ( def osNode in mapToList(extraNodes) ){
+        println "In for loop"
+        def this_os = "${osNode.key}"
+        def this_extraNodes = "${osNode.value}"
+        println "After define variables"
+        println "Log directory: ${LOG_DIR}"
+        println "${this_os}"
+        tests["${this_os}"] = {
+          node("${this_os}_expansion_master") {
+            println "In node"
+            stage ("Running cluster setup on ${this_os}") {
+              println "In stage"
+              setup_node_exp("${TMD_DIR}", "${NODE_EXPANSION_DIR}", "${TMD_BASE_BRANCH}", "${LOG_DIR}", "${INSTALLATION_URL}", "${this_os}")
+            }
+          }
+          stage ("Cleaning up extra nodes of ${this_os}"){
+            cleanup_extra_nodes(this_extraNodes, "${this_os}", "${NODE_EXPANSION_DIR}", "${TMD_DIR}", "${TMD_BASE_BRANCH}")
+          }
+          node("${this_os}_expansion_master"){
+            stage("Running Expansion test on ${this_os}"){
+              run_exp_test("${RELEASE_BRANCH}", "${LOG_DIR}", "${this_extraNodes}", "${NODE_EXPANSION_DIR}")
+            }
+          }
+        }
+      }
+      parallel tests
+      println "Node Expansion Test Successful."
+    } catch(err) {
+      println "Node Expansion Test Failed! Error: ${err}"
+      error "Node Expansion Test Failed!"
+    }
+  }
+}

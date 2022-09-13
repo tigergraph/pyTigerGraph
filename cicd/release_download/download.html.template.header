@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+<link rel="icon" href="./assets/img/cropped-icon-512-1-32x32.png" sizes="32x32" />
+<link rel="stylesheet" href="./assets/css/tg.css">
+<link rel="stylesheet" href="./assets/font/font-awesome-4.7.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="https://use.typekit.net/nzi0hja.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="logo">
+        <a href="https://www.tigergraph.com/" class="custom-logo-link" rel="home" aria-current="page"><img src="./assets/img/tg_logo.png"></a>
+      </div>
+    </div>
+  </header>
+  <div class="container">
+    <div class=" head_section">
+      <div class="head_content">
+        <p>Unleash the power of interconnected data for deeper insights and better outcomes with Native Parallel Graph™ technology</p>
+        <form method="get" id="form_latest" action="$LATEST_EDITION">
+          <a href="javascript:;" onclick="document.getElementById('form_latest').submit();">DOWNLOAD LATEST FREE EDITION</a>
+        </form>
+      </div>
+      <div class="head_content_img"> 
+        <img src="./assets/img/tg_load.png">
+      </div>
+    </div>
+  </div>
+  <section class="tab_section">
+    <div class="tab_head">
+      <h1>Current Releases</h1>
+      <hr>
+    </div>
+    <div class="container">
+      <div class="tab">
+        <button class="tablinks" onclick="tabhead(event, 'Enterprise')" id="tab_Enterprise">Enterprise Edition </button>
+        <button class="tablinks" onclick="tabhead(event, 'Docker')" id="tab_Docker">Docker Image</button>
+        <button class="tablinks" onclick="tabhead(event, 'GSQLClient')" id="tab_GSQLClient">GSQL Client</button>
+        <button class="tablinks" onclick="tabhead(event, 'MLWorkbench')"  id="tab_MLWorkbench">ML Workbench</button>
+      </div>
+    </div>

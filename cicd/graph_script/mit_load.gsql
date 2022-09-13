@@ -1,0 +1,63 @@
+DROP JOB all
+
+CREATE ONLINE_POST JOB loadUser FOR GRAPH mwh_graph {
+  LOAD TO VERTEX user VALUES ($0,$0,$1,$2,$3,$4);
+}
+RUN JOB loadUser USING FILENAME="./data/user.dat", SEPARATOR=",", EOL="\n"
+
+CREATE ONLINE_POST JOB loadNode FOR GRAPH mwh_graph {
+  LOAD TO VERTEX slave_node VALUES ($0,$0,$1,$2,$3,$4,$5);
+}
+RUN JOB loadNode USING FILENAME="./data/slave_node.dat", SEPARATOR=",", EOL="\n"
+
+CREATE ONLINE_POST JOB loadRepo FOR GRAPH mwh_graph {
+  LOAD TO VERTEX repo VALUES ($0,$0);
+}
+RUN JOB loadRepo USING FILENAME="./data/repo.dat", SEPARATOR=",", EOL="\n"
+
+/**
+CREATE ONLINE_POST JOB loadmwh FOR GRAPH mwh_graph {
+  LOAD TO VERTEX mwh_request VALUES (gsql_concat($1, $0),$0,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15);
+}
+RUN JOB loadmwh USING FILENAME="./data/mwh_request.dat", SEPARATOR=",", EOL="\n"
+
+CREATE ONLINE_POST JOB loadBuild FOR GRAPH mwh_graph {
+  LOAD TO VERTEX build_job VALUES ($0,$0,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11);
+}
+RUN JOB loadBuild USING FILENAME="./data/build_job.dat", SEPARATOR=",", EOL="\n"
+
+CREATE ONLINE_POST JOB loadTest FOR GRAPH mwh_graph {
+  LOAD TO VERTEX test_job VALUES ($0,$0,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13);
+}
+RUN JOB loadTest USING FILENAME="./data/test_job.dat", SEPARATOR=",", EOL="\n"
+
+CREATE ONLINE_POST JOB loadUserRequest FOR GRAPH mwh_graph {
+  LOAD TO EDGE user_request_info VALUES ($0,$1);
+}
+RUN JOB loadUserRequest USING FILENAME="./data/user_request_info.dat", SEPARATOR=",", EOL="\n"
+
+CREATE ONLINE_POST JOB loadmwhBuild FOR GRAPH mwh_graph {
+  LOAD TO EDGE mwh_build_info VALUES ($0,$1);
+}
+RUN JOB loadmwhBuild USING FILENAME="./data/mwh_build_info.dat", SEPARATOR=",", EOL="\n"
+
+CREATE ONLINE_POST JOB loadmwhTest FOR GRAPH mwh_graph {
+  LOAD TO EDGE mwh_test_info VALUES ($0,$1);
+}
+RUN JOB loadmwhTest USING FILENAME="./data/mwh_test_info.dat", SEPARATOR=",", EOL="\n"
+
+CREATE ONLINE_POST JOB loadBuildTest FOR GRAPH mwh_graph {
+  LOAD TO EDGE build_test_info VALUES ($0,$1);
+}
+RUN JOB loadBuildTest USING FILENAME="./data/build_test_info.dat", SEPARATOR=",", EOL="\n"
+
+CREATE ONLINE_POST JOB loadBuildNode FOR GRAPH mwh_graph {
+  LOAD TO EDGE build_node_info VALUES ($0,$1);
+}
+RUN JOB loadBuildNode USING FILENAME="./data/build_node_info.dat", SEPARATOR=",", EOL="\n"
+
+CREATE ONLINE_POST JOB loadTestNode FOR GRAPH mwh_graph {
+  LOAD TO EDGE test_node_info VALUES ($0,$1);
+}
+RUN JOB loadTestNode USING FILENAME="./data/test_node_info.dat", SEPARATOR=",", EOL="\n"
+**/

@@ -1,0 +1,38 @@
+DROP QUERY getDebugJob4Node
+
+/*
+*  Get debug job of the given node
+*/
+CREATE QUERY getDebugJob4Node(VERTEX<slave_node> node_name) FOR GRAPH mwh_graph {
+  MaxAccum<INT> @latest_debug;
+  // declare current datetime
+  DATETIME cur_now;
+  the_node = {node_name};
+
+  /*
+  *  Get current datetime, beacuse the now() will use UTC timezone
+  *  and the diff between UTC and PDT timezone is 7 hour.
+  */
+  cur_now = datetime_sub(now(), INTERVAL 7 HOUR);
+
+  /*
+  *  The debug_status might not be reset to false by mistakes. So this query need
+  *  have error tolerance.
+  *  1. find all target jobs with debug_status = true
+  *  2. maxAccum to get latest job with largest debug_start among step 1
+  *  3. check if debug_end of the latest_debug vertex is larger than now.
+  */
+  debugging_nodes = SELECT s
+           FROM the_node:s - ((build_node_info|test_node_info):e) -> :t
+           WHERE t.debug_status == true
+           ACCUM s.@latest_debug += datetime_to_epoch(t.debug_start);
+
+  debugging_jobs = SELECT t
+           FROM the_node:s - ((build_node_info|test_node_info):e) -> :t
+           WHERE t.debug_status == true AND datetime_to_epoch(t.debug_start) == s.@latest_debug
+                 AND datetime_diff(t.debug_end, cur_now) > 0;
+
+  PRINT debugging_jobs;
+}
+
+INSTALL QUERY getDebugJob4Node

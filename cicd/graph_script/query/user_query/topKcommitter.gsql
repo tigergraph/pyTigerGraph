@@ -1,0 +1,46 @@
+DROP QUERY topKcommitter
+
+/*
+*  Get top k committer: whose commit number is in top K in the given period of time.
+*/
+CREATE QUERY topKcommitter(STRING start_t = "", STRING end_t = "", INT num_days, INT topK) FOR GRAPH mwh_graph {
+  // count accumulator to count the commit number for each user
+  SumAccum<INT> @commit_count;
+
+  // Declare the datetime range
+  datetime start_dt, end_dt;
+
+  /*
+  *  Get start_dt and end_dt datetime
+  *  1. use num_days ago to get time range: days_ago_t --- now
+  *  2. specify time range: start_t --- end_t
+  *  now() will use UTC timezone and the diff between UTC and PDT timezone is 7 hour.
+  */
+  IF num_days != 0 THEN
+      end_dt = datetime_sub(now(), INTERVAL 7 HOUR);
+      start_dt = datetime_sub(end_dt, INTERVAL num_days DAY);
+  ELSE
+      end_dt = to_datetime(end_t);
+      start_dt = to_datetime(start_t);
+  END;
+
+  all_users = {user.*};
+
+  /*
+  *  find top k user
+  *  find valid mwh_request: 1. status == success 2. datetime in range (start_dt, end_dt)
+  *  count the valid mwh_request, sort by it and only select top k user.
+  */
+  k_users = SELECT s
+          FROM all_users:s - (user_request_info) -> mwh_request:t
+          WHERE t.job_type == "mit" AND t.status == "SUCCESS"
+                AND datetime_diff(t.start_t, start_dt) >= 0
+                AND datetime_diff(t.start_t, end_dt) <= 0
+          ACCUM s.@commit_count += 1
+          ORDER BY s.@commit_count DESC
+          LIMIT topK;
+
+  PRINT k_users;
+}
+
+INSTALL QUERY topKcommitter

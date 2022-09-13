@@ -1,0 +1,14 @@
+CREATE QUERY addUser(STRING user_name, STRING email, STRING jiraname="", STRING hipchatname="",STRING work_loc) FOR GRAPH mwh_graph { 
+  /* Write query logic here */ 
+  STRING jira_name, hipchat_name;
+  Users = {user.*};
+  if jiraname == "" then 
+    jira_name = user_name;
+  end;
+  if hipchatname == "" THEN
+    hipchat_name = user_name;
+  end;
+  INSERT INTO user VALUES ( user_name,user_name,email,jira_name,hipchat_name,work_loc );
+  name = SELECT s FROM Users:s WHERE s.user_name == user_name;
+  PRINT name;
+}

@@ -1,0 +1,32 @@
+DROP QUERY getTestDiff
+
+CREATE QUERY getTestDiff(STRING start_t = "", STRING end_t = "", STRING j_type = "mit,wip") FOR GRAPH mwh_graph {
+  MaxAccum<INT> @maxTestCost;
+  MinAccum<INT> @minTestCost;
+
+  datetime start_dt, end_dt;
+
+  IF start_t != "" AND end_t != "" THEN
+    end_dt = to_datetime(end_t);
+    start_dt = to_datetime(start_t);
+  ELSE
+    end_dt = datetime_sub(now(), INTERVAL 7 HOUR);
+  END;
+
+  S = {mwh_request.*};
+
+  all_mwh = SELECT s
+           FROM S:s - (mwh_test_info) -> test_job:t
+           WHERE s.status == "SUCCESS"
+                 AND (is_contains(j_type, s.job_type) OR j_type == "all")
+                 AND datetime_diff(s.start_t, start_dt) >= 0 AND datetime_diff(s.start_t, end_dt) <= 0
+                 AND s.message != "ignore"
+           ACCUM INT test_cost = get_minutes(t.timecost),
+                 s.@maxTestCost += test_cost,
+                 s.@minTestCost += test_cost
+           ORDER BY (s.@maxTestCost - s.@minTestCost) DESC;
+
+  PRINT all_mwh;
+}
+
+INSTALL QUERY getTestDiff

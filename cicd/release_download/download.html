@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+<link rel="icon" href="./assets/img/cropped-icon-512-1-32x32.png" sizes="32x32" />
+<link rel="stylesheet" href="./assets/css/tg.css">
+<link rel="stylesheet" href="./assets/font/font-awesome-4.7.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="https://use.typekit.net/nzi0hja.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="logo">
+        <a href="https://www.tigergraph.com/" class="custom-logo-link" rel="home" aria-current="page"><img src="./assets/img/tg_logo.png"></a>
+      </div>
+    </div>
+  </header>
+  <div class="container">
+    <div class=" head_section">
+      <div class="head_content">
+        <p>Unleash the power of interconnected data for deeper insights and better outcomes with Native Parallel Graph™ technology</p>
+        <form method="get" id="form_latest" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.6.0-offline.tar.gz">
+          <a href="javascript:;" onclick="document.getElementById('form_latest').submit();">DOWNLOAD LATEST FREE EDITION</a>
+        </form>
+      </div>
+      <div class="head_content_img"> 
+        <img src="./assets/img/tg_load.png">
+      </div>
+    </div>
+  </div>
+  <section class="tab_section">
+    <div class="tab_head">
+      <h1>Current Releases</h1>
+      <hr>
+    </div>
+    <div class="container">
+      <div class="tab">
+        <button class="tablinks" onclick="tabhead(event, 'Enterprise')" id="tab_Enterprise">Enterprise Edition </button>
+        <button class="tablinks" onclick="tabhead(event, 'Docker')" id="tab_Docker">Docker Image</button>
+        <button class="tablinks" onclick="tabhead(event, 'MLWorkbench')"  id="tab_MLWorkbench">ML Workbench</button>
+        <!--button class="tablinks" onclick="tabhead(event, 'VMImage')" id="tab_VMImage">VM Image </button>
+        <button class="tablinks" onclick="tabhead(event, 'Developer')" id="tab_Developer">Developer Edition</button-->
+      </div>
+    </div>
+
+    <!--Docker-->
+    <div id="Docker" class="tabcontent">
+      <h3>Docker image is available directly from Docker Hub: <span style="background-color:#27343b;color:#ffffff;font-weight:normal;"> docker pull tigergraph/tigergraph:latest </span><br> Please visit <a href="https://github.com/tigergraph/ecosys/blob/master/demos/guru_scripts/docker/README.md" target="_blank" rel="noopener"><span style="color: #f78117;">TigerGraph Ecosystem<span></span></span></a> for detailed instructions.</h3>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.6.0 Docker Image </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Docker_3_6_0_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.6.0-offline-docker-image.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Docker_3_6_0_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.6.0 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">3.81GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">df1beca7a113c4031c004d6ef7a0820d826d4a4f1821c5ce35352a8dcf95f72a</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.5.3 Docker Image </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Docker_3_5_3_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.5.3-offline-docker-image.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Docker_3_5_3_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.5.3 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">3.69GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">6b97e7f9677b2f9dd3672e3e4e3f4be36566e4ee0d68afb2b02db5a1b791f157</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.5.2 Docker Image </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Docker_3_5_2_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.5.2-offline-docker-image.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Docker_3_5_2_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.5.2 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">3.69GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">e8b120bdd63c5888d56cec7accc3f07ff37f143a9bfa50298b4c880ecf54dd66</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.5.1 Docker Image </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Docker_3_5_1_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.5.1-offline-docker-image.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Docker_3_5_1_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.5.1 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">3.50GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">1fe91e807b2a048ed5a0f4e540331d4a7d48c695f13f72dc3b3538390375502c</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.5.0 Docker Image </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Docker_3_5_0_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.5.0-offline-docker-image.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Docker_3_5_0_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.5.0 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">3.42GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">8992d32525803b6e4b2286a015351a2e5e347e0a7c771a47c252ad3cd71fc9ef</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.4.0 Docker Image </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Docker_3_4_0_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.4.0-offline-docker-image.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Docker_3_4_0_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.4.0 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">3.48GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">731d05cc860b5e903c20d650a30c4bff126617786b958dadbc0aa8e0ae50ad4f</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.3.0 Docker Image </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Docker_3_3_0_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.3.0-offline-docker-image.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Docker_3_3_0_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.3.0 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">3.12GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">3188a602b89caa40a706ed6f31517c95998efa1c13276965581f788f709e8f05</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.2.2 Docker Image </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Docker_3_2_2_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.2.2-offline-docker-image.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Docker_3_2_2_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.2.2 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">3.27GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">4f7a514019e0fbd31f32d28b86c36d503ebe2d50e926820e163d2cd1a6a767c1</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.2.1 Docker Image </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Docker_3_2_1_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.2.1-offline-docker-image.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Docker_3_2_1_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.2.1 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">3.16GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">c33fdca5c5a213bc775335c3c98a571c1a82881d99da3fb67bb503eed6ef10da</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.2.0 Docker Image </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Docker_3_2_0_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.2.1-offline-docker-image.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Docker_3_2_0_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.2.0 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">3.16GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">c33fdca5c5a213bc775335c3c98a571c1a82881d99da3fb67bb503eed6ef10da</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.1.6 Docker Image </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Docker_3_1_6_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.1.6-offline-docker-image.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Docker_3_1_6_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.1.6 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">3.02GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">853f105e896785cece166aef53710609287883d7936e8670d0e49dedcfe4f370</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.1.5 Docker Image </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Docker_3_1_5_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.1.5-offline-docker-image.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Docker_3_1_5_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.1.5 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">3.02GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">02e8c6e176ecc737af0b80fb93a84e00504316e955cbf23815fc7b7ce275e073</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.1.3 Docker Image </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Docker_3_1_3_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.1.3-offline-docker-image.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Docker_3_1_3_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.1.3 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">3.01GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">4e62a3bc44a96435c0edfe62101af75eef0052901f8b419fe46833436c943447</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.1.2 Docker Image </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Docker_3_1_2_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.1.2-offline-docker-image.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Docker_3_1_2_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.1.2 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">3.01GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">4dd7d9364da0634550ab86171424b8242546f9a931432065bfd48c0d39ac548e</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.1.1 Docker Image </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Docker_3_1_1_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.1.1-offline-docker-image.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Docker_3_1_1_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.1.1 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">3.01GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">5a404cb6c0275f0d3663ab334ca76a07af7d7f1a7037d5a3a7cb292ea011fc7a</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.1.0 Docker Image </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Docker_3_1_0_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.1.0-offline-docker-image.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Docker_3_1_0_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.1.0 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">2.99GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">dc4a7f14ab1c5b1edc6deb5be46f6e548291566fa3c3d2e660e3562338c05fd0</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+</div>
+    <!---Enterprise-->
+    <div id="Enterprise" class="tabcontent">
+      <h3>For paid edition, please visit  <a href="https://www.tigergraph.com/get-tigergraph/" target="_blank" rel="noopener"><span style="color: #f78117;">https://www.tigergraph.com</span></a>  for more information.</h3>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.6.0  </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Enterprise_3_6_0_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.6.0-offline.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Enterprise_3_6_0_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.6.0 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">3.20GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">cd5eb1dd7aa48a3d55996b18f01b2401665dc2f3f34886fb7f4b3362b03a3ef5</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.5.3  </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Enterprise_3_5_3_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.5.3-offline.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Enterprise_3_5_3_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.5.3 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">3.17GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">24f82308ce15014c11aceda9c788c4ffccad476715e5373ecbb5ec17269839a5</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.5.2  </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Enterprise_3_5_2_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.5.2-offline.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Enterprise_3_5_2_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.5.2 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">3.17GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">ac22daca20eca4343c2cfe51d01167058281dc5a9ded9a61cf14c2fb5230dde3</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.5.1  </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Enterprise_3_5_1_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.5.1-offline.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Enterprise_3_5_1_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.5.1 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">3.03GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">3b97312e503522315902eaae4405bfa1a49eadd75bade7df13c600030abdee92</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.5.0  </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Enterprise_3_5_0_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.5.0-offline.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Enterprise_3_5_0_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.5.0 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">3.03GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">2f992e40a4011abaa0d0a7e1f2f5afbff8072bfa148c14798dbcb779b81a59fb</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.4.0  </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Enterprise_3_4_0_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.4.0-offline.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Enterprise_3_4_0_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.4.0 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">3.02GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">b5bd1ee484cec71973ca978c01379582fd7ecc35d49cf1b4ba843a8862b96b1e</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.3.0  </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Enterprise_3_3_0_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.3.0-offline.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Enterprise_3_3_0_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.3.0 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">2.85GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">618c55d7f33e9cb8e3d23267a59b34932b4e552d8f6a9b1b7eeba0cab70ddcbf</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.2.3  </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Enterprise_3_2_3_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.2.3-offline.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Enterprise_3_2_3_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.2.3 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">2.86GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">cdc2fbdc556707cb31e96d754c3b9d17d49cbffee31fe09b2e80d0bb03660fce</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.2.2  </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Enterprise_3_2_2_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.2.2-offline.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Enterprise_3_2_2_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.2.2 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">2.86GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">d70438144f9eecccfd613169ec266bc0eebeb1b8b19ee2f405f782e1291516c5</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.2.1  </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Enterprise_3_2_1_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.2.1-offline.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Enterprise_3_2_1_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.2.1 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">2.86GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">a6ea8cec1d950e150c7d9d11bafcd2c5f112388562a6b03a8b41ffae464afa17</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.2.0  </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Enterprise_3_2_0_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.2.1-offline.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Enterprise_3_2_0_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.2.0 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">2.86GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">a6ea8cec1d950e150c7d9d11bafcd2c5f112388562a6b03a8b41ffae464afa17</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.1.6  </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Enterprise_3_1_6_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.1.6-offline.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Enterprise_3_1_6_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.1.6 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">2.73GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">9fede4c4a622eab67d3df3d0bf100091e4664c231da2500a16cdbe790892488f</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.1.5  </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Enterprise_3_1_5_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.1.5-offline.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Enterprise_3_1_5_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.1.5 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">2.73GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">639e0aa1f151521d5ca0a108c634885a5c714f72630db58e2abc7ae31a5194d8</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.1.3  </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Enterprise_3_1_3_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.1.3-offline.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Enterprise_3_1_3_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.1.3 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">2.72GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">44ff9682e7ab55a676cec87f42a7260d99aef319546ce41a9107b251250ca356</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.1.2  </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Enterprise_3_1_2_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.1.2-offline.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Enterprise_3_1_2_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.1.2 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">2.72GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">78e2d04289a2c6ff961aedb85561a58eacf17aa98d2bde035d3b418cc9f25dc7</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.1.1  </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Enterprise_3_1_1_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.1.1-offline.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Enterprise_3_1_1_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.1.1 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">2.72GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">891bfb2617d60cb4708c62fe0a4049f58273935b9ddb9050a15536455d2cf3ae</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph Enterprise Free Edition 3.1.0  </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_Enterprise_3_1_0_Linux" method="get" action="https://dl.tigergraph.com/enterprise-edition/tigergraph-3.1.0-offline.tar.gz">
+               <a href="javascript:{}" onclick="document.getElementById('form_Enterprise_3_1_0_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 3.1.0 (Enterprise Free Edition)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">2.70GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">f6af0c76eb19cc28986074aae247e59414ad0e6c8d7c6f41d337de9d8cb2ec41</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+</div>
+<!-- Starting TAB MLWorkbench -->
+<div id="MLWorkbench" class="tabcontent">
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph ML Workbench 0.9.0  </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Mac OS X</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_MLWorkbench_0_9_0_MacOSX" method="get" action="https://dl.tigergraph.com/mlworkbench/MLWorkbench-0.9.0-MacOSX-x86_64.sh">
+               <a href="javascript:{}" onclick="document.getElementById('form_MLWorkbench_0_9_0_MacOSX').submit();"><span class="oew-table-text-inner">  TigerGraph 0.9.0 (ML Workbench)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">.52GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">48ada14d109d7235559fb52d4c1a233acbf8b4fbf74f519741a694e9258f7b82</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="inner-tab">
+        <h2 class="inner-title">TigerGraph ML Workbench 0.9.0  </h2>	
+        <table class="oew-table oew-table-even">			
+          <thead>
+            <tr class="oew-table-row">
+            <th class="oew-table-cell elementor-repeater-item-504a04b"><span class="oew-table-text"><span class="oew-table-text-inner">OS</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba"><span class="oew-table-text oew-table-text"><span class="oew-table-text-inner">DOWNLOAD</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c"><span class="oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">SIZE</span></span></th><th class="oew-table-cell elementor-repeater-item-504a04b oew-table-cell elementor-repeater-item-64611ba oew-table-cell elementor-repeater-item-d6f2d9c oew-table-cell elementor-repeater-item-d565d48"><span class="oew-table-text oew-table-text oew-table-text oew-table-text"><span class="oew-table-text-inner">Sha256Sum</span></span></th>
+            </tr>
+          </thead>
+           <tbody>
+            <tr class="oew-table-row elementor-repeater-item-ce8a89f">
+             <td class="oew-table-cell elementor-repeater-item-707b39a" data-title="OS"><span class="oew-table-text"><span class="oew-table-text-inner">Linux</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-de530ec" data-title="DOWNLOAD">
+              <form id="form_MLWorkbench_0_9_0_Linux" method="get" action="https://dl.tigergraph.com/mlworkbench/MLWorkbench-0.9.0-Linux-x86_64.sh">
+               <a href="javascript:{}" onclick="document.getElementById('form_MLWorkbench_0_9_0_Linux').submit();"><span class="oew-table-text-inner">  TigerGraph 0.9.0 (ML Workbench)   <i class="fa fa-angle-down"></i></span></a>
+              </form>
+             </td>
+             <td class="oew-table-cell elementor-repeater-item-ee4b408" data-title="SIZE"><span class="oew-table-text"><span class="oew-table-text-inner">2.49GB</span></span></td>
+             <td class="oew-table-cell elementor-repeater-item-dbac82a" data-title="Sha256Sum"><span class="oew-table-text"><span class="oew-table-text-inner">1c9a7109d492c5df4dc4db1df2fbc5e53132a7e7d39af78a6e850554a8657764</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+</div>
+<script src="./assets/js/custom_js.js"></script>
+   
+</body>
+</html> 

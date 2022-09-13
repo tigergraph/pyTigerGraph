@@ -1,0 +1,237 @@
+@font-face {
+  font-family: "fontawesome";
+  src: url("../font/font-awesome-4.7.0/fonts/fontawesome-webfont.eot");
+  src: url("../font/font-awesome-4.7.0/fonts/fontawesome-webfont.woff") format("woff"),
+  url("../font/font-awesome-4.7.0/fonts/FontAwesome.otf") format("opentype"),
+  url("../font/font-awesome-4.7.0/fonts/fontawesome-webfont.svg") format("svg");
+  }
+body{
+  padding: 0;
+  margin: 0;
+}
+.container{
+  max-width: 1240px;
+  margin: 0 auto;
+}
+.head_section{
+  display: flex;
+}
+.head_content{
+    width: 50%;
+    padding-left: 80px;
+}
+.head_content_img{
+  width: 50%;
+}
+.tab {
+    overflow: hidden;
+    display: flex;
+  }
+  
+  /* Style the buttons inside the tab */
+  .tab button {
+    background-color: inherit;
+    float: left;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 11px 16px;
+    transition: 0.3s;
+    font-size: 20px;
+    line-height: 35px;
+    width: 100%;
+    color: #929292;
+    font-family: urbane;
+  }
+ 
+  /* Create an active/current tablink class */
+  .tab button.active {
+    background-color: #f78117;
+    color: #fff;
+  }
+  
+  /* Style the tab content */
+  .tabcontent {
+    display: none;
+    padding: 0px;    
+    max-width: 1240px;
+    margin: 0 auto;
+    
+  }
+  .inner-tab table {
+    width: 100%;
+  }
+  .inner-tab thead {
+    background-color: #ddd;
+  }
+  a {
+    text-decoration: none;
+}
+table a{
+  color: #4eb8d4;
+}
+table a:hover{
+  color: #f78117;
+}
+.head_content p {
+	font-size: 28px;
+  line-height: 36px;
+  font-family: urbane;
+}
+.head_content a {
+	font-size: 16px;
+	font-weight: 600;
+	line-height: 21px;
+	letter-spacing: 0.4px;
+	background-color: rgba(255, 255, 255, 0);
+	color: #000000;
+	border-style: solid;
+	border-width: 2px 2px 2px 2px;
+	border-radius: 0px 0px 0px 0px;
+  padding: 10px 10px 10px 10px;
+  border-color: #f78117;
+  font-family: urbane;
+}
+}
+.head_content a:hover{
+  background-color: #f78117;
+  color: #fff;
+}
+.tab_head h1 {
+	font-size: 35px;
+  line-height: 45px;
+  margin: 0;
+  font-family: urbane;
+  padding-bottom: 20px;
+  text-align: center;
+}
+.tabcontent h3 {
+	font-size: 14px;
+  line-height: 21px;
+  margin-bottom: 0px;
+  margin-top: 28px;
+  font-family: urbane;
+}
+td {
+	font-size: 14px;
+	line-height: 16px;
+}
+table, th, td {
+  border-collapse: collapse;
+  text-align: center;
+  padding: 12px 0px;
+  text-transform: uppercase;
+}
+th, td {
+	font-family: usual;
+	font-weight: 500;
+	font-size: 14px;
+	color: #6d6e71;
+}
+hr {
+	margin: 0;
+}
+.logo {
+	padding: 25px 0px;
+}
+.tab_section {
+  padding-top: 55px;
+  padding-bottom: 65px;
+}
+table {
+  border-bottom: 1px solid #f78117;
+}
+.inner-title {
+	margin-top: 30px;
+  margin-bottom: 18px;
+  font-family: urbane;
+  font-weight: 400;
+}
+.tab button::after, .head_content a::after {
+	content: '\f107';
+	font-family: fontawesome;
+	padding-left: 10px;
+	font-size: 19px;
+	font-weight: 800;
+}
+@media only screen and (max-width: 1300px) and (min-width: 1024px){
+  .tabcontent,.container{
+      width: 90%;
+  }
+}
+@media only screen and (max-width:1024px){
+  .container{
+    padding: 0 15px;
+  }
+}
+@media only screen and (max-width:767px){
+  .head_section {
+    display: flex;
+    flex-direction: column;
+  }
+  .head_content{
+    width: 100%;
+    padding: 0;
+    text-align: center;
+  }
+  .head_content_img {
+    width: 100%;
+    float: left;
+    padding-top: 43px;
+    text-align: center;
+  }
+  .tab{
+    flex-wrap: wrap;
+  }
+  table, th, td{
+    text-align: left;
+  }
+  .tab button::after{
+    display: block;
+  }  
+  .tab button{
+    width: 50%;
+    border: 2px solid #b3b3b3;
+    border-bottom: 4px solid #b3b3b3;
+  }
+  .inner-title{
+    text-align:center;
+  }  
+  .inner-tab table {
+    width: 100%;
+    display: flex;
+  }
+  th, td {
+    display: flex;
+}
+th,td{
+  padding: 12px 20px;
+}
+td {
+	word-wrap: anywhere;
+}
+.tabcontent h3{
+  text-align: center;
+}
+.tab button:nth-child(n+1) {
+	border-top: 0;
+}
+.tab button:nth-child(2n+1) {
+	border-left: 0;
+}
+.tab button:nth-child(2n+2) {
+	border-right: 0;
+}
+.head_content a{
+  font-size: 14px;
+}
+.tab_head h1 {
+	font-size: 28px;
+	line-height: 38px;
+  margin: 0;
+  padding-bottom: 23px;
+}
+.tab_section .container {
+	padding: 0;
+}
+}

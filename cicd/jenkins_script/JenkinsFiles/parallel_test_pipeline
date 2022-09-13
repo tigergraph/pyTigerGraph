@@ -1,0 +1,70 @@
+#!/bin/groovy
+
+JOB_ID = "test_job"
+ALL_USER_NAME = USER_NAME
+USER_NAME = USER_NAME.split(",")[0].replaceAll(/@.*/,"")
+
+if ( PARALLEL_INDEX =~ "#" ) {
+  currentBuild.displayName = "#${currentBuild.number} ${USER_NAME} sibling job " + "${PARALLEL_INDEX} for ${T_JOB_ID}#${T_BUILD_NUMBER}: ${UNITTESTS}"
+} else {
+  currentBuild.displayName = "#${currentBuild.number} ${USER_NAME} parallel job " + "${PARALLEL_INDEX} for ${T_JOB_ID}#${T_BUILD_NUMBER}: ${UNITTESTS}"
+}
+
+load("mit/jenkins_script/JenkinsFiles/src/init.groovy")
+
+timestamps {
+  wrap([$class: 'AnsiColorBuildWrapper']) {
+    lock('end2end_' + env.NODE_NAME) {
+      def start_t = new Date()
+
+      try {
+        UTIL = load("mit/jenkins_script/JenkinsFiles/src/util.groovy")
+        UTIL.init()
+        JOB = load("mit/jenkins_script/JenkinsFiles/src/job.groovy")
+        STAGE = load("mit/jenkins_script/JenkinsFiles/src/stage.groovy")
+      } catch (java.lang.Throwable error) {
+        println "exception caught:"
+        println error
+        throw error
+      }
+
+      try {
+        UTIL.pre_pipeline()
+        UTIL.before_test()
+        JOB.pre_job()
+      } catch (err) {
+        echo "Preparation before starting job failed due to: ${err.getMessage()} " 
+        JOB.job_failed(err)
+        //Update offline message
+        //  UTIL.sendToServer("/nodes/${NODE_NAME}/takeOffline", 'PUT', ["log_dir": log_dir + '/mit_log'
+        //      , "offline_message": "${USER_NAME} ${T_JOB_ID}#${T_BUILD_NUMBER} " +
+        //      "${JOB_ID}#${currentBuild.number} | ${PARAM} | ${UNITTESTS} | Cluster Debugging"])
+        throw err
+      }
+
+      //Remove unnecessary takeOnline here since it will be taken care of
+      //in job_success function when job succeeds. Just return if job finishes
+      //successfully and node is not m1.
+      if (currentBuild.result == 'SUCCESS') {
+        if (JOB_ID == "test_job" || (JOB_ID == "build_job" && !(params.BUILD_ONLY == "true" && params.NO_FAIL !="0"))) {
+          UTIL.sendToServer("/nodes/${NODE_NAME}/takeOnline", 'PUT', ["log_dir": log_dir + '/mit_log'])
+        }
+        return
+      }
+
+      try {
+        //STAGE.create_mark_tag()
+        JOB.stage_gtestspace()
+        JOB.stage_install()
+        JOB.stage_component_test()
+        JOB.stage_integration_test()
+        JOB.check_gle_constants()
+
+      } catch (err) {
+        JOB.job_failed(err)
+        throw err
+      }
+      JOB.job_success(start_t)
+    }
+  } //AnsiColorBuildWrapper
+} //timestamps
