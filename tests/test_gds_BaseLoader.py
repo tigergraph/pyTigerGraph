@@ -577,7 +577,7 @@ class TestGDSBaseLoader(unittest.TestCase):
         exit_event = Event()
         raw = (
             "People,99,1 0 0 1 ,1,0,Alex,1\nPeople,8,1 0 0 1 ,1,1,Bill,0\nCompany,2,0.3,0\n",
-            "Colleague,99,8,0.1,2021,1,0\nColleague,8,99,1.5,2020,0,1\nWork,99,2\nWork,2,8\n",
+            "Colleague,99,8,0.1,2021,1,0\nColleague,8,99,1.5,2020,0,1\nWork,99,2,a b \nWork,2,8,c d \n",
         )
         read_task_q.put(raw)
         read_task_q.put(None)
@@ -602,7 +602,7 @@ class TestGDSBaseLoader(unittest.TestCase):
             },
             {"Colleague": ["x", "time"]},
             {"Colleague": ["y"]},
-            {"Colleague": ["is_train"]},
+            {"Colleague": ["is_train"], "Work": ["category"]},
             {
                 "Colleague": {
                     "FromVertexTypeName": "People",
@@ -617,6 +617,7 @@ class TestGDSBaseLoader(unittest.TestCase):
                     "FromVertexTypeName": "People",
                     "ToVertexTypeName": "Company",
                     "IsDirected": False,
+                    "category": "LIST:STRING"
                 }
             },
             False,
@@ -640,7 +641,7 @@ class TestGDSBaseLoader(unittest.TestCase):
         assert_close_torch(data.nodes["People"].data["y"], torch.tensor([1, 1]))
         assert_close_torch(data.nodes["People"].data["train_mask"], torch.tensor([False, True]))
         assert_close_torch(data.nodes["People"].data["is_seed"], torch.tensor([True, False]))
-        self.assertListEqual(data.extra_data["name"], ["Alex", "Bill"])
+        self.assertListEqual(data.extra_data["People"]["name"], ["Alex", "Bill"])
         assert_close_torch(
             data.nodes["Company"].data["x"], torch.tensor([0.3], dtype=torch.double)
         )
@@ -648,6 +649,7 @@ class TestGDSBaseLoader(unittest.TestCase):
         assert_close_torch(
             data.edges(etype="Work"), (torch.tensor([0, 1]), torch.tensor([0, 0]))
         )
+        self.assertListEqual(data.extra_data["Work"]["category"], [['a', 'b'], ['c', 'd']])
         data = data_q.get()
         self.assertIsNone(data)
 
