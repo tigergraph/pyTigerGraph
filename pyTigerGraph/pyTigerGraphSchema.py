@@ -12,6 +12,7 @@ from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
 logger = logging.getLogger(__name__)
 
+
 class pyTigerGraphSchema(pyTigerGraphBase):
 
     def _getUDTs(self) -> dict:
