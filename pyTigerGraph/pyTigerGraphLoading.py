@@ -63,6 +63,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             logger.info("exit: runLoadingJobWithFile")
 
             return None
+            # TODO Should throw exception instead?
 
         res = self._post(self.restppUrl + "/ddl/" + self.graphname, params=params, data=data,
             headers={"RESPONSE-LIMIT": str(sizeLimit), "GSQL-TIMEOUT": str(timeout)})

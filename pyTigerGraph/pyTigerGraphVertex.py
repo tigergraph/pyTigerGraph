@@ -5,6 +5,7 @@ Functions to upsert, retrieve and delete vertices.
 All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object].
 """
 import json
+import logging
 import warnings
 
 from typing import TYPE_CHECKING, Union
@@ -16,8 +17,11 @@ from pyTigerGraph.pyTigerGraphException import TigerGraphException
 from pyTigerGraph.pyTigerGraphSchema import pyTigerGraphSchema
 from pyTigerGraph.pyTigerGraphUtils import pyTigerGraphUtils
 
+logger = logging.getLogger(__name__)
+
 
 class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
+
     def getVertexTypes(self, force: bool = False) -> list:
         """Returns the list of vertex type names of the graph.
 
@@ -29,9 +33,16 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         Returns:
             The list of vertex types defined in the current graph.
         """
+        logger.info("entry: getVertexTypes")
+        logger.debug("params: " + self._locals(locals()))
+
         ret = []
         for vt in self.getSchema(force=force)["VertexTypes"]:
             ret.append(vt["Name"])
+
+        logger.debug("return: " + str(ret))
+        logger.info("exit: getVertexTypes")
+
         return ret
 
     def getVertexType(self, vertexType: str, force: bool = False) -> dict:
@@ -47,11 +58,20 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         Returns:
             The metadata of the vertex type.
         """
+        logger.info("entry: getVertexType")
+        logger.debug("params: " + self._locals(locals()))
+
         for vt in self.getSchema(force=force)["VertexTypes"]:
             if vt["Name"] == vertexType:
+                logger.debug("return: " + str(vt))
+                logger.info("exit: getVertexType (found)")
+
                 return vt
+
+        logger.warning("Vertex type `" + vertexType + "` was not found.")
+        logger.info("exit: getVertexType (not found)")
+
         return {}  # Vertex type was not found
-        # TODO Should raise exception instead?
 
     def getVertexCount(self, vertexType: Union[str, list], where: str = "") -> Union[int, dict]:
         """Returns the number of vertices of the specified type.
@@ -84,11 +104,19 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             - `POST /builtins`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_built_in_functions_on_graph[Run built-in functions]
         """
+        logger.info("entry: getVertexCount")
+        logger.debug("params: " + self._locals(locals()))
+
         # If WHERE condition is not specified, use /builtins else use /vertices
         if isinstance(vertexType, str) and vertexType != "*":
             res = self._get(self.restppUrl + "/graph/" + self.graphname + "/vertices/" + vertexType
-                + "?count_only=true" + ("&filter=" + where if where else ""))[0]
-            return res["count"]
+                + "?count_only=true" + ("&filter=" + where if where else ""))[0]["count"]
+
+            logger.debug("return: " + str(res))
+            logger.info("exit: getVertexCount (1)")
+
+            return res
+
         if where:
             if vertexType == "*":
                 raise TigerGraphException(
@@ -96,16 +124,22 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             else:
                 raise TigerGraphException(
                     "VertexType cannot be a list if where condition is specified.", None)
+
         if vertexType == "*":
             # TODO Investigate: /builtins/stat_vertex_number: why it is not up-to-date after insert?
             # data = '{"function":"stat_vertex_number","type":"' + vertexType + '"}'
             # res = self._post(self.restppUrl + "/builtins/" + self.graphname, data=data)
             vertexType = self.getVertexTypes()
+
         ret = {}
         for vt in vertexType:
             res = self._get(self.restppUrl + "/graph/" + self.graphname + "/vertices/" + vt
                 + "?count_only=true")[0]
             ret[res["v_type"]] = res["count"]
+
+        logger.debug("return: " + str(ret))
+        logger.info("exit: getVertexCount (2)")
+
         return ret
 
     def upsertVertex(self, vertexType: str, vertexId: str, attributes: dict = None) -> int:
@@ -140,13 +174,18 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             - `POST /graph/{graph_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_upsert_data_to_graph[Upsert data to graph]
         """
-        if not isinstance(attributes, dict):
-            return None
-            # TODO Should return 0 or raise exception instead?
+        logger.info("entry: upsertVertex")
+        logger.debug("params: " + self._locals(locals()))
+
         vals = self._upsertAttrs(attributes)
         data = json.dumps({"vertices": {vertexType: {vertexId: vals}}})
-        return self._post(self.restppUrl + "/graph/" + self.graphname, data=data)[0][
-            "accepted_vertices"]
+
+        ret = self._post(self.restppUrl + "/graph/" + self.graphname, data=data)[0]["accepted_vertices"]
+
+        logger.debug("return: " + str(ret))
+        logger.info("exit: upsertVertex")
+
+        return ret
 
     def upsertVertices(self, vertexType: str, vertices: list) -> int:
         """Upserts multiple vertices (of the same type).
@@ -187,16 +226,21 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             - `POST /graph/{graph_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_upsert_data_to_graph[Upsert data to graph]
         """
-        if not isinstance(vertices, list):
-            return None
-            # TODO Should return 0 or raise exception instead?
+        logger.info("entry: upsertVertices")
+        logger.debug("params: " + self._locals(locals()))
+
         data = {}
         for v in vertices:
             vals = self._upsertAttrs(v[1])
             data[v[0]] = vals
         data = json.dumps({"vertices": {vertexType: data}})
-        return self._post(self.restppUrl + "/graph/" + self.graphname, data=data)[0][
-            "accepted_vertices"]
+
+        ret = self._post(self.restppUrl + "/graph/" + self.graphname, data=data)[0]["accepted_vertices"]
+
+        logger.debug("return: " + str(ret))
+        logger.info("exit: upsertVertices")
+
+        return ret
 
     def upsertVertexDataFrame(self, df: 'pd.DataFrame', vertexType: str, v_id: bool = None,
             attributes: dict = "") -> int:
@@ -219,6 +263,8 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         Returns:
             The number of vertices upserted.
         """
+        logger.info("entry: upsertVertexDataFrame")
+        logger.debug("params: " + self._locals(locals()))
 
         json_up = []
 
@@ -230,7 +276,12 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
                 else {target: json_up[-1][source] for target, source in attributes.items()}
             )
 
-        return self.upsertVertices(vertexType=vertexType, vertices=json_up)
+        ret = self.upsertVertices(vertexType=vertexType, vertices=json_up)
+
+        logger.debug("return: " + str(ret))
+        logger.info("exit: upsertVertexDataFrame")
+
+        return ret
 
     def getVertices(self, vertexType: str, select: str = "", where: str = "",
             limit: Union[int, str] = None, sort: str = "", fmt: str = "py", withId: bool = True,
@@ -277,6 +328,9 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             - `GET /graph/{graph_name}/vertices/{vertex_type}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_list_vertices[List vertices]
         """
+        logger.info("entry: getVertices")
+        logger.debug("params: " + self._locals(locals()))
+
         url = self.restppUrl + "/graph/" + self.graphname + "/vertices/" + vertexType
         isFirst = True
         if select:
@@ -297,9 +351,13 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         ret = self._get(url)
 
         if fmt == "json":
-            return json.dumps(ret)
-        if fmt == "df":
-            return self.vertexSetToDataFrame(ret, withId, withType)
+            ret = json.dumps(ret)
+        elif fmt == "df":
+            ret = self.vertexSetToDataFrame(ret, withId, withType)
+
+        logger.debug("return: " + str(ret))
+        logger.info("exit: getVertices")
+
         return ret
 
     def getVertexDataFrame(self, vertexType: str, select: str = "", where: str = "",
@@ -335,8 +393,16 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             The (selected) details of the (matching) vertex instances (sorted, limited) as pandas
             DataFrame.
         """
-        return self.getVertices(vertexType, select=select, where=where, limit=limit, sort=sort,
+        logger.info("entry: getVertexDataFrame")
+        logger.debug("params: " + self._locals(locals()))
+
+        ret = self.getVertices(vertexType, select=select, where=where, limit=limit, sort=sort,
             fmt="df", withId=True, withType=False, timeout=timeout)
+
+        logger.debug("return: " + str(ret))
+        logger.info("exit: getVertexDataFrame")
+
+        return ret
 
     def getVertexDataframe(self, vertexType: str, select: str = "", where: str = "",
             limit: Union[int, str] = None, sort: str = "", timeout: int = 0) -> 'pd.DataFrame':
@@ -347,6 +413,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         warnings.warn(
             "The `getVertexDataframe()` function is deprecated; use `getVertexDataFrame()` instead.",
             DeprecationWarning)
+
         return self.getVertexDataFrame(vertexType, select=select, where=where, limit=limit,
             sort=sort, timeout=timeout)
 
@@ -384,14 +451,14 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         TODO Find out how/if select and timeout can be specified
         """
+        logger.info("entry: getVerticesById")
+        logger.debug("params: " + self._locals(locals()))
+
         if not vertexIds:
             raise TigerGraphException("No vertex ID was specified.", None)
         vids = []
         if isinstance(vertexIds, (int, str)):
             vids.append(vertexIds)
-        elif not isinstance(vertexIds, list):
-            return None
-            # TODO Should return 0 or raise exception?
         else:
             vids = vertexIds
         url = self.restppUrl + "/graph/" + self.graphname + "/vertices/" + vertexType + "/"
@@ -401,9 +468,13 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             ret += self._get(url + self._safeChar(vid))
 
         if fmt == "json":
-            return json.dumps(ret)
-        if fmt == "df":
-            return self.vertexSetToDataFrame(ret, withId, withType)
+            ret = json.dumps(ret)
+        elif fmt == "df":
+            ret = self.vertexSetToDataFrame(ret, withId, withType)
+
+        logger.debug("return: " + str(ret))
+        logger.info("exit: getVerticesById")
+
         return ret
 
     def getVertexDataFrameById(self, vertexType: str, vertexIds: Union[int, str, list],
@@ -423,17 +494,27 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         Returns:
             The (selected) details of the (matching) vertex instances as pandas DataFrame.
         """
-        return self.getVerticesById(vertexType, vertexIds, select, fmt="df", withId=True,
+        logger.info("entry: getVertexDataFrameById")
+        logger.debug("params: " + self._locals(locals()))
+
+        ret = self.getVerticesById(vertexType, vertexIds, select, fmt="df", withId=True,
             withType=False)
+
+        logger.debug("return: " + str(ret))
+        logger.info("exit: getVertexDataFrameById")
+
+        return ret
 
     def getVertexDataframeById(self, vertexType: str, vertexIds: Union[int, str, list],
             select: str = "") -> 'pd.DataFrame':
         """DEPRECATED
 
         Use `getVertexDataFrameById()` instead.
-
-        TODO Proper deprecation
         """
+        warnings.warn(
+            "The `getVertexDataframeById()` function is deprecated; use `getVertexDataFrameById()` instead.",
+            DeprecationWarning)
+
         return self.getVertexDataFrameById(vertexType, vertexIds, select)
 
     def getVertexStats(self, vertexTypes: Union[str, list], skipNA: bool = False) -> dict:
@@ -454,16 +535,17 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             - `POST /builtins/{graph_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_built_in_functions_on_graph[Run built-in functions]
         """
+        logger.info("entry: getVertexStats")
+        logger.debug("params: " + self._locals(locals()))
+
         vts = []
         if vertexTypes == "*":
             vts = self.getVertexTypes()
         elif isinstance(vertexTypes, str):
             vts = [vertexTypes]
-        elif isinstance(vertexTypes, list):
-            vts = vertexTypes
         else:
-            return None
-            # TODO Should return {} or raise exception instead?
+            vts = vertexTypes
+
         ret = {}
         for vt in vts:
             data = '{"function":"stat_vertex_attr","type":"' + vt + '"}'
@@ -480,6 +562,10 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
                 res = res["results"]
                 for r in res:
                     ret[r["v_type"]] = r["attributes"]
+
+        logger.debug("return: " + str(ret))
+        logger.info("exit: getVertexStats")
+
         return ret
 
     def delVertices(self, vertexType: str, where: str = "", limit: str = "", sort: str = "",
@@ -520,6 +606,9 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             - `DELETE /graph/{graph_name}/vertices/{vertex_type}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_delete_vertices[Delete vertices]
         """
+        logger.info("entry: delVertices")
+        logger.debug("params: " + self._locals(locals()))
+
         url = self.restppUrl + "/graph/" + self.graphname + "/vertices/" + vertexType
         isFirst = True
         if where:
@@ -533,7 +622,13 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             isFirst = False
         if timeout and timeout > 0:
             url += ("?" if isFirst else "&") + "timeout=" + str(timeout)
-        return self._delete(url)["deleted_vertices"]
+
+        ret = self._delete(url)["deleted_vertices"]
+
+        logger.debug("return: " + str(ret))
+        logger.info("exit: delVertices")
+
+        return ret
 
     def delVerticesById(self, vertexType: str, vertexIds: Union[int, str, list],
             permanent: bool = False, timeout: int = 0) -> int:
@@ -557,16 +652,17 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             - `DELETE /graph/{graph_name}/vertices/{vertex_type}/{vertex_id}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_delete_a_vertex[Delete a vertex]
         """
+        logger.info("entry: delVerticesById")
+        logger.debug("params: " + self._locals(locals()))
+
         if not vertexIds:
             raise TigerGraphException("No vertex ID was specified.", None)
         vids = []
         if isinstance(vertexIds, (int, str)):
             vids.append(self._safeChar(vertexIds))
-        elif not isinstance(vertexIds, list):
-            return None
-            # TODO Should return 0 or raise an exception instead?
         else:
             vids = [self._safeChar(f) for f in vertexIds]
+
         url1 = self.restppUrl + "/graph/" + self.graphname + "/vertices/" + vertexType + "/"
         url2 = ""
         if permanent:
@@ -576,6 +672,10 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         ret = 0
         for vid in vids:
             ret += self._delete(url1 + str(vid) + url2)["deleted_vertices"]
+
+        logger.debug("return: " + str(ret))
+        logger.info("exit: delVerticesById")
+
         return ret
 
     # def delVerticesByType(self, vertexType: str, permanent: bool = False):
@@ -626,11 +726,15 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             A pandas DataFrame containing the vertex attributes (and optionally the vertex primary
             ID and type).
         """
+        logger.info("entry: vertexSetToDataFrame")
+        logger.debug("params: " + self._locals(locals()))
+
         try:
             import pandas as pd
         except ImportError:
             raise ImportError("Pandas is required to use this function. "
                 "Download pandas using 'pip install pandas'.")
+
         df = pd.DataFrame(vertexSet)
         cols = []
         if withId:
@@ -638,4 +742,10 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         if withType:
             cols.append(df["v_type"])
         cols.append(pd.DataFrame(df["attributes"].tolist()))
-        return pd.concat(cols, axis=1)
+
+        ret = pd.concat(cols, axis=1)
+
+        logger.debug("return: " + str(ret))
+        logger.info("exit: vertexSetToDataFrame")
+
+        return ret
