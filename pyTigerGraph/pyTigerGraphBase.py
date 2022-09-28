@@ -7,6 +7,7 @@ A TigerGraphConnection object provides the HTTP(S) communication used by all oth
 import base64
 import json
 import sys
+import warnings
 from typing import Union
 from urllib.parse import urlparse
 
@@ -26,11 +27,11 @@ def excepthook(type, value, traceback):
 
 class pyTigerGraphBase(object):
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
-            gsqlSecret: str = "", username: str = "tigergraph", password: str = "tigergraph", 
-            tgCloud: bool = False, restppPort: Union[int, str] = "9000", gsPort: Union[int, str] = "14240",
-            gsqlVersion: str = "", version: str = "", apiToken: str = "", useCert: bool = True,
-            certPath: str = None, debug: bool = False, sslPort: Union[int, str] = "443",
-            gcp: bool = False):
+            gsqlSecret: str = "", username: str = "tigergraph", password: str = "tigergraph",
+            tgCloud: bool = False, restppPort: Union[int, str] = "9000",
+            gsPort: Union[int, str] = "14240", gsqlVersion: str = "", version: str = "",
+            apiToken: str = "", useCert: bool = None, certPath: str = None, debug: bool = False,
+            sslPort: Union[int, str] = "443", gcp: bool = False):
         """Initiate a connection object.
 
         Args:
@@ -42,14 +43,15 @@ class pyTigerGraphBase(object):
                 The default graph for running queries.
             gsqlSecret:
                 The secret key for GSQL. See https://docs.tigergraph.com/tigergraph-server/current/user-access/managing-credentials#_secrets.
-                Required for GSQL authentication on TigerGraph Cloud instances created after July 5, 2022.
+                Required for GSQL authentication on TigerGraph Cloud instances created after
+                July 5, 2022.
             username:
                 The username on the TigerGraph server.
             password:
                 The password for that user.
             tgCloud:
-                Set to `True` if using TigerGraph Cloud. If your hostname contains `tgcloud`, then this is
-                automatically set to `True`, and you do not need to set this argument.
+                Set to `True` if using TigerGraph Cloud. If your hostname contains `tgcloud`, then
+                this is automatically set to `True`, and you do not need to set this argument.
             restppPort:
                 The port for REST++ queries.
             gsPort:
@@ -58,7 +60,7 @@ class pyTigerGraphBase(object):
                 The version of the GSQL client to be used. Effectively the version of the database
                 being connected to.
             version:
-                DEPRECATED; use `gsqlVersion()`.
+                DEPRECATED; use `gsqlVersion`.
             apiToken:
                 DEPRECATED; use `getToken()` with a secret to get a session token.
             useCert:
@@ -90,51 +92,68 @@ class pyTigerGraphBase(object):
             self.password = password
         self.graphname = graphname
 
+        # TODO Remove apiToken parameter
+        if apiToken:
+            warnings.warn(
+                "The `apiToken` parameter is deprecated; use `getToken()` function instead.",
+                DeprecationWarning)
         self.apiToken = apiToken
+
         # TODO Eliminate version and use gsqlVersion only, meaning TigerGraph server version
-        if gsqlVersion != "":
+        if gsqlVersion:
             self.version = gsqlVersion
-        elif version != "":
+        elif version:
+            warnings.warn(
+                "The `version` parameter is deprecated; use the `gsqlVersion` parameter instead.",
+                DeprecationWarning)
             self.version = version
         else:
             self.version = ""
         self.base64_credential = base64.b64encode(
             "{0}:{1}".format(self.username, self.password).encode("utf-8")).decode("utf-8")
         if self.apiToken:
-            self.authHeader = {'Authorization': "Bearer " + self.apiToken}
+            self.authHeader = {"Authorization": "Bearer " + self.apiToken}
         else:
-            self.authHeader = {'Authorization': 'Basic {0}'.format(self.base64_credential)}
+            self.authHeader = {"Authorization": "Basic {0}".format(self.base64_credential)}
 
         self.debug = debug
         if not self.debug:
             sys.excepthook = excepthook
             sys.tracebacklimit = None
         self.schema = None
-        self.downloadCert = useCert
+
+        # TODO Remove useCert parameter
+        if useCert is not None:
+            warnings.warn(
+                "The `useCert` parameter is deprecated; the need for a CA certificate is now determined by URL scheme.",
+                DeprecationWarning)
         if inputHost.scheme == "http":
             self.downloadCert = False
             self.useCert = False
-            self.certPath = ''
+            self.certPath = ""
         elif inputHost.scheme == "https":
             self.downloadCert = True
             self.useCert = True
             self.certPath = certPath
-        self.downloadJar = False
         self.sslPort = sslPort
 
         self.gsqlInitiated = False
 
         self.Client = None
 
+        # TODO Remove gcp parameter
+        if gcp:
+            warnings.warn("The `gcp` parameter is deprecated.", DeprecationWarning)
         self.tgCloud = tgCloud or gcp
         if "tgcloud" in self.netloc.lower():
-            try: # if get request succeeds, using TG Cloud instance provisioned before 6/20/2022
-                self._get(self.host + ":" + str(restppPort) + "/echo/" + graphname, resKey="message")
-            except requests.exceptions.RequestException: # if get request fails, using TG Cloud instance provisioned after 6/20/2022, after new firewall config
+            try:  # If get request succeeds, using TG Cloud instance provisioned after 6/20/2022
+                self._get(self.host + "/api/ping", resKey="message")
                 self.tgCloud = True
+            except requests.exceptions.RequestException:  # If get request fails, using TG Cloud instance provisioned before 6/20/2022, before new firewall config
+                self.tgCloud = False
             except TigerGraphException:
-                raise(TigerGraphException("Incorrect graphname."))
-        
+                raise (TigerGraphException("Incorrect graphname."))
+
         restppPort = str(restppPort)
         if self.tgCloud and (restppPort == "9000" or restppPort == "443"):
             # TODO Should not `sslPort` be used instead of hard coded value?
@@ -264,7 +283,7 @@ class pyTigerGraphBase(object):
         return res
 
     def _post(self, url: str, authMode: str = "token", headers: dict = None,
-            data: Union[dict, list, str] = None, resKey: str = "results", skipCheck: bool = False,
+            data: Union[dict, list, str, bytes] = None, resKey: str = "results", skipCheck: bool = False,
             params: Union[dict, list, str] = None) -> Union[dict, list]:
         """Generic POST method.
 

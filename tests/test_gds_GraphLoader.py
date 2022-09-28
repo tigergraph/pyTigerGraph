@@ -11,8 +11,8 @@ from torch_geometric.data import HeteroData as pygHeteroData
 class TestGDSGraphLoader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora")
-        # cls.conn.gsql("drop query all")
+        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
+        cls.conn.getToken(cls.conn.createSecret())
 
     def test_init(self):
         loader = GraphLoader(
@@ -27,7 +27,7 @@ class TestGDSGraphLoader(unittest.TestCase):
             add_self_loop=False,
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.82.171.137:9092",
+            kafka_address="kafka:9092",
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
         self.assertEqual(loader.num_batches, 11)
@@ -45,7 +45,7 @@ class TestGDSGraphLoader(unittest.TestCase):
             add_self_loop=False,
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.82.171.137:9092",
+            kafka_address="kafka:9092",
         )
         num_batches = 0
         for data in loader:
@@ -72,7 +72,7 @@ class TestGDSGraphLoader(unittest.TestCase):
             add_self_loop=False,
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.82.171.137:9092",
+            kafka_address="kafka:9092",
         )
         num_batches = 0
         for data in loader:
@@ -102,7 +102,7 @@ class TestGDSGraphLoader(unittest.TestCase):
             add_self_loop=False,
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.82.171.137:9092",
+            kafka_address="kafka:9092",
         )
         num_batches = 0
         for data in loader:
@@ -195,8 +195,8 @@ class TestGDSGraphLoader(unittest.TestCase):
 class TestGDSGraphLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora")
-        # cls.conn.gsql("drop query all")
+        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
+        cls.conn.getToken(cls.conn.createSecret())
 
     def test_init(self):
         loader = GraphLoader(
@@ -298,38 +298,34 @@ class TestGDSGraphLoaderREST(unittest.TestCase):
             num_batches += 1
         self.assertEqual(num_batches, 11)
 
-    def test_string_attr(self):
-        conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora2")
+    def test_list_string_attr(self):
+        conn = TigerGraphConnection(host="http://tigergraph", graphname="Social")
+        conn.getToken(conn.createSecret())
         loader = GraphLoader(
             graph=conn,
-            v_in_feats=["x"],
-            v_out_labels=["y"],
-            v_extra_feats=["train_mask", "val_mask", "test_mask", "name"],
+            v_in_feats=["age"],
+            v_extra_feats=["state"],
+            e_extra_feats=["duration"],
             num_batches=1,
             shuffle=False,
-            filter_by="train_mask",
             output_format="PyG",
-            add_self_loop=False,
-            loader_id=None,
-            buffer_size=4,
         )
         data = loader.data
         # print(data)
-        # print(data.name)
+        # print(data["state"])
+        # print(data["duration"])
         self.assertIsInstance(data, pygData)
-        self.assertIn("x", data)
-        self.assertIn("y", data)
-        self.assertIn("train_mask", data)
-        self.assertIn("val_mask", data)
-        self.assertIn("test_mask", data)
-        self.assertIn("name", data)
+        self.assertEqual(data["x"].shape[0], 7)
+        self.assertEqual(len(data["state"]), 7)
+        self.assertEqual(data["edge_index"].shape[1], 14)
+        self.assertEqual(len(data["duration"]), 14)
 
 
 class TestGDSHeteroGraphLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://35.230.92.92", graphname="hetero")
-        # cls.conn.gsql("drop query all")
+        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="hetero")
+        cls.conn.getToken(cls.conn.createSecret())
 
     def test_init(self):
         loader = GraphLoader(
@@ -449,13 +445,13 @@ if __name__ == "__main__":
     suite.addTest(TestGDSGraphLoader("test_iterate_pyg"))
     suite.addTest(TestGDSGraphLoader("test_iterate_df"))
     suite.addTest(TestGDSGraphLoader("test_edge_attr"))
-    suite.addTest(TestGDSGraphLoader("test_sasl_plaintext"))
-    suite.addTest(TestGDSGraphLoader("test_sasl_ssl"))
+    # suite.addTest(TestGDSGraphLoader("test_sasl_plaintext"))
+    # suite.addTest(TestGDSGraphLoader("test_sasl_ssl"))
     suite.addTest(TestGDSGraphLoaderREST("test_init"))
     suite.addTest(TestGDSGraphLoaderREST("test_iterate_pyg"))
     suite.addTest(TestGDSGraphLoaderREST("test_iterate_df"))
     suite.addTest(TestGDSGraphLoaderREST("test_edge_attr"))
-    suite.addTest(TestGDSGraphLoaderREST("test_string_attr"))
+    suite.addTest(TestGDSGraphLoaderREST("test_list_string_attr"))
     suite.addTest(TestGDSHeteroGraphLoaderREST("test_init"))
     suite.addTest(TestGDSHeteroGraphLoaderREST("test_iterate_pyg"))
     suite.addTest(TestGDSHeteroGraphLoaderREST("test_iterate_df"))

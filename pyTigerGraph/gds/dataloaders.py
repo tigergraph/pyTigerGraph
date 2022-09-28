@@ -23,6 +23,9 @@ if TYPE_CHECKING:
     from kafka import KafkaAdminClient, KafkaConsumer
     import torch
     import dgl
+    import tensorflow as tf
+    import spektral
+    import scipy
     import torch_geometric as pyg
     from typing import Literal
 
@@ -33,20 +36,8 @@ from ..pyTigerGraphException import TigerGraphException
 from .utilities import install_query_file, random_string
 
 __all__ = ["VertexLoader", "EdgeLoader", "NeighborLoader", "GraphLoader", "EdgeNeighborLoader"]
-__pdoc__ = {}
 
-_udf_funcs = {
-    "UINT": "int_to_string",
-    "INT": "int_to_string",
-    "BOOL": "bool_to_string",
-    "FLOAT": "float_to_string",
-    "DOUBLE": "float_to_string",
-    "LIST:UINT": "int_to_string",
-    "LIST:INT": "int_to_string",
-    "LIST:BOOL": "bool_to_string",
-    "LIST:FLOAT": "float_to_string",
-    "LIST:DOUBLE": "float_to_string",
-}
+RANDOM_TOPIC_LEN = 8
 
 
 class BaseLoader:
@@ -59,6 +50,7 @@ class BaseLoader:
         buffer_size: int = 4,
         output_format: str = "dataframe",
         reverse_edge: bool = False,
+        timeout: int = 300000,
         kafka_address: str = "",
         Kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -73,7 +65,10 @@ class BaseLoader:
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        timeout: int = 300000,
+        kafka_skip_produce: bool = False,
+        kafka_auto_offset_reset: str = "earliest",
+        kafka_del_topic_per_epoch: bool = False,
+        kafka_add_topic_per_epoch: bool = False
     ) -> None:
         """Base Class for data loaders.
 
@@ -103,9 +98,11 @@ class BaseLoader:
                 Format of the output data of the loader. Defaults to dataframe.
             reverse_edge (bool, optional):
                 Whether to traverse along reverse edge types. Defaults to False.
+            timeout (int, optional):
+                Timeout value for GSQL queries, in ms. Defaults to 300000.
             kafka_address (str):
                 Address of the Kafka broker. Defaults to localhost:9092.
-            max_kafka_msg_size (int, optional):
+            kafka_max_msg_size (int, optional):
                 Maximum size of a Kafka message in bytes.
                 Defaults to 104857600.
             kafka_num_partitions (int, optional):
@@ -138,8 +135,17 @@ class BaseLoader:
                 Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
             kafka_consumer_ca_location (str, optional):
                 Path to CA certificate on client machine for verifying the broker's key. 
-            timeout (int, optional):
-                Timeout value for GSQL queries, in ms. Defaults to 300000.
+            kafka_skip_produce (bool, optional):
+                Whether or not to skip calling the producer.
+            kafka_auto_offset_reset (str, optional):
+                Where to start for a new consumer. "earliest" will move to the oldest available message, 
+                "latest" will move to the most recent. Any other value will raise the exception.
+                Defaults to "earliest".
+            kafka_del_topic_per_epoch (bool, optional): 
+                Whether to delete the topic after each epoch. It is effective only when
+                `kafka_add_topic_per_epoch` is True. Defaults to False.
+            kafka_add_topic_per_epoch (bool, optional):  
+                Whether to add a topic for each epoch. Defaults to False.
         """
         # Thread to send requests, download and load data
         self._requester = None
@@ -151,22 +157,31 @@ class BaseLoader:
         self._read_task_q = None
         self._data_q = None
         self._kafka_topic = None
+        self._all_kafka_topics = set()
         # Exit signal to terminate threads
         self._exit_event = None
         # In-memory data cache. Only used if num_batches=1
         self._data = None
         # Kafka topic configs
+        self._kafka_admin = None
+        self._kafka_consumer = None
         self.kafka_partitions = kafka_num_partitions
         self.kafka_replica = kafka_replica_factor
         self.kafka_retention_ms = kafka_retention_ms
-        self.delete_kafka_topic = kafka_auto_del_topic
+        self.delete_all_topics = kafka_auto_del_topic
+        self.kafka_skip_produce = kafka_skip_produce
+        self.add_epoch_topic = kafka_add_topic_per_epoch
+        if self.add_epoch_topic:
+            self.delete_epoch_topic = kafka_del_topic_per_epoch
+        else:
+            self.delete_epoch_topic = False
         # Get graph info
         self.reverse_edge = reverse_edge
         self._graph = graph
         self._v_schema, self._e_schema = self._get_schema()
         # Initialize basic params
         if not loader_id:
-            self.loader_id = random_string(6)
+            self.loader_id = random_string(RANDOM_TOPIC_LEN)
         else:
             self.loader_id = loader_id
         self.num_batches = num_batches
@@ -196,7 +211,7 @@ class BaseLoader:
                     client_id=self.loader_id,
                     max_partition_fetch_bytes=Kafka_max_msg_size,
                     fetch_max_bytes=Kafka_max_msg_size,
-                    auto_offset_reset="earliest",
+                    auto_offset_reset=kafka_auto_offset_reset,
                     security_protocol=kafka_security_protocol,
                     sasl_mechanism=kafka_sasl_mechanism,
                     sasl_plain_username=kafka_sasl_plain_username,
@@ -244,12 +259,12 @@ class BaseLoader:
         # self._install_query()
 
     def __del__(self) -> NoReturn:
-        self._reset()
+        self._reset(theend=True)
 
     def _get_schema(self) -> Tuple[dict, dict]:
         v_schema = {}
         e_schema = {}
-        schema = self._graph.getSchema()
+        schema = self._graph.getSchema(force=True)
         # Get vertex schema
         for vtype in schema["VertexTypes"]:
             v = vtype["Name"]
@@ -359,49 +374,62 @@ class BaseLoader:
         self.query_name = ""
         raise NotImplementedError
 
+    def _set_kafka_topic(self) -> None:
+        # Generate kafka topic, add it to payload and consumer
+        # Generate topic
+        if self.add_epoch_topic:
+            kafka_topic = "{}_{}".format(self.loader_id, self._iterations)
+        else:
+            kafka_topic = self.loader_id
+        self._kafka_topic = kafka_topic
+        self._payload["kafka_topic"] = kafka_topic
+        self._all_kafka_topics.add(kafka_topic)
+        # Create topic if not exist
+        if kafka_topic not in self._kafka_admin.list_topics():
+            try:
+                from kafka.admin import NewTopic
+            except ImportError:
+                raise ImportError(
+                    "kafka-python is not installed. Please install it to use kafka streaming."
+                )
+            new_topic = NewTopic(
+                kafka_topic,
+                self.kafka_partitions,
+                self.kafka_replica,
+                topic_configs={
+                    "retention.ms": str(self.kafka_retention_ms),
+                    "max.message.bytes": str(self.max_kafka_msg_size),
+                },
+            )
+            resp = self._kafka_admin.create_topics([new_topic])
+            if resp.to_object()["topic_errors"][0]["error_code"] != 0:
+                raise ConnectionError(
+                    "Failed to create Kafka topic {} at {}.".format(
+                        kafka_topic, self._kafka_consumer.config["bootstrap_servers"]
+                    )
+                )
+            # Double check the topic is fully created
+            while not self._kafka_admin.describe_topics([kafka_topic])[0]["partitions"]:
+                sleep(1)
+        else:
+            # Topic exists. This means there might be data in kafka already. Skip 
+            # calling producer as default unless explicitely set otherwise.
+            if self.kafka_skip_produce is None:
+                self.kafka_skip_produce = True
+        # Subscribe to the topic
+        if (not self._kafka_consumer.subscription()) or kafka_topic not in self._kafka_consumer.subscription():
+            self._kafka_consumer.subscribe([kafka_topic])
+            _ = self._kafka_consumer.topics() # Call this to refresh metadata. Or the new subscription seems to be delayed.
+
     @staticmethod
     def _request_kafka(
         exit_event: Event,
         tgraph: "TigerGraphConnection",
         query_name: str,
-        kafka_consumer: "KafkaConsumer",
-        kafka_admin: "KafkaAdminClient",
-        kafka_topic: str,
-        kafka_partitions: int = 1,
-        kafka_replica: int = 1,
-        kafka_topic_size: int = 100000000,
-        kafka_retention_ms: int = 60000,
         timeout: int = 600000,
         payload: dict = {},
         headers: dict = {},
     ) -> NoReturn:
-        # Create topic if not exist
-        try:
-            from kafka.admin import NewTopic
-        except ImportError:
-            raise ImportError(
-                "kafka-python is not installed. Please install it to use kafka streaming."
-            )
-        if kafka_topic not in kafka_consumer.topics():
-            new_topic = NewTopic(
-                kafka_topic,
-                kafka_partitions,
-                kafka_replica,
-                topic_configs={
-                    "retention.ms": str(kafka_retention_ms),
-                    "max.message.bytes": str(kafka_topic_size),
-                },
-            )
-            resp = kafka_admin.create_topics([new_topic])
-            if resp.to_object()["topic_errors"][0]["error_code"] != 0:
-                raise ConnectionError(
-                    "Failed to create Kafka topic {} at {}.".format(
-                        kafka_topic, kafka_consumer.config["bootstrap_servers"]
-                    )
-                )
-        # Subscribe to the topic
-        kafka_consumer.subscribe([kafka_topic])
-        _ = kafka_consumer.topics() # Call this to refresh metadata. Or the new subscription seems to be delayed.
         # Run query async
         # TODO: change to runInstalledQuery when it supports async mode
         _headers = {"GSQL-ASYNC": "true", "GSQL-TIMEOUT": str(timeout)}
@@ -415,10 +443,18 @@ class BaseLoader:
             resKey=None
         )
         # Check status
-        _stat_payload = {
-            "graph_name": tgraph.graphname,
-            "requestid": resp["request_id"],
-        }
+        try:
+            _stat_payload = {
+                "graph_name": tgraph.graphname,
+                "requestid": resp["request_id"],
+            }
+        except KeyError:
+            if resp["results"][0]["kafkaError"] != '':
+                raise TigerGraphException(
+                    "Error writing to Kafka: {}".format(resp["results"][0]["kafkaError"])
+                )
+            return
+            
         while not exit_event.is_set():
             status = tgraph._get(
                 tgraph.restppUrl + "/query_status", params=_stat_payload
@@ -576,14 +612,14 @@ class BaseLoader:
         reindex: bool = True,
         primary_id: dict = {},
         is_hetero: bool = False
-    ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, pd.DataFrame], "dgl.DGLGraph", "pyg.data.Data",
+    ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, pd.DataFrame], "dgl.DGLGraph", "pyg.data.Data", "spektral.data.graph.Graph",
                dict, Tuple[dict, dict], "pyg.data.HeteroData"]:
         """Parse raw data into dataframes, DGL graphs, or PyG graphs.
         """    
         def attr_to_tensor(
             attributes: list, attr_types: dict, df: pd.DataFrame
         ) -> "torch.Tensor":
-            """Turn multiple columes of a dataframe into a tensor.
+            """Turn multiple columns of a dataframe into a tensor.
             """        
             x = []
             for col in attributes:
@@ -602,7 +638,13 @@ class BaseLoader:
                     x.append(df[[col]].astype("int8").to_numpy().astype(dtype))
                 else:
                     x.append(df[[col]].to_numpy().astype(dtype))
-            return torch.tensor(np.hstack(x)).squeeze(dim=1)
+            if mode == "pyg" or mode == "dgl":
+                return torch.tensor(np.hstack(x)).squeeze(dim=1)
+            elif mode == "spektral":
+                try:
+                    return np.squeeze(np.hstack(x), axis=1) #throws an error if axis isn't 1
+                except:
+                    return np.hstack(x)
 
         def add_attributes(attr_names: list, attr_types: dict, attr_df: pd.DataFrame, 
                            graph, is_hetero: bool, mode: str, feat_name: str, 
@@ -621,9 +663,12 @@ class BaseLoader:
                     elif target == "vertex":
                         data = graph[vetype]
                 elif mode == "dgl":
-                    raise NotImplementedError
+                    if target == "edge":
+                        data = graph.edges[vetype].data
+                    elif target == "vertex":
+                        data = graph.nodes[vetype].data
             else:
-                if mode == "pyg":
+                if mode == "pyg" or mode == "spektral":
                     data = graph
                 elif mode == "dgl":
                     if target == "edge":
@@ -650,9 +695,12 @@ class BaseLoader:
                     elif target == "vertex":
                         data = graph[vetype]
                 elif mode == "dgl":
-                    raise NotImplementedError
+                    if target == "edge":
+                        data = graph.edges[vetype].data
+                    elif target == "vertex":
+                        data = graph.nodes[vetype].data
             else:
-                if mode == "pyg":
+                if mode == "pyg" or mode == "spektral":
                     data = graph
                 elif mode == "dgl":
                     if target == "edge":
@@ -664,28 +712,62 @@ class BaseLoader:
                 dtype = attr_types[col].lower()
                 if dtype.startswith("str"):
                     if mode == "dgl":
-                        graph.extra_data[col] = attr_df[col].to_list()
-                    elif mode == "pyg":
+                        if vetype is None:
+                            # Homogeneous graph, add column directly to extra data
+                            graph.extra_data[col] = attr_df[col].to_list()
+                        elif vetype not in graph.extra_data:
+                            # Hetero graph, vetype doesn't exist in extra data
+                            graph.extra_data[vetype] = {}
+                            graph.extra_data[vetype][col] = attr_df[col].to_list()
+                        else: 
+                            # Hetero graph and vetype already exists
+                            graph.extra_data[vetype][col] = attr_df[col].to_list()
+                    elif mode == "pyg" or mode == "spektral":
                         data[col] = attr_df[col].to_list()
                 elif dtype.startswith("list"):
                     dtype2 = dtype.split(":")[1]
-                    data[col] = torch.tensor(
-                        attr_df[col]
-                        .str.split(expand=True)
-                        .to_numpy()
-                        .astype(dtype2)
-                    )
+                    if dtype2.startswith("str"):
+                        if mode == "dgl":
+                            if vetype is None:
+                                # Homogeneous graph, add column directly to extra data
+                                graph.extra_data[col] = attr_df[col].str.split().to_list()
+                            elif vetype not in graph.extra_data:
+                                # Hetero graph, vetype doesn't exist in extra data
+                                graph.extra_data[vetype] = {}
+                                graph.extra_data[vetype][col] = attr_df[col].str.split().to_list()
+                            else: 
+                                # Hetero graph and vetype already exists
+                                graph.extra_data[vetype][col] = attr_df[col].str.split().to_list()
+                        elif mode == "pyg" or mode == "spektral":
+                            data[col] = attr_df[col].str.split().to_list()
+                    else:
+                        if mode == "pyg" or mode == "dgl":
+                            data[col] = torch.tensor(
+                                attr_df[col]
+                                .str.split(expand=True)
+                                .to_numpy()
+                                .astype(dtype2)
+                            )
+                        elif mode == "spektral":
+                            data[col] = attr_df[col].str.split(expand=True).to_numpy().astype(dtype2)
                 elif dtype.startswith("set") or dtype.startswith("map") or dtype.startswith("date"):
                     raise NotImplementedError(
                         "{} type not supported for extra features yet.".format(dtype))
                 elif dtype == "bool":
-                    data[col] = torch.tensor(
-                        attr_df[col].astype("int8").astype(dtype)
-                    )
+                    if mode == "pyg" or mode == "dgl":
+                        data[col] = torch.tensor(
+                            attr_df[col].astype("int8").astype(dtype)
+                        )
+                    elif mode == "spektral":
+                        data[col] = attr_df[col].astype("int8").astype(dtype)
                 else:
-                    data[col] = torch.tensor(
-                        attr_df[col].astype(dtype)
-                    )
+                    if mode == "pyg" or mode == "dgl":
+                        data[col] = torch.tensor(
+                            attr_df[col].astype(dtype)
+                        )
+                    elif mode == "spektral":
+                        data[col] = attr_df[col].astype(dtype)
+        
         # Read in vertex and edge CSVs as dataframes              
         vertices, edges = None, None
         if in_format == "vertex":
@@ -775,15 +857,15 @@ class BaseLoader:
             raise NotImplementedError
         # Convert dataframes into PyG or DGL graphs
         if out_format.lower() == "pyg" or out_format.lower() == "dgl":
+            if vertices is None or edges is None:
+                raise ValueError(
+                    "Spektral, PyG, or DGL format can only be used with (sub)graph loaders."
+                )
             try:
                 import torch
             except ImportError:
                 raise ImportError(
                     "PyTorch is not installed. Please install it to use PyG or DGL output."
-                )
-            if vertices is None or edges is None:
-                raise ValueError(
-                    "PyG or DGL format can only be used with (sub)graph loaders."
                 )
             if out_format.lower() == "dgl":
                 try:
@@ -804,22 +886,50 @@ class BaseLoader:
                     raise ImportError(
                         "PyG is not installed. Please install PyG to use PyG format."
                     )
+        elif out_format.lower() == "spektral":
+            if vertices is None or edges is None:
+                raise ValueError(
+                    "Spektral, PyG, or DGL format can only be used with (sub)graph loaders."
+                )
+            try:
+                import tensorflow as tf
+            except ImportError:
+                raise ImportError(
+                    "Tensorflow is not installed. Please install it to use spektral output."
+                )
+            try:
+                import scipy
+            except ImportError:
+                raise ImportError(
+                    "scipy is not installed. Please install it to use spektral output."
+                )
+            try:
+                import spektral
+                mode = "spektral"
+            except ImportError:
+                raise ImportError(
+                    "Spektral is not installed. Please install it to use spektral output."
+                )
+        elif out_format.lower() == "dataframe":
+            return data
+        else:
+            raise NotImplementedError
+        # Reformat as a graph.
+        # Need to have a pair of tables for edges and vertices.
+        if not is_hetero:
+            # Deal with edgelist first
+            if reindex:
+                vertices["tmp_id"] = range(len(vertices))
+                id_map = vertices[["vid", "tmp_id"]]
+                edges = edges.merge(id_map, left_on="source", right_on="vid")
+                edges.drop(columns=["source", "vid"], inplace=True)
+                edges = edges.merge(id_map, left_on="target", right_on="vid")
+                edges.drop(columns=["target", "vid"], inplace=True)
+                edgelist = edges[["tmp_id_x", "tmp_id_y"]]
             else:
-                raise NotImplementedError
-            # Reformat as a graph.
-            # Need to have a pair of tables for edges and vertices.
-            if not is_hetero:
-                # Deal with edgelist first
-                if reindex:
-                    vertices["tmp_id"] = range(len(vertices))
-                    id_map = vertices[["vid", "tmp_id"]]
-                    edges = edges.merge(id_map, left_on="source", right_on="vid")
-                    edges.drop(columns=["source", "vid"], inplace=True)
-                    edges = edges.merge(id_map, left_on="target", right_on="vid")
-                    edges.drop(columns=["target", "vid"], inplace=True)
-                    edgelist = edges[["tmp_id_x", "tmp_id_y"]]
-                else:
-                    edgelist = edges[["source", "target"]]
+                edgelist = edges[["source", "target"]]
+
+            if mode == "dgl" or mode == "pyg":
                 edgelist = torch.tensor(edgelist.to_numpy().T, dtype=torch.long)
                 if mode == "dgl":
                     data = dgl.graph(data=(edgelist[0], edgelist[1]))
@@ -831,34 +941,51 @@ class BaseLoader:
                     if add_self_loop:
                         edgelist = add_self_loops(edgelist)[0]
                     data["edge_index"] = edgelist
-                del edgelist
-                # Deal with edge attributes
-                if e_in_feats:
-                    add_attributes(e_in_feats, e_attr_types, edges, 
-                                   data, is_hetero, mode, "edge_feat", "edge")
-                if e_out_labels:
-                    add_attributes(e_out_labels, e_attr_types, edges, 
-                                   data, is_hetero, mode, "edge_label", "edge")
-                if e_extra_feats:
-                    add_sep_attr(e_extra_feats, e_attr_types, edges,
-                                 data, is_hetero, mode, "edge")            
-                del edges
-                # Deal with vertex attributes next
-                if v_in_feats:
-                    add_attributes(v_in_feats, v_attr_types, vertices, 
-                                   data, is_hetero, mode, "x", "vertex")
-                if v_out_labels:
-                    add_attributes(v_out_labels, v_attr_types, vertices, 
-                                   data, is_hetero, mode, "y", "vertex")
-                if v_extra_feats:
-                    add_sep_attr(v_extra_feats, v_attr_types, vertices,
-                                 data, is_hetero, mode, "vertex")
-                del vertices
-            else:
-                # Heterogeneous graph
-                # Deal with edgelist first
-                edgelist = {}
-                if reindex:
+            elif mode == "spektral":
+                n_edges = len(edgelist)
+                n_vertices = len(vertices)
+                adjacency_data = [1 for i in range(n_edges)] #spektral adjacency format requires weights for each edge to initialize
+                adjacency = scipy.sparse.coo_matrix((adjacency_data, (edgelist["tmp_id_x"], edgelist["tmp_id_y"])), shape=(n_vertices, n_vertices))
+                if add_self_loop:
+                    adjacency = spektral.utils.add_self_loops(adjacency, value=1)
+                edge_index = np.stack((adjacency.row, adjacency.col), axis=-1)
+                data = spektral.data.graph.Graph(A=adjacency)
+            del edgelist     
+            # Deal with edge attributes
+            if e_in_feats:
+                add_attributes(e_in_feats, e_attr_types, edges, 
+                                data, is_hetero, mode, "edge_feat", "edge")
+                if mode == "spektral":
+                    edge_data = data["edge_feat"]
+                    edge_index, edge_data = spektral.utils.reorder(edge_index, edge_features=edge_data)
+                    n_edges = len(edge_index)
+                    data["e"] = np.array([[i] for i in edge_data]) #if something breaks when you add self-loops it's here
+                    adjacency_data = [1 for i in range(n_edges)]
+                    data["a"] = scipy.sparse.coo_matrix((adjacency_data, (edge_index[:, 0], edge_index[:, 1])), shape=(n_vertices, n_vertices))
+
+            if e_out_labels:
+                add_attributes(e_out_labels, e_attr_types, edges, 
+                                data, is_hetero, mode, "edge_label", "edge")
+            if e_extra_feats:
+                add_sep_attr(e_extra_feats, e_attr_types, edges,
+                            data, is_hetero, mode, "edge")            
+            del edges
+            # Deal with vertex attributes next
+            if v_in_feats:
+                add_attributes(v_in_feats, v_attr_types, vertices, 
+                                data, is_hetero, mode, "x", "vertex")
+            if v_out_labels:
+                add_attributes(v_out_labels, v_attr_types, vertices, 
+                                data, is_hetero, mode, "y", "vertex")
+            if v_extra_feats:
+                add_sep_attr(v_extra_feats, v_attr_types, vertices,
+                            data, is_hetero, mode, "vertex")
+            del vertices
+        else:
+            # Heterogeneous graph
+            # Deal with edgelist first
+            edgelist = {}
+            if reindex:
                     id_map = {}
                     for vtype in vertices:
                         vertices[vtype]["tmp_id"] = range(len(vertices[vtype]))
@@ -885,69 +1012,114 @@ class BaseLoader:
                                 subdf1 = pd.concat((subdf1, subdf2), ignore_index=True)
                             edges[etype] = subdf1
                             edgelist[etype] = edges[etype][["tmp_id_x", "tmp_id_y"]]
-                else:
-                    for etype in edges:
-                        edgelist[etype] = edges[etype][["source", "target"]]
+            else:
                 for etype in edges:
-                    edgelist[etype] = torch.tensor(edgelist[etype].to_numpy().T, dtype=torch.long)
-                if mode == "dgl":
-                    data.extra_data = {}
-                    raise NotImplementedError
-                elif mode == "pyg":
-                    data = pygHeteroData()
-                    for etype in edgelist:
-                        if add_self_loop:
-                            edgelist[etype] = add_self_loops(edgelist[etype])[0]
-                        data[e_attr_types[etype]["FromVertexTypeName"], 
-                             etype,
-                             e_attr_types[etype]["ToVertexTypeName"]].edge_index = edgelist[etype]
-                del edgelist
-                # Deal with edge attributes
-                if e_in_feats:
-                    for etype in edges:
-                        if etype not in e_in_feats:
-                            continue
-                        add_attributes(e_in_feats[etype], e_attr_types[etype], edges[etype], 
-                                       data, is_hetero, mode, "edge_feat", "edge", etype)
-                if e_out_labels:
-                    for etype in edges:
-                        if etype not in e_out_labels:
-                            continue
-                        add_attributes(e_out_labels[etype], e_attr_types[etype], edges[etype], 
-                                       data, is_hetero, mode, "edge_label", "edge", etype)
-                if e_extra_feats:
-                    for etype in edges:
-                        if etype not in e_extra_feats:
-                            continue
-                        add_sep_attr(e_extra_feats[etype], e_attr_types[etype], edges[etype],
-                                     data, is_hetero, mode, "edge", etype)   
-                del edges
-                # Deal with vertex attributes next
-                if v_in_feats:
-                    for vtype in vertices:
-                        if vtype not in v_in_feats:
-                            continue
-                        add_attributes(v_in_feats[vtype], v_attr_types[vtype], vertices[vtype], 
-                                       data, is_hetero, mode, "x", "vertex", vtype)
-                if v_out_labels:
-                    for vtype in vertices:
-                        if vtype not in v_out_labels:
-                            continue
-                        add_attributes(v_out_labels[vtype], v_attr_types[vtype], vertices[vtype], 
-                                       data, is_hetero, mode, "y", "vertex", vtype)
-                if v_extra_feats:
-                    for vtype in vertices:
-                        if vtype not in v_extra_feats:
-                            continue
-                        add_sep_attr(v_extra_feats[vtype], v_attr_types[vtype], vertices[vtype],
-                                     data, is_hetero, mode, "vertex", vtype)   
-                del vertices
-        elif out_format.lower() == "dataframe":
-            pass
-        else:
-            raise NotImplementedError
-
+                    edgelist[etype] = edges[etype][["source", "target"]]
+            for etype in edges:
+                edgelist[etype] = torch.tensor(edgelist[etype].to_numpy().T, dtype=torch.long)
+            if mode == "dgl":
+                data = dgl.heterograph({
+                    (e_attr_types[etype]["FromVertexTypeName"], etype, e_attr_types[etype]["ToVertexTypeName"]): (edgelist[etype][0], edgelist[etype][1]) for etype in edgelist})
+                if add_self_loop:
+                    data = dgl.add_self_loop(data)
+                data.extra_data = {}
+            elif mode == "pyg":
+                data = pygHeteroData()
+                for etype in edgelist:
+                    if add_self_loop:
+                        edgelist[etype] = add_self_loops(edgelist[etype])[0]
+                    data[e_attr_types[etype]["FromVertexTypeName"], 
+                        etype,
+                        e_attr_types[etype]["ToVertexTypeName"]].edge_index = edgelist[etype]
+            elif mode == "spektral":
+                raise NotImplementedError
+            del edgelist
+            # Deal with edge attributes
+            if e_in_feats:
+                for etype in edges:
+                    if etype not in e_in_feats:
+                        continue
+                    add_attributes(e_in_feats[etype], e_attr_types[etype], edges[etype], 
+                                    data, is_hetero, mode, "edge_feat", "edge", etype)
+            if e_out_labels:
+                for etype in edges:
+                    if etype not in e_out_labels:
+                        continue
+                    add_attributes(e_out_labels[etype], e_attr_types[etype], edges[etype], 
+                                    data, is_hetero, mode, "edge_label", "edge", etype)
+            if e_extra_feats:
+                for etype in edges:
+                    if etype not in e_extra_feats:
+                        continue
+                    add_sep_attr(e_extra_feats[etype], e_attr_types[etype], edges[etype],
+                                data, is_hetero, mode, "edge", etype)   
+            del edges
+            # Deal with vertex attributes next
+            if v_in_feats:
+                for vtype in vertices:
+                    if vtype not in v_in_feats:
+                        continue
+                    add_attributes(v_in_feats[vtype], v_attr_types[vtype], vertices[vtype], 
+                                    data, is_hetero, mode, "x", "vertex", vtype)
+            if v_out_labels:
+                for vtype in vertices:
+                    if vtype not in v_out_labels:
+                        continue
+                    add_attributes(v_out_labels[vtype], v_attr_types[vtype], vertices[vtype], 
+                                    data, is_hetero, mode, "y", "vertex", vtype)
+            if v_extra_feats:
+                for vtype in vertices:
+                    if vtype not in v_extra_feats:
+                        continue
+                    add_sep_attr(v_extra_feats[vtype], v_attr_types[vtype], vertices[vtype],
+                                data, is_hetero, mode, "vertex", vtype)   
+            del vertices
         return data
+
+    def _start_request(self, out_tuple: bool, resp_type: str):
+        # If using kafka
+        if self.kafka_address_consumer:
+            # Generate topic
+            self._set_kafka_topic()
+            # Start consumer thread
+            self._downloader = Thread(
+                target=self._download_from_kafka,
+                args=(
+                    self._exit_event,
+                    self._read_task_q,
+                    self.num_batches,
+                    out_tuple,
+                    self._kafka_consumer,
+                ),
+            )
+            self._downloader.start()
+            # Start requester thread
+            if not self.kafka_skip_produce:
+                self._requester = Thread(
+                    target=self._request_kafka,
+                    args=(
+                        self._exit_event,
+                        self._graph,
+                        self.query_name,
+                        self.timeout,
+                        self._payload,
+                    ),
+                )
+                self._requester.start()
+        else:
+            # Otherwise, use rest api
+            self._requester = Thread(
+                target=self._request_rest,
+                args=(
+                    self._graph,
+                    self.query_name,
+                    self._read_task_q,
+                    self.timeout,
+                    self._payload,
+                    resp_type,
+                ),
+            )
+            self._requester.start()
 
     def _start(self) -> None:
         # This is a template. Implement your own logics here.
@@ -1008,7 +1180,7 @@ class BaseLoader:
         else:
             return self
 
-    def _reset(self) -> None:
+    def _reset(self, theend=False) -> None:
         logging.debug("Resetting the loader")
         if self._exit_event:
             self._exit_event.set()
@@ -1044,9 +1216,21 @@ class BaseLoader:
             None,
             None,
         )
-        if self.delete_kafka_topic:
-            if self._kafka_topic:
+        if theend:
+            if self._kafka_topic and self._kafka_consumer:
                 self._kafka_consumer.unsubscribe()
+            if self.delete_all_topics and self._kafka_admin:
+                topics_to_delete = self._all_kafka_topics.intersection(self._kafka_admin.list_topics())
+                resp = self._kafka_admin.delete_topics(list(topics_to_delete))
+                for del_res in resp.to_object()["topic_error_codes"]:
+                    if del_res["error_code"] != 0:
+                        raise TigerGraphException(
+                            "Failed to delete topic {}".format(del_res["topic"])
+                        )
+        else:
+            if self.delete_epoch_topic and self._kafka_admin:
+                if self._kafka_topic and self._kafka_consumer:
+                    self._kafka_consumer.unsubscribe()
                 resp = self._kafka_admin.delete_topics([self._kafka_topic])
                 del_res = resp.to_object()["topic_error_codes"][0]
                 if del_res["error_code"] != 0:
@@ -1122,6 +1306,7 @@ class NeighborLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -1136,7 +1321,10 @@ class NeighborLoader(BaseLoader):
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        timeout: int = 300000,
+        kafka_skip_produce: bool = False,
+        kafka_auto_offset_reset: str = "earliest",
+        kafka_del_topic_per_epoch: bool = False,
+        kafka_add_topic_per_epoch: bool = False
     ) -> None:
         """NO DOC"""
 
@@ -1147,6 +1335,7 @@ class NeighborLoader(BaseLoader):
             buffer_size,
             output_format,
             reverse_edge,
+            timeout,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
@@ -1161,7 +1350,10 @@ class NeighborLoader(BaseLoader):
             kafka_sasl_plain_password,
             kafka_producer_ca_location,
             kafka_consumer_ca_location,
-            timeout,
+            kafka_skip_produce,
+            kafka_auto_offset_reset,
+            kafka_del_topic_per_epoch,
+            kafka_add_topic_per_epoch
         )
         # Resolve attributes
         is_hetero = any(map(lambda x: isinstance(x, dict), 
@@ -1192,6 +1384,8 @@ class NeighborLoader(BaseLoader):
         else:
             self._vtypes = list(self._v_schema.keys())
             self._etypes = list(self._e_schema.keys())
+        self._vtypes = sorted(self._vtypes)
+        self._etypes = sorted(self._etypes)
         # Resolve seeds
         if batch_size:
             # If batch_size is given, calculate the number of batches
@@ -1257,7 +1451,7 @@ class NeighborLoader(BaseLoader):
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
+                        "stringify(s.{})".format(attr)
                         for attr in v_attr_names
                     )
                     print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + ",1\\n")\n'.format(
@@ -1285,7 +1479,7 @@ class NeighborLoader(BaseLoader):
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
+                        "stringify(e.{})".format(attr)
                         for attr in e_attr_names
                     )
                     print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")\n'.format(
@@ -1303,7 +1497,7 @@ class NeighborLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
+                    "stringify(s.{})".format(attr)
                     for attr in v_attr_names
                 )
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + ",1\\n")'.format(
@@ -1325,7 +1519,7 @@ class NeighborLoader(BaseLoader):
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
+                    "stringify(e.{})".format(attr)
                     for attr in e_attr_names
                 )
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")'.format(
@@ -1350,56 +1544,7 @@ class NeighborLoader(BaseLoader):
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
-        # Start requesting thread.
-        if self.kafka_address_consumer:
-            # If using kafka
-            self._kafka_topic = "{}_{}".format(self.loader_id, self._iterations)
-            self._payload["kafka_topic"] = self._kafka_topic
-            self._requester = Thread(
-                target=self._request_kafka,
-                args=(
-                    self._exit_event,
-                    self._graph,
-                    self.query_name,
-                    self._kafka_consumer,
-                    self._kafka_admin,
-                    self._kafka_topic,
-                    self.kafka_partitions,
-                    self.kafka_replica,
-                    self.max_kafka_msg_size,
-                    self.kafka_retention_ms,
-                    self.timeout,
-                    self._payload,
-                ),
-            )
-        else:
-            # Otherwise, use rest api
-            self._requester = Thread(
-                target=self._request_rest,
-                args=(
-                    self._graph,
-                    self.query_name,
-                    self._read_task_q,
-                    self.timeout,
-                    self._payload,
-                    "both",
-                ),
-            )
-        self._requester.start()
-
-        # If using Kafka, start downloading thread.
-        if self.kafka_address_consumer:
-            self._downloader = Thread(
-                target=self._download_from_kafka,
-                args=(
-                    self._exit_event,
-                    self._read_task_q,
-                    self.num_batches,
-                    True,
-                    self._kafka_consumer,
-                ),
-            )
-            self._downloader.start()
+        self._start_request(True, "both")
 
         # Start reading thread.
         if not self.is_hetero:
@@ -1605,6 +1750,7 @@ class EdgeLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -1619,7 +1765,10 @@ class EdgeLoader(BaseLoader):
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        timeout: int = 300000,
+        kafka_skip_produce: bool = False,
+        kafka_auto_offset_reset: str = "earliest",
+        kafka_del_topic_per_epoch: bool = False,
+        kafka_add_topic_per_epoch: bool = False
     ) -> None:
         """
         NO DOC.
@@ -1631,6 +1780,7 @@ class EdgeLoader(BaseLoader):
             buffer_size,
             output_format,
             reverse_edge,
+            timeout,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
@@ -1645,7 +1795,10 @@ class EdgeLoader(BaseLoader):
             kafka_sasl_plain_password,
             kafka_producer_ca_location,
             kafka_consumer_ca_location,
-            timeout,
+            kafka_skip_produce,
+            kafka_auto_offset_reset,
+            kafka_del_topic_per_epoch,
+            kafka_add_topic_per_epoch
         )
         # Resolve attributes
         is_hetero = isinstance(attributes, dict)
@@ -1657,6 +1810,7 @@ class EdgeLoader(BaseLoader):
                 self._etypes = list(self._e_schema.keys())
         else:
             self._etypes = list(self._e_schema.keys())
+        self._etypes = sorted(self._etypes)
         # Initialize parameters for the query
         if batch_size:
             # If batch_size is given, calculate the number of batches
@@ -1693,7 +1847,7 @@ class EdgeLoader(BaseLoader):
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
+                        "stringify(e.{})".format(attr)
                         for attr in e_attr_names
                     )
                     print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")\n'.format(
@@ -1711,7 +1865,7 @@ class EdgeLoader(BaseLoader):
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
+                    "stringify(e.{})".format(attr)
                     for attr in e_attr_names
                 )
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")'.format(
@@ -1736,56 +1890,7 @@ class EdgeLoader(BaseLoader):
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
-        # Start requesting thread.
-        if self.kafka_address_consumer:
-            # If using kafka
-            self._kafka_topic = "{}_{}".format(self.loader_id, self._iterations)
-            self._payload["kafka_topic"] = self._kafka_topic
-            self._requester = Thread(
-                target=self._request_kafka,
-                args=(
-                    self._exit_event,
-                    self._graph,
-                    self.query_name,
-                    self._kafka_consumer,
-                    self._kafka_admin,
-                    self._kafka_topic,
-                    self.kafka_partitions,
-                    self.kafka_replica,
-                    self.max_kafka_msg_size,
-                    self.kafka_retention_ms,
-                    self.timeout,
-                    self._payload,
-                ),
-            )
-        else:
-            # Otherwise, use rest api
-            self._requester = Thread(
-                target=self._request_rest,
-                args=(
-                    self._graph,
-                    self.query_name,
-                    self._read_task_q,
-                    self.timeout,
-                    self._payload,
-                    "edge",
-                ),
-            )
-        self._requester.start()
-
-        # If using Kafka, start downloading thread.
-        if self.kafka_address_consumer:
-            self._downloader = Thread(
-                target=self._download_from_kafka,
-                args=(
-                    self._exit_event,
-                    self._read_task_q,
-                    self.num_batches,
-                    False,
-                    self._kafka_consumer,
-                ),
-            )
-            self._downloader.start()
+        self._start_request(False, "edge")
 
         # Start reading thread.
         if not self.is_hetero:
@@ -1914,6 +2019,7 @@ class VertexLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -1928,7 +2034,10 @@ class VertexLoader(BaseLoader):
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        timeout: int = 300000,
+        kafka_skip_produce: bool = False,
+        kafka_auto_offset_reset: str = "earliest",
+        kafka_del_topic_per_epoch: bool = False,
+        kafka_add_topic_per_epoch: bool = False
     ) -> None:
         """
         NO DOC
@@ -1940,6 +2049,7 @@ class VertexLoader(BaseLoader):
             buffer_size,
             output_format,
             reverse_edge,
+            timeout,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
@@ -1954,7 +2064,10 @@ class VertexLoader(BaseLoader):
             kafka_sasl_plain_password,
             kafka_producer_ca_location,
             kafka_consumer_ca_location,
-            timeout,
+            kafka_skip_produce,
+            kafka_auto_offset_reset,
+            kafka_del_topic_per_epoch,
+            kafka_add_topic_per_epoch
         )
         # Resolve attributes
         is_hetero = isinstance(attributes, dict)
@@ -1966,6 +2079,7 @@ class VertexLoader(BaseLoader):
                 self._vtypes = list(self._v_schema.keys())
         else:
             self._vtypes = list(self._v_schema.keys())
+        self._vtypes = sorted(self._vtypes)
         # Initialize parameters for the query
         if batch_size:
             # If batch_size is given, calculate the number of batches
@@ -2003,7 +2117,7 @@ class VertexLoader(BaseLoader):
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
+                        "stringify(s.{})".format(attr)
                         for attr in v_attr_names
                     )
                     print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + "\\n")\n'.format(
@@ -2021,7 +2135,7 @@ class VertexLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
+                    "stringify(s.{})".format(attr)
                     for attr in v_attr_names
                 )
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + "\\n")'.format(
@@ -2046,57 +2160,8 @@ class VertexLoader(BaseLoader):
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
-        # Start requesting thread.
-        if self.kafka_address_consumer:
-            # If using kafka
-            self._kafka_topic = "{}_{}".format(self.loader_id, self._iterations)
-            self._payload["kafka_topic"] = self._kafka_topic
-            self._requester = Thread(
-                target=self._request_kafka,
-                args=(
-                    self._exit_event,
-                    self._graph,
-                    self.query_name,
-                    self._kafka_consumer,
-                    self._kafka_admin,
-                    self._kafka_topic,
-                    self.kafka_partitions,
-                    self.kafka_replica,
-                    self.max_kafka_msg_size,
-                    self.kafka_retention_ms,
-                    self.timeout,
-                    self._payload,
-                ),
-            )
-        else:
-            # Otherwise, use rest api
-            self._requester = Thread(
-                target=self._request_rest,
-                args=(
-                    self._graph,
-                    self.query_name,
-                    self._read_task_q,
-                    self.timeout,
-                    self._payload,
-                    "vertex",
-                ),
-            )
-        self._requester.start()
-
-        # If using Kafka, start downloading thread.
-        if self.kafka_address_consumer:
-            self._downloader = Thread(
-                target=self._download_from_kafka,
-                args=(
-                    self._exit_event,
-                    self._read_task_q,
-                    self.num_batches,
-                    False,
-                    self._kafka_consumer,
-                ),
-            )
-            self._downloader.start()
-
+        self._start_request(False, "vertex")
+            
         # Start reading thread.
         if not self.is_hetero:
             v_attr_types = next(iter(self._v_schema.values()))
@@ -2230,6 +2295,7 @@ class GraphLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -2244,7 +2310,10 @@ class GraphLoader(BaseLoader):
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        timeout: int = 300000,
+        kafka_skip_produce: bool = False,
+        kafka_auto_offset_reset: str = "earliest",
+        kafka_del_topic_per_epoch: bool = False,
+        kafka_add_topic_per_epoch: bool = False
     ) -> None:
         """
         NO DOC
@@ -2256,6 +2325,7 @@ class GraphLoader(BaseLoader):
             buffer_size,
             output_format,
             reverse_edge,
+            timeout,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
@@ -2270,7 +2340,10 @@ class GraphLoader(BaseLoader):
             kafka_sasl_plain_password,
             kafka_producer_ca_location,
             kafka_consumer_ca_location,
-            timeout,
+            kafka_skip_produce,
+            kafka_auto_offset_reset,
+            kafka_del_topic_per_epoch,
+            kafka_add_topic_per_epoch
         )
         # Resolve attributes
         is_hetero = any(map(lambda x: isinstance(x, dict), 
@@ -2301,6 +2374,8 @@ class GraphLoader(BaseLoader):
         else:
             self._vtypes = list(self._v_schema.keys())
             self._etypes = list(self._e_schema.keys())
+        self._vtypes = sorted(self._vtypes)
+        self._etypes = sorted(self._etypes)
         # Initialize parameters for the query
         if batch_size:
             # If batch_size is given, calculate the number of batches
@@ -2342,7 +2417,7 @@ class GraphLoader(BaseLoader):
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
+                        "stringify(s.{})".format(attr)
                         for attr in v_attr_names
                     )
                     print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + "\\n")\n'.format(
@@ -2364,7 +2439,7 @@ class GraphLoader(BaseLoader):
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
+                        "stringify(e.{})".format(attr)
                         for attr in e_attr_names
                     )
                     print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")\n'.format(
@@ -2382,7 +2457,7 @@ class GraphLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
+                    "stringify(s.{})".format(attr)
                     for attr in v_attr_names
                 )
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + "\\n")'.format(
@@ -2397,7 +2472,7 @@ class GraphLoader(BaseLoader):
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
+                    "stringify(e.{})".format(attr)
                     for attr in e_attr_names
                 )
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")'.format(
@@ -2422,56 +2497,7 @@ class GraphLoader(BaseLoader):
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
-        # Start requesting thread.
-        if self.kafka_address_consumer:
-            # If using kafka
-            self._kafka_topic = "{}_{}".format(self.loader_id, self._iterations)
-            self._payload["kafka_topic"] = self._kafka_topic
-            self._requester = Thread(
-                target=self._request_kafka,
-                args=(
-                    self._exit_event,
-                    self._graph,
-                    self.query_name,
-                    self._kafka_consumer,
-                    self._kafka_admin,
-                    self._kafka_topic,
-                    self.kafka_partitions,
-                    self.kafka_replica,
-                    self.max_kafka_msg_size,
-                    self.kafka_retention_ms,
-                    self.timeout,
-                    self._payload,
-                ),
-            )
-        else:
-            # Otherwise, use rest api
-            self._requester = Thread(
-                target=self._request_rest,
-                args=(
-                    self._graph,
-                    self.query_name,
-                    self._read_task_q,
-                    self.timeout,
-                    self._payload,
-                    "both",
-                ),
-            )
-        self._requester.start()
-
-        # If using Kafka, start downloading thread.
-        if self.kafka_address_consumer:
-            self._downloader = Thread(
-                target=self._download_from_kafka,
-                args=(
-                    self._exit_event,
-                    self._read_task_q,
-                    self.num_batches,
-                    True,
-                    self._kafka_consumer,
-                ),
-            )
-            self._downloader.start()
+        self._start_request(True, "both")
 
         # Start reading thread.
         if not self.is_hetero:
@@ -2564,6 +2590,7 @@ class EdgeNeighborLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -2578,7 +2605,10 @@ class EdgeNeighborLoader(BaseLoader):
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        timeout: int = 300000,
+        kafka_skip_produce: bool = False,
+        kafka_auto_offset_reset: str = "earliest",
+        kafka_del_topic_per_epoch: bool = False,
+        kafka_add_topic_per_epoch: bool = False
     ) -> None:
         """NO DOC"""
 
@@ -2589,6 +2619,7 @@ class EdgeNeighborLoader(BaseLoader):
             buffer_size,
             output_format,
             reverse_edge,
+            timeout,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
@@ -2603,7 +2634,10 @@ class EdgeNeighborLoader(BaseLoader):
             kafka_sasl_plain_password,
             kafka_producer_ca_location,
             kafka_consumer_ca_location,
-            timeout,
+            kafka_skip_produce,
+            kafka_auto_offset_reset,
+            kafka_del_topic_per_epoch,
+            kafka_add_topic_per_epoch
         )
         # Resolve attributes
         is_hetero = any(map(lambda x: isinstance(x, dict), 
@@ -2634,6 +2668,8 @@ class EdgeNeighborLoader(BaseLoader):
         else:
             self._vtypes = list(self._v_schema.keys())
             self._etypes = list(self._e_schema.keys())
+        self._vtypes = sorted(self._vtypes)
+        self._etypes = sorted(self._etypes)
         # Resolve seeds
         self._seed_types = self._etypes if ((not filter_by) or isinstance(filter_by, str)) else list(filter_by.keys())
         # Resolve number of batches
@@ -2687,7 +2723,7 @@ class EdgeNeighborLoader(BaseLoader):
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
+                        "stringify(s.{})".format(attr)
                         for attr in v_attr_names
                     )
                     print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + "\\n")\n'.format(
@@ -2710,7 +2746,7 @@ class EdgeNeighborLoader(BaseLoader):
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
+                        "stringify(e.{})".format(attr)
                         for attr in e_attr_names
                     )
                     print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + ",1\\n")\n'.format(
@@ -2734,7 +2770,7 @@ class EdgeNeighborLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
+                    "stringify(s.{})".format(attr)
                     for attr in v_attr_names
                 )
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + "\\n")'.format(
@@ -2750,7 +2786,7 @@ class EdgeNeighborLoader(BaseLoader):
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
+                    "stringify(e.{})".format(attr)
                     for attr in e_attr_names
                 )
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + ",1\\n")'.format(
@@ -2782,56 +2818,7 @@ class EdgeNeighborLoader(BaseLoader):
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
-        # Start requesting thread.
-        if self.kafka_address_consumer:
-            # If using kafka
-            self._kafka_topic = "{}_{}".format(self.loader_id, self._iterations)
-            self._payload["kafka_topic"] = self._kafka_topic
-            self._requester = Thread(
-                target=self._request_kafka,
-                args=(
-                    self._exit_event,
-                    self._graph,
-                    self.query_name,
-                    self._kafka_consumer,
-                    self._kafka_admin,
-                    self._kafka_topic,
-                    self.kafka_partitions,
-                    self.kafka_replica,
-                    self.max_kafka_msg_size,
-                    self.kafka_retention_ms,
-                    self.timeout,
-                    self._payload,
-                ),
-            )
-        else:
-            # Otherwise, use rest api
-            self._requester = Thread(
-                target=self._request_rest,
-                args=(
-                    self._graph,
-                    self.query_name,
-                    self._read_task_q,
-                    self.timeout,
-                    self._payload,
-                    "both",
-                ),
-            )
-        self._requester.start()
-
-        # If using Kafka, start downloading thread.
-        if self.kafka_address_consumer:
-            self._downloader = Thread(
-                target=self._download_from_kafka,
-                args=(
-                    self._exit_event,
-                    self._read_task_q,
-                    self.num_batches,
-                    True,
-                    self._kafka_consumer,
-                ),
-            )
-            self._downloader.start()
+        self._start_request(True, "both")
 
         # Start reading thread.
         if not self.is_hetero:
