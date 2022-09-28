@@ -82,7 +82,8 @@ class pyTigerGraphBase(object):
 
         """
         logger.info("entry: __init__")
-        logger.debug("params: " + self._locals(locals()))
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
 
         inputHost = urlparse(host)
         if inputHost.scheme not in ["http", "https"]:
@@ -232,7 +233,8 @@ class pyTigerGraphBase(object):
             The (relevant part of the) response from the request (as a dictionary).
         """
         logger.info("entry: _req")
-        logger.debug("params: " + self._locals(locals()))
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
 
         if authMode == "token" and str(self.apiToken) != "":
             if isinstance(self.apiToken, tuple):
@@ -267,12 +269,14 @@ class pyTigerGraphBase(object):
         if not skipCheck:
             self._errorCheck(res)
         if not resKey:
-            logger.debug("return: " + str(res))
+            if logger.level == logging.DEBUG:
+                logger.debug("return: " + str(res))
             logger.info("exit: _req (no resKey)")
 
             return res
 
-        logger.debug("return: " + str(res[resKey]))
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res[resKey]))
         logger.info("exit: _req (resKey)")
 
         return res[resKey]
@@ -300,11 +304,13 @@ class pyTigerGraphBase(object):
             The (relevant part of the) response from the request (as a dictionary).
        """
         logger.info("entry: _get")
-        logger.debug("params: " + self._locals(locals()))
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
 
         res = self._req("GET", url, authMode, headers, None, resKey, skipCheck, params)
 
-        logger.debug("return: " + str(res))
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
         logger.info("exit: _get")
 
         return res
@@ -335,11 +341,13 @@ class pyTigerGraphBase(object):
             The (relevant part of the) response from the request (as a dictionary).
         """
         logger.info("entry: _post")
-        logger.debug("params: " + self._locals(locals()))
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
 
         res = self._req("POST", url, authMode, headers, data, resKey, skipCheck, params)
 
-        logger.debug("return: " + str(res))
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
         logger.info("exit: _post")
 
         return res
@@ -357,11 +365,13 @@ class pyTigerGraphBase(object):
             The response from the request (as a dictionary).
         """
         logger.info("entry: _delete")
-        logger.debug("params: " + self._locals(locals()))
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
 
         res = self._req("DELETE", url, authMode)
 
-        logger.debug("return: " + str(res))
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
         logger.info("exit: _delete")
 
         return res

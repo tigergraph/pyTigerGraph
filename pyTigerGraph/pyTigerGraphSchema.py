@@ -29,7 +29,8 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         res = self._get(self.gsUrl + "/gsqlserver/gsql/udtlist?graph=" + self.graphname,
             authMode="pwd")
 
-        logger.debug("return: " + str(res))
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
         logger.info("exit: _getUDTs")
 
         return res
@@ -54,7 +55,8 @@ class pyTigerGraphSchema(pyTigerGraphBase):
             xref:tigergraph-server:API:built-in-endpoints.adoc#operation-codes[Operation codes]
         """
         logger.info("entry: _upsertAttrs")
-        logger.debug("params: " + self._locals(locals()))
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
 
         if not isinstance(attributes, dict):
             return {}
@@ -67,7 +69,8 @@ class pyTigerGraphSchema(pyTigerGraphBase):
             else:
                 vals[attr] = {"value": val}
 
-        logger.debug("return: " + str(vals))
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(vals))
         logger.info("exit: _upsertAttrs")
 
         return vals
@@ -91,7 +94,8 @@ class pyTigerGraphSchema(pyTigerGraphBase):
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_show_graph_schema_metadata[Show graph schema metadata]
         """
         logger.info("entry: getSchema")
-        logger.debug("params: " + self._locals(locals()))
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
 
         if not self.schema or force:
             self.schema = self._get(self.gsUrl + "/gsqlserver/gsql/schema?graph=" + self.graphname,
@@ -99,7 +103,8 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         if udts and ("UDTs" not in self.schema or force):
             self.schema["UDTs"] = self._getUDTs()
 
-        logger.debug("return: " + str(self.schema))
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(self.schema))
         logger.info("exit: getSchema")
 
         return self.schema
@@ -138,7 +143,8 @@ class pyTigerGraphSchema(pyTigerGraphBase):
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_upsert_data_to_graph[Upsert data to graph]
         """
         logger.info("entry: upsertData")
-        logger.debug("params: " + self._locals(locals()))
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
 
         if not isinstance(data, str):
             data = json.dumps(data)
@@ -158,7 +164,8 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         res = self._post(self.restppUrl + "/graph/" + self.graphname, headers=headers, data=data,
             params=params)[0]
 
-        logger.debug("return: " + str(res))
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
         logger.info("exit: getSchema")
 
         return res
@@ -182,7 +189,8 @@ class pyTigerGraphSchema(pyTigerGraphBase):
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_list_all_endpoints[List all endpoints]
         """
         logger.info("entry: getEndpoints")
-        logger.debug("params: " + self._locals(locals()))
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
 
         ret = {}
         if not (builtin or dynamic or static):
@@ -209,7 +217,8 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         if sta:
             ret.update(self._get(url + "static=true", resKey=""))
 
-        logger.debug("return: " + str(ret))
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
         logger.info("exit: getEndpoints")
 
         return ret

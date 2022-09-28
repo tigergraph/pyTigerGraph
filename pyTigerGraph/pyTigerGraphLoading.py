@@ -46,7 +46,8 @@ class pyTigerGraphLoading(pyTigerGraphBase):
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_a_loading_job[Run a loading job]
         """
         logger.info("entry: runLoadingJobWithFile")
-        logger.debug("params: " + self._locals(locals()))
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
 
         try:
             data = open(filePath, 'rb').read()
@@ -68,7 +69,8 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         res = self._post(self.restppUrl + "/ddl/" + self.graphname, params=params, data=data,
             headers={"RESPONSE-LIMIT": str(sizeLimit), "GSQL-TIMEOUT": str(timeout)})
 
-        logger.debug("return: " + str(res))
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
         logger.info("exit: runLoadingJobWithFile")
 
         return res
@@ -82,6 +84,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         warnings.warn(
             "The `uploadFile()` function is deprecated; use `runLoadingJobWithFile()` instead.",
             DeprecationWarning)
+
         return self.runLoadingJobWithFile(filePath, fileTag, jobName, sep, eol, timeout, sizeLimit)
 
     # TODO POST /restpploader/{graph_name}
