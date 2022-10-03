@@ -35,7 +35,7 @@ import pandas as pd
 from ..pyTigerGraphException import TigerGraphException
 from .utilities import install_query_file, random_string, add_attribute
 
-__all__ = ["VertexLoader", "EdgeLoader", "NeighborLoader", "GraphLoader", "EdgeNeighborLoader"]
+__all__ = ["VertexLoader", "EdgeLoader", "NeighborLoader", "GraphLoader", "EdgeNeighborLoader", "NodePieceLoader"]
 
 RANDOM_TOPIC_LEN = 8
 
