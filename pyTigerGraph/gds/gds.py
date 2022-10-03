@@ -843,6 +843,7 @@ class GDS:
                         reverse_edge: bool = False,
                         timeout: int = 300000) -> NodePieceLoader:
         params = {
+            "graph": self.conn,
             "v_feats": v_feats,
             "target_vertex_types": target_vertex_types,
             "compute_anchors": compute_anchors,
