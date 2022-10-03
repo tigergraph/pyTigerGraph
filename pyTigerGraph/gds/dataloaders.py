@@ -2956,13 +2956,15 @@ class NodePieceLoader(BaseLoader):
             self._vtypes = list(self._v_schema.keys())
         self._vtypes = sorted(self._vtypes)
         # Initialize parameters for the query
+        if isinstance(target_vertex_types, str):
+            target_vertex_types = [target_vertex_types]
         if batch_size:
             # If batch_size is given, calculate the number of batches
             num_vertices_by_type = self._graph.getVertexCount(self._vtypes)
             if filter_by:
                 num_vertices = sum(
                     self._graph.getVertexCount(k, where="{}!=0".format(filter_by))
-                    for k in num_vertices_by_type
+                    for k in target_vertex_types
                 )
             else:
                 num_vertices = sum(num_vertices_by_type.values())

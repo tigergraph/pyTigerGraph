@@ -2,6 +2,7 @@ CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
   SET<VERTEX> input_vertices,
   SET<STRING> v_types,
   SET<STRING> e_types,
+  SET<STRING> seed_types,
   BOOL compute_all = TRUE,
   BOOL use_cache = TRUE,
   STRING filter_by,
@@ -52,7 +53,7 @@ CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
                 END
               END;
     ELSE # computing all, shuffle vertices if needed
-        start = {v_types};
+        start = {seed_types};
         IF shuffle THEN
             num_vertices = start.size();
             res = SELECT s 
@@ -77,7 +78,7 @@ CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
       SetAccum<VERTEX> @@printed_vertices;
       # Get batch seeds
       IF input_vertices.size()==0 THEN
-        start = {v_types};
+        start = {seed_types};
         IF filter_by IS NOT NULL THEN
           seeds = SELECT s 
                   FROM start:s 
