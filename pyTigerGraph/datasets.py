@@ -104,6 +104,10 @@ class Datasets(BaseDataset):
                     pjoin(self.tmp_dir, self.name, job["filePath"]),
                     job["fileTag"],
                     job["jobName"],
+                    sep=job.get("sep", ","),
+                    eol=job.get("eol", "\n"),
+                    timeout=job.get("timeout", 60000),
+                    sizeLimit=job.get("sizeLimit", 128000000)
                 )
             )
         return resp
