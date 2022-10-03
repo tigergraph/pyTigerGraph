@@ -165,7 +165,7 @@ def install_query_file(
     return query_name
 
 
-def add_attribute(conn: "TigerGraphConnection", schema_type: str, attr_type: str, attr_name: str=None, schema_name: list[str]=None, global_change:bool = False):
+def add_attribute(conn: "TigerGraphConnection", schema_type: str, attr_type: str, attr_name: str=None, schema_name: list=None, global_change:bool = False):
     '''
     If the current attribute is not already added to the schema, it will create the schema job to do that.
     Check whether to add the attribute to vertex(vertices) or edge(s).
