@@ -33,7 +33,7 @@ import numpy as np
 import pandas as pd
 
 from ..pyTigerGraphException import TigerGraphException
-from .utilities import install_query_file, random_string
+from .utilities import install_query_file, random_string, add_attribute
 
 __all__ = ["VertexLoader", "EdgeLoader", "NeighborLoader", "GraphLoader", "EdgeNeighborLoader"]
 
@@ -2866,26 +2866,33 @@ class EdgeNeighborLoader(BaseLoader):
 
 
 class NodePieceLoader(BaseLoader):
-    """NodePieceLoader.
+    """Nodepiece Loader.
     """
     def __init__(
         self,
         graph: "TigerGraphConnection",
-        anchor_attr: str,
+        v_feats: Union[list, dict] = None,
+        target_vertex_types: Union[str, list] = None,
+        compute_anchors: bool = False,
+        anchor_method: str = "random",
+        anchor_cache_attr: str = "anchors",
         max_distance: int = 5,
+        max_anchors: int = 10,
         max_relational_context: int = 10,
-        sampling_percentage: float = 0.1,
-        v_types: list = None,
+        anchor_percentage: float = 0.01,
+        anchor_attribute: str = "is_anchor",
         e_types: list = None,
-        v_out_labels: Union[list, dict] = None,
-        v_extra_feats: Union[list, dict] = None,
+        compute_all: bool = True,
+        global_schema_change: bool = False,
         batch_size: int = None,
         num_batches: int = 1,
         shuffle: bool = False,
-        filter_by: Union[str, dict] = None,
+        filter_by: str = None,
+        output_format: str = "dataframe",
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -2900,16 +2907,22 @@ class NodePieceLoader(BaseLoader):
         kafka_sasl_plain_password: str = None,
         kafka_producer_ca_location: str = None,
         kafka_consumer_ca_location: str = None,
-        timeout: int = 300000,
+        kafka_skip_produce: bool = False,
+        kafka_auto_offset_reset: str = "earliest",
+        kafka_del_topic_per_epoch: bool = False,
+        kafka_add_topic_per_epoch: bool = False
     ) -> None:
-        """NO DOC"""
-
+        """
+        NO DOC
+        """
         super().__init__(
             graph,
             loader_id,
             num_batches,
             buffer_size,
+            output_format,
             reverse_edge,
+            timeout,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
@@ -2924,166 +2937,143 @@ class NodePieceLoader(BaseLoader):
             kafka_sasl_plain_password,
             kafka_producer_ca_location,
             kafka_consumer_ca_location,
-            timeout,
+            kafka_skip_produce,
+            kafka_auto_offset_reset,
+            kafka_del_topic_per_epoch,
+            kafka_add_topic_per_epoch
         )
         # Resolve attributes
-        is_hetero = any(map(lambda x: isinstance(x, dict), 
-                        (v_out_labels, v_extra_feats)))
+        is_hetero = isinstance(v_feats, dict)
         self.is_hetero = is_hetero
-        self.v_out_labels = self._validate_vertex_attributes(v_out_labels, is_hetero)
-        self.v_extra_feats = self._validate_vertex_attributes(v_extra_feats, is_hetero)
+        self.anchor_cache_attr = anchor_cache_attr
+        self.attributes = self._validate_vertex_attributes(v_feats, is_hetero)
+        self._anchor_perc = anchor_percentage
         if is_hetero:
-            self._vtypes = list(
-                    set(self.v_in_feats.keys())
-                    | set(self.v_out_labels.keys())
-                    | set(self.v_extra_feats.keys())
-                )
+            self._vtypes = list(self.attributes.keys())
             if not self._vtypes:
                 self._vtypes = list(self._v_schema.keys())
-            self._etypes = list(
-                set(self.e_in_feats.keys())
-                | set(self.e_out_labels.keys())
-                | set(self.e_extra_feats.keys())
-            )
-            if not self._etypes:
-                self._etypes = list(self._e_schema.keys())
         else:
             self._vtypes = list(self._v_schema.keys())
-            self._etypes = list(self._e_schema.keys())
-        # Resolve seeds
-        self._seed_types = self._etypes if ((not filter_by) or isinstance(filter_by, str)) else list(filter_by.keys())
-        # Resolve number of batches
+        self._vtypes = sorted(self._vtypes)
+        # Initialize parameters for the query
         if batch_size:
             # If batch_size is given, calculate the number of batches
+            num_vertices_by_type = self._graph.getVertexCount(self._vtypes)
             if filter_by:
-                self._num_batches = math.ceil(len(self._seed_types) / batch_size)
+                num_vertices = sum(
+                    self._graph.getVertexCount(k, where="{}!=0".format(filter_by))
+                    for k in num_vertices_by_type
+                )
             else:
-                num_edges = sum(self._graph.getEdgeCount(i) for i in self._etypes)
-            self.num_batches = math.ceil(num_edges / batch_size)
+                num_vertices = sum(num_vertices_by_type.values())
+            self.num_batches = math.ceil(num_vertices / batch_size)
         else:
             # Otherwise, take the number of batches as is.
             self.num_batches = num_batches
-        # Initialize parameters for the query
+        self._target_v_types = target_vertex_types
+        self.filter_by = filter_by
         self._payload["num_batches"] = self.num_batches
         if filter_by:
-            if isinstance(filter_by, str):
-                self._payload["filter_by"] = filter_by
-            else:
-                attr = set(filter_by.values())
-                if len(attr) != 1:
-                    raise NotImplementedError("Filtering by different attributes for different edge types is not supported. Please use the same attribute for different types.")
-                self._payload["filter_by"] = attr.pop()
+            self._payload["filter_by"] = filter_by
         self._payload["shuffle"] = shuffle
         self._payload["v_types"] = self._vtypes
-        self._payload["e_types"] = self._etypes
-        self._payload["seed_types"] = self._seed_types
+        if isinstance(target_vertex_types, str):
+            self._payload["seed_types"] = [target_vertex_types]
+        else:
+            self._payload["seed_types"] = target_vertex_types
+        self._payload["max_distance"] = max_distance
+        self._payload["max_anchors"] = max_anchors
+        self._payload["max_rel_context"] = max_relational_context
+        self._payload["anchor_attr"] = anchor_attribute
+        if e_types:
+            self._payload["e_types"] = e_types
+        else:
+            self._payload["e_types"] = list(self._e_schema.keys())
+        self._payload["compute_all"] = compute_all
+        # Compute Anchors
+        if compute_anchors:
+            self._compute_anchors(anchor_attribute, anchor_method)
+        to_change = []
+        for v_type in self._vtypes:
+            if anchor_cache_attr not in self._v_schema[v_type].keys():
+                # add anchor cache attribute
+                to_change.append(v_type)
+        if to_change != []:
+            ret = add_attribute(self._graph, "VERTEX", "MAP<INT, INT>", anchor_cache_attr, to_change, global_change=global_schema_change)
+            print(ret)
         # Install query
         self.query_name = self._install_query()
 
-    def _install_query(self):
+    def _compute_anchors(self, anchor_attr, method="random") -> str:
+        if method.lower() == "random":
+            query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "splitters",
+                "random_anchor_selection.gsql",
+            )
+            install_query_file(self._graph, query_path)
+            params = {
+                "percentage": self._anchor_perc,
+                "filter_by": self.filter_by,
+                "v_type": self._vtypes,
+                "tgt_v_type": self._target_v_types,
+                "anchor_attr": anchor_attr,
+                "random_seed": 42
+            }
+            self._graph.runInstalledQuery("random_anchor_selection", params=params)
+        else:
+            raise NotImplementedError("{} anchor selection method is not supported. Please try 'random' anchor selection method".format(method))
+
+    def _install_query(self) -> str:
         # Install the right GSQL query for the loader.
         query_suffix = []
         query_replace = {}
 
-        if self.is_hetero:
+        if isinstance(self.attributes, dict):
             # Multiple vertex types
             print_query = ""
             for idx, vtype in enumerate(self._vtypes):
-                v_attr_names = (
-                    self.v_in_feats.get(vtype, [])
-                    + self.v_out_labels.get(vtype, [])
-                    + self.v_extra_feats.get(vtype, [])
-                )
+                v_attr_names = self.attributes.get(vtype, [])
                 query_suffix.extend(v_attr_names)
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
-                        "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
+                        "stringify(s.{})".format(attr)
                         for attr in v_attr_names
                     )
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + "\\n")\n'.format(
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + s.@rel_context_set + "," + s.@ancs + "," + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
                 else:
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "\\n")\n'.format(
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + s.@rel_context_set + "," + s.@ancs + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype)
             print_query += "END"
             query_replace["{VERTEXATTRS}"] = print_query
-            # Multiple edge types
-            print_query_seed = ""
-            print_query_other = ""
-            for idx, etype in enumerate(self._etypes):
-                e_attr_names = (
-                    self.e_in_feats.get(etype, [])
-                    + self.e_out_labels.get(etype, [])
-                    + self.e_extra_feats.get(etype, [])
-                )
-                query_suffix.extend(e_attr_names)
-                e_attr_types = self._e_schema[etype]
-                if e_attr_names:
-                    print_attr = '+","+'.join(
-                        "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
-                        for attr in e_attr_names
-                    )
-                    print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + ",1\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", etype, print_attr)
-                    print_query_other += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + ",0\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", etype, print_attr)
-                else:
-                    print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + ",1\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", etype)
-                    print_query_other += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + ",0\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", etype)
-            print_query_seed += "END"
-            print_query_other += "END"
-            query_replace["{SEEDEDGEATTRS}"] = print_query_seed
-            query_replace["{OTHEREDGEATTRS}"] = print_query_other
             query_suffix = list(dict.fromkeys(query_suffix))
         else:
             # Ignore vertex types
-            v_attr_names = self.v_in_feats + self.v_out_labels + self.v_extra_feats
+            v_attr_names = self.attributes
             query_suffix.extend(v_attr_names)
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "{}(s.{})".format('' if v_attr_types[attr]=="STRING" else _udf_funcs[v_attr_types[attr]], attr)
+                    "stringify(s.{})".format(attr)
                     for attr in v_attr_names
                 )
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + "\\n")'.format(
+                print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + s.@rel_context_set + "," + s.@ancs + "," + {} + "\\n")'.format(
                     print_attr
                 )
-                query_replace["{VERTEXATTRS}"] = print_query
             else:
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "\\n")'
-                query_replace["{VERTEXATTRS}"] = print_query
-            # Ignore edge types
-            e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
-            query_suffix.extend(e_attr_names)
-            e_attr_types = next(iter(self._e_schema.values()))
-            if e_attr_names:
-                print_attr = '+","+'.join(
-                    "{}(e.{})".format('' if e_attr_types[attr]=="STRING" else _udf_funcs[e_attr_types[attr]], attr)
-                    for attr in e_attr_names
-                )
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + ",1\\n")'.format(
-                    print_attr
-                )
-                query_replace["{SEEDEDGEATTRS}"] = print_query
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + ",0\\n")'.format(
-                    print_attr
-                )
-                query_replace["{OTHEREDGEATTRS}"] = print_query
-            else:
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + ",1\\n")'
-                query_replace["{SEEDEDGEATTRS}"] = print_query
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + ",0\\n")'
-                query_replace["{OTHEREDGEATTRS}"] = print_query
+            query_replace["{VERTEXATTRS}"] = print_query
         query_replace["{QUERYSUFFIX}"] = "_".join(query_suffix)
+        query_replace["{ANCHOR_CACHE_ATTRIBUTE}"] = self.anchor_cache_attr
         # Install query
         query_path = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "gsql",
-                "dataloaders",
-                "edge_nei_loader.gsql",
+            os.path.dirname(os.path.abspath(__file__)),
+            "gsql",
+            "dataloaders",
+            "nodepiece_loader.gsql",
         )
         return install_query_file(self._graph, query_path, query_replace)
 
@@ -3093,70 +3083,18 @@ class NodePieceLoader(BaseLoader):
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
-        # Start requesting thread.
-        if self.kafka_address_consumer:
-            # If using kafka
-            self._kafka_topic = "{}_{}".format(self.loader_id, self._iterations)
-            self._payload["kafka_topic"] = self._kafka_topic
-            self._requester = Thread(
-                target=self._request_kafka,
-                args=(
-                    self._exit_event,
-                    self._graph,
-                    self.query_name,
-                    self._kafka_consumer,
-                    self._kafka_admin,
-                    self._kafka_topic,
-                    self.kafka_partitions,
-                    self.kafka_replica,
-                    self.max_kafka_msg_size,
-                    self.kafka_retention_ms,
-                    self.timeout,
-                    self._payload,
-                ),
-            )
+        self._start_request(False, "vertex")
+        attributes = self.attributes
+        if self.is_hetero:
+            for key in self.attributes.keys():
+                attributes[key] = ["relational_context", "closest_anchors"] + attributes[key]
         else:
-            # Otherwise, use rest api
-            self._requester = Thread(
-                target=self._request_rest,
-                args=(
-                    self._graph,
-                    self.query_name,
-                    self._read_task_q,
-                    self.timeout,
-                    self._payload,
-                    "both",
-                ),
-            )
-        self._requester.start()
-
-        # If using Kafka, start downloading thread.
-        if self.kafka_address_consumer:
-            self._downloader = Thread(
-                target=self._download_from_kafka,
-                args=(
-                    self._exit_event,
-                    self._read_task_q,
-                    self.num_batches,
-                    True,
-                    self._kafka_consumer,
-                ),
-            )
-            self._downloader.start()
-
+            attributes = ["relational_context", "closest_anchors"] + attributes
+            
         # Start reading thread.
         if not self.is_hetero:
-            e_extra_feats = self.e_extra_feats + ["is_seed"]
-            e_attr_types = next(iter(self._e_schema.values()))
-            e_attr_types["is_seed"] = "bool"
             v_attr_types = next(iter(self._v_schema.values()))
         else:
-            e_extra_feats = {}
-            for etype in self._etypes:
-                e_extra_feats[etype] = self.e_extra_feats.get(etype, []) + ["is_seed"]
-            e_attr_types = self._e_schema
-            for etype in e_attr_types:
-                e_attr_types[etype]["is_seed"] = "bool"
             v_attr_types = self._v_schema
         self._reader = Thread(
             target=self._read_data,
@@ -3164,18 +3102,18 @@ class NodePieceLoader(BaseLoader):
                 self._exit_event,
                 self._read_task_q,
                 self._data_q,
-                "graph",
+                "vertex",
                 self.output_format,
-                self.v_in_feats,
-                self.v_out_labels,
-                self.v_extra_feats,
+                attributes,
+                {} if self.is_hetero else [],
+                {} if self.is_hetero else [],
                 v_attr_types,
-                self.e_in_feats,
-                self.e_out_labels,
-                e_extra_feats,
-                e_attr_types,
-                self.add_self_loop,
-                True,
+                [],
+                [],
+                [],
+                {},
+                False,
+                False,
                 self.is_hetero
             ),
         )
@@ -3185,5 +3123,55 @@ class NodePieceLoader(BaseLoader):
     def data(self) -> Any:
         """A property of the instance.
         The `data` property stores all data if all data is loaded in a single batch.
-        If there are multiple batches of data, the `data` property returns the instance itself"""
+        If there are multiple batches of data, the `data` property returns the instance itself."""
         return super().data
+
+    def fetch(self, vertices: list) -> None:
+        if not vertices:
+            return None
+        if not isinstance(vertices, list):
+            raise ValueError(
+                'Input to fetch() should be in format: [{"primary_id": ..., "type": ...}, ...]'
+            )
+        for i in vertices:
+            if not (isinstance(i, dict) and ("primary_id" in i) and ("type" in i)):
+                raise ValueError(
+                    'Input to fetch() should be in format: [{"primary_id": ..., "type": ...}, ...]'
+                )
+
+        self._payload["input_vertices"] = []
+        for i in vertices:
+            self._payload["input_vertices"].append((i["primary_id"], i["type"]))
+        resp = self._graph.runInstalledQuery(
+            self.query_name, params=self._payload, timeout=self.timeout, usePost=True
+        )
+        del self._payload["input_vertices"]
+        attributes = self.attributes
+        if self.is_hetero:
+            for key in self.attributes.keys():
+                attributes[key] = ["relational_context", "closest_anchors"] + attributes[key]
+        else:
+            attributes = ["relational_context", "closest_anchors"] + attributes
+        if not self.is_hetero:
+            v_attr_types = next(iter(self._v_schema.values()))
+        else:
+            v_attr_types = self._v_schema
+        if self.is_hetero:
+            data = self._parse_data(resp[0]["vertex_batch"], 
+                                    v_in_feats=attributes, 
+                                    v_out_labels = {},
+                                    v_extra_feats = {},
+                                    v_attr_types=v_attr_types,
+                                    reindex=False, 
+                                    is_hetero=self.is_hetero, 
+                                    primary_id=resp[0]["pids"])
+        else:
+            data = self._parse_data(resp[0]["vertex_batch"], 
+                                    v_in_feats=attributes, 
+                                    v_out_labels = [],
+                                    v_extra_feats = [],
+                                    v_attr_types=v_attr_types,
+                                    reindex=False, 
+                                    is_hetero=self.is_hetero, 
+                                    primary_id=resp[0]["pids"])
+        return data

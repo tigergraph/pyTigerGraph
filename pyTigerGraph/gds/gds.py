@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
 
 from .dataloaders import (EdgeLoader, EdgeNeighborLoader, GraphLoader,
-                          NeighborLoader, VertexLoader)
+                          NeighborLoader, VertexLoader, NodePieceLoader)
 from .featurizer import Featurizer
 from .splitters import RandomEdgeSplitter, RandomVertexSplitter
 # from ..pyTigerGraph import pyTigerGraphGSQL
@@ -818,6 +818,59 @@ class GDS:
             return EdgeNeighborLoader(**params)
         else:
             return EdgeNeighborLoader(**params)
+
+    def nodepieceLoader(self, 
+                        v_feats: Union[list, dict] = None,
+                        target_vertex_types: Union[str, list] = None,
+                        compute_anchors: bool = False,
+                        anchor_method: str = "random",
+                        anchor_cache_attr: str = "anchors",
+                        max_distance: int = 5,
+                        max_anchors: int = 10,
+                        max_relational_context: int = 10,
+                        anchor_percentage: float = 0.01,
+                        anchor_attribute: str = "is_anchor",
+                        e_types: list = None,
+                        compute_all: bool = True,
+                        global_schema_change: bool = False,
+                        batch_size: int = None,
+                        num_batches: int = 1,
+                        shuffle: bool = False,
+                        filter_by: str = None,
+                        output_format: str = "dataframe",
+                        loader_id: str = None,
+                        buffer_size: int = 4,
+                        reverse_edge: bool = False,
+                        timeout: int = 300000) -> NodePieceLoader:
+        params = {
+            "v_feats": v_feats,
+            "target_vertex_types": target_vertex_types,
+            "compute_anchors": compute_anchors,
+            "anchor_method": anchor_method,
+            "anchor_cache_attr": anchor_cache_attr,
+            "max_distance": max_distance,
+            "max_anchors": max_anchors,
+            "max_relational_context": max_relational_context, 
+            "anchor_percentage": anchor_percentage,
+            "anchor_attribute": anchor_attribute,
+            "e_types": e_types,
+            "compute_all": compute_all,
+            "global_schema_change": global_schema_change,
+            "batch_size": batch_size,
+            "num_batches": num_batches,
+            "shuffle": shuffle,
+            "filter_by": filter_by,
+            "output_format": output_format,
+            "loader_id": loader_id,
+            "buffer_size": buffer_size,
+            "reverse_edge": reverse_edge,
+            "timeout": timeout
+        }
+        if self.kafkaConfig:
+            params.update(self.kafkaConfig)
+            return NodePieceLoader(**params)
+        else:
+            return NodePieceLoader(**params)
 
     def featurizer(self) -> Featurizer:
         """Get a featurizer.
