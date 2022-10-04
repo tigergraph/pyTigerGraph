@@ -3011,6 +3011,13 @@ class NodePieceLoader(BaseLoader):
         # Install query
         self.query_name = self._install_query()
 
+        # Get number of tokens for embedding table
+        self.num_tokens = len(["PAD", "CLS", "MASK"]) + len(e_types) + max_distance + 1
+        self.num_tokens += sum(
+                    self._graph.getVertexCount(k, where="{}!=0".format(anchor_attribute))
+                    for k in self._vtypes
+                )
+
     def _compute_anchors(self, anchor_attr, method="random") -> str:
         if method.lower() == "random":
             query_path = os.path.join(
