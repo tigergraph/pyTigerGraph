@@ -1,3 +1,8 @@
+"""datasets
+
+In-stock datasets that can be ingested into a TigerGraph database through the `ingestDataset`
+function in pyTigerGraph.
+"""
 import json
 import tarfile
 from abc import ABC, abstractmethod
@@ -34,6 +39,18 @@ class BaseDataset(ABC):
 
 class Datasets(BaseDataset):
     def __init__(self, name: str = None, tmp_dir: str = "./tmp") -> None:
+        """In-stock datasets.
+
+        Please see "https://tigergraph-public-data.s3.us-west-1.amazonaws.com/inventory.json"
+        for datasets that are currently available. The files for the dataset with `name` will be
+        downloaded to local `tmp_dir` automatically when this class is instantiated.
+
+        Args:
+            name (str, optional): 
+                Name of the dataset to get. Defaults to None.
+            tmp_dir (str, optional): 
+                Where to store the artifacts of this dataset. Defaults to "./tmp".
+        """        
         super().__init__(name)
         self.base_url = "https://tigergraph-public-data.s3.us-west-1.amazonaws.com/"
         self.tmp_dir = tmp_dir

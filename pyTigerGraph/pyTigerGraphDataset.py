@@ -7,7 +7,16 @@ from .datasets import Datasets
 
 
 class pyTigerGraphDataset:
-    def ingest(self, dataset: Datasets, cleanup=True) -> None:
+    def ingestDataset(self, dataset: Datasets, cleanup=True) -> None:
+        """Ingest an in-stock dataset to a TigerGraph database.
+
+        Args:
+            dataset (Datasets): 
+                A Datasets object as `pyTigerGraph.datasets.Datasets`.
+            cleanup (bool, optional): 
+                Whether or not to remove local artifacts downloaded by `Datasets` 
+                after ingestion is done. Defaults to True.
+        """        
         if not dataset.ingest_ready:
             raise Exception("This dataset is not ingestable.")
 
