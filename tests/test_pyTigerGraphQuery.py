@@ -79,6 +79,17 @@ class test_pyTigerGraphQuery(pyTigerGraphUnitTest):
         self.assertIn("ret", res[0])
         self.assertEqual(15, res[0]["ret"])
 
+    def test_05_runInstalledQueryAsync(self):
+        q_id = self.conn.runInstalledQuery("query1", runAsync=True)
+        res = self.conn.getQueryResult(q_id)
+        self.assertIn("ret", res[0])
+        self.assertEqual(15, res[0]["ret"])
 
+    def test_06_checkQueryStatus(self):
+        q_id = self.conn.runInstalledQuery("query1", runAsync=True)
+        res = self.conn.checkQueryStatus(q_id)
+        self.assertIn("requestid", res[0])
+        self.assertEqual(q_id, res[0]["requestid"])
+        
 if __name__ == '__main__':
     unittest.main()
