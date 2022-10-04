@@ -3011,6 +3011,12 @@ class NodePieceLoader(BaseLoader):
         # Install query
         self.query_name = self._install_query()
 
+        if self.is_hetero:
+            for key in self.attributes.keys():
+                self.attributes[key] = ["relational_context", "closest_anchors"] + self.attributes[key]
+        else:
+            self.attributes = ["relational_context", "closest_anchors"] + self.attributes
+
         # Get number of tokens for embedding table
         self.num_tokens = len(e_types) + max_distance + 1
         self.num_tokens += sum(
@@ -3098,12 +3104,6 @@ class NodePieceLoader(BaseLoader):
         self._exit_event = Event()
 
         self._start_request(False, "vertex")
-        attributes = self.attributes
-        if self.is_hetero:
-            for key in self.attributes.keys():
-                attributes[key] = ["relational_context", "closest_anchors"] + attributes[key]
-        else:
-            attributes = ["relational_context", "closest_anchors"] + attributes
             
         # Start reading thread.
         if not self.is_hetero:
@@ -3118,7 +3118,7 @@ class NodePieceLoader(BaseLoader):
                 self._data_q,
                 "vertex",
                 self.output_format,
-                attributes,
+                self.attributes,
                 {} if self.is_hetero else [],
                 {} if self.is_hetero else [],
                 v_attr_types,
