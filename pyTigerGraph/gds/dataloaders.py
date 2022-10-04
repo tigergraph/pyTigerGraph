@@ -2957,17 +2957,25 @@ class NodePieceLoader(BaseLoader):
         self._vtypes = sorted(self._vtypes)
         # Initialize parameters for the query
         if isinstance(target_vertex_types, str):
-            target_vertex_types = [target_vertex_types]
+            self._seed_types = [target_vertex_types]
+        else:
+            self._seed_types = target_vertex_types
         if batch_size:
-            # If batch_size is given, calculate the number of batches
-            num_vertices_by_type = self._graph.getVertexCount(self._vtypes)
-            if filter_by:
+            if not filter_by:
+                num_vertices = sum(self._graph.getVertexCount(self._seed_types).values())
+            elif isinstance(filter_by, str):
                 num_vertices = sum(
                     self._graph.getVertexCount(k, where="{}!=0".format(filter_by))
-                    for k in target_vertex_types
+                    for k in self._seed_types
+                )
+            elif isinstance(filter_by, dict):
+                self._seed_types = list(filter_by.keys())
+                num_vertices = sum(
+                    self._graph.getVertexCount(k, where="{}!=0".format(filter_by[k]))
+                    for k in self._seed_types
                 )
             else:
-                num_vertices = sum(num_vertices_by_type.values())
+                raise ValueError("filter_by should be None, attribute name, or dict of {type name: attribute name}.")
             self.num_batches = math.ceil(num_vertices / batch_size)
         else:
             # Otherwise, take the number of batches as is.
@@ -2979,10 +2987,7 @@ class NodePieceLoader(BaseLoader):
             self._payload["filter_by"] = filter_by
         self._payload["shuffle"] = shuffle
         self._payload["v_types"] = self._vtypes
-        if isinstance(target_vertex_types, str):
-            self._payload["seed_types"] = [target_vertex_types]
-        else:
-            self._payload["seed_types"] = target_vertex_types
+        self._payload["seed_types"] = self._seed_types
         self._payload["max_distance"] = max_distance
         self._payload["max_anchors"] = max_anchors
         self._payload["max_rel_context"] = max_relational_context
@@ -3035,7 +3040,7 @@ class NodePieceLoader(BaseLoader):
         if isinstance(self.attributes, dict):
             # Multiple vertex types
             print_query = ""
-            for idx, vtype in enumerate(self._vtypes):
+            for idx, vtype in enumerate(self._seed_types):
                 v_attr_names = self.attributes.get(vtype, [])
                 query_suffix.extend(v_attr_names)
                 v_attr_types = self._v_schema[vtype]
