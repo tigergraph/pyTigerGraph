@@ -3031,8 +3031,7 @@ class NodePieceLoader(BaseLoader):
             self.attributes = ["relational_context", "closest_anchors"] + self.attributes
 
         # Get number of tokens for embedding table
-        self.num_tokens = len(e_types) + max_distance + 1
-        self.num_tokens += sum(
+        self.num_tokens = sum(
                     self._graph.getVertexCount(k, where="{}!=0".format(anchor_attribute))
                     for k in self._vtypes
                 )
@@ -3040,7 +3039,7 @@ class NodePieceLoader(BaseLoader):
         self.curIdx = 0
         self.specialTokens = ["PAD"] + special_tokens
         self.baseTokens = self.specialTokens + ["dist_"+str(i) for i in range(self._payload["max_distance"]+1)] + e_types
-
+        self.num_tokens += len(self.baseTokens)
         for tok in self.baseTokens:
             self.idToIdx[tok] = self.curIdx
             self.curIdx += 1
