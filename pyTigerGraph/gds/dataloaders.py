@@ -2874,6 +2874,7 @@ class NodePieceLoader(BaseLoader):
         v_feats: Union[list, dict] = None,
         target_vertex_types: Union[str, list] = None,
         compute_anchors: bool = False,
+        use_cache: bool = False,
         anchor_method: str = "random",
         anchor_cache_attr: str = "anchors",
         max_distance: int = 5,
@@ -2992,6 +2993,7 @@ class NodePieceLoader(BaseLoader):
         self._payload["max_anchors"] = max_anchors
         self._payload["max_rel_context"] = max_relational_context
         self._payload["anchor_attr"] = anchor_attribute
+        self._payload["use_cache"] = use_cache
         if e_types:
             self._payload["e_types"] = e_types
         else:

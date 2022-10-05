@@ -823,6 +823,7 @@ class GDS:
                         v_feats: Union[list, dict] = None,
                         target_vertex_types: Union[str, list] = None,
                         compute_anchors: bool = False,
+                        use_cache: bool = False,
                         anchor_method: str = "random",
                         anchor_cache_attr: str = "anchors",
                         max_distance: int = 5,
@@ -845,6 +846,7 @@ class GDS:
         params = {
             "graph": self.conn,
             "v_feats": v_feats,
+            "use_cache": use_cache,
             "target_vertex_types": target_vertex_types,
             "compute_anchors": compute_anchors,
             "anchor_method": anchor_method,
