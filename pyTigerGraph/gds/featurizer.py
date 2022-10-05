@@ -47,7 +47,11 @@ class Featurizer:
                         "approximate": "https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/master/algorithms/Centrality/closeness/approximate/tg_closeness_cent_approx.gsql",
                         "exact": "https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/master/algorithms/Centrality/closeness/exact/tg_closeness_cent.gsql"
                     },
-                "degree": "https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/master/algorithms/Centrality/degree/tg_degree_cent.gsql",
+                "degree": 
+                    {
+                        "unweighted": "https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/master/algorithms/Centrality/degree/unweighted/tg_degree_cent.gsql",
+                        "weighted": "https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/master/algorithms/Centrality/degree/weighted/tg_weighted_degree_cent.gsql"
+                    },
                 "eigenvector": "https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/master/algorithms/Centrality/eigenvector/tg_eigenvector_cent.gsql",
                 "harmonic": "https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/master/algorithms/Centrality/harmonic/tg_harmonic_cent.gsql"
                 },
