@@ -567,7 +567,8 @@ class BaseLoader:
         e_attr_types: dict = {},
         add_self_loop: bool = False,
         reindex: bool = True,
-        is_hetero: bool = False
+        is_hetero: bool = False,
+        callback_fn: function = None,
     ) -> NoReturn:
         while not exit_event.is_set():
             raw = in_q.get()
@@ -590,7 +591,8 @@ class BaseLoader:
                 add_self_loop = add_self_loop,
                 reindex = reindex,
                 primary_id = {},
-                is_hetero = is_hetero
+                is_hetero = is_hetero,
+                callback_fn = callback_fn
             )
             out_q.put(data)
             in_q.task_done()
@@ -611,7 +613,8 @@ class BaseLoader:
         add_self_loop: bool = False,
         reindex: bool = True,
         primary_id: dict = {},
-        is_hetero: bool = False
+        is_hetero: bool = False,
+        callback_fn: function = None,
     ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, pd.DataFrame], "dgl.DGLGraph", "pyg.data.Data", "spektral.data.graph.Graph",
                dict, Tuple[dict, dict], "pyg.data.HeteroData"]:
         """Parse raw data into dataframes, DGL graphs, or PyG graphs.
@@ -911,7 +914,10 @@ class BaseLoader:
                     "Spektral is not installed. Please install it to use spektral output."
                 )
         elif out_format.lower() == "dataframe":
-            return data
+            if callback_fn:
+                return callback_fn(data)
+            else:
+                return data
         else:
             raise NotImplementedError
         # Reformat as a graph.
@@ -1074,7 +1080,10 @@ class BaseLoader:
                     add_sep_attr(v_extra_feats[vtype], v_attr_types[vtype], vertices[vtype],
                                 data, is_hetero, mode, "vertex", vtype)   
             del vertices
-        return data
+        if callback_fn:
+            return callback_fn(data)
+        else:
+            return data
 
     def _start_request(self, out_tuple: bool, resp_type: str):
         # If using kafka
@@ -3099,6 +3108,9 @@ class NodePieceLoader(BaseLoader):
         )
         return install_query_file(self._graph, query_path, query_replace)
 
+    def nodepiece_process(self, data):
+        return data
+
     def _start(self) -> None:
         # Create task and result queues
         self._read_task_q = Queue(self.buffer_size * 2)
@@ -3130,7 +3142,8 @@ class NodePieceLoader(BaseLoader):
                 {},
                 False,
                 False,
-                self.is_hetero
+                self.is_hetero,
+                self.nodepiece_process
             ),
         )
         self._reader.start()
@@ -3180,7 +3193,8 @@ class NodePieceLoader(BaseLoader):
                                     v_attr_types=v_attr_types,
                                     reindex=False, 
                                     is_hetero=self.is_hetero, 
-                                    primary_id=resp[0]["pids"])
+                                    primary_id=resp[0]["pids"],
+                                    callback_fn=self.nodepiece_process)
         else:
             data = self._parse_data(resp[0]["vertex_batch"], 
                                     v_in_feats=attributes, 
@@ -3189,5 +3203,6 @@ class NodePieceLoader(BaseLoader):
                                     v_attr_types=v_attr_types,
                                     reindex=False, 
                                     is_hetero=self.is_hetero, 
-                                    primary_id=resp[0]["pids"])
+                                    primary_id=resp[0]["pids"],
+                                    callback_fn=self.nodepiece_process)
         return data
