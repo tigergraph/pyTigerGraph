@@ -2887,6 +2887,7 @@ class NodePieceLoader(BaseLoader):
         use_cache: bool = False,
         anchor_method: str = "random",
         anchor_cache_attr: str = "anchors",
+        special_tokens: list = ["MASK", "CLS", "SEP"],
         max_distance: int = 5,
         max_anchors: int = 10,
         max_relational_context: int = 10,
@@ -3035,6 +3036,14 @@ class NodePieceLoader(BaseLoader):
                     self._graph.getVertexCount(k, where="{}!=0".format(anchor_attribute))
                     for k in self._vtypes
                 )
+        self.idToIdx = {}
+        self.curIdx = 0
+        self.specialTokens = ["PAD"] + special_tokens
+        self.baseTokens = self.specialTokens + ["dist_"+str(i) for i in range(self._payload["max_distance"]+1)] + e_types
+
+        for tok in self.baseTokens:
+            self.idToIdx[tok] = self.curIdx
+            self.curIdx += 1
 
     def _compute_anchors(self, anchor_attr, method="random") -> str:
         if method.lower() == "random":
@@ -3110,6 +3119,33 @@ class NodePieceLoader(BaseLoader):
         return install_query_file(self._graph, query_path, query_replace)
 
     def nodepiece_process(self, data):
+        def processRelContext(row):
+            context = row.split(" ")[:-1]
+            context = [self.idToIdx[x] for x in context][:self._payload["max_rel_context"]]
+            context = context + [self.idToIdx["PAD"] for x in range(len(context), self._payload["max_rel_context"])]
+            return context
+        def processAnchors(row):
+            ancs = row.split(" ")[:-1]
+            dists = []
+            toks = []
+            for anc in ancs:
+                tmp = anc.split(":")
+                dists.append(self.idToIdx["dist_"+str(tmp[1])])
+                if tmp[0] in self.idToIdx:
+                    toks.append(self.idToIdx[tmp[0]])
+                else:
+                    self.idToIdx[tmp[0]] = self.curIdx
+                    self.curIdx += 1
+            dists += [self.idToIdx["PAD"] for x in range(len(dists), self._payload["max_anchors"])]
+            toks += [self.idToIdx["PAD"] for x in range(len(toks), self._payload["max_anchors"])]
+            return {"ancs":toks, "dists": dists}
+        for v_type in data.keys():
+            data[v_type]["relational_context"] = data[v_type]["relational_context"].apply(lambda x: processRelContext(x))
+            ancs = data[v_type]["closest_anchors"].apply(lambda x: processAnchors(x))
+            ancs = pd.DataFrame(list(ancs))
+            data[v_type].drop(columns="closest_anchors")
+            data[v_type]["anchors"] = ancs["ancs"]
+            data[v_type]["anchor_distances"] = ancs["dists"]
         return data
 
     def _start(self) -> None:
