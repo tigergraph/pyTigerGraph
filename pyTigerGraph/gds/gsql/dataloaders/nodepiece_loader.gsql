@@ -106,7 +106,9 @@ CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
             POST-ACCUM
               FOREACH tup IN s.@token_heap DO
                 s.@ancs += int_to_string(tup.v_id)+":"+int_to_string(tup.distance)+" ",
-                s.{ANCHOR_CACHE_ATTRIBUTE} += (tup.v_id -> tup.distance)
+                IF use_cache THEN
+                  s.{ANCHOR_CACHE_ATTRIBUTE} += (tup.v_id -> tup.distance)
+                END
               END,
               {VERTEXATTRS};
       
