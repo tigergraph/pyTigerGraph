@@ -7,6 +7,7 @@ You can define an instance of each data loader class through a link:https://docs
 Requires `querywriters` user permissions for full functionality. 
 """
 
+from ast import Call
 import io
 import logging
 import math
@@ -16,7 +17,7 @@ from queue import Empty, Queue
 from threading import Event, Thread
 from time import sleep
 from typing import (TYPE_CHECKING, Any, Iterator, NoReturn, Tuple,
-                    Union)
+                    Union, Callable)
 
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
@@ -568,7 +569,7 @@ class BaseLoader:
         add_self_loop: bool = False,
         reindex: bool = True,
         is_hetero: bool = False,
-        callback_fn: function = None,
+        callback_fn: Callable = None,
     ) -> NoReturn:
         while not exit_event.is_set():
             raw = in_q.get()
@@ -614,7 +615,7 @@ class BaseLoader:
         reindex: bool = True,
         primary_id: dict = {},
         is_hetero: bool = False,
-        callback_fn: function = None,
+        callback_fn: Callable = None,
     ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, pd.DataFrame], "dgl.DGLGraph", "pyg.data.Data", "spektral.data.graph.Graph",
                dict, Tuple[dict, dict], "pyg.data.HeteroData"]:
         """Parse raw data into dataframes, DGL graphs, or PyG graphs.
