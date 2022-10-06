@@ -320,6 +320,32 @@ class TestGDSGraphLoaderREST(unittest.TestCase):
         self.assertEqual(data["edge_index"].shape[1], 14)
         self.assertEqual(len(data["duration"]), 14)
 
+    def test_iterate_spektral(self):
+        loader = GraphLoader(
+            graph=self.conn,
+            v_in_feats=["x"],
+            v_out_labels=["y"],
+            v_extra_feats=["train_mask", "val_mask", "test_mask"],
+            batch_size=1024,
+            shuffle=True,
+            filter_by=None,
+            output_format="spektral",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4,
+        )
+        num_batches = 0
+        for data in loader:
+            # print(num_batches, data)
+            # self.assertIsInstance(data, spData)
+            self.assertIn("x", data)
+            self.assertIn("y", data)
+            self.assertIn("train_mask", data)
+            self.assertIn("val_mask", data)
+            self.assertIn("test_mask", data)
+            num_batches += 1
+        self.assertEqual(num_batches, 11)
+
 
 class TestGDSHeteroGraphLoaderREST(unittest.TestCase):
     @classmethod
@@ -445,7 +471,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSGraphLoader("test_iterate_pyg"))
     suite.addTest(TestGDSGraphLoader("test_iterate_df"))
     suite.addTest(TestGDSGraphLoader("test_edge_attr"))
-    # suite.addTest(TestGDSGraphLoader("test_sasl_plaintext"))
+    suite.addTest(TestGDSGraphLoader("test_sasl_plaintext"))
     # suite.addTest(TestGDSGraphLoader("test_sasl_ssl"))
     suite.addTest(TestGDSGraphLoaderREST("test_init"))
     suite.addTest(TestGDSGraphLoaderREST("test_iterate_pyg"))
