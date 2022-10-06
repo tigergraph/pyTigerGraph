@@ -3041,20 +3041,28 @@ class NodePieceLoader(BaseLoader):
             if isinstance(tokenMap, dict):
                 self.idToIdx = tokenMap
             elif isinstance(tokenMap, str):
-                self.idToIdx = pickle.load(open(tokenMap))
+                self.idToIdx = pickle.load(open(tokenMap, "rb"))
         else:
             self.idToIdx = {}
             self.curIdx = 0
             self.specialTokens = ["PAD"] + special_tokens
             self.baseTokens = self.specialTokens + ["dist_"+str(i) for i in range(self._payload["max_distance"]+1)] + e_types
             self.num_tokens += len(self.baseTokens)
-            for tok in self.baseTokens:
+            query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "dataloaders",
+                "get_anchors.gsql",
+            )
+            params = {"anchor_attr": anchor_attribute, "v_types": self._vtypes}
+            install_query_file(self._graph, query_path)
+            ancs = self._graph.runInstalledQuery("get_anchors", params=params)[0]["@@vids"]
+            for tok in self.baseTokens + ancs:
                 self.idToIdx[tok] = self.curIdx
                 self.curIdx += 1
 
     def saveTokens(self, filename) -> None:
         pickle.dump(self.idToIdx, open(filename, "wb"))
-
 
     def _compute_anchors(self, anchor_attr, method="random") -> str:
         if method.lower() == "random":
@@ -3154,7 +3162,7 @@ class NodePieceLoader(BaseLoader):
             data[v_type]["relational_context"] = data[v_type]["relational_context"].apply(lambda x: processRelContext(x))
             ancs = data[v_type]["closest_anchors"].apply(lambda x: processAnchors(x))
             ancs = pd.DataFrame(list(ancs))
-            data[v_type].drop(columns="closest_anchors")
+            data[v_type].drop(columns="closest_anchors", inplace=True)
             data[v_type]["anchors"] = ancs["ancs"]
             data[v_type]["anchor_distances"] = ancs["dists"]
         return data
