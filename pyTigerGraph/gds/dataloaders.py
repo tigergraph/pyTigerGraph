@@ -18,6 +18,7 @@ from threading import Event, Thread
 from time import sleep
 from typing import (TYPE_CHECKING, Any, Iterator, NoReturn, Tuple,
                     Union, Callable)
+import pickle
 
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
@@ -2893,6 +2894,7 @@ class NodePieceLoader(BaseLoader):
         max_relational_context: int = 10,
         anchor_percentage: float = 0.01,
         anchor_attribute: str = "is_anchor",
+        tokenMap: Union[dict, str] = None,
         e_types: list = None,
         compute_all: bool = True,
         global_schema_change: bool = False,
@@ -3035,14 +3037,24 @@ class NodePieceLoader(BaseLoader):
                     self._graph.getVertexCount(k, where="{}!=0".format(anchor_attribute))
                     for k in self._vtypes
                 )
-        self.idToIdx = {}
-        self.curIdx = 0
-        self.specialTokens = ["PAD"] + special_tokens
-        self.baseTokens = self.specialTokens + ["dist_"+str(i) for i in range(self._payload["max_distance"]+1)] + e_types
-        self.num_tokens += len(self.baseTokens)
-        for tok in self.baseTokens:
-            self.idToIdx[tok] = self.curIdx
-            self.curIdx += 1
+        if tokenMap:
+            if isinstance(tokenMap, dict):
+                self.idToIdx = tokenMap
+            elif isinstance(tokenMap, str):
+                self.idToIdx = pickle.load(open(tokenMap))
+        else:
+            self.idToIdx = {}
+            self.curIdx = 0
+            self.specialTokens = ["PAD"] + special_tokens
+            self.baseTokens = self.specialTokens + ["dist_"+str(i) for i in range(self._payload["max_distance"]+1)] + e_types
+            self.num_tokens += len(self.baseTokens)
+            for tok in self.baseTokens:
+                self.idToIdx[tok] = self.curIdx
+                self.curIdx += 1
+
+    def saveTokens(self, filename) -> None:
+        pickle.dump(self.idToIdx, open(filename, "wb"))
+
 
     def _compute_anchors(self, anchor_attr, method="random") -> str:
         if method.lower() == "random":
@@ -3203,20 +3215,22 @@ class NodePieceLoader(BaseLoader):
                 raise ValueError(
                     'Input to fetch() should be in format: [{"primary_id": ..., "type": ...}, ...]'
                 )
-
-        self._payload["input_vertices"] = []
+        _payload = {}
+        _payload["v_types"] = self._vtypes
+        _payload["max_distance"] = self._payload["max_distance"]
+        _payload["max_anchors"] = self._payload["max_anchors"]
+        _payload["max_rel_context"] = self._payload["max_rel_context"]
+        _payload["anchor_attr"] = self._payload["anchor_attr"]
+        _payload["use_cache"] = self._payload["use_cache"]
+        _payload["e_types"] = self._payload["e_types"]
+        _payload["compute_all"] = self._payload["compute_all"]
+        _payload["input_vertices"] = []
         for i in vertices:
-            self._payload["input_vertices"].append((i["primary_id"], i["type"]))
+            _payload["input_vertices"].append((i["primary_id"], i["type"]))
         resp = self._graph.runInstalledQuery(
-            self.query_name, params=self._payload, timeout=self.timeout, usePost=True
+            self.query_name, params=_payload, timeout=self.timeout, usePost=True
         )
-        del self._payload["input_vertices"]
         attributes = self.attributes
-        if self.is_hetero:
-            for key in self.attributes.keys():
-                attributes[key] = ["relational_context", "closest_anchors"] + attributes[key]
-        else:
-            attributes = ["relational_context", "closest_anchors"] + attributes
         if not self.is_hetero:
             v_attr_types = next(iter(self._v_schema.values()))
         else:
