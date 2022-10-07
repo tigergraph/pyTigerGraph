@@ -11,3 +11,4 @@ site/
 pyTigerGraph.egg-info
 tests1.py
 tests/testserver.cfg
+.ipynb_checkpoints

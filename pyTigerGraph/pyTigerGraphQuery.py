@@ -125,7 +125,8 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
         return ret
 
     def runInstalledQuery(self, queryName: str, params: Union[str, dict] = None,
-            timeout: int = None, sizeLimit: int = None, usePost: bool = False) -> list:
+            timeout: int = None, sizeLimit: int = None, usePost: bool = False, runAsync: bool = False,
+            replica: int = None, threadLimit: int = None) -> list:
         """Runs an installed query.
 
         The query must be already created and installed in the graph.
@@ -147,6 +148,16 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
             usePost:
                 The RESTPP accepts a maximum URL length of 8192 characters. Use POST if additional parameters cause
                 you to exceed this limit.
+            runAsync:
+                Run the query in asynchronous mode. 
+                See xref:gsql-ref:querying:query-operations#_detached_mode_async_option[Async operation]
+            replica:
+                If your TigerGraph instance is an HA cluster, specify which replica to run the query on. Must be a 
+                value between [1, (cluster replication factor)].
+                See xref:tigergraph-server:API:built-in-endpoints#_specify_replica[Specify replica]
+            threadLimit:
+                Specify a limit of the number of threads the query is allowed to use on each node of the TigerGraph cluster.
+                See xref:tigergraph-server:API:built-in-endpoints#_specify_thread_limit[Thread limit]
 
         Returns:
             The output of the query, a list of output elements (vertex sets, edge sets, variables,
@@ -173,20 +184,24 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_an_installed_query_get[Run an installed query (GET)]
             - `POST /query/{graph_name}/{query_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_an_installed_query_post[Run an installed query (POST)]
-
-        TODO Specify replica: GSQL-REPLICA
-        TODO Specify thread limit: GSQL-THREAD-LIMIT
-        TODO Detached mode
         """
         logger.info("entry: runInstalledQuery")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
         headers = {}
+        res_key = "results"
         if timeout and timeout > 0:
             headers["GSQL-TIMEOUT"] = str(timeout)
         if sizeLimit and sizeLimit > 0:
             headers["RESPONSE-LIMIT"] = str(sizeLimit)
+        if runAsync:
+            headers["GSQL-ASYNC"] = "true"
+            res_key = "request_id"
+        if replica:
+            headers["GSQL-REPLICA"] = str(replica)
+        if threadLimit:
+            headers["GSQL-THREAD-LIMIT"] = str(threadLimit)
 
         if isinstance(params, dict):
             params = self._parseQueryParameters(params)
@@ -210,13 +225,32 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
 
             return ret
 
-    # TODO checkQueryStatus()
-    #   GET /query_status/{graph_name}
-    #   xref:tigergraph-server:API:built-in-endpoints.adoc#_check_query_status_detached_mode[Check query status (detached mode)]
+    def checkQueryStatus(self, requestId: str = ""):
+        """Checks the status of the queries running on the graph specified in the connection.
 
-    # TODO getQueryResult()
-    #   GET /query_result/{requestid}
-    #   xref:tigergraph-server:API:built-in-endpoints.adoc#_check_query_results_detached_mode[Check query results (detached mode)]
+        Args:
+            requestId (str, optional):
+                String ID of the request. If empty, returns all running requests.
+                See xref:tigergraph-server:API:built-in-endpoints.adoc#_check_query_status_detached_mode[Check query status (detached mode)]
+
+        Endpoint:
+            - `GET /query_status/{graph_name}`
+                See xref:tigergraph-server:API:built-in-endpoints.adoc#_check_query_status_detached_mode[Check query status (detached mode)]
+        """
+        if requestId != "":
+            return self._get(self.restppUrl + "/query_status?graph_name="+self.graphname+"&requestid="+requestId)
+        else:
+            return self._get(self.restppUrl + "/query_status?graph_name="+self.graphname+"&requestid=all")
+
+    def getQueryResult(self, requestId: str = ""):
+        """Gets the result of a detached query.
+
+        Args:
+            requestId (str):
+                String ID of the request.
+                See xref:tigergraph-server:API:built-in-endpoints.adoc#_check_query_results_detached_mode[Check query results (detached mode)]
+        """
+        return self._get(self.restppUrl + "/query_result?requestid="+requestId)
 
     def runInterpretedQuery(self, queryText: str, params: Union[str, dict] = None) -> list:
         """Runs an interpreted query.

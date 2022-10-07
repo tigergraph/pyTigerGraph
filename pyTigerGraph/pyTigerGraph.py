@@ -10,6 +10,7 @@ from pyTigerGraph.pyTigerGraphLoading import pyTigerGraphLoading
 from pyTigerGraph.pyTigerGraphPath import pyTigerGraphPath
 from pyTigerGraph.pyTigerGraphUDT import pyTigerGraphUDT
 from pyTigerGraph.pyTigerGraphVertex import pyTigerGraphVertex
+from pyTigerGraph.pyTigerGraphDataset import pyTigerGraphDataset
 
 if TYPE_CHECKING:
     from .gds import gds
@@ -23,7 +24,7 @@ if not sys.warnoptions:
 # TODO Proper deprecation handling; import deprecation?
 
 class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT, pyTigerGraphAuth,
-    pyTigerGraphLoading, pyTigerGraphPath, object):
+    pyTigerGraphLoading, pyTigerGraphPath, pyTigerGraphDataset, object):
     """Python wrapper for TigerGraph's REST++ and GSQL APIs"""
 
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
