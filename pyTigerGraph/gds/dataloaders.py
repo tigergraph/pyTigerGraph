@@ -3052,6 +3052,7 @@ class NodePieceLoader(BaseLoader):
             params = {"anchor_attr": anchor_attribute, "v_types": self._vtypes}
             install_query_file(self._graph, query_path)
             ancs = self._graph.runInstalledQuery("get_anchors", params=params)[0]["@@vids"]
+            print("Number of Anchors:", len(ancs))
             for tok in self.baseTokens + ancs:
                 self.idToIdx[tok] = self.curIdx
                 self.curIdx += 1
@@ -3147,11 +3148,7 @@ class NodePieceLoader(BaseLoader):
             for anc in ancs:
                 tmp = anc.split(":")
                 dists.append(self.idToIdx["dist_"+str(tmp[1])])
-                if tmp[0] in self.idToIdx:
-                    toks.append(self.idToIdx[tmp[0]])
-                else:
-                    self.idToIdx[tmp[0]] = self.curIdx
-                    self.curIdx += 1
+                toks.append(self.idToIdx[tmp[0]])
             dists += [self.idToIdx["PAD"] for x in range(len(dists), self._payload["max_anchors"])]
             toks += [self.idToIdx["PAD"] for x in range(len(toks), self._payload["max_anchors"])]
             return {"ancs":toks, "dists": dists}
