@@ -1,7 +1,7 @@
 import unittest
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
-from pyTigerGraphUnitTest import pyTigerGraphUnitTest
+from .pyTigerGraphUnitTest import pyTigerGraphUnitTest
 
 
 class test_pyTigerGraphPath(pyTigerGraphUnitTest):
@@ -9,7 +9,7 @@ class test_pyTigerGraphPath(pyTigerGraphUnitTest):
 
     def test_01_getSecrets(self):
         res = self.conn.showSecrets()
-        self.assertIsInstance(dict)
+        self.assertIsInstance(res, dict)
         self.assertEqual(3, len(res))
         self.assertIn("secret1", res)
         self.assertIn("secret2", res)
