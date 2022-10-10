@@ -3054,7 +3054,7 @@ class NodePieceLoader(BaseLoader):
             ancs = self._graph.runInstalledQuery("get_anchors", params=params)[0]["@@vids"]
             print("Number of Anchors:", len(ancs))
             for tok in self.baseTokens + ancs:
-                self.idToIdx[tok] = self.curIdx
+                self.idToIdx[str(tok)] = self.curIdx
                 self.curIdx += 1
             
         self.num_tokens = len(self.idToIdx.keys())
@@ -3138,7 +3138,7 @@ class NodePieceLoader(BaseLoader):
     def nodepiece_process(self, data):
         def processRelContext(row):
             context = row.split(" ")[:-1]
-            context = [self.idToIdx[x] for x in context][:self._payload["max_rel_context"]]
+            context = [self.idToIdx[str(x)] for x in context][:self._payload["max_rel_context"]]
             context = context + [self.idToIdx["PAD"] for x in range(len(context), self._payload["max_rel_context"])]
             return context
         def processAnchors(row):
@@ -3148,7 +3148,7 @@ class NodePieceLoader(BaseLoader):
             for anc in ancs:
                 tmp = anc.split(":")
                 dists.append(self.idToIdx["dist_"+str(tmp[1])])
-                toks.append(self.idToIdx[tmp[0]])
+                toks.append(self.idToIdx[str(tmp[0])])
             dists += [self.idToIdx["PAD"] for x in range(len(dists), self._payload["max_anchors"])]
             toks += [self.idToIdx["PAD"] for x in range(len(toks), self._payload["max_anchors"])]
             return {"ancs":toks, "dists": dists}
