@@ -1,20 +1,18 @@
 import unittest
 
 from pyTigerGraph import TigerGraphConnection
-from pyTigerGraph.gds.utilities import is_query_installed
 from pyTigerGraph.gds.dataloaders import EdgeNeighborLoader
+from pyTigerGraph.gds.utilities import is_query_installed
 from torch_geometric.data import Data as pygData
-from spektral.data.graph import Graph as spData
-from torch_geometric.data import HeteroData as pygHeteroData
 
 
 class TestGDSEdgeNeighborLoaderKafka(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora")
-        # cls.conn.gsql("drop query all")
-    
-    def test_sasl_plaintext(self):
+        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
+        cls.conn.getToken(cls.conn.createSecret())
+
+    def test_iterate_pyg(self):
         loader = EdgeNeighborLoader(
             graph=self.conn,
             v_in_feats=["x"],
@@ -28,48 +26,12 @@ class TestGDSEdgeNeighborLoaderKafka(unittest.TestCase):
             add_self_loop=False,
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.127.11.236:9092",
-            kafka_security_protocol="SASL_PLAINTEXT",
-            kafka_sasl_mechanism="PLAIN",
-            kafka_sasl_plain_username="bill",
-            kafka_sasl_plain_password="bill"
+            kafka_address="kafka:9092",
         )
         num_batches = 0
         for data in loader:
             # print(num_batches, data)
             self.assertIsInstance(data, pygData)
-            self.assertIn("x", data)
-            self.assertIn("is_seed", data)
-            self.assertIn("is_train", data)
-            self.assertGreater(data["x"].shape[0], 0)
-            self.assertGreater(data["edge_index"].shape[1], 0)
-            num_batches += 1
-        self.assertEqual(num_batches, 11)
-
-    def test_sasl_plaintext_spektral(self):
-        loader = EdgeNeighborLoader(
-            graph=self.conn,
-            v_in_feats=["x"],
-            e_extra_feats=["is_train"],
-            batch_size=1024,
-            num_neighbors=10,
-            num_hops=2,
-            shuffle=False,
-            filter_by=None,
-            output_format="spektral",
-            add_self_loop=False,
-            loader_id=None,
-            buffer_size=4,
-            kafka_address="34.127.11.236:9092",
-            kafka_security_protocol="SASL_PLAINTEXT",
-            kafka_sasl_mechanism="PLAIN",
-            kafka_sasl_plain_username="bill",
-            kafka_sasl_plain_password="bill"
-        )
-        num_batches = 0
-        for data in loader:
-            # print(num_batches, data)
-            self.assertIsInstance(data, spData)
             self.assertIn("x", data)
             self.assertIn("is_seed", data)
             self.assertIn("is_train", data)
@@ -99,7 +61,7 @@ class TestGDSEdgeNeighborLoaderKafka(unittest.TestCase):
             kafka_sasl_mechanism="PLAIN",
             kafka_sasl_plain_username="YIQM66T3BZZLSXBJ",
             kafka_sasl_plain_password="UgRdpSS34e2kYe8jZ9m7py4LgjkjxsGrePiaaMv/YCHRIjRmTJMpodS/0og8SYe8",
-            kafka_producer_ca_location="/home/tigergraph/mlworkbench/ssl/cert.pem"
+            kafka_producer_ca_location="/home/tigergraph/mlworkbench/ssl/cert.pem",
         )
         num_batches = 0
         for data in loader:
@@ -117,8 +79,8 @@ class TestGDSEdgeNeighborLoaderKafka(unittest.TestCase):
 class TestGDSEdgeNeighborLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora")
-        # cls.conn.gsql("drop query all")
+        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
+        cls.conn.getToken(cls.conn.createSecret())
 
     def test_init(self):
         loader = EdgeNeighborLoader(
@@ -183,7 +145,7 @@ class TestGDSEdgeNeighborLoaderREST(unittest.TestCase):
         num_batches = 0
         for data in loader:
             # print(num_batches, data)
-            self.assertIsInstance(data, spData)
+            # self.assertIsInstance(data, spData)
             self.assertIn("x", data)
             self.assertIn("is_seed", data)
             self.assertIn("is_train", data)
@@ -191,16 +153,15 @@ class TestGDSEdgeNeighborLoaderREST(unittest.TestCase):
             self.assertGreater(data["A"].shape[1], 0)
             num_batches += 1
         self.assertEqual(num_batches, 11)
- 
+
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
-    suite.addTest(TestGDSEdgeNeighborLoaderKafka("test_sasl_plaintext"))
-    suite.addTest(TestGDSEdgeNeighborLoaderKafka("test_sasl_plaintext_spektral"))
-    suite.addTest(TestGDSEdgeNeighborLoaderKafka("test_sasl_ssl"))
+    suite.addTest(TestGDSEdgeNeighborLoaderKafka("test_iterate_pyg"))
+    # suite.addTest(TestGDSEdgeNeighborLoaderKafka("test_sasl_ssl"))
     suite.addTest(TestGDSEdgeNeighborLoaderREST("test_init"))
     suite.addTest(TestGDSEdgeNeighborLoaderREST("test_iterate_pyg"))
-    suite.addTest(TestGDSEdgeNeighborLoaderREST("test_iterate_spektral"))
-    
+    # suite.addTest(TestGDSEdgeNeighborLoaderREST("test_iterate_spektral"))
+
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)

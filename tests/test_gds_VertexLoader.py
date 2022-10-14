@@ -9,8 +9,8 @@ from pyTigerGraph.gds.utilities import is_query_installed
 class TestGDSVertexLoader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora")
-        # cls.conn.gsql("drop query all")
+        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
+        cls.conn.getToken(cls.conn.createSecret())
 
     def test_init(self):
         loader = VertexLoader(
@@ -21,7 +21,7 @@ class TestGDSVertexLoader(unittest.TestCase):
             filter_by="train_mask",
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.82.171.137:9092",
+            kafka_address="kafka:9092",
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
         self.assertEqual(loader.num_batches, 9)
@@ -35,7 +35,7 @@ class TestGDSVertexLoader(unittest.TestCase):
             filter_by="train_mask",
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.82.171.137:9092",
+            kafka_address="kafka:9092",
         )
         num_batches = 0
         for data in loader:
@@ -58,7 +58,7 @@ class TestGDSVertexLoader(unittest.TestCase):
             filter_by="train_mask",
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.82.171.137:9092",
+            kafka_address="kafka:9092",
         )
         data = loader.data
         # print(data)
@@ -129,8 +129,8 @@ class TestGDSVertexLoader(unittest.TestCase):
 class TestGDSVertexLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora")
-        # cls.conn.gsql("drop query all")
+        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
+        cls.conn.getToken(cls.conn.createSecret())
 
     def test_init(self):
         loader = VertexLoader(
@@ -187,31 +187,29 @@ class TestGDSVertexLoaderREST(unittest.TestCase):
         self.assertIn("test_mask", data.columns)
 
     def test_string_attr(self):
-        conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora2")
+        conn = TigerGraphConnection(host="http://tigergraph", graphname="Social")
+        conn.getToken(conn.createSecret())
         loader = VertexLoader(
             graph=conn,
-            attributes=["y", "train_mask", "val_mask", "test_mask", "name"],
+            attributes=["age", "state"],
             num_batches=1,
             shuffle=False,
-            filter_by="train_mask",
             loader_id=None,
             buffer_size=4,
         )
         data = loader.data
-        # print(data.head())
+        # print(data)
         self.assertIsInstance(data, DataFrame)
-        self.assertIn("y", data.columns)
-        self.assertIn("train_mask", data.columns)
-        self.assertIn("val_mask", data.columns)
-        self.assertIn("test_mask", data.columns)
-        self.assertIn("name", data.columns)
+        self.assertEqual(data.shape[0], 7)
+        self.assertIn("age", data.columns)
+        self.assertIn("state", data.columns)
 
 
 class TestGDSHeteroVertexLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://35.230.92.92", graphname="hetero")
-        # cls.conn.gsql("drop query all")
+        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="hetero")
+        cls.conn.getToken(cls.conn.createSecret())
 
     def test_init(self):
         loader = VertexLoader(
@@ -277,7 +275,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSVertexLoader("test_iterate"))
     suite.addTest(TestGDSVertexLoader("test_all_vertices"))
     suite.addTest(TestGDSVertexLoader("test_sasl_plaintext"))
-    suite.addTest(TestGDSVertexLoader("test_sasl_ssl"))
+    # suite.addTest(TestGDSVertexLoader("test_sasl_ssl"))
     suite.addTest(TestGDSVertexLoaderREST("test_init"))
     suite.addTest(TestGDSVertexLoaderREST("test_iterate"))
     suite.addTest(TestGDSVertexLoaderREST("test_all_vertices"))

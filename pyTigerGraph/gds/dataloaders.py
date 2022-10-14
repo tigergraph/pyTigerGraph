@@ -7,7 +7,9 @@ You can define an instance of each data loader class through a link:https://docs
 Requires `querywriters` user permissions for full functionality. 
 """
 
+import hashlib
 import io
+import json
 import logging
 import math
 import os
@@ -15,8 +17,7 @@ from collections import defaultdict
 from queue import Empty, Queue
 from threading import Event, Thread
 from time import sleep
-from typing import (TYPE_CHECKING, Any, Iterator, NoReturn, Tuple,
-                    Union)
+from typing import TYPE_CHECKING, Any, Iterator, NoReturn, Tuple, Union
 
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
@@ -1434,8 +1435,17 @@ class NeighborLoader(BaseLoader):
 
     def _install_query(self):
         # Install the right GSQL query for the loader.
-        query_suffix = []
-        query_replace = {}
+        query_suffix = {
+            "v_in_feats": self.v_in_feats,
+            "v_out_labels": self.v_out_labels,
+            "v_extra_feats": self.v_extra_feats,
+            "e_in_feats": self.e_in_feats,
+            "e_out_labels": self.e_out_labels,
+            "e_extra_feats": self.e_extra_feats,
+        }
+        md5 = hashlib.md5()
+        md5.update(json.dumps(query_suffix).encode())
+        query_replace = {"{QUERYSUFFIX}": md5.hexdigest()}
 
         if isinstance(self.v_in_feats, dict) or isinstance(self.e_in_feats, dict):
             # Multiple vertex types
@@ -1447,7 +1457,6 @@ class NeighborLoader(BaseLoader):
                     + self.v_out_labels.get(vtype, [])
                     + self.v_extra_feats.get(vtype, [])
                 )
-                query_suffix.extend(v_attr_names)
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
@@ -1475,7 +1484,6 @@ class NeighborLoader(BaseLoader):
                     + self.e_out_labels.get(etype, [])
                     + self.e_extra_feats.get(etype, [])
                 )
-                query_suffix.extend(e_attr_names)
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
@@ -1489,11 +1497,9 @@ class NeighborLoader(BaseLoader):
                             "IF" if idx==0 else "ELSE IF", etype)
             print_query += "END"
             query_replace["{EDGEATTRS}"] = print_query
-            query_suffix = list(dict.fromkeys(query_suffix))
         else:
             # Ignore vertex types
             v_attr_names = self.v_in_feats + self.v_out_labels + self.v_extra_feats
-            query_suffix.extend(v_attr_names)
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
@@ -1515,7 +1521,6 @@ class NeighborLoader(BaseLoader):
                 query_replace["{OTHERVERTEXATTRS}"] = print_query
             # Ignore edge types
             e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
-            query_suffix.extend(e_attr_names)
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
@@ -1528,7 +1533,6 @@ class NeighborLoader(BaseLoader):
             else:
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "\\n")'
             query_replace["{EDGEATTRS}"] = print_query
-        query_replace["{QUERYSUFFIX}"] = "_".join(query_suffix)
         # Install query
         query_path = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
@@ -1835,15 +1839,18 @@ class EdgeLoader(BaseLoader):
 
     def _install_query(self):
         # Install the right GSQL query for the loader.
-        query_suffix = []
-        query_replace = {}
+        query_suffix = {
+            "attributes": self.attributes,
+        }
+        md5 = hashlib.md5()
+        md5.update(json.dumps(query_suffix).encode())
+        query_replace = {"{QUERYSUFFIX}": md5.hexdigest()}
 
         if isinstance(self.attributes, dict):
             # Multiple edge types
             print_query = ""
             for idx, etype in enumerate(self._etypes):
                 e_attr_names = self.attributes.get(etype, [])
-                query_suffix.extend(e_attr_names)
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
@@ -1857,11 +1864,9 @@ class EdgeLoader(BaseLoader):
                             "IF" if idx==0 else "ELSE IF", etype)
             print_query += "END"
             query_replace["{EDGEATTRS}"] = print_query
-            query_suffix = list(dict.fromkeys(query_suffix))
         else:
             # Ignore edge types
             e_attr_names = self.attributes
-            query_suffix.extend(e_attr_names)
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
@@ -1874,7 +1879,6 @@ class EdgeLoader(BaseLoader):
             else:
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "\\n")'
             query_replace["{EDGEATTRS}"] = print_query
-        query_replace["{QUERYSUFFIX}"] = "_".join(query_suffix)
         # Install query
         query_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
@@ -2105,15 +2109,18 @@ class VertexLoader(BaseLoader):
 
     def _install_query(self) -> str:
         # Install the right GSQL query for the loader.
-        query_suffix = []
-        query_replace = {}
+        query_suffix = {
+            "attributes": self.attributes,
+        }
+        md5 = hashlib.md5()
+        md5.update(json.dumps(query_suffix).encode())
+        query_replace = {"{QUERYSUFFIX}": md5.hexdigest()}
 
         if isinstance(self.attributes, dict):
             # Multiple vertex types
             print_query = ""
             for idx, vtype in enumerate(self._vtypes):
                 v_attr_names = self.attributes.get(vtype, [])
-                query_suffix.extend(v_attr_names)
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
@@ -2127,11 +2134,9 @@ class VertexLoader(BaseLoader):
                             "IF" if idx==0 else "ELSE IF", vtype)
             print_query += "END"
             query_replace["{VERTEXATTRS}"] = print_query
-            query_suffix = list(dict.fromkeys(query_suffix))
         else:
             # Ignore vertex types
             v_attr_names = self.attributes
-            query_suffix.extend(v_attr_names)
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
@@ -2144,7 +2149,6 @@ class VertexLoader(BaseLoader):
             else:
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "\\n")'
             query_replace["{VERTEXATTRS}"] = print_query
-        query_replace["{QUERYSUFFIX}"] = "_".join(query_suffix)
         # Install query
         query_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
@@ -2401,8 +2405,17 @@ class GraphLoader(BaseLoader):
 
     def _install_query(self) -> str:
         # Install the right GSQL query for the loader.
-        query_suffix = []
-        query_replace = {}
+        query_suffix = {
+            "v_in_feats": self.v_in_feats,
+            "v_out_labels": self.v_out_labels,
+            "v_extra_feats": self.v_extra_feats,
+            "e_in_feats": self.e_in_feats,
+            "e_out_labels": self.e_out_labels,
+            "e_extra_feats": self.e_extra_feats,
+        }
+        md5 = hashlib.md5()
+        md5.update(json.dumps(query_suffix).encode())
+        query_replace = {"{QUERYSUFFIX}": md5.hexdigest()}
 
         if isinstance(self.v_in_feats, dict):
             # Multiple vertex types
@@ -2413,7 +2426,6 @@ class GraphLoader(BaseLoader):
                     + self.v_out_labels.get(vtype, [])
                     + self.v_extra_feats.get(vtype, [])
                 )
-                query_suffix.extend(v_attr_names)
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
@@ -2435,7 +2447,6 @@ class GraphLoader(BaseLoader):
                     + self.e_out_labels.get(etype, [])
                     + self.e_extra_feats.get(etype, [])
                 )
-                query_suffix.extend(e_attr_names)
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
@@ -2449,11 +2460,9 @@ class GraphLoader(BaseLoader):
                             "IF" if idx==0 else "ELSE IF", etype)
             print_query += "END"
             query_replace["{EDGEATTRS}"] = print_query
-            query_suffix = list(dict.fromkeys(query_suffix))
         else:
             # Ignore vertex types
             v_attr_names = self.v_in_feats + self.v_out_labels + self.v_extra_feats
-            query_suffix.extend(v_attr_names)
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
@@ -2468,7 +2477,6 @@ class GraphLoader(BaseLoader):
             query_replace["{VERTEXATTRS}"] = print_query
             # Ignore edge types
             e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
-            query_suffix.extend(e_attr_names)
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
@@ -2481,7 +2489,6 @@ class GraphLoader(BaseLoader):
             else:
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "\\n")'
             query_replace["{EDGEATTRS}"] = print_query
-        query_replace["{QUERYSUFFIX}"] = "_".join(query_suffix)
         # Install query
         query_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
@@ -2707,8 +2714,17 @@ class EdgeNeighborLoader(BaseLoader):
 
     def _install_query(self):
         # Install the right GSQL query for the loader.
-        query_suffix = []
-        query_replace = {}
+        query_suffix = {
+            "v_in_feats": self.v_in_feats,
+            "v_out_labels": self.v_out_labels,
+            "v_extra_feats": self.v_extra_feats,
+            "e_in_feats": self.e_in_feats,
+            "e_out_labels": self.e_out_labels,
+            "e_extra_feats": self.e_extra_feats,
+        }
+        md5 = hashlib.md5()
+        md5.update(json.dumps(query_suffix).encode())
+        query_replace = {"{QUERYSUFFIX}": md5.hexdigest()}
 
         if self.is_hetero:
             # Multiple vertex types
@@ -2719,7 +2735,6 @@ class EdgeNeighborLoader(BaseLoader):
                     + self.v_out_labels.get(vtype, [])
                     + self.v_extra_feats.get(vtype, [])
                 )
-                query_suffix.extend(v_attr_names)
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
@@ -2742,7 +2757,6 @@ class EdgeNeighborLoader(BaseLoader):
                     + self.e_out_labels.get(etype, [])
                     + self.e_extra_feats.get(etype, [])
                 )
-                query_suffix.extend(e_attr_names)
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
@@ -2762,11 +2776,9 @@ class EdgeNeighborLoader(BaseLoader):
             print_query_other += "END"
             query_replace["{SEEDEDGEATTRS}"] = print_query_seed
             query_replace["{OTHEREDGEATTRS}"] = print_query_other
-            query_suffix = list(dict.fromkeys(query_suffix))
         else:
             # Ignore vertex types
             v_attr_names = self.v_in_feats + self.v_out_labels + self.v_extra_feats
-            query_suffix.extend(v_attr_names)
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
@@ -2782,7 +2794,6 @@ class EdgeNeighborLoader(BaseLoader):
                 query_replace["{VERTEXATTRS}"] = print_query
             # Ignore edge types
             e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
-            query_suffix.extend(e_attr_names)
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
@@ -2802,7 +2813,6 @@ class EdgeNeighborLoader(BaseLoader):
                 query_replace["{SEEDEDGEATTRS}"] = print_query
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + ",0\\n")'
                 query_replace["{OTHEREDGEATTRS}"] = print_query
-        query_replace["{QUERYSUFFIX}"] = "_".join(query_suffix)
         # Install query
         query_path = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
