@@ -1,13 +1,16 @@
 """Path Finding Functions.
 
 The functions on this page find paths between vertices within the graph.
-All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object]. 
+All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object].
 """
 
 import json
+import logging
 from typing import Union
 
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
+
+logger = logging.getLogger(__name__)
 
 
 class pyTigerGraphPath(pyTigerGraphBase):
@@ -56,6 +59,10 @@ class pyTigerGraphPath(pyTigerGraphBase):
             Returns:
                 A list of vertices in the format required by the path finding endpoints.
             """
+            logger.info("entry: parseVertices")
+            if logger.level == logging.DEBUG:
+                logger.debug("params: " + self._locals(locals()))
+
             ret = []
             if not isinstance(vertices, list):
                 vertices = [vertices]
@@ -66,23 +73,31 @@ class pyTigerGraphPath(pyTigerGraphBase):
                 elif isinstance(v, dict) and "v_type" in v and "v_id" in v:
                     tmp = {"type": v["v_type"], "id": v["v_id"]}
                     ret.append(tmp)
-                elif self.debug:
-                    print("Invalid vertex type or value: " + str(v))
-                    # TODO Proper logging
+                else:
+                    logger.warning("Invalid vertex type or value: " + str(v))
+
+            if logger.level == logging.DEBUG:
+                logger.debug("return: " + str(ret))
+            logger.info("exit: parseVertices")
+
             return ret
 
-        def parseFilters(filters: list) -> list:
+        def parseFilters(filters: Union[dict, tuple, list]) -> list:
             """Parses filter input parameters and converts it to the format required by the path
             finding endpoints.
 
             Args:
                 filters:
-                    A list of `(vertexType, condition)` tuples or `{"type": <str>, "condition": <str>}`
-                    dictionaries.
+                    A list of `(vertexType, condition)` tuples or
+                    `{"type": <str>, "condition": <str>}` dictionaries.
 
             Returns:
                 A list of filters in the format required by the path finding endpoints.
             """
+            logger.info("entry: parseFilters")
+            if logger.level == logging.DEBUG:
+                logger.debug("params: " + self._locals(locals()))
+
             ret = []
             if not isinstance(filters, list):
                 filters = [filters]
@@ -93,10 +108,18 @@ class pyTigerGraphPath(pyTigerGraphBase):
                 elif isinstance(f, dict) and "type" in f and "condition" in f:
                     tmp = {"type": f["type"], "condition": f["condition"]}
                     ret.append(tmp)
-                elif self.debug:
-                    print("Invalid filter type or value: " + str(f))
-                    # TODO Proper logging
+                else:
+                    logger.warning("Invalid filter type or value: " + str(f))
+
+            if logger.level == logging.DEBUG:
+                logger.debug("return: " + str(ret))
+            logger.info("exit: parseFilters")
+
             return ret
+
+        logger.info("entry: _preparePathParams")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
 
         # Assembling the input payload
         if not sourceVertices or not targetVertices:
@@ -112,7 +135,13 @@ class pyTigerGraphPath(pyTigerGraphBase):
         if allShortestPaths:
             data["allShortestPaths"] = True
 
-        return json.dumps(data)
+        ret = json.dumps(data)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: _preparePathParams")
+
+        return ret
 
     def shortestPath(self, sourceVertices: Union[dict, tuple, list],
             targetVertices: Union[dict, tuple, list], maxLength: int = None,
@@ -161,9 +190,19 @@ class pyTigerGraphPath(pyTigerGraphBase):
             - `POST /shortestpath/{graphName}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_find_shortest_path[Find the shortest path].
         """
+        logger.info("entry: shortestPath")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         data = self._preparePathParams(sourceVertices, targetVertices, maxLength, vertexFilters,
             edgeFilters, allShortestPaths)
-        return self._post(self.restppUrl + "/shortestpath/" + self.graphname, data=data)
+        ret = self._post(self.restppUrl + "/shortestpath/" + self.graphname, data=data)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: shortestPath")
+
+        return ret
 
     def allPaths(self, sourceVertices: Union[dict, tuple, list],
             targetVertices: Union[dict, tuple, list], maxLength: int,
@@ -206,6 +245,16 @@ class pyTigerGraphPath(pyTigerGraphBase):
             - `POST /allpaths/{graphName}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_find_all_paths[Find all paths]
         """
+        logger.info("entry: allPaths")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         data = self._preparePathParams(sourceVertices, targetVertices, maxLength, vertexFilters,
             edgeFilters)
-        return self._post(self.restppUrl + "/allpaths/" + self.graphname, data=data)
+        ret = self._post(self.restppUrl + "/allpaths/" + self.graphname, data=data)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: allPaths")
+
+        return ret

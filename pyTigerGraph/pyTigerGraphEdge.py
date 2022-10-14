@@ -4,6 +4,7 @@ Functions to upsert, retrieve and delete edges.
 All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object].
 """
 import json
+import logging
 import warnings
 
 from typing import TYPE_CHECKING, Union
@@ -14,8 +15,11 @@ if TYPE_CHECKING:
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 from pyTigerGraph.pyTigerGraphQuery import pyTigerGraphQuery
 
+logger = logging.getLogger(__name__)
+
 
 class pyTigerGraphEdge(pyTigerGraphQuery):
+
     def getEdgeTypes(self, force: bool = False) -> list:
         """Returns the list of edge type names of the graph.
 
@@ -27,9 +31,18 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         Returns:
             The list of edge types defined in the current graph.
         """
+        logger.info("entry: getEdgeTypes")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         ret = []
         for et in self.getSchema(force=force)["EdgeTypes"]:
             ret.append(et["Name"])
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: getEdgeTypes")
+
         return ret
 
     def getEdgeType(self, edgeType: str, force: bool = False) -> dict:
@@ -45,9 +58,21 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         Returns:
             The metadata of the edge type.
         """
+        logger.info("entry: getEdgeType")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         for et in self.getSchema(force=force)["EdgeTypes"]:
             if et["Name"] == edgeType:
+                if logger.level == logging.DEBUG:
+                    logger.debug("return: " + str(et))
+                logger.info("exit: getEdgeType (found)")
+
                 return et
+
+        logger.warning("Edge type `" + edgeType + "` was not found.")
+        logger.info("exit: getEdgeType (not found)")
+
         return {}
 
     def getEdgeSourceVertexType(self, edgeType: str) -> Union[str, set]:
@@ -73,11 +98,21 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                 at the individual source/target pairs to find out which combinations are
                 valid/defined.
         """
+        logger.info("entry: getEdgeSourceVertexType")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         edgeTypeDetails = self.getEdgeType(edgeType)
 
         # Edge type with a single source vertex type
         if edgeTypeDetails["FromVertexTypeName"] != "*":
-            return edgeTypeDetails["FromVertexTypeName"]
+            ret = edgeTypeDetails["FromVertexTypeName"]
+
+            if logger.level == logging.DEBUG:
+                logger.debug("return: " + str(ret))
+            logger.info("exit: getEdgeSourceVertexType (single source)")
+
+            return ret
 
         # Edge type with multiple source vertex types
         if "EdgePairs" in edgeTypeDetails:
@@ -85,9 +120,18 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             vts = set()
             for ep in edgeTypeDetails["EdgePairs"]:
                 vts.add(ep["From"])
+
+            if logger.level == logging.DEBUG:
+                logger.debug("return: " + str(vts))
+            logger.info("exit: getEdgeSourceVertexType (multi source)")
+
             return vts
         else:
             # 2.6.1 and earlier notation
+            if logger.level == logging.DEBUG:
+                logger.debug("return: *")
+            logger.info("exit: getEdgeSourceVertexType (multi source, pre-3.x)")
+
             return "*"
 
     def getEdgeTargetVertexType(self, edgeType: str) -> Union[str, set]:
@@ -112,11 +156,21 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                 edge is defined between all source and all target vertex types. You need to look at
                 the individual source/target pairs to find out which combinations are valid/defined.
         """
+        logger.info("entry: getEdgeTargetVertexType")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         edgeTypeDetails = self.getEdgeType(edgeType)
 
         # Edge type with a single target vertex type
         if edgeTypeDetails["ToVertexTypeName"] != "*":
-            return edgeTypeDetails["ToVertexTypeName"]
+            ret = edgeTypeDetails["ToVertexTypeName"]
+
+            if logger.level == logging.DEBUG:
+                logger.debug("return: " + str(ret))
+            logger.info("exit: getEdgeTargetVertexType (single target)")
+
+            return ret
 
         # Edge type with multiple target vertex types
         if "EdgePairs" in edgeTypeDetails:
@@ -124,9 +178,18 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             vts = set()
             for ep in edgeTypeDetails["EdgePairs"]:
                 vts.add(ep["To"])
+
+            if logger.level == logging.DEBUG:
+                logger.debug("return: " + str(vts))
+            logger.info("exit: getEdgeTargetVertexType (multi target)")
+
             return vts
         else:
             # 2.6.1 and earlier notation
+            if logger.level == logging.DEBUG:
+                logger.debug("return: *")
+            logger.info("exit: getEdgeTargetVertexType (multi target, pre-3.x)")
+
             return "*"
 
     def isDirected(self, edgeType: str) -> bool:
@@ -139,7 +202,17 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         Returns:
             `True`, if the edge is directed.
         """
-        return self.getEdgeType(edgeType)["IsDirected"]
+        logger.info("entry: isDirected")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        ret = self.getEdgeType(edgeType)["IsDirected"]
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: isDirected")
+
+        return ret
 
     def getReverseEdge(self, edgeType: str) -> str:
         """Returns the name of the reverse edge of the specified edge type, if applicable.
@@ -151,12 +224,28 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         Returns:
             The name of the reverse edge, if it was defined.
         """
+        logger.info("entry: getReverseEdge")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         if not self.isDirected(edgeType):
+            logger.error(edgeType + " is not a directed edge")
+            logger.info("exit: getReverseEdge (not directed)")
+
             return ""
-            # TODO Should return some other value or raise exception?
+
         config = self.getEdgeType(edgeType)["Config"]
         if "REVERSE_EDGE" in config:
-            return config["REVERSE_EDGE"]
+            ret = config["REVERSE_EDGE"]
+
+            if logger.level == logging.DEBUG:
+                logger.debug("return: " + str(ret))
+            logger.info("exit: getReverseEdge (reverse edge found)")
+
+            return ret
+
+        logger.info("exit: getReverseEdge (reverse edge not found)")
+
         return ""
         # TODO Should return some other value or raise exception?
 
@@ -204,6 +293,10 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             - `POST /builtins/{graph_name}`
                 See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_run_built_in_functions_on_graph
         """
+        logger.info("entry: getEdgeCountFrom")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         # If WHERE condition is not specified, use /builtins else user /vertices
         if where or (sourceVertexType and sourceVertexId):
             if not sourceVertexType or not sourceVertexId:
@@ -223,7 +316,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                 url += "&filter=" + self._safeChar(where)
             res = self._get(url)
         else:
-            if not edgeType:  # TODO is this a valid check?
+            if not edgeType:  # TODO Is this a valid check?
                 raise TigerGraphException(
                     "A valid edge type or \"*\" must be specified for edge type.", None)
             data = '{"function":"stat_edge_number","type":"' + edgeType + '"' \
@@ -231,11 +324,24 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                    + (',"to_type":"' + targetVertexType + '"' if targetVertexType else '') \
                    + '}'
             res = self._post(self.restppUrl + "/builtins/" + self.graphname, data=data)
+
         if len(res) == 1 and res[0]["e_type"] == edgeType:
-            return res[0]["count"]
+            ret = res[0]["count"]
+
+            if logger.level == logging.DEBUG:
+                logger.debug("return: " + str(ret))
+            logger.info("exit: getEdgeCountFrom (single edge type)")
+
+            return ret
+
         ret = {}
         for r in res:
             ret[r["e_type"]] = r["count"]
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: getEdgeCountFrom  (multiple edge types)")
+
         return ret
 
     def getEdgeCount(self, edgeType: str = "*", sourceVertexType: str = "",
@@ -257,8 +363,18 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         Returns:
             A dictionary of `edge_type: edge_count` pairs.
         """
-        return self.getEdgeCountFrom(edgeType=edgeType, sourceVertexType=sourceVertexType,
+        logger.info("entry: getEdgeCount")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        ret = self.getEdgeCountFrom(edgeType=edgeType, sourceVertexType=sourceVertexType,
             targetVertexType=targetVertexType)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: getEdgeCount")
+
+        return ret
 
     def upsertEdge(self, sourceVertexType: str, sourceVertexId: str, edgeType: str,
             targetVertexType: str, targetVertexId: str, attributes: dict = None) -> int:
@@ -304,17 +420,36 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         TODO Add ack, new_vertex_only, vertex_must_exist, update_vertex_only and atomic_level
             parameters and functionality.
         """
+        logger.info("entry: upsertEdge")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         if attributes is None:
             attributes = {}
-        if not isinstance(attributes, dict):
-            return None
-            # TODO Should return 0 or raise an exception instead?
+
         vals = self._upsertAttrs(attributes)
-        data = json.dumps(
-            {"edges": {sourceVertexType: {
-                sourceVertexId: {edgeType: {targetVertexType: {targetVertexId: vals}}}}}})
-        return self._post(self.restppUrl + "/graph/" + self.graphname, data=data)[0][
+        data = json.dumps({
+            "edges": {
+                sourceVertexType: {
+                    sourceVertexId: {
+                        edgeType: {
+                            targetVertexType: {
+                                targetVertexId: vals
+                            }
+                        }
+                    }
+                }
+            }
+        })
+
+        ret = self._post(self.restppUrl + "/graph/" + self.graphname, data=data)[0][
             "accepted_edges"]
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: upsertEdge")
+
+        return ret
 
     def upsertEdges(self, sourceVertexType: str, edgeType: str, targetVertexType: str,
             edges: list) -> int:
@@ -355,9 +490,10 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         TODO Add ack, new_vertex_only, vertex_must_exist, update_vertex_only and atomic_level
             parameters and functionality.
         """
-        if not isinstance(edges, list):
-            return None
-            # TODO Should return 0 or raise an exception instead?
+        logger.info("entry: upsertEdges")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         data = {sourceVertexType: {}}
         l1 = data[sourceVertexType]
         for e in edges:
@@ -380,8 +516,15 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             # targetVertexId
             l4[e[1]] = vals
         data = json.dumps({"edges": data})
-        return self._post(self.restppUrl + "/graph/" + self.graphname, data=data)[0][
+
+        ret = self._post(self.restppUrl + "/graph/" + self.graphname, data=data)[0][
             "accepted_edges"]
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: upsertEdges")
+
+        return ret
 
     def upsertEdgeDataFrame(self, df: 'pd.DataFrame', sourceVertexType: str, edgeType: str,
             targetVertexType: str, from_id: str = "", to_id: str = "",
@@ -412,6 +555,9 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         Returns:
             The number of edges upserted.
         """
+        logger.info("entry: upsertEdgeDataFrame")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
 
         json_up = []
 
@@ -424,12 +570,13 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                 else {target: json_up[-1][source] for target, source in attributes.items()}
             )
 
-        return self.upsertEdges(
-            sourceVertexType=sourceVertexType,
-            edgeType=edgeType,
-            targetVertexType=targetVertexType,
-            edges=json_up
-        )
+        ret = self.upsertEdges(sourceVertexType, edgeType, targetVertexType, json_up)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: upsertEdgeDataFrame")
+
+        return ret
 
     def getEdges(self, sourceVertexType: str, sourceVertexId: str, edgeType: str = "",
             targetVertexType: str = "", targetVertexId: str = "", select: str = "", where: str = "",
@@ -482,6 +629,10 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             - `GET /graph/{graph_name}/edges/{source_vertex_type}/{source_vertex_id}`
                 See https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#list-edges-of-a-vertex
         """
+        logger.info("entry: getEdges")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         # TODO Change sourceVertexId to sourceVertexIds and allow passing both str and list<str> as
         #   parameter
         if not sourceVertexType or not sourceVertexId:
@@ -513,9 +664,14 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         ret = self._get(url)
 
         if fmt == "json":
-            return json.dumps(ret)
-        if fmt == "df":
-            return self.edgeSetToDataFrame(ret, withId, withType)
+            ret = json.dumps(ret)
+        elif fmt == "df":
+            ret = self.edgeSetToDataFrame(ret, withId, withType)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: getEdges")
+
         return ret
 
     def getEdgesDataFrame(self, sourceVertexType: str, sourceVertexId: str, edgeType: str = "",
@@ -555,8 +711,18 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             The (selected) details of the (matching) edge instances (sorted, limited) as dictionary,
             JSON or pandas DataFrame.
         """
-        return self.getEdges(sourceVertexType, sourceVertexId, edgeType, targetVertexType,
+        logger.info("entry: getEdgesDataFrame")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        ret = self.getEdges(sourceVertexType, sourceVertexId, edgeType, targetVertexType,
             targetVertexId, select, where, limit, sort, fmt="df", timeout=timeout)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: getEdgesDataFrame")
+
+        return ret
 
     def getEdgesDataframe(self, sourceVertexType: str, sourceVertexId: str, edgeType: str = "",
             targetVertexType: str = "", targetVertexId: str = "", select: str = "", where: str = "",
@@ -568,6 +734,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         warnings.warn(
             "The `getEdgesDataframe()` function is deprecated; use `getEdgesDataFrame()` instead.",
             DeprecationWarning)
+
         return self.getEdgesDataFrame(sourceVertexType, sourceVertexId, edgeType, targetVertexType,
             targetVertexId, select, where, limit, sort, timeout)
 
@@ -595,8 +762,15 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
 
         TODO Add limit parameter
         """
+        logger.info("entry: getEdgesByType")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         if not edgeType:
-            return []
+            logger.warning("Edge type is not specified")
+            logger.info("exit: getEdgesByType")
+
+            return {}
 
         sourceVertexType = self.getEdgeSourceVertexType(edgeType)
         # TODO Support edges with multiple source vertex types
@@ -625,9 +799,14 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         ret = ret[0]["edges"]
 
         if fmt == "json":
-            return json.dumps(ret)
-        if fmt == "df":
-            return self.edgeSetToDataFrame(ret, withId, withType)
+            ret = json.dumps(ret)
+        elif fmt == "df":
+            ret = self.edgeSetToDataFrame(ret, withId, withType)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: _upsertAttrs")
+
         return ret
 
     # TODO getEdgesDataFrameByType
@@ -649,6 +828,10 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             - `POST /builtins/{graph_name}`
                 See https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#run-built-in-functions-on-graph
         """
+        logger.info("entry: getEdgeStats")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         ets = []
         if edgeTypes == "*":
             ets = self.getEdgeTypes()
@@ -657,8 +840,11 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         elif isinstance(edgeTypes, list):
             ets = edgeTypes
         else:
-            return None
-            # TODO Should return {} or raise exception?
+            logger.warning("The `edgeTypes` parameter is invalid.")
+            logger.info("exit: getEdgeStats")
+
+            return {}
+
         ret = {}
         for et in ets:
             data = '{"function":"stat_edge_attr","type":"' + et + '","from_type":"*","to_type":"*"}'
@@ -676,6 +862,11 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                 res = res["results"]
                 for r in res:
                     ret[r["e_type"]] = r["attributes"]
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: getEdgeStats")
+
         return ret
 
     def delEdges(self, sourceVertexType: str, sourceVertexId: str, edgeType: str = "",
@@ -715,17 +906,24 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             - `DELETE /graph/{graph_name}/edges/{source_vertex_type}/{source_vertex_id}/{edge_type}/{target_vertex_type}/{target_vertex_id}`
                 See https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#delete-an-edge
         """
+        logger.info("entry: delEdges")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         if not sourceVertexType or not sourceVertexId:
             raise TigerGraphException("Both sourceVertexType and sourceVertexId must be provided.",
                 None)
+
         url = self.restppUrl + "/graph/" + self.graphname + "/edges/" + sourceVertexType + "/" + str(
             sourceVertexId)
+
         if edgeType:
             url += "/" + edgeType
             if targetVertexType:
                 url += "/" + targetVertexType
                 if targetVertexId:
                     url += "/" + str(targetVertexId)
+
         isFirst = True
         if where:
             url += ("?" if isFirst else "&") + "filter=" + where
@@ -735,10 +933,16 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             isFirst = False
         if timeout and timeout > 0:
             url += ("?" if isFirst else "&") + "timeout=" + str(timeout)
+
         res = self._delete(url)
         ret = {}
         for r in res:
             ret[r["e_type"]] = r["deleted_edges"]
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: delEdges")
+
         return ret
 
     def edgeSetToDataFrame(self, edgeSet: list, withId: bool = True,
@@ -806,6 +1010,10 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             ID or source and target vertices, and the edge type.
 
         """
+        logger.info("entry: edgeSetToDataFrame")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         try:
             import pandas as pd
         except ImportError:
@@ -819,4 +1027,11 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         if withType:
             cols.append(df["e_type"])
         cols.append(pd.DataFrame(df["attributes"].tolist()))
-        return pd.concat(cols, axis=1)
+
+        ret = pd.concat(cols, axis=1)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: edgeSetToDataFrame")
+
+        return ret

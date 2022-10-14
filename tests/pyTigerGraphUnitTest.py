@@ -9,7 +9,7 @@ class pyTigerGraphUnitTest(unittest.TestCase):
 
     def setUp(self):
         params = {
-            "host": "http://3.144.132.94",
+            "host": "http://127.0.0.1",
             "graphname": "tests",
             "username": "tigergraph",
             "password": "tigergraph",

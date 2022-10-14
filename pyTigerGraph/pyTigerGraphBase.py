@@ -6,6 +6,7 @@ A TigerGraphConnection object provides the HTTP(S) communication used by all oth
 """
 import base64
 import json
+import logging
 import sys
 import warnings
 from typing import Union
@@ -25,12 +26,14 @@ def excepthook(type, value, traceback):
     # TODO Proper logging
 
 
+logger = logging.getLogger(__name__)
+
 class pyTigerGraphBase(object):
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
             gsqlSecret: str = "", username: str = "tigergraph", password: str = "tigergraph",
             tgCloud: bool = False, restppPort: Union[int, str] = "9000",
             gsPort: Union[int, str] = "14240", gsqlVersion: str = "", version: str = "",
-            apiToken: str = "", useCert: bool = None, certPath: str = None, debug: bool = False,
+            apiToken: str = "", useCert: bool = None, certPath: str = None, debug: bool = None,
             sslPort: Union[int, str] = "443", gcp: bool = False):
         """Initiate a connection object.
 
@@ -68,16 +71,20 @@ class pyTigerGraphBase(object):
             certPath:
                 The filesystem path to the CA certificate. Required in case of https connections.
             debug:
-                Enable debug messages.
+                DEPRECATED; configure standard logging in your app.
             sslPort:
                 Port for fetching SSL certificate in case of firewall.
             gcp:
-                DEPRECATED: Is firewall used?
+                DEPRECATED.
 
         Raises:
             TigerGraphException: In case on invalid URL scheme.
 
         """
+        logger.info("entry: __init__")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         inputHost = urlparse(host)
         if inputHost.scheme not in ["http", "https"]:
             raise TigerGraphException("Invalid URL scheme. Supported schemes are http and https.",
@@ -116,10 +123,14 @@ class pyTigerGraphBase(object):
         else:
             self.authHeader = {"Authorization": "Basic {0}".format(self.base64_credential)}
 
-        self.debug = debug
-        if not self.debug:
-            sys.excepthook = excepthook
+        if debug is not None:
+            warnings.warn(
+                "The `debug` parameter is deprecated; configure standard logging in your app.",
+                DeprecationWarning)
+        if not debug:
+            sys.excepthook = excepthook  # TODO Why was this necessary? Can it be removed?
             sys.tracebacklimit = None
+
         self.schema = None
 
         # TODO Remove useCert parameter
@@ -173,6 +184,12 @@ class pyTigerGraphBase(object):
             self.gsUrl = self.host + ":" + self.gsPort
         self.url = ""
 
+        logger.info("exit: __init__")
+
+    def _locals(self, _locals: dict) -> str:
+        del _locals["self"]
+        return str(_locals)
+
     def _errorCheck(self, res: dict):
         """Checks if the JSON document returned by an endpoint has contains `error: true`. If so,
             it raises an exception.
@@ -215,6 +232,10 @@ class pyTigerGraphBase(object):
         Returns:
             The (relevant part of the) response from the request (as a dictionary).
         """
+        logger.info("entry: _req")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         if authMode == "token" and str(self.apiToken) != "":
             if isinstance(self.apiToken, tuple):
                 self.apiToken = self.apiToken[0]
@@ -248,13 +269,16 @@ class pyTigerGraphBase(object):
         if not skipCheck:
             self._errorCheck(res)
         if not resKey:
-            if self.debug:
-                print(res)
-                # TODO Proper logging
+            if logger.level == logging.DEBUG:
+                logger.debug("return: " + str(res))
+            logger.info("exit: _req (no resKey)")
+
             return res
-        if self.debug:
-            print(res[resKey])
-            # TODO Proper logging
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res[resKey]))
+        logger.info("exit: _req (resKey)")
+
         return res[resKey]
 
     def _get(self, url: str, authMode: str = "token", headers: dict = None, resKey: str = "results",
@@ -279,7 +303,16 @@ class pyTigerGraphBase(object):
         Returns:
             The (relevant part of the) response from the request (as a dictionary).
        """
+        logger.info("entry: _get")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         res = self._req("GET", url, authMode, headers, None, resKey, skipCheck, params)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.info("exit: _get")
+
         return res
 
     def _post(self, url: str, authMode: str = "token", headers: dict = None,
@@ -307,7 +340,17 @@ class pyTigerGraphBase(object):
         Returns:
             The (relevant part of the) response from the request (as a dictionary).
         """
-        return self._req("POST", url, authMode, headers, data, resKey, skipCheck, params)
+        logger.info("entry: _post")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        res = self._req("POST", url, authMode, headers, data, resKey, skipCheck, params)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.info("exit: _post")
+
+        return res
 
     def _delete(self, url: str, authMode: str = "token") -> Union[dict, list]:
         """Generic DELETE method.
@@ -320,5 +363,15 @@ class pyTigerGraphBase(object):
 
         Returns:
             The response from the request (as a dictionary).
-       """
-        return self._req("DELETE", url, authMode)
+        """
+        logger.info("entry: _delete")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        res = self._req("DELETE", url, authMode)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.info("exit: _delete")
+
+        return res

@@ -1,7 +1,7 @@
 import unittest
 from datetime import datetime
 
-from pyTigerGraphUnitTest import pyTigerGraphUnitTest
+from .pyTigerGraphUnitTest import pyTigerGraphUnitTest
 
 
 class test_pyTigerGraphQuery(pyTigerGraphUnitTest):
