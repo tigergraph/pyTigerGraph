@@ -4,7 +4,7 @@ import unittest
 import pandas
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
-from .pyTigerGraphUnitTest import pyTigerGraphUnitTest
+from pyTigerGraphUnitTest import pyTigerGraphUnitTest
 
 
 class test_pyTigerGraphVertex(pyTigerGraphUnitTest):

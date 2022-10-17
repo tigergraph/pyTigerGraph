@@ -3,7 +3,7 @@ import unittest
 
 import pandas
 
-from .pyTigerGraphUnitTest import pyTigerGraphUnitTest
+from pyTigerGraphUnitTest import pyTigerGraphUnitTest
 
 
 class test_pyTigerGraphEdge(pyTigerGraphUnitTest):

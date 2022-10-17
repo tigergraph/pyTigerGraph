@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from .pyTigerGraphUnitTest import pyTigerGraphUnitTest
+from pyTigerGraphUnitTest import pyTigerGraphUnitTest
 
 
 class test_pyTigerGraphPath(pyTigerGraphUnitTest):

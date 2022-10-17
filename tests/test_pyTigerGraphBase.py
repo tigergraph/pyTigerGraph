@@ -2,7 +2,7 @@ import json
 import unittest
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
-from .pyTigerGraphUnitTest import pyTigerGraphUnitTest
+from pyTigerGraphUnitTest import pyTigerGraphUnitTest
 
 
 class test_pyTigerGraphBase(pyTigerGraphUnitTest):
