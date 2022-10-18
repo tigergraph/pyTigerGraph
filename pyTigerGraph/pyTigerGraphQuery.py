@@ -208,7 +208,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
 
         if usePost:
             ret = self._post(self.restppUrl + "/query/" + self.graphname + "/" + queryName,
-                data=params, headers=headers)
+                data=params, headers=headers, resKey=res_key)
 
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(ret))
@@ -217,7 +217,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
             return ret
         else:
             ret = self._get(self.restppUrl + "/query/" + self.graphname + "/" + queryName,
-                params=params, headers=headers)
+                params=params, headers=headers, resKey=res_key)
 
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(ret))
@@ -250,7 +250,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
                 String ID of the request.
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_check_query_results_detached_mode[Check query results (detached mode)]
         """
-        return self._get(self.restppUrl + "/query_result?requestid="+requestId)
+        return self._get(self.restppUrl + "/query_result?graph_name="+self.graphname+"&requestid="+requestId)
 
     def runInterpretedQuery(self, queryText: str, params: Union[str, dict] = None) -> list:
         """Runs an interpreted query.
