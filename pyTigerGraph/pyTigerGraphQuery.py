@@ -250,7 +250,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
                 String ID of the request.
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_check_query_results_detached_mode[Check query results (detached mode)]
         """
-        return self._get(self.restppUrl + "/query_result?requestid="+requestId)
+        return self._get(self.restppUrl + "/query_result?graph_name="+self.graphname+"&requestid="+requestId)
 
     def runInterpretedQuery(self, queryText: str, params: Union[str, dict] = None) -> list:
         """Runs an interpreted query.
