@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Union
 
 import urllib3
 
-from pyTigerGraph.pyTigerGraphAuth import pyTigerGraphAuth
 from pyTigerGraph.pyTigerGraphEdge import pyTigerGraphEdge
 from pyTigerGraph.pyTigerGraphLoading import pyTigerGraphLoading
 from pyTigerGraph.pyTigerGraphPath import pyTigerGraphPath
@@ -23,7 +22,7 @@ if not sys.warnoptions:
 
 # TODO Proper deprecation handling; import deprecation?
 
-class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT, pyTigerGraphAuth,
+class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT,
     pyTigerGraphLoading, pyTigerGraphPath, pyTigerGraphDataset, object):
     """Python wrapper for TigerGraph's REST++ and GSQL APIs"""
 
