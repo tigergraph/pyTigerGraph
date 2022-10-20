@@ -1,7 +1,7 @@
 import ipycytoscape
 
 
-def drawSchema(schema: dict, style: dict = {}):
+def drawSchema(schema: dict, style: list = []):
     cytoscape_style = [
         {
             "selector": "node",
@@ -51,7 +51,8 @@ def drawSchema(schema: dict, style: dict = {}):
         },
         # {'width': '100%', 'height': '400px',}
     ]
-    cytoscape_style.update(style)
+    if style:
+        cytoscape_style = style
 
     # build json
     tg_graph_json = _convert_schema_for_ipycytoscape(schema)
