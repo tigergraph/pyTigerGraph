@@ -4,6 +4,7 @@ CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
   SET<STRING> e_types,
   SET<STRING> seed_types,
   BOOL compute_all = TRUE,
+  BOOL clear_cache = TRUE,
   BOOL use_cache = TRUE,
   STRING filter_by,
   STRING anchor_attr,
@@ -32,15 +33,14 @@ CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
 
     MapAccum<VERTEX, SumAccum<INT>> @@token_count;
     MapAccum<INT, INT> @conv_map;
-  
+    BOOL cache_empty = FALSE;
     INT distance;
     start = {v_types};
-    ancs = SELECT s 
-           FROM start:s 
-           WHERE s.getAttr(anchor_attr, "BOOL")
-           POST-ACCUM s.@token_heap += Distance_Tuple(getvid(s), 0);
     # Perform fetch operation if desired
-    IF input_vertices.size() != 0 AND input_vertices.size() < ancs.size()  AND NOT compute_all THEN
+    IF clear_cache THEN
+      res = SELECT s FROM start:s POST-ACCUM s.{ANCHOR_CACHE_ATTRIBUTE} = s.@conv_map;
+    END;
+    IF input_vertices.size() != 0 AND NOT compute_all THEN
       seeds = {input_vertices};
       res = SELECT s FROM seeds:s -(e_types)- v_types:t
             ACCUM
@@ -52,8 +52,19 @@ CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
                 FOREACH (key, val) IN t.{ANCHOR_CACHE_ATTRIBUTE} DO
                   s.@token_heap += Distance_Tuple(key, val)
                 END
+              END
+            POST-ACCUM
+              IF s.@token_heap.size() == 0 THEN
+                cache_empty = TRUE
               END;
-    ELSE # computing all, shuffle vertices if needed
+    ELSE
+      cache_empty = TRUE;
+    END;
+    IF cache_empty THEN  # computing all, shuffle vertices if needed
+        ancs = SELECT s 
+           FROM start:s 
+           WHERE s.getAttr(anchor_attr, "BOOL")
+           POST-ACCUM s.@token_heap += Distance_Tuple(getvid(s), 0);
         start = {seed_types};
         IF shuffle THEN
             num_vertices = start.size();
@@ -107,14 +118,16 @@ CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
             POST-ACCUM
               FOREACH tup IN s.@token_heap DO
                 s.@ancs += int_to_string(tup.v_id)+":"+int_to_string(tup.distance)+" ",
-                IF use_cache THEN
+                IF use_cache AND cache_empty THEN
                   s.@conv_map += (tup.v_id -> tup.distance)
                 END
               END,
-              IF use_cache THEN
+              IF use_cache AND cache_empty THEN
                 s.{ANCHOR_CACHE_ATTRIBUTE} = s.@conv_map
               END,
-              {VERTEXATTRS};
+              IF s.type == "Paper" THEN 
+ @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + s.@rel_context_set + "," + s.@ancs + "," + stringify(s.y)+","+stringify(s.features) + "\n")
+END;
       
       IF kafka_address IS NOT NULL THEN
         # Write to kafka
