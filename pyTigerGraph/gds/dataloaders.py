@@ -3239,6 +3239,7 @@ class NodePieceLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
         else:
             v_attr_types = self._v_schema
+        print(resp)
         if self.is_hetero:
             data = self._parse_data(resp[0]["vertex_batch"], 
                                     v_in_feats=attributes, 
