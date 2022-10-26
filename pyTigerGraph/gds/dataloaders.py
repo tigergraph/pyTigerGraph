@@ -3226,6 +3226,7 @@ class NodePieceLoader(BaseLoader):
         _payload["max_rel_context"] = self._payload["max_rel_context"]
         _payload["anchor_attr"] = self._payload["anchor_attr"]
         _payload["use_cache"] = self._payload["use_cache"]
+        _payload["clear_cache"] = self._payload["clear_cache"]
         _payload["e_types"] = self._payload["e_types"]
         _payload["compute_all"] = self._payload["compute_all"]
         _payload["input_vertices"] = []
