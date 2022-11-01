@@ -351,7 +351,7 @@ class Featurizer:
                     if query_name != "tg_fastRP":
                         if not(feat_type):
                             feat_type = self.queryResult_type_dict[query_name]
-                        _ = self._add_attribute(schema_type, feat_type, feat_name, schema_name, global_change=global_schema)
+                        _ = add_attribute(self.conn, schema_type, feat_type, feat_name, schema_name, global_change=global_schema)
                 else:
                     query_ulr= self._get_query_url(query_name)
                     raise ValueError("The algorithm does not provide any feature, see the algorithm details:"+query_ulr+".")
