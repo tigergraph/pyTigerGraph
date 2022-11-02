@@ -7,7 +7,7 @@ from pyTigerGraph.gds.dataloaders import NodePieceLoader
 from pyTigerGraph.gds.utilities import is_query_installed
 
 
-class TestGDSVertexLoader(unittest.TestCase):
+class TestGDSNodePieceLoader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
@@ -16,7 +16,7 @@ class TestGDSVertexLoader(unittest.TestCase):
     def test_init(self):
         loader = NodePieceLoader(
             graph=self.conn,
-            attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
+            v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
             batch_size=16,
             shuffle=True,
             filter_by="train_mask",
@@ -30,7 +30,7 @@ class TestGDSVertexLoader(unittest.TestCase):
     def test_iterate(self):
         loader = NodePieceLoader(
             graph=self.conn,
-            attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
+            v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
             batch_size=16,
             shuffle=True,
             filter_by="train_mask",
@@ -55,7 +55,7 @@ class TestGDSVertexLoader(unittest.TestCase):
     def test_all_vertices(self):
         loader = NodePieceLoader(
             graph=self.conn,
-            attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
+            v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
             num_batches=1,
             shuffle=False,
             filter_by="train_mask",
@@ -77,7 +77,7 @@ class TestGDSVertexLoader(unittest.TestCase):
     def test_sasl_plaintext(self):
         loader = NodePieceLoader(
             graph=self.conn,
-            attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
+            v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
             batch_size=16,
             shuffle=True,
             filter_by="train_mask",
@@ -106,7 +106,7 @@ class TestGDSVertexLoader(unittest.TestCase):
     def test_sasl_ssl(self):
         loader = NodePieceLoader(
             graph=self.conn,
-            attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
+            v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
             batch_size=16,
             shuffle=True,
             filter_by="train_mask",
@@ -135,7 +135,7 @@ class TestGDSVertexLoader(unittest.TestCase):
             num_batches += 1
         self.assertEqual(num_batches, 9)
 
-class TestGDSVertexLoaderREST(unittest.TestCase):
+class TestGDSNodePieceLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
@@ -144,7 +144,7 @@ class TestGDSVertexLoaderREST(unittest.TestCase):
     def test_init(self):
         loader = NodePieceLoader(
             graph=self.conn,
-            attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
+            v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
             batch_size=16,
             shuffle=True,
             filter_by="train_mask",
@@ -157,7 +157,7 @@ class TestGDSVertexLoaderREST(unittest.TestCase):
     def test_iterate(self):
         loader = NodePieceLoader(
             graph=self.conn,
-            attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
+            v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
             batch_size=16,
             shuffle=True,
             filter_by="train_mask",
@@ -179,9 +179,9 @@ class TestGDSVertexLoaderREST(unittest.TestCase):
         self.assertEqual(num_batches, 9)
 
     def test_all_vertices(self):
-        loader = VertexLoader(
+        loader = NodePieceLoader(
             graph=self.conn,
-            attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
+            v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
             num_batches=1,
             shuffle=False,
             filter_by="train_mask",
@@ -204,7 +204,7 @@ class TestGDSVertexLoaderREST(unittest.TestCase):
         conn.getToken(conn.createSecret())
         loader = NodePieceLoader(
             graph=conn,
-            attributes=["age", "state"],
+            v_feats=["age", "state"],
             num_batches=1,
             shuffle=False,
             loader_id=None,
@@ -218,7 +218,7 @@ class TestGDSVertexLoaderREST(unittest.TestCase):
         self.assertIn("state", data.columns)
 
 
-class TestGDSHeteroVertexLoaderREST(unittest.TestCase):
+class TestGDSHeteroNodePieceLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="hetero")
@@ -227,7 +227,7 @@ class TestGDSHeteroVertexLoaderREST(unittest.TestCase):
     def test_init(self):
         loader = NodePieceLoader(
             graph=self.conn,
-            attributes={"v0": ["x", "y"],
+            v_feats={"v0": ["x", "y"],
                         "v1": ["x"]},
             batch_size=20,
             shuffle=True,
@@ -241,7 +241,7 @@ class TestGDSHeteroVertexLoaderREST(unittest.TestCase):
     def test_iterate(self):
         loader = NodePieceLoader(
             graph=self.conn,
-            attributes={"v0": ["x", "y"],
+            v_feats={"v0": ["x", "y"],
                         "v1": ["x"]},
             batch_size=20,
             shuffle=True,
@@ -267,7 +267,7 @@ class TestGDSHeteroVertexLoaderREST(unittest.TestCase):
     def test_all_vertices(self):
         loader = NodePieceLoader(
             graph=self.conn,
-            attributes={"v0": ["x", "y"],
+            v_feats={"v0": ["x", "y"],
                         "v1": ["x"]},
             num_batches=1,
             shuffle=False,
@@ -288,18 +288,18 @@ class TestGDSHeteroVertexLoaderREST(unittest.TestCase):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
-    suite.addTest(TestGDSVertexLoader("test_init"))
-    suite.addTest(TestGDSVertexLoader("test_iterate"))
-    suite.addTest(TestGDSVertexLoader("test_all_vertices"))
-    suite.addTest(TestGDSVertexLoader("test_sasl_plaintext"))
-    # suite.addTest(TestGDSVertexLoader("test_sasl_ssl"))
-    suite.addTest(TestGDSVertexLoaderREST("test_init"))
-    suite.addTest(TestGDSVertexLoaderREST("test_iterate"))
-    suite.addTest(TestGDSVertexLoaderREST("test_all_vertices"))
-    suite.addTest(TestGDSVertexLoaderREST("test_string_attr"))
-    suite.addTest(TestGDSHeteroVertexLoaderREST("test_init"))
-    suite.addTest(TestGDSHeteroVertexLoaderREST("test_iterate"))
-    suite.addTest(TestGDSHeteroVertexLoaderREST("test_all_vertices"))
+    suite.addTest(TestGDSNodePieceLoader("test_init"))
+    suite.addTest(TestGDSNodePieceLoader("test_iterate"))
+    suite.addTest(TestGDSNodePieceLoader("test_all_vertices"))
+    suite.addTest(TestGDSNodePieceLoader("test_sasl_plaintext"))
+    # suite.addTest(TestGDSNodePieceLoader("test_sasl_ssl"))
+    suite.addTest(TestGDSNodePieceLoaderREST("test_init"))
+    suite.addTest(TestGDSNodePieceLoaderREST("test_iterate"))
+    suite.addTest(TestGDSNodePieceLoaderREST("test_all_vertices"))
+    suite.addTest(TestGDSNodePieceLoaderREST("test_string_attr"))
+    suite.addTest(TestGDSHeteroNodePieceLoaderREST("test_init"))
+    suite.addTest(TestGDSHeteroNodePieceLoaderREST("test_iterate"))
+    suite.addTest(TestGDSHeteroNodePieceLoaderREST("test_all_vertices"))
 
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)
