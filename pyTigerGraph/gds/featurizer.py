@@ -237,8 +237,7 @@ class Featurizer:
         resp = self.conn.gsql(query)
         status = resp.splitlines()[-1]
         if "Failed" in status:
-            print(resp)
-            raise ConnectionError(status)
+            raise ConnectionError(resp)
         return query_name 
 
     def installAlgorithm(self,query_name:str, query_path: str = None, global_change:bool = False) -> str:
@@ -325,8 +324,7 @@ class Featurizer:
         resp = self.conn.gsql(job)
         status = resp.splitlines()[-1]
         if "Failed" in status:
-            print(resp)
-            raise ConnectionError(status)
+            raise ConnectionError(resp)
         else:
             print(status)
         return 'Schema change succeeded.'
