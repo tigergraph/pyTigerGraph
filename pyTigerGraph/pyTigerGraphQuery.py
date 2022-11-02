@@ -1,9 +1,10 @@
 """Query Functions.
 
 The functions on this page run installed or interpret queries in TigerGraph.
-All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object]. 
+All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object].
 """
 import json
+import logging
 from datetime import datetime
 
 from typing import TYPE_CHECKING, Union
@@ -14,6 +15,8 @@ if TYPE_CHECKING:
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 from pyTigerGraph.pyTigerGraphSchema import pyTigerGraphSchema
 from pyTigerGraph.pyTigerGraphUtils import pyTigerGraphUtils
+
+logger = logging.getLogger(__name__)
 
 
 class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
@@ -35,16 +38,25 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
              Modify to return only installed ones
         TODO Return with query name as key rather than REST endpoint as key?
         """
+        logger.info("entry: getInstalledQueries")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         ret = self.getEndpoints(dynamic=True)
         if fmt == "json":
-            return json.dumps(ret)
+            ret = json.dumps(ret)
         if fmt == "df":
             try:
                 import pandas as pd
             except ImportError:
                 raise ImportError("Pandas is required to use this function. "
                     "Download pandas using 'pip install pandas'.")
-            return pd.DataFrame(ret).T
+            ret = pd.DataFrame(ret).T
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: getInstalledQueries")
+
         return ret
 
     # TODO getQueryMetadata()
@@ -73,6 +85,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
             "key": [([p_id1, p_id2, ...], "vtype"), ...]
             I.e. multiple primary IDs of the same vertex type
         """
+        logger.info("entry: _parseQueryParameters")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         ret = ""
         for k, v in params.items():
             if isinstance(v, tuple):
@@ -80,7 +96,8 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
                     ret += k + "=" + str(v[0]) + "&" + k + ".type=" + self._safeChar(v[1]) + "&"
                 else:
                     raise TigerGraphException(
-                        "Invalid parameter value: (vertex_primary_id, vertex_type) was expected.")
+                        "Invalid parameter value: (vertex_primary_id, vertex_type)"
+                        " was expected.")
             elif isinstance(v, list):
                 i = 0
                 for vv in v:
@@ -89,8 +106,9 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
                             ret += k + "[" + str(i) + "]=" + self._safeChar(vv[0]) + "&" + \
                                    k + "[" + str(i) + "].type=" + vv[1] + "&"
                         else:
-                            raise TigerGraphException("Invalid parameter value: (vertex_primary_id"
-                                ", vertex_type) was expected.")
+                            raise TigerGraphException(
+                                "Invalid parameter value: (vertex_primary_id , vertex_type)"
+                                " was expected.")
                     else:
                         ret += k + "=" + self._safeChar(vv) + "&"
                     i += 1
@@ -98,10 +116,17 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
                 ret += k + "=" + self._safeChar(v.strftime("%Y-%m-%d %H:%M:%S")) + "&"
             else:
                 ret += k + "=" + self._safeChar(v) + "&"
-        return ret[:-1]
+        ret = ret[:-1]
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: _parseQueryParameters")
+
+        return ret
 
     def runInstalledQuery(self, queryName: str, params: Union[str, dict] = None,
-            timeout: int = None, sizeLimit: int = None, usePost: bool = False) -> list:
+            timeout: int = None, sizeLimit: int = None, usePost: bool = False, runAsync: bool = False,
+            replica: int = None, threadLimit: int = None) -> list:
         """Runs an installed query.
 
         The query must be already created and installed in the graph.
@@ -123,6 +148,16 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
             usePost:
                 The RESTPP accepts a maximum URL length of 8192 characters. Use POST if additional parameters cause
                 you to exceed this limit.
+            runAsync:
+                Run the query in asynchronous mode. 
+                See xref:gsql-ref:querying:query-operations#_detached_mode_async_option[Async operation]
+            replica:
+                If your TigerGraph instance is an HA cluster, specify which replica to run the query on. Must be a 
+                value between [1, (cluster replication factor)].
+                See xref:tigergraph-server:API:built-in-endpoints#_specify_replica[Specify replica]
+            threadLimit:
+                Specify a limit of the number of threads the query is allowed to use on each node of the TigerGraph cluster.
+                See xref:tigergraph-server:API:built-in-endpoints#_specify_thread_limit[Thread limit]
 
         Returns:
             The output of the query, a list of output elements (vertex sets, edge sets, variables,
@@ -149,34 +184,73 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_an_installed_query_get[Run an installed query (GET)]
             - `POST /query/{graph_name}/{query_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_an_installed_query_post[Run an installed query (POST)]
-
-        TODO Specify replica: GSQL-REPLICA
-        TODO Specify thread limit: GSQL-THREAD-LIMIT
-        TODO Detached mode
         """
+        logger.info("entry: runInstalledQuery")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         headers = {}
+        res_key = "results"
         if timeout and timeout > 0:
             headers["GSQL-TIMEOUT"] = str(timeout)
         if sizeLimit and sizeLimit > 0:
             headers["RESPONSE-LIMIT"] = str(sizeLimit)
+        if runAsync:
+            headers["GSQL-ASYNC"] = "true"
+            res_key = "request_id"
+        if replica:
+            headers["GSQL-REPLICA"] = str(replica)
+        if threadLimit:
+            headers["GSQL-THREAD-LIMIT"] = str(threadLimit)
 
         if isinstance(params, dict):
             params = self._parseQueryParameters(params)
 
         if usePost:
-            return self._post(self.restppUrl + "/query/" + self.graphname + "/" + queryName,
-                data=params, headers=headers)
+            ret = self._post(self.restppUrl + "/query/" + self.graphname + "/" + queryName,
+                data=params, headers=headers, resKey=res_key)
+
+            if logger.level == logging.DEBUG:
+                logger.debug("return: " + str(ret))
+            logger.info("exit: runInstalledQuery (POST)")
+
+            return ret
         else:
-            return self._get(self.restppUrl + "/query/" + self.graphname + "/" + queryName,
-                params=params, headers=headers)
+            ret = self._get(self.restppUrl + "/query/" + self.graphname + "/" + queryName,
+                params=params, headers=headers, resKey=res_key)
 
-    # TODO checkQueryStatus()
-    #   GET /query_status/{graph_name}
-    #   xref:tigergraph-server:API:built-in-endpoints.adoc#_check_query_status_detached_mode[Check query status (detached mode)]
+            if logger.level == logging.DEBUG:
+                logger.debug("return: " + str(ret))
+            logger.info("exit: runInstalledQuery (GET)")
 
-    # TODO getQueryResult()
-    #   GET /query_result/{requestid}
-    #   xref:tigergraph-server:API:built-in-endpoints.adoc#_check_query_results_detached_mode[Check query results (detached mode)]
+            return ret
+
+    def checkQueryStatus(self, requestId: str = ""):
+        """Checks the status of the queries running on the graph specified in the connection.
+
+        Args:
+            requestId (str, optional):
+                String ID of the request. If empty, returns all running requests.
+                See xref:tigergraph-server:API:built-in-endpoints.adoc#_check_query_status_detached_mode[Check query status (detached mode)]
+
+        Endpoint:
+            - `GET /query_status/{graph_name}`
+                See xref:tigergraph-server:API:built-in-endpoints.adoc#_check_query_status_detached_mode[Check query status (detached mode)]
+        """
+        if requestId != "":
+            return self._get(self.restppUrl + "/query_status?graph_name="+self.graphname+"&requestid="+requestId)
+        else:
+            return self._get(self.restppUrl + "/query_status?graph_name="+self.graphname+"&requestid=all")
+
+    def getQueryResult(self, requestId: str = ""):
+        """Gets the result of a detached query.
+
+        Args:
+            requestId (str):
+                String ID of the request.
+                See xref:tigergraph-server:API:built-in-endpoints.adoc#_check_query_results_detached_mode[Check query results (detached mode)]
+        """
+        return self._get(self.restppUrl + "/query_result?graph_name="+self.graphname+"&requestid="+requestId)
 
     def runInterpretedQuery(self, queryText: str, params: Union[str, dict] = None) -> list:
         """Runs an interpreted query.
@@ -227,12 +301,23 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
         TODO Add "GSQL-TIMEOUT: <timeout value in ms>" and "RESPONSE-LIMIT: <size limit in byte>"
             plus parameters if applicable to interpreted queries (see runInstalledQuery() above)
         """
+        logger.info("entry: runInterpretedQuery")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         queryText = queryText.replace("$graphname", self.graphname)
         queryText = queryText.replace("@graphname@", self.graphname)
         if isinstance(params, dict):
             params = self._parseQueryParameters(params)
-        return self._post(self.gsUrl + "/gsqlserver/interpreted_query", data=queryText,
+
+        ret = self._post(self.gsUrl + "/gsqlserver/interpreted_query", data=queryText,
             params=params, authMode="pwd")
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: runInterpretedQuery")
+
+        return ret
 
     # TODO getRunningQueries()
     # GET /showprocesslist/{graph_name}
@@ -307,6 +392,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
                 obj["x_sources"].append(src)
             else:
                 obj["x_sources"] = [src]
+
+        logger.info("entry: parseQueryOutput")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
 
         vs = {}
         es = {}
@@ -393,6 +482,11 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
         ret = {"vertices": vs, "edges": es}
         if not graphOnly:
             ret["output"] = ou
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: parseQueryOutput")
+
         return ret
 
     def getStatistics(self, seconds: int = 10, segments: int = 10) -> dict:
@@ -412,6 +506,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
             - `GET /statistics/{graph_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_show_query_performance[Show query performance]
         """
+        logger.info("entry: getStatistics")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         if not seconds:
             seconds = 10
         else:
@@ -420,5 +518,12 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
             segments = 10
         else:
             segments = max(min(segments, 0), 100)
-        return self._get(self.restppUrl + "/statistics/" + self.graphname + "?seconds=" +
+
+        ret = self._get(self.restppUrl + "/statistics/" + self.graphname + "?seconds=" +
                          str(seconds) + "&segment=" + str(segments), resKey="")
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: getStatistics")
+
+        return ret

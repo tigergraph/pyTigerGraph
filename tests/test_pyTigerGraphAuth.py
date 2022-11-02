@@ -9,7 +9,7 @@ class test_pyTigerGraphPath(pyTigerGraphUnitTest):
 
     def test_01_getSecrets(self):
         res = self.conn.showSecrets()
-        self.assertIsInstance(dict)
+        self.assertIsInstance(res, dict)
         self.assertEqual(3, len(res))
         self.assertIn("secret1", res)
         self.assertIn("secret2", res)
@@ -57,21 +57,21 @@ class test_pyTigerGraphPath(pyTigerGraphUnitTest):
 
     def test_05_getToken(self):
         res = self.conn.createSecret("secret5", True)
-        token = self.conn.getToken(res)
+        token = self.conn.getToken(res["secret5"])
         self.assertIsInstance(token, tuple)
-        self.conn.dropSecret("secret6")
+        self.conn.dropSecret("secret5")
 
     def test_06_refreshToken(self):
         res = self.conn.createSecret("secret6", True)
-        token = self.conn.getToken(res)
-        refreshed = self.conn.refreshToken(res, token)
+        token = self.conn.getToken(res["secret6"])
+        refreshed = self.conn.refreshToken(res["secret6"], token[0])
         self.assertIsInstance(refreshed, tuple)
         self.conn.dropSecret("secret6")
 
     def test_07_deleteToken(self):
         res = self.conn.createSecret("secret7", True)
-        token = self.conn.getToken(res)
-        self.assertTrue(self.conn.deleteToken(res, token))
+        token = self.conn.getToken(res["secret7"])
+        self.assertTrue(self.conn.deleteToken(res["secret7"], token[0]))
         self.conn.dropSecret("secret7")
 
 if __name__ == '__main__':

@@ -1,3 +1,4 @@
+import os
 import unittest
 from os.path import exists
 
@@ -9,7 +10,7 @@ class pyTigerGraphUnitTest(unittest.TestCase):
 
     def setUp(self):
         params = {
-            "host": "http://3.144.132.94",
+            "host": "http://127.0.0.1",
             "graphname": "tests",
             "username": "tigergraph",
             "password": "tigergraph",
@@ -24,7 +25,8 @@ class pyTigerGraphUnitTest(unittest.TestCase):
             "gcp": False
         }
 
-        fname = "testserver.cfg"
+        path = os.path.dirname(os.path.realpath(__file__))
+        fname = os.path.join(path, "testserver.cfg")
         if exists(fname):
             try:
                 cfg = open(fname, "r")
@@ -48,3 +50,5 @@ class pyTigerGraphUnitTest(unittest.TestCase):
             restppPort=params["restppPort"], gsPort=params["gsPort"],
             gsqlVersion=params["gsqlVersion"], useCert=params["userCert"],
             certPath=params["certPath"], sslPort=params["sslPort"], gcp=params["gcp"])
+        if params.get("getToken", False):
+            self.conn.getToken(self.conn.createSecret())

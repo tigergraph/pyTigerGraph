@@ -1,9 +1,10 @@
 """Utility Functions.
 
 Utility functions for pyTigerGraph.
-All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object]. 
+All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object].
 """
 import json
+import logging
 import re
 import urllib
 from typing import Any, Union
@@ -15,8 +16,11 @@ from typing import TYPE_CHECKING, Union
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
+logger = logging.getLogger(__name__)
+
 
 class pyTigerGraphUtils(pyTigerGraphBase):
+
     def _safeChar(self, inputString: Any) -> str:
         """Replace special characters in string using the %xx escape.
 
@@ -46,12 +50,27 @@ class pyTigerGraphUtils(pyTigerGraphBase):
             - `GET /echo`
             - `POST /echo`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_echo[Echo]
-
-        TODO Implement POST
         """
+        logger.info("entry: echo")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         if usePost:
-            return str(self._post(self.restppUrl + "/echo/" + self.graphname, resKey="message"))
-        return str(self._get(self.restppUrl + "/echo/" + self.graphname, resKey="message"))
+            ret = str(self._post(self.restppUrl + "/echo/" + self.graphname, resKey="message"))
+
+            if logger.level == logging.DEBUG:
+                logger.debug("return: " + str(ret))
+            logger.info("exit: echo (POST)")
+
+            return ret
+
+        ret = str(self._get(self.restppUrl + "/echo/" + self.graphname, resKey="message"))
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: echo (GET)")
+
+        return ret
 
     def getVersion(self, raw: bool = False) -> Union[str, list]:
         """Retrieves the git versions of all components of the system.
@@ -69,6 +88,10 @@ class pyTigerGraphUtils(pyTigerGraphBase):
             - `GET /version`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_show_component_versions[Show component versions]
         """
+        logger.info("entry: getVersion")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         if self.useCert and self.certPath:
             response = requests.request("GET", self.restppUrl + "/version/" + self.graphname,
                 headers=self.authHeader, verify=False)
@@ -88,6 +111,11 @@ class pyTigerGraphUtils(pyTigerGraphBase):
                 component = {"name": m[0], "version": m[1], "hash": m[2],
                     "datetime": m[3] + " " + m[4] + " " + m[5]}
                 components.append(component)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(components))
+        logger.info("exit: getVersion")
+
         return components
 
     def getVer(self, component: str = "product", full: bool = False) -> str:
@@ -107,6 +135,10 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         Raises:
             `TigerGraphException` if invalid/non-existent component is specified.
         """
+        logger.info("entry: getVer")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         ret = ""
         for v in self.getVersion():
             if v["name"] == component.lower():
@@ -115,7 +147,13 @@ class pyTigerGraphUtils(pyTigerGraphBase):
             if full:
                 return ret
             ret = re.search("_.+_", ret)
-            return ret.group().strip("_")
+            ret = ret.group().strip("_")
+
+            if logger.level == logging.DEBUG:
+                logger.debug("return: " + str(ret))
+            logger.info("exit: getVer")
+
+            return ret
         else:
             raise TigerGraphException("\"" + component + "\" is not a valid component.", None)
 
@@ -127,6 +165,8 @@ class pyTigerGraphUtils(pyTigerGraphBase):
 
         TODO Check if this endpoint was still available.
         """
+        logger.info("entry: getLicenseInfo")
+
         res = self._get(self.restppUrl + "/showlicenseinfo", resKey="", skipCheck=True)
         ret = {}
         if not res["error"]:
@@ -139,4 +179,9 @@ class pyTigerGraphUtils(pyTigerGraphBase):
             ret["daysRemaining"] = -1
         else:
             raise TigerGraphException(res["message"], res["code"])
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: getLicenseInfo")
+
         return ret

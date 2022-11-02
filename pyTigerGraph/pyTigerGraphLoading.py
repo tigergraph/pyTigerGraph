@@ -3,11 +3,16 @@
 The functions on this page run loading jobs on the TigerGraph server.
 All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object].
 """
+import logging
+import warnings
 from typing import Union
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
+logger = logging.getLogger(__name__)
+
 
 class pyTigerGraphLoading(pyTigerGraphBase):
+
     def runLoadingJobWithFile(self, filePath: str, fileTag: str, jobName: str, sep: str = None,
             eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000) -> Union[dict, None]:
         """Execute a loading job with the referenced file.
@@ -40,6 +45,10 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             - `POST /ddl/{graph_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_a_loading_job[Run a loading job]
         """
+        logger.info("entry: runLoadingJobWithFile")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         try:
             data = open(filePath, 'rb').read()
             params = {
@@ -50,18 +59,32 @@ class pyTigerGraphLoading(pyTigerGraphBase):
                 params["sep"] = sep
             if eol is not None:
                 params["eol"] = eol
-        except:
+        except OSError as ose:
+            logger.error(ose.strerror)
+            logger.info("exit: runLoadingJobWithFile")
+
             return None
-        return self._post(self.restppUrl + "/ddl/" + self.graphname, params=params, data=data,
+            # TODO Should throw exception instead?
+
+        res = self._post(self.restppUrl + "/ddl/" + self.graphname, params=params, data=data,
             headers={"RESPONSE-LIMIT": str(sizeLimit), "GSQL-TIMEOUT": str(timeout)})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.info("exit: runLoadingJobWithFile")
+
+        return res
 
     def uploadFile(self, filePath, fileTag, jobName="", sep=None, eol=None, timeout=16000,
             sizeLimit=128000000) -> dict:
         """DEPRECATED
 
         Use `runLoadingJobWithFile()` instead.
-        TODO Proper depreciation
         """
+        warnings.warn(
+            "The `uploadFile()` function is deprecated; use `runLoadingJobWithFile()` instead.",
+            DeprecationWarning)
+
         return self.runLoadingJobWithFile(filePath, fileTag, jobName, sep, eol, timeout, sizeLimit)
 
     # TODO POST /restpploader/{graph_name}

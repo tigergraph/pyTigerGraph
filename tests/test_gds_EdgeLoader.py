@@ -2,15 +2,15 @@ import unittest
 
 from pandas import DataFrame
 from pyTigerGraph import TigerGraphConnection
-from pyTigerGraph.gds.utilities import is_query_installed
 from pyTigerGraph.gds.dataloaders import EdgeLoader
+from pyTigerGraph.gds.utilities import is_query_installed
 
 
 class TestGDSEdgeLoader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora")
-        # cls.conn.gsql("drop query all")
+        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
+        cls.conn.getToken(cls.conn.createSecret())
 
     def test_init(self):
         loader = EdgeLoader(
@@ -20,7 +20,7 @@ class TestGDSEdgeLoader(unittest.TestCase):
             filter_by=None,
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.82.171.137:9092",
+            kafka_address="kafka:9092",
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
         self.assertEqual(loader.num_batches, 11)
@@ -33,7 +33,7 @@ class TestGDSEdgeLoader(unittest.TestCase):
             filter_by=None,
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.82.171.137:9092",
+            kafka_address="kafka:9092",
         )
         num_batches = 0
         for data in loader:
@@ -50,7 +50,7 @@ class TestGDSEdgeLoader(unittest.TestCase):
             filter_by=None,
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.82.171.137:9092",
+            kafka_address="kafka:9092",
         )
         data = loader.data
         # print(data)
@@ -59,13 +59,13 @@ class TestGDSEdgeLoader(unittest.TestCase):
     def test_iterate_attr(self):
         loader = EdgeLoader(
             graph=self.conn,
-            attributes=["time","is_train"],
+            attributes=["time", "is_train"],
             batch_size=1024,
             shuffle=True,
             filter_by=None,
             loader_id=None,
             buffer_size=4,
-            kafka_address="34.82.171.137:9092",
+            kafka_address="kafka:9092",
         )
         num_batches = 0
         for data in loader:
@@ -79,7 +79,7 @@ class TestGDSEdgeLoader(unittest.TestCase):
     def test_sasl_plaintext(self):
         loader = EdgeLoader(
             graph=self.conn,
-            attributes=["time","is_train"],
+            attributes=["time", "is_train"],
             batch_size=1024,
             shuffle=True,
             filter_by=None,
@@ -89,7 +89,7 @@ class TestGDSEdgeLoader(unittest.TestCase):
             kafka_security_protocol="SASL_PLAINTEXT",
             kafka_sasl_mechanism="PLAIN",
             kafka_sasl_plain_username="bill",
-            kafka_sasl_plain_password="bill"
+            kafka_sasl_plain_password="bill",
         )
         num_batches = 0
         for data in loader:
@@ -103,7 +103,7 @@ class TestGDSEdgeLoader(unittest.TestCase):
     def test_sasl_ssl(self):
         loader = EdgeLoader(
             graph=self.conn,
-            attributes=["time","is_train"],
+            attributes=["time", "is_train"],
             batch_size=1024,
             shuffle=True,
             filter_by=None,
@@ -116,33 +116,8 @@ class TestGDSEdgeLoader(unittest.TestCase):
             kafka_sasl_mechanism="PLAIN",
             kafka_sasl_plain_username="YIQM66T3BZZLSXBJ",
             kafka_sasl_plain_password="UgRdpSS34e2kYe8jZ9m7py4LgjkjxsGrePiaaMv/YCHRIjRmTJMpodS/0og8SYe8",
-            kafka_producer_ca_location="/home/tigergraph/mlworkbench/ssl/cert.pem"
+            kafka_producer_ca_location="/home/tigergraph/mlworkbench/ssl/cert.pem",
         )
-        num_batches = 0
-        for data in loader:
-            # print(num_batches, data.head())
-            self.assertIsInstance(data, DataFrame)
-            self.assertIn("time", data)
-            self.assertIn("is_train", data)
-            num_batches += 1
-        self.assertEqual(num_batches, 11)
-
-    def test_sasl_ssl_kafka_config(self):
-        self.conn.gds.configureKafka(kafka_address="pkc-6ojv2.us-west4.gcp.confluent.cloud:9092",
-            kafka_replica_factor=3,
-            kafka_max_msg_size=8388608,
-            kafka_security_protocol="SASL_SSL",
-            kafka_sasl_mechanism="PLAIN",
-            kafka_sasl_plain_username="YIQM66T3BZZLSXBJ",
-            kafka_sasl_plain_password="UgRdpSS34e2kYe8jZ9m7py4LgjkjxsGrePiaaMv/YCHRIjRmTJMpodS/0og8SYe8",
-            kafka_producer_ca_location="/home/tigergraph/mlworkbench/ssl/cert.pem"
-        )
-        loader = self.conn.gds.edgeLoader(attributes=["time","is_train"],
-                                        batch_size=1024,
-                                        shuffle=True,
-                                        filter_by=None,
-                                        loader_id=None,
-                                        buffer_size=4)
         num_batches = 0
         for data in loader:
             # print(num_batches, data.head())
@@ -158,8 +133,8 @@ class TestGDSEdgeLoader(unittest.TestCase):
 class TestGDSEdgeLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora")
-        # cls.conn.gsql("drop query all")
+        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
+        cls.conn.getToken(cls.conn.createSecret())
 
     def test_init(self):
         loader = EdgeLoader(
@@ -205,12 +180,12 @@ class TestGDSEdgeLoaderREST(unittest.TestCase):
     def test_iterate_attr(self):
         loader = EdgeLoader(
             graph=self.conn,
-            attributes=["time","is_train"],
+            attributes=["time", "is_train"],
             batch_size=1024,
             shuffle=True,
             filter_by=None,
             loader_id=None,
-            buffer_size=4
+            buffer_size=4,
         )
         num_batches = 0
         for data in loader:
@@ -223,11 +198,12 @@ class TestGDSEdgeLoaderREST(unittest.TestCase):
 
     # TODO: test filter_by
 
+
 class TestGDSHeteroEdgeLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://35.230.92.92", graphname="hetero")
-        # cls.conn.gsql("drop query all")
+        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="hetero")
+        cls.conn.getToken(cls.conn.createSecret())
 
     def test_init(self):
         loader = EdgeLoader(
@@ -260,13 +236,12 @@ class TestGDSHeteroEdgeLoaderREST(unittest.TestCase):
     def test_iterate_hetero(self):
         loader = EdgeLoader(
             graph=self.conn,
-            attributes={"v0v0": ["is_train", "is_val"],
-                        "v2v0": ["is_train", "is_val"]},
+            attributes={"v0v0": ["is_train", "is_val"], "v2v0": ["is_train", "is_val"]},
             batch_size=200,
             shuffle=False,
             filter_by=None,
             loader_id=None,
-            buffer_size=4
+            buffer_size=4,
         )
         num_batches = 0
         for data in loader:
@@ -281,6 +256,7 @@ class TestGDSHeteroEdgeLoaderREST(unittest.TestCase):
             num_batches += 1
         self.assertEqual(num_batches, 9)
 
+
 if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(TestGDSEdgeLoader("test_init"))
@@ -288,8 +264,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSEdgeLoader("test_whole_edgelist"))
     suite.addTest(TestGDSEdgeLoader("test_iterate_attr"))
     suite.addTest(TestGDSEdgeLoader("test_sasl_plaintext"))
-    suite.addTest(TestGDSEdgeLoader("test_sasl_ssl"))
-    suite.addTest(TestGDSEdgeLoader("test_sasl_ssl_kafka_config"))
+    # suite.addTest(TestGDSEdgeLoader("test_sasl_ssl"))
     suite.addTest(TestGDSEdgeLoaderREST("test_init"))
     suite.addTest(TestGDSEdgeLoaderREST("test_iterate"))
     suite.addTest(TestGDSEdgeLoaderREST("test_whole_edgelist"))
