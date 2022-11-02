@@ -2877,7 +2877,31 @@ class EdgeNeighborLoader(BaseLoader):
 
 
 class NodePieceLoader(BaseLoader):
-    """Nodepiece Loader.
+    """NodePieceLoader.
+
+    A data loader that performs NodePiece sampling from the graph.
+    You can declare a `NodePieceLoader` instance with the factory function `nodePieceLoader()`.
+
+    A NodePiece loader is an iterable.
+    When you loop through a loader instance, it loads one batch of data from the graph to which you established a connection.
+
+    In every iteration, the NodePiece loader selects a group of seed vertices of size batch size. 
+    For each vertex in the batch, it will produce a set of the k closest "anchor" vertices in the graph,
+    as well as up to j edge types. For more information on the NodePiece data loading scheme, the
+    https://towardsdatascience.com/nodepiece-tokenizing-knowledge-graphs-6dd2b91847aa[blog article] and
+    https://arxiv.org/abs/2106.12144[paper] are good places to start.
+
+    You can iterate on the instance until every vertex has been picked as seed.
+
+    Examples:
+
+    The following example iterates over an NodePiece loader instance.
+    [.wrap,python]
+    ----
+    for i, batch in enumerate(node_piece_loader):
+        print("----Batch {}----".format(i))
+        print(batch)
+    ----
     """
     def __init__(
         self,
@@ -2888,7 +2912,7 @@ class NodePieceLoader(BaseLoader):
         use_cache: bool = False,
         clear_cache: bool = False,
         anchor_method: str = "random",
-        anchor_cache_attr: str = "anchors",
+        anchor_cache_attr: str = None,
         special_tokens: list = ["MASK", "CLS", "SEP"],
         max_distance: int = 5,
         max_anchors: int = 10,
@@ -2897,7 +2921,6 @@ class NodePieceLoader(BaseLoader):
         anchor_attribute: str = "is_anchor",
         tokenMap: Union[dict, str] = None,
         e_types: list = None,
-        compute_all: bool = True,
         global_schema_change: bool = False,
         batch_size: int = None,
         num_batches: int = 1,
@@ -2973,8 +2996,10 @@ class NodePieceLoader(BaseLoader):
         # Initialize parameters for the query
         if isinstance(target_vertex_types, str):
             self._seed_types = [target_vertex_types]
-        else:
+        elif isinstance(target_vertex_types, list):
             self._seed_types = target_vertex_types
+        else:
+            self._seed_types = self._vtypes
         if batch_size:
             if not filter_by:
                 num_vertices = sum(self._graph.getVertexCount(self._seed_types).values())
@@ -3013,18 +3038,18 @@ class NodePieceLoader(BaseLoader):
             self._payload["e_types"] = e_types
         else:
             self._payload["e_types"] = list(self._e_schema.keys())
-        self._payload["compute_all"] = compute_all
         # Compute Anchors
         if compute_anchors:
             self._compute_anchors(anchor_attribute, anchor_method)
-        to_change = []
-        for v_type in self._vtypes:
-            if anchor_cache_attr not in self._v_schema[v_type].keys():
-                # add anchor cache attribute
-                to_change.append(v_type)
-        if to_change != []:
-            ret = add_attribute(self._graph, "VERTEX", "MAP<INT, INT>", anchor_cache_attr, to_change, global_change=global_schema_change)
-            print(ret)
+        if anchor_cache_attr:
+            to_change = []
+            for v_type in self._vtypes:
+                if anchor_cache_attr not in self._v_schema[v_type].keys():
+                    # add anchor cache attribute
+                    to_change.append(v_type)
+            if to_change != []:
+                ret = add_attribute(self._graph, "VERTEX", "MAP<INT, INT>", anchor_cache_attr, to_change, global_change=global_schema_change)
+                print(ret)
         # Install query
         self.query_name = self._install_query()
 
@@ -3228,7 +3253,6 @@ class NodePieceLoader(BaseLoader):
         _payload["use_cache"] = self._payload["use_cache"]
         _payload["clear_cache"] = self._payload["clear_cache"]
         _payload["e_types"] = self._payload["e_types"]
-        _payload["compute_all"] = self._payload["compute_all"]
         _payload["input_vertices"] = []
         for i in vertices:
             _payload["input_vertices"].append((i["primary_id"], i["type"]))
