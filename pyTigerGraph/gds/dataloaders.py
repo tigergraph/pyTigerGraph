@@ -19,7 +19,7 @@ from queue import Empty, Queue
 from threading import Event, Thread
 from time import sleep
 import pickle
-from typing import TYPE_CHECKING, Any, Iterator, NoReturn, Tuple, Union
+from typing import TYPE_CHECKING, Any, Iterator, NoReturn, Tuple, Union, Callable
 
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
