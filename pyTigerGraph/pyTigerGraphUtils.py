@@ -93,10 +93,10 @@ class pyTigerGraphUtils(pyTigerGraphBase):
             logger.debug("params: " + self._locals(locals()))
 
         if self.useCert and self.certPath:
-            response = requests.request("GET", self.restppUrl + "/version/" + self.graphname,
+            response = requests.request("GET", self.restppUrl + "/version",
                 headers=self.authHeader, verify=False)
         else:
-            response = requests.request("GET", self.restppUrl + "/version/" + self.graphname,
+            response = requests.request("GET", self.restppUrl + "/version",
                 headers=self.authHeader)
         res = json.loads(response.text, strict=False)  # "strict=False" is why _get() was not used
         self._errorCheck(res)
