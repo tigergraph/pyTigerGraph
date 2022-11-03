@@ -1,28 +1,95 @@
 import unittest
-import os
-from os.path import join as pjoin
+from io import StringIO
+from textwrap import dedent
 from unittest import runner
-#from parso import split_lines
+from unittest.mock import patch
+
 from pyTigerGraph import TigerGraphConnection
-from pyTigerGraph.gds import featurizer
 from pyTigerGraph.gds.featurizer import Featurizer
-from pyTigerGraph.gds.utilities import random_string
+from pyTigerGraph.gds.utilities import is_query_installed, random_string
 
 
 class test_Featurizer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora2")
-        cls.featurizer = Featurizer(conn)
+        conn = TigerGraphConnection(host="http://localhost", graphname="Cora")
+        conn.getToken(conn.createSecret())
+        cls.featurizer = Featurizer(conn, repo="tests/fixtures")
 
-    def test_is_query_installed(self):
-        self.assertFalse(self.featurizer._is_query_installed("not_listed"))
+    def test_get_db_version(self):
+        major_ver, minor_ver, patch_ver = self.featurizer._get_db_version()
+        self.assertEqual(major_ver, "3")
+        self.assertEqual(minor_ver, "7")
+        self.assertEqual(patch_ver, "0")
+        self.assertEqual(self.featurizer.algo_ver, "3.7.0")
+
+    def test_get_algo_dict(self):
+        algo_dict = self.featurizer._get_algo_dict("tests/fixtures/manifest.json")
+        self.assertIsInstance(algo_dict, dict)
+        self.assertIn("Centrality", algo_dict)
+
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_listAlgorithms(self, mock_stdout):
+        self.featurizer.listAlgorithms()
+        truth = """\
+            Available algorithms per category:
+            - Centrality: 10 algorithms
+            - Classification: 7 algorithms
+            - Community: 6 algorithms
+            - Embeddings: 1 algorithms
+            - Path: 3 algorithms
+            - Topological Link Prediction: 6 algorithms
+            - Similarity: 4 algorithms
+            Call listAlgorithms() with the category name to see the list of algorithms
+            """
+        self.assertEqual(mock_stdout.getvalue(), dedent(truth))
+
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_listAlgorithms_category(self, mock_stdout):
+        self.featurizer.listAlgorithms("Centrality")
+        truth = """\
+            Available algorithms for Centrality:
+              pagerank:
+                weighted:
+                  01. name: tg_pagerank_wt
+                unweighted:
+                  02. name: tg_pagerank
+              article_rank:
+                03. name: tg_article_rank
+              betweenness:
+                04. name: tg_betweenness_cent
+              closeness:
+                approximate:
+                  05. name: tg_closeness_cent_approx
+                exact:
+                  06. name: tg_closeness_cent
+              degree:
+                unweighted:
+                  07. name: tg_degree_cent
+                weighted:
+                  08. name: tg_weighted_degree_cent
+              eigenvector:
+                09. name: tg_eigenvector_cent
+              harmonic:
+                10. name: tg_harmonic_cent
+            Call run() with the algorithm name to execute it
+            """
+        self.maxDiff=None
+        self.assertEqual(mock_stdout.getvalue(), dedent(truth))
 
     def test_install_query_file(self):
-        query_name = "tg_pagerank"
-        resp = self.featurizer._install_query_file(query_name) 
-        self.assertEqual(resp,"tg_pagerank")
-        self.assertTrue(self.featurizer._is_query_installed("tg_pagerank"))
+        query_path = "https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/3.7/algorithms/Centrality/pagerank/global/unweighted/tg_pagerank.gsql"
+        resp = self.featurizer._install_query_file(query_path) 
+        self.assertEqual(resp, "tg_pagerank")
+        self.assertTrue(is_query_installed(self.featurizer.conn, "tg_pagerank"))
+
+    def test_get_algo_paths(self):
+        algo_dict = self.featurizer._get_algo_dict("tests/fixtures/manifest.json")
+        self.assertDictEqual(
+            self.featurizer._get_algo_paths(algo_dict["Path"]),
+            {'tg_bfs': ['tests/fixtures/algorithms/Path/bfs/tg_bfs.gsql'], 
+             'tg_cycle_detection_count': ['tests/fixtures/algorithms/Path/cycle_detection/count/tg_cycle_detection_count.gsql'], 
+             'tg_shortest_ss_no_wt': ['tests/fixtures/algorithms/Path/shortest_path/unweighted/tg_shortest_ss_no_wt.gsql']})
 
     def test_get_Params(self):
         _dict = {'v_type': None,
@@ -173,22 +240,26 @@ class test_Featurizer(unittest.TestCase):
 
 if __name__ == '__main__':
     suite = unittest.TestSuite()
-    suite.addTest(test_Featurizer("test_is_query_installed"))
+    suite.addTest(test_Featurizer("test_get_db_version"))
+    suite.addTest(test_Featurizer("test_get_algo_dict"))
+    suite.addTest(test_Featurizer("test_listAlgorithms"))
+    suite.addTest(test_Featurizer("test_listAlgorithms_category"))
     suite.addTest(test_Featurizer("test_install_query_file"))
-    suite.addTest(test_Featurizer("test_get_Params"))
-    suite.addTest(test_Featurizer("test01_add_attribute"))
-    suite.addTest(test_Featurizer("test02_add_attribute"))
-    suite.addTest(test_Featurizer("test03_add_attribute"))
-    suite.addTest(test_Featurizer("test04_add_attribute"))
-    suite.addTest(test_Featurizer("test01_installAlgorithm"))
-    suite.addTest(test_Featurizer("test02_installAlgorithm"))
-    suite.addTest(test_Featurizer("test01_runAlgorithm"))
-    suite.addTest(test_Featurizer("test02_runAlgorithm"))
-    suite.addTest(test_Featurizer("test03_runAlgorithm")) 
-    suite.addTest(test_Featurizer("test04_runAlgorithm"))
-    suite.addTest(test_Featurizer("test05_runAlgorithm"))
-    suite.addTest(test_Featurizer("test06_installCustomAlgorithm"))
-    suite.addTest(test_Featurizer("test07_runCustomAlgorithm"))
+    suite.addTest(test_Featurizer("test_get_algo_paths"))
+    # suite.addTest(test_Featurizer("test_get_Params"))
+    # suite.addTest(test_Featurizer("test01_add_attribute"))
+    # suite.addTest(test_Featurizer("test02_add_attribute"))
+    # suite.addTest(test_Featurizer("test03_add_attribute"))
+    # suite.addTest(test_Featurizer("test04_add_attribute"))
+    # suite.addTest(test_Featurizer("test01_installAlgorithm"))
+    # suite.addTest(test_Featurizer("test02_installAlgorithm"))
+    # suite.addTest(test_Featurizer("test01_runAlgorithm"))
+    # suite.addTest(test_Featurizer("test02_runAlgorithm"))
+    # suite.addTest(test_Featurizer("test03_runAlgorithm")) 
+    # suite.addTest(test_Featurizer("test04_runAlgorithm"))
+    # suite.addTest(test_Featurizer("test05_runAlgorithm"))
+    # suite.addTest(test_Featurizer("test06_installCustomAlgorithm"))
+    # suite.addTest(test_Featurizer("test07_runCustomAlgorithm"))
     
 
 
