@@ -230,14 +230,14 @@ class Featurizer:
         if query_name == "tg_fastRP":
             # Drop all jobs on the graph
             self.conn.gsql("USE GRAPH {}\n".format(self.conn.graphname) + "drop job *")
-            res = self._add_attribute(schema_type="VERTEX",attr_type=" LIST<DOUBLE>",attr_name="fastrp_embedding",global_change=global_change)
+            res = self._add_attribute(schema_type="VERTEX",attr_type=" LIST<DOUBLE>",attr_name="embedding",global_change=global_change)
         # TODO: Check if Distributed query is needed.
         query = ("USE GRAPH {}\n".format(self.conn.graphname) + query + "\nINSTALL QUERY {}\n".format(query_name))
         print("Installing and optimizing the queries, it might take a minute")
         resp = self.conn.gsql(query)
         status = resp.splitlines()[-1]
         if "Failed" in status:
-            raise ConnectionError(status)
+            raise ConnectionError(resp)
         return query_name 
 
     def installAlgorithm(self,query_name:str, query_path: str = None, global_change:bool = False) -> str:
@@ -324,7 +324,7 @@ class Featurizer:
         resp = self.conn.gsql(job)
         status = resp.splitlines()[-1]
         if "Failed" in status:
-            raise ConnectionError(status)
+            raise ConnectionError(resp)
         else:
             print(status)
         return 'Schema change succeeded.'

@@ -162,7 +162,9 @@ class test_Featurizer(unittest.TestCase):
         self.assertIsNotNone(self.featurizer.runAlgorithm("tg_pagerank",params=params,timeout=2147480, global_schema=True),message)
 
     def test06_installCustomAlgorithm(self):
-        out = self.featurizer.installAlgorithm("simple_query", query_path="./fixtures/create_query_simple.gsql")
+        path = os.path.dirname(os.path.realpath(__file__))
+        fname = os.path.join(path, "fixtures/create_query_simple.gsql")
+        out = self.featurizer.installAlgorithm("simple_query", query_path=fname)
         self.assertEqual(out, "simple_query")
     
     def test07_runCustomAlgorithm(self):
