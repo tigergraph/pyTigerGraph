@@ -19,6 +19,9 @@ class pyTigerGraphDataset(pyTigerGraphAuth):
             cleanup (bool, optional):
                 Whether or not to remove local artifacts downloaded by `Datasets`
                 after ingestion is done. Defaults to True.
+            getToken (bool, optional):
+                Whether or not to get auth token from the database. This is required
+                when auth token is enabled for the database. Defaults to False.
         """
         if not dataset.ingest_ready:
             raise Exception("This dataset is not ingestable.")
@@ -28,6 +31,9 @@ class pyTigerGraphDataset(pyTigerGraphAuth):
             # self.gsql("USE GRAPH {}\nDROP JOB ALL\nDROP GRAPH {}".format(
             #     dataset.name, dataset.name
             # ))
+            self.graphname = dataset.name
+            if getToken:
+                self.getToken(self.createSecret())
             print(
                 "A graph with name {} already exists in the database. "
                 "Please drop it first before ingesting.".format(dataset.name)
