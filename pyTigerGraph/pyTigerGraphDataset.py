@@ -28,6 +28,9 @@ class pyTigerGraphDataset(pyTigerGraphAuth):
             # self.gsql("USE GRAPH {}\nDROP JOB ALL\nDROP GRAPH {}".format(
             #     dataset.name, dataset.name
             # ))
+            self.graphname = dataset.name
+            if getToken:
+                self.getToken(self.createSecret())
             print(
                 "A graph with name {} already exists in the database. "
                 "Please drop it first before ingesting.".format(dataset.name)
