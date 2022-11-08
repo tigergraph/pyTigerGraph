@@ -30,7 +30,7 @@ class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT
             gsqlSecret: str = "", username: str = "tigergraph", password: str = "tigergraph",
             tgCloud: bool = False, restppPort: Union[int, str] = "9000",
             gsPort: Union[int, str] = "14240", gsqlVersion: str = "", version: str = "",
-            apiToken: str = "", useCert: bool = None, certPath: str = None, debug: bool = False,
+            apiToken: str = "", useCert: bool = None, certPath: str = None, debug: bool = None,
             sslPort: Union[int, str] = "443", gcp: bool = False):
         super().__init__(host, graphname, gsqlSecret, username, password, tgCloud, restppPort,
             gsPort, gsqlVersion, version, apiToken, useCert, certPath, debug, sslPort, gcp)
