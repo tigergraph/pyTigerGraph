@@ -1,10 +1,9 @@
+import os
 import unittest
 from io import StringIO
 from textwrap import dedent
 from unittest import runner
 from unittest.mock import patch
-import os
-from os.path import join as pjoin
 
 from pyTigerGraph import TigerGraphConnection
 from pyTigerGraph.gds.featurizer import Featurizer
@@ -14,7 +13,7 @@ from pyTigerGraph.gds.utilities import is_query_installed, random_string
 class test_Featurizer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        conn = TigerGraphConnection(host="http://localhost", graphname="Cora")
+        conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
         conn.getToken(conn.createSecret())
         cls.featurizer = Featurizer(conn, algo_version="3.7")
 
@@ -87,15 +86,20 @@ class test_Featurizer(unittest.TestCase):
         self.assertEqual(resp, "tg_pagerank")
         self.assertTrue(is_query_installed(self.featurizer.conn, "tg_pagerank"))
 
-    def test_get_algo_paths(self):
+    def test_get_algo_details(self):
         path = os.path.dirname(os.path.realpath(__file__))
         fname = os.path.join(path, "fixtures/manifest.json")
         algo_dict = self.featurizer._get_algo_dict(fname)
+        res = self.featurizer._get_algo_details(algo_dict["Path"])
         self.assertDictEqual(
-            self.featurizer._get_algo_paths(algo_dict["Path"]),
+            res[0],
             {'tg_bfs': ['https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/3.7/algorithms/Path/bfs/tg_bfs.gsql'], 
              'tg_cycle_detection_count': ['https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/3.7/algorithms/Path/cycle_detection/count/tg_cycle_detection_count.gsql'], 
              'tg_shortest_ss_no_wt': ['https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/3.7/algorithms/Path/shortest_path/unweighted/tg_shortest_ss_no_wt.gsql']})
+        self.assertDictEqual(
+            res[1],
+            {'tg_bfs': "INT", 
+             'tg_shortest_ss_no_wt': "INT"})
 
     def test_get_Params(self):
         _dict = {'v_type': None,
@@ -108,44 +112,16 @@ class test_Featurizer(unittest.TestCase):
             'result_attr': '', 
             'file_path': '',
             'display_edges': True}
-        self.assertEqual(self.featurizer._get_Params("tg_pagerank"),_dict)
+        self.assertEqual(self.featurizer._get_Params("tg_pagerank"), _dict)
 
     def test01_add_attribute(self):
-        try:
-            tasks = "ALTER VERTEX Paper2 DROP ATTRIBUTE (attr1);"
-            job_name = "drop_{}_attr_{}".format("VERTEX",random_string(6)) 
-            job = "USE GRAPH {}\n".format(self.featurizer.conn.graphname) + "CREATE GLOBAL SCHEMA_CHANGE JOB {} {{\n".format(
-                job_name) + ''.join(tasks) + "}}\nRUN GLOBAL SCHEMA_CHANGE JOB {}".format(job_name)
-            # Submit the job
-            resp = self.featurizer.conn.gsql(job)
-            status = resp.splitlines()[-1]
-            if "Failed" in status:
-                raise ConnectionError(status)
-            else:
-                pass
-        except:
-            pass
-        self.assertEqual( self.featurizer._add_attribute("VERTEX","FLOAT","attr1", global_change=True),'Schema change succeeded.')
+        self.assertEqual(self.featurizer._add_attribute("VERTEX", "FLOAT", "attr1", global_change=False), 'Schema change succeeded.')
 
     def test02_add_attribute(self):
-        try:
-            tasks = "ALTER Edge Cites2 DROP ATTRIBUTE (attr2);"
-            job_name = "drop_{}_attr_{}".format("EDGE",random_string(6)) 
-            job = "USE GRAPH {}\n".format(self.featurizer.conn.graphname) + "CREATE GLOBAL SCHEMA_CHANGE JOB {} {{\n".format(
-                job_name) + ''.join(tasks) + "}}\nRUN GLOBAL SCHEMA_CHANGE JOB {}".format(job_name)
-            # Submit the job
-            resp = self.featurizer.conn.gsql(job)
-            status = resp.splitlines()[-1]
-            if "Failed" in status:
-                raise ConnectionError(status)
-            else:
-                pass
-        except:
-            pass
-        self.assertEqual(self.featurizer._add_attribute("Edge","BOOL","attr2", global_change=True),'Schema change succeeded.')
+        self.assertEqual(self.featurizer._add_attribute("Edge", "BOOL", "attr2", global_change=False), 'Schema change succeeded.')
     
     def test03_add_attribute(self):
-        self.assertEqual(self.featurizer._add_attribute("Vertex","BOOL","attr1", global_change=True),'Attribute already exists')
+        self.assertEqual(self.featurizer._add_attribute("Vertex", "BOOL", "attr1", global_change=False), 'Attribute already exists')
 
     def test04_add_attribute(self):
         with self.assertRaises(Exception) as context:
@@ -153,46 +129,18 @@ class test_Featurizer(unittest.TestCase):
         self.assertTrue('schema_type has to be VERTEX or EDGE' in str(context.exception))
     
     def test05_add_attribute(self):
-        try:
-            tasks = "ALTER VERTEX Paper2 DROP ATTRIBUTE (attr4);"
-            job_name = "drop_{}_attr_{}".format("VERTEX",random_string(6)) 
-            job = "USE GRAPH {}\n".format(self.featurizer.conn.graphname) + "CREATE GLOBAL SCHEMA_CHANGE JOB {} {{\n".format(
-                job_name) + ''.join(tasks) + "}}\nRUN GLOBAL SCHEMA_CHANGE JOB {}".format(job_name)
-            # Submit the job
-            resp = self.featurizer.conn.gsql(job)
-            status = resp.splitlines()[-1]
-            if "Failed" in status:
-                raise ConnectionError(status)
-            else:
-                pass
-        except:
-            pass
-        self.assertEqual(self.featurizer._add_attribute("VERTEX","BOOL","attr4",['Paper2'], global_change=True),'Schema change succeeded.')
+        self.assertEqual(self.featurizer._add_attribute("VERTEX", "BOOL", "attr4", ['Paper'], global_change=False), 'Schema change succeeded.')
 
     def test01_installAlgorithm(self):
-       self.assertEqual(self.featurizer.installAlgorithm("tg_pagerank").strip(),"tg_pagerank")
+       self.assertEqual(self.featurizer.installAlgorithm("tg_pagerank"), "tg_pagerank")
 
     def test02_installAlgorithm(self):
         with self.assertRaises(Exception):
             self.featurizer.installAlgorithm("someQuery")
  
     def test01_runAlgorithm(self):
-        try:
-            tasks = "ALTER VERTEX Paper2 DROP ATTRIBUTE (pagerank);"
-            job_name = "drop_{}_attr_{}".format("VERTEX",random_string(6)) 
-            job = "USE GRAPH {}\n".format(self.featurizer.conn.graphname) + "CREATE GLOBAL SCHEMA_CHANGE JOB {} {{\n".format(
-                job_name) + ''.join(tasks) + "}}\nRUN GLOBAL SCHEMA_CHANGE JOB {}".format(job_name)
-            # Submit the job
-            resp = self.featurizer.conn.gsql(job)
-            status = resp.splitlines()[-1]
-            if "Failed" in status:
-                raise ConnectionError(status)
-            else:
-                pass
-        except:
-            pass
-        params = {'v_type': 'Paper2',
-            'e_type': 'Cite2',
+        params = {'v_type': 'Paper',
+            'e_type': 'Cite',
             'max_change': 0.001,
             'max_iter': 25,
             'damping': 0.85,
@@ -202,28 +150,27 @@ class test_Featurizer(unittest.TestCase):
             'file_path': '',
             'display_edges': True}
         message = "Test value is not none."
-        self.assertIsNotNone(self.featurizer.runAlgorithm("tg_pagerank",params=params,feat_name="pagerank",timeout=2147480, global_schema=True),message)
+        self.assertIsNotNone(self.featurizer.runAlgorithm("tg_pagerank", params=params, feat_name="pagerank", timeout=2147480, global_schema=False), message)
 
-    
     def test02_runAlgorithm(self):
         with self.assertRaises(ValueError):
-            self.featurizer.runAlgorithm("tg_pagerank",timeout=2147480)
+            self.featurizer.runAlgorithm("tg_pagerank", timeout=2147480)
 
     def test03_runAlgorithm(self):
-        params = {'v_type': 'Paper2', 'e_type': ['Cite2'], 'weights': '1,1,2', 'beta': -0.85, 'k': 3, 'reduced_dim': 128,
+        params = {'v_type': 'Paper', 'e_type': ['Cite'], 'weights': '1,1,2', 'beta': -0.85, 'k': 3, 'reduced_dim': 128,
           'sampling_constant': 1, 'random_seed': 42, 'print_accum': False,'result_attr':"",'file_path' :""}
         with self.assertRaises(Exception):
-            self.featurizer.runAlgorithm("tg_fastRP",params=params,feat_name="fastrp_embedding",timeout=1,global_schema=True)
+            self.featurizer.runAlgorithm("tg_fastRP", params=params, feat_name="fastrp_embedding", timeout=1, global_schema=False)
 
     def test04_runAlgorithm(self):
-        params = {'v_type': 'Paper2', 'e_type': ['Cite2'], 'weights': '1,1,2', 'beta': -0.85, 'k': 3, 'reduced_dim': 128, 
+        params = {'v_type': 'Paper', 'e_type': ['Cite'], 'weights': '1,1,2', 'beta': -0.85, 'k': 3, 'reduced_dim': 128, 
           'sampling_constant': 1, 'random_seed': 42, 'print_accum': False,'result_attr':"",'file_path' :""}
         with self.assertRaises(Exception):
-            self.featurizer.runAlgorithm("tg_fastRP",params=params,feat_name="fastrp_embedding",sizeLimit=1, global_schema=True)
+            self.featurizer.runAlgorithm("tg_fastRP", params=params, feat_name="fastrp_embedding", sizeLimit=1, global_schema=False)
     
     def test05_runAlgorithm(self):
-        params = {'v_type': 'Paper2',
-            'e_type': 'Cite2',
+        params = {'v_type': 'Paper',
+            'e_type': 'Cite',
             'max_change': 0.001,
             'max_iter': 25,
             'damping': 0.85,
@@ -232,7 +179,7 @@ class test_Featurizer(unittest.TestCase):
             'file_path': '',
             'display_edges': True}
         message = "Test value is not none."
-        self.assertIsNotNone(self.featurizer.runAlgorithm("tg_pagerank",params=params,timeout=2147480, global_schema=True),message)
+        self.assertIsNotNone(self.featurizer.runAlgorithm("tg_pagerank", params=params, timeout=2147480, global_schema=False), message)
 
     def test06_installCustomAlgorithm(self):
         path = os.path.dirname(os.path.realpath(__file__))
@@ -241,7 +188,7 @@ class test_Featurizer(unittest.TestCase):
         self.assertEqual(out, "simple_query")
     
     def test07_runCustomAlgorithm(self):
-        out = self.featurizer.runAlgorithm("simple_query", params={}, feat_name="test_feat", feat_type="INT", custom_query=True, global_schema=True)
+        out = self.featurizer.runAlgorithm("simple_query", params={}, feat_name="test_feat", feat_type="INT", custom_query=True, global_schema=False)
         self.assertEqual(out[0]['"Hello World!"'], "Hello World!")
 
 if __name__ == '__main__':
@@ -251,25 +198,24 @@ if __name__ == '__main__':
     suite.addTest(test_Featurizer("test_listAlgorithms"))
     suite.addTest(test_Featurizer("test_listAlgorithms_category"))
     suite.addTest(test_Featurizer("test_install_query_file"))
-    suite.addTest(test_Featurizer("test_get_algo_paths"))
-    # suite.addTest(test_Featurizer("test_get_Params"))
-    # suite.addTest(test_Featurizer("test01_add_attribute"))
-    # suite.addTest(test_Featurizer("test02_add_attribute"))
-    # suite.addTest(test_Featurizer("test03_add_attribute"))
-    # suite.addTest(test_Featurizer("test04_add_attribute"))
-    # suite.addTest(test_Featurizer("test01_installAlgorithm"))
-    # suite.addTest(test_Featurizer("test02_installAlgorithm"))
-    # suite.addTest(test_Featurizer("test01_runAlgorithm"))
-    # suite.addTest(test_Featurizer("test02_runAlgorithm"))
-    # suite.addTest(test_Featurizer("test03_runAlgorithm")) 
-    # suite.addTest(test_Featurizer("test04_runAlgorithm"))
-    # suite.addTest(test_Featurizer("test05_runAlgorithm"))
-    # suite.addTest(test_Featurizer("test06_installCustomAlgorithm"))
-    # suite.addTest(test_Featurizer("test07_runCustomAlgorithm"))
+    suite.addTest(test_Featurizer("test_get_algo_details"))
+    suite.addTest(test_Featurizer("test_get_Params"))
+    suite.addTest(test_Featurizer("test01_add_attribute"))
+    suite.addTest(test_Featurizer("test02_add_attribute"))
+    suite.addTest(test_Featurizer("test03_add_attribute"))
+    suite.addTest(test_Featurizer("test04_add_attribute"))
+    suite.addTest(test_Featurizer("test05_add_attribute"))
+    suite.addTest(test_Featurizer("test01_installAlgorithm"))
+    suite.addTest(test_Featurizer("test02_installAlgorithm"))
+    suite.addTest(test_Featurizer("test01_runAlgorithm"))
+    suite.addTest(test_Featurizer("test02_runAlgorithm"))
+    suite.addTest(test_Featurizer("test03_runAlgorithm")) 
+    suite.addTest(test_Featurizer("test04_runAlgorithm"))
+    suite.addTest(test_Featurizer("test05_runAlgorithm"))
+    suite.addTest(test_Featurizer("test06_installCustomAlgorithm"))
+    suite.addTest(test_Featurizer("test07_runCustomAlgorithm"))
     
-
-
-    runner = unittest.TextTestRunner(verbosity=2)
+    runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)
 
     
