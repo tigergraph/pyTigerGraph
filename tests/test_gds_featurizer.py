@@ -188,7 +188,7 @@ class test_Featurizer(unittest.TestCase):
         self.assertEqual(out, "simple_query")
     
     def test07_runCustomAlgorithm(self):
-        out = self.featurizer.runAlgorithm("simple_query", params={}, feat_name="test_feat", feat_type="INT", custom_query=True, global_schema=False)
+        out = self.featurizer.runAlgorithm("simple_query", params={}, feat_name="test_feat", feat_type="INT", schema_name=["Paper"], custom_query=True, global_schema=False)
         self.assertEqual(out[0]['"Hello World!"'], "Hello World!")
 
 if __name__ == '__main__':

@@ -35,14 +35,14 @@ class Featurizer:
         self.conn = conn
         # Get DB version if algo version is not given
         if not algo_version:
-            major_ver, minor_ver, patch_ver = self._get_db_version()
+            self.major_ver, self.minor_ver, self.patch_ver = self._get_db_version()
         else:
             self.algo_ver = algo_version
-            major_ver, minor_ver = algo_version.split(".")[:2]
+            self.major_ver, self.minor_ver = algo_version.split(".")[:2]
         # Get repo address
         if not repo:
             repo = "https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/{}.{}".format(
-                major_ver, minor_ver
+                self.major_ver, self.minor_ver
             )
         self.repo = repo
         # Get algo dict from manifest
@@ -54,6 +54,7 @@ class Featurizer:
         self.query = None
         self.query_name = None
         self.query_result_type = None
+        self.sch_type = None
 
     def _get_db_version(self) -> Tuple[str, str, str]:
         # Get DB version
@@ -227,7 +228,7 @@ class Featurizer:
         # Else, install query by name from the repo.
         # If the query paths are not collected yet, do it now.
         if not self.algo_paths:
-            self.algo_paths, self.query_result_type = self._get_algo_details(self.algo_dict)
+            self.algo_paths, self.query_result_type, self.sch_type = self._get_algo_details(self.algo_dict)
         if query_name not in self.algo_paths:
             raise ValueError("Cannot find {} in the library.".format(query_name))
         for query in self.algo_paths[query_name]:
@@ -236,7 +237,7 @@ class Featurizer:
         return self.query_name
 
     def _get_algo_details(self, algo_dict: dict) -> dict:
-        def get_details(d: dict, paths: dict, types: dict) -> None:
+        def get_details(d: dict, paths: dict, types: dict, sch_obj: dict) -> None:
             if "name" in d.keys():
                 if "path" not in d.keys():
                     raise Exception(
@@ -245,16 +246,19 @@ class Featurizer:
                 paths[d["name"]] = [pjoin(self.repo, p) for p in d["path"].split(";")]
                 if "value_type" in d.keys():
                     types[d["name"]] = d["value_type"]
+                if "schema_type" in d.keys():
+                    sch_obj[d["name"]] = d["schema_type"]
                 return
             for k in d:
                 if isinstance(d[k], dict):
-                    get_details(d[k], paths, types)
+                    get_details(d[k], paths, types, sch_obj)
             return
 
         algo_paths = {}
         algo_result_types = {}
-        get_details(algo_dict, algo_paths, algo_result_types)
-        return algo_paths, algo_result_types
+        sch_types = {}
+        get_details(algo_dict, algo_paths, algo_result_types, sch_types)
+        return algo_paths, algo_result_types, sch_types
 
     def _add_attribute(
         self,
@@ -345,7 +349,7 @@ class Featurizer:
 
     def _get_query(self, query_name: str) -> str:
         if not self.algo_paths:
-            self.algo_paths, self.query_result_type = self._get_algo_details(self.algo_dict)
+            self.algo_paths, self.query_result_type, self.sch_type = self._get_algo_details(self.algo_dict)
         if query_name not in self.algo_paths:
             raise ValueError("Cannot find {} in the library.".format(query_name))
         query_path = self.algo_paths[query_name][-1]
@@ -412,8 +416,8 @@ class Featurizer:
         sizeLimit: int = None,
     ) -> Any:
         """
-        Runs an installed query.
-        The query must be already created and installed in the graph.
+        Runs a TigerGraph Graph Data Science Algorithm. If a built-in algorithm is not installed, it will automatically install before execution. 
+        Custom algorithms will have to be installed using the `installAlgorithm()` method.
         If the query accepts input parameters and the parameters have not been provided, calling this function runs the query with the default values for the parameters.
         If the there isn't a default value in the query definition and no parameters are provided, the function raises a `ValueError`.
 
@@ -422,27 +426,27 @@ class Featurizer:
                 The name of the query to be executed.
             params (dict):
                 Query parameters. A dictionary.
-            feat_name (str):
-                An attribute name that needs to be added to the vertex/edge
-            feat_type (str):
+            feat_name (str, optional):
+                An attribute name that needs to be added to the vertex/edge. If the result attribute parameter is specified in the parameters, that will be used.
+            feat_type (str, optional):
                 Type of attribute that needs to be added to the vertex/edge. Only needed if `custom_query` is set to `True`.
-            custom_query (bool):
+            custom_query (bool, optional):
                 If the query is a custom query. Defaults to False.
-            schema_name:
+            schema_name (list, optional):
                 List of Vertices/Edges that the attr_name need to added to them.
-            global_schema (bool):
+                If the algorithm contains the parameters of `v_type` and `e_type`, these will be used automatically.
+            global_schema (bool, optional):
                 False by default. Set to true if you want to run `GLOBAL SCHEMA_CHANGE JOB`.
                 See https://docs.tigergraph.com/gsql-ref/current/ddl-and-loading/modifying-a-graph-schema#_global_vs_local_schema_changes.
-            timeout (int):
+            timeout (int, optional):
                 Maximum duration for successful query execution (in milliseconds).
-            sizeLimit (int):
+            sizeLimit (int, optional):
                 Maximum size of response (in bytes).
 
         Returns:
             The output of the query, a list of output elements (vertex sets, edge sets, variables,
             accumulators, etc.)
         """
-        schema_type = "VERTEX"
         if params == None:
             if not (custom_query):
                 params = self._get_Params(query_name)
@@ -463,34 +467,83 @@ class Featurizer:
                     return result
         else:
             if not (custom_query):
-                default_params = self._get_Params(query_name)
-            else:
-                if feat_name == None or feat_type == None:
-                    default_params = {}
-                else:
-                    default_params = {"result_attr": feat_name}
-            if feat_name:
-                if "result_attr" in default_params.keys():
-                    params["result_attr"] = feat_name
-                    if query_name != "tg_fastRP":
-                        if not (feat_type):
-                            feat_type = self.query_result_type[query_name]
+                _ = self._get_Params(query_name)
+            if "result_attr" in params.keys() or "result_attribute" in params.keys() or feat_name:
+                if custom_query and not(schema_name):
+                    raise ValueError("Must specify schema_name if adding attributes for custom query")
+                if "result_attr" in params.keys():
+                    feat_name = params["result_attr"]
+                elif "result_attribute" in params.keys():
+                    feat_name = params["result_attribute"]
+                if not(query_name == "tg_fastRP" and int(self.major) <= 3 and int(self.minor) <= 7): # fastRP in 3.7 creates attribute at install time
+                    if not(custom_query):
+                        feat_type = self.query_result_type[query_name]
+                        schema_type = self.sch_type[query_name]
+                    else:
+                        if schema_name in self.conn.getEdgeTypes():
+                            schema_type = "EDGE"
+                        else:
+                            schema_type = "VERTEX"
+                    
+                    if schema_type == "VERTEX" and "v_type" in params:
+                        if isinstance(params["v_type"], str):
+                            schema_name = [params["v_type"]]
+                        elif isinstance(params["v_type"], list):
+                            schema_name = params["v_type"]
+                        else:
+                            raise ValueError("v_type should be either a list or string")
+                    elif schema_type == "EDGE" and "e_type" in params:
+                        if isinstance(params["e_type"], str):
+                            schema_name = [params["e_type"]]
+                        elif isinstance(params["e_type"], list):
+                            schema_name = params["e_type"]
+                        else:
+                            raise ValueError("e_type should be either a list or string")
+
+                    global_types = []
+                    local_types = []
+                    if schema_type == "VERTEX":
+                        for v_type in schema_name:
+                            if "IsLocal" in self.conn.getVertexType(v_type, force=True):
+                                local_types.append(v_type)
+                            else:
+                                global_types.append(v_type)
+                    if schema_type == "EDGE":
+                        for e_type in schema_name:
+                            if "IsLocal" in self.conn.getEdgeType(e_type, force=True):
+                                local_types.append(e_type)
+                            else:
+                                global_types.append(e_type)
+
+                    if len(global_types) > 0 or global_schema:
                         _ = self._add_attribute(
                             schema_type,
                             feat_type,
                             feat_name,
-                            schema_name,
-                            global_change=global_schema,
+                            global_types,
+                            global_change=True,
                         )
-                else:
-                    query_ulr = self.algo_paths[query_name][-1]
-                    raise ValueError(
-                        "The algorithm does not provide any feature, see the algorithm details:"
-                        + query_ulr
-                        + "."
-                    )
-            result = self.conn.runInstalledQuery(
-                query_name, params, timeout=timeout, sizeLimit=sizeLimit, usePost=True
-            )
-            if result != None:
-                return result
+                    if len(local_types) > 0 or not(global_schema):
+                        _ = self._add_attribute(
+                            schema_type,
+                            feat_type,
+                            feat_name,
+                            local_types,
+                            global_change=False,
+                        )
+            '''
+            else:
+                query_ulr = self.algo_paths[query_name][-1]
+                raise ValueError(
+                    "The algorithm does not provide any feature, see the algorithm details: "
+                    + query_ulr
+                    + "."
+                )
+            '''
+        if not(query_name in [x.split("/")[-1] for x in self.conn.getInstalledQueries().keys()]):
+            self.installAlgorithm(query_name)
+        result = self.conn.runInstalledQuery(
+            query_name, params, timeout=timeout, sizeLimit=sizeLimit, usePost=True
+        )
+        if result != None:
+            return result
