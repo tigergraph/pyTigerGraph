@@ -3,6 +3,8 @@ from io import StringIO
 from textwrap import dedent
 from unittest import runner
 from unittest.mock import patch
+import os
+from os.path import join as pjoin
 
 from pyTigerGraph import TigerGraphConnection
 from pyTigerGraph.gds.featurizer import Featurizer
@@ -14,17 +16,19 @@ class test_Featurizer(unittest.TestCase):
     def setUpClass(cls):
         conn = TigerGraphConnection(host="http://localhost", graphname="Cora")
         conn.getToken(conn.createSecret())
-        cls.featurizer = Featurizer(conn, repo="tests/fixtures")
+        cls.featurizer = Featurizer(conn, algo_version="3.7")
 
     def test_get_db_version(self):
         major_ver, minor_ver, patch_ver = self.featurizer._get_db_version()
-        self.assertEqual(major_ver, "3")
-        self.assertEqual(minor_ver, "7")
-        self.assertEqual(patch_ver, "0")
-        self.assertEqual(self.featurizer.algo_ver, "3.7.0")
+        self.assertIsNotNone(int(major_ver))
+        self.assertIsNotNone(int(minor_ver))
+        self.assertIsNotNone(int(patch_ver))
+        self.assertIsInstance(self.featurizer.algo_ver, str)
 
     def test_get_algo_dict(self):
-        algo_dict = self.featurizer._get_algo_dict("tests/fixtures/manifest.json")
+        path = os.path.dirname(os.path.realpath(__file__))
+        fname = os.path.join(path, "fixtures/manifest.json")
+        algo_dict = self.featurizer._get_algo_dict(fname)
         self.assertIsInstance(algo_dict, dict)
         self.assertIn("Centrality", algo_dict)
 
@@ -34,12 +38,12 @@ class test_Featurizer(unittest.TestCase):
         truth = """\
             Available algorithms per category:
             - Centrality: 10 algorithms
-            - Classification: 7 algorithms
+            - Classification: 6 algorithms
             - Community: 6 algorithms
             - Embeddings: 1 algorithms
             - Path: 3 algorithms
             - Topological Link Prediction: 6 algorithms
-            - Similarity: 4 algorithms
+            - Similarity: 3 algorithms
             Call listAlgorithms() with the category name to see the list of algorithms
             """
         self.assertEqual(mock_stdout.getvalue(), dedent(truth))
@@ -84,12 +88,14 @@ class test_Featurizer(unittest.TestCase):
         self.assertTrue(is_query_installed(self.featurizer.conn, "tg_pagerank"))
 
     def test_get_algo_paths(self):
-        algo_dict = self.featurizer._get_algo_dict("tests/fixtures/manifest.json")
+        path = os.path.dirname(os.path.realpath(__file__))
+        fname = os.path.join(path, "fixtures/manifest.json")
+        algo_dict = self.featurizer._get_algo_dict(fname)
         self.assertDictEqual(
             self.featurizer._get_algo_paths(algo_dict["Path"]),
-            {'tg_bfs': ['tests/fixtures/algorithms/Path/bfs/tg_bfs.gsql'], 
-             'tg_cycle_detection_count': ['tests/fixtures/algorithms/Path/cycle_detection/count/tg_cycle_detection_count.gsql'], 
-             'tg_shortest_ss_no_wt': ['tests/fixtures/algorithms/Path/shortest_path/unweighted/tg_shortest_ss_no_wt.gsql']})
+            {'tg_bfs': ['https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/3.7/algorithms/Path/bfs/tg_bfs.gsql'], 
+             'tg_cycle_detection_count': ['https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/3.7/algorithms/Path/cycle_detection/count/tg_cycle_detection_count.gsql'], 
+             'tg_shortest_ss_no_wt': ['https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/3.7/algorithms/Path/shortest_path/unweighted/tg_shortest_ss_no_wt.gsql']})
 
     def test_get_Params(self):
         _dict = {'v_type': None,
