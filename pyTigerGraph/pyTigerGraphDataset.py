@@ -1,6 +1,6 @@
 """Data Ingestion Functions
 
-Ingest in-stock datasets into a TigerGraph database.
+Ingest stock datasets into a TigerGraph database.
 All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object]. 
 """
 from .datasets import Datasets
@@ -11,7 +11,7 @@ class pyTigerGraphDataset(pyTigerGraphAuth):
     def ingestDataset(
         self, dataset: Datasets, cleanup: bool = True, getToken: bool = False
     ) -> None:
-        """Ingest an in-stock dataset to a TigerGraph database.
+        """Ingest a stock dataset to a TigerGraph database.
 
         Args:
             dataset (Datasets):
@@ -73,5 +73,6 @@ class pyTigerGraphDataset(pyTigerGraphAuth):
         print("---- Finished ingestion ----", flush=True)
 
     def check_exist_graphs(self, name: str) -> bool:
+        "NO DOC"
         resp = self.gsql("ls")
         return "Graph {}".format(name) in resp

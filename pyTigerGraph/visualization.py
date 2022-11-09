@@ -1,7 +1,19 @@
+"""Visualization Functions
+
+Contains functions to visualize graphs.
+"""
 import ipycytoscape
 
 
 def drawSchema(schema: dict, style: list = []):
+    """Visualize a graph schema.
+
+    Args:
+        schema (dict):
+            A dictionary that describes a graph schema. This can be obtained by running `conn.getSchema()`
+        style (list, optional):
+            A list of styles that complies with ipycytoscape standards.
+    """
     cytoscape_style = [
         {
             "selector": "node",
