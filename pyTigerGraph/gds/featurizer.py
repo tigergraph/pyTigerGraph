@@ -264,7 +264,7 @@ class Featurizer:
         self,
         schema_type: str,
         attr_type: str,
-        attr_name: str = None,
+        attr_name: str,
         schema_name: List[str] = None,
         global_change: bool = False,
     ):
@@ -288,6 +288,7 @@ class Featurizer:
         """
         # Check whether to add the attribute to vertex(vertices) or edge(s)
         self.result_attr = attr_name
+        print(schema_type, attr_type, attr_name, schema_name)
         v_type = False
         if schema_type.upper() == "VERTEX":
             target = self.conn.getVertexTypes(force=True)
@@ -478,16 +479,16 @@ class Featurizer:
             if "result_attr" in params.keys() or "result_attribute" in params.keys() or feat_name:
                 if custom_query and not(schema_name):
                     raise ValueError("Must specify schema_name if adding attributes for custom query")
-                if "result_attr" in params.keys():
+                if "result_attr" in params.keys() and params["result_attr"] != "" and params["result_attr"] != None:
                     feat_name = params["result_attr"]
-                elif "result_attribute" in params.keys():
+                elif "result_attribute" in params.keys() and params["result_attr"] != "" and params["result_attr"] != None:
                     feat_name = params["result_attribute"]
                 if not(query_name == "tg_fastRP" and int(self.major) <= 3 and int(self.minor) <= 7): # fastRP in 3.7 creates attribute at install time
                     if not(custom_query):
                         feat_type = self.query_result_type[query_name]
                         schema_type = self.sch_type[query_name]
                     else:
-                        if schema_name in self.conn.getEdgeTypes():
+                        if schema_name[0] in self.conn.getEdgeTypes(): # assuming all schema changes are either edge types or vertex types, no mixing.
                             schema_type = "EDGE"
                         else:
                             schema_type = "VERTEX"
@@ -521,21 +522,20 @@ class Featurizer:
                                 local_types.append(e_type)
                             else:
                                 global_types.append(e_type)
-
                     if len(global_types) > 0 or global_schema:
                         _ = self._add_attribute(
-                            schema_type,
-                            feat_type,
-                            feat_name,
-                            global_types,
+                            schema_type=schema_type,
+                            attr_type=feat_type,
+                            attr_name=feat_name,
+                            schema_name=global_types,
                             global_change=True,
                         )
                     if len(local_types) > 0 or not(global_schema):
                         _ = self._add_attribute(
-                            schema_type,
-                            feat_type,
-                            feat_name,
-                            local_types,
+                            schema_type = schema_type,
+                            attr_type = feat_type,
+                            attr_name = feat_name,
+                            schema_name = local_types,
                             global_change=False,
                         )
             '''
@@ -547,7 +547,7 @@ class Featurizer:
                     + "."
                 )
             '''
-        if not(query_name in [x.split("/")[-1] for x in self.conn.getInstalledQueries().keys()]):
+        if not(query_name in [x.split("/")[-1] for x in self.conn.getInstalledQueries().keys()]) and not(custom_query):
             self.installAlgorithm(query_name)
         result = self.conn.runInstalledQuery(
             query_name, params, timeout=timeout, sizeLimit=sizeLimit, usePost=True
