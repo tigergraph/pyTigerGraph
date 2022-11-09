@@ -135,7 +135,7 @@ def install_query_file(
             resp = conn.gsql(query)
             status = resp.splitlines()[-1]
             if "Failed" in status:
-                raise ConnectionError(status)
+                raise ConnectionError(resp)
         else:
             return query_name
     # Otherwise, install the query from file
@@ -159,7 +159,7 @@ def install_query_file(
     resp = conn.gsql(query)
     status = resp.splitlines()[-1]
     if "Failed" in status:
-        raise ConnectionError(status)
+        raise ConnectionError(resp)
     else:
         print(status)
     return query_name
