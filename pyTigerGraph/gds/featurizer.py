@@ -53,6 +53,7 @@ class Featurizer:
         self.params_dict = {}  # input parameter for the desired algorithm to be run
         self.query = None
         self.query_name = None
+        self.query_result_type = None
 
     def _get_db_version(self) -> Tuple[str, str, str]:
         # Get DB version
@@ -226,7 +227,7 @@ class Featurizer:
         # Else, install query by name from the repo.
         # If the query paths are not collected yet, do it now.
         if not self.algo_paths:
-            self.algo_paths = self._get_algo_paths(self.algo_dict)
+            self.algo_paths, self.query_result_type = self._get_algo_details(self.algo_dict)
         if query_name not in self.algo_paths:
             raise ValueError("Cannot find {} in the library.".format(query_name))
         for query in self.algo_paths[query_name]:
@@ -234,23 +235,26 @@ class Featurizer:
         self.query_name = query_name
         return self.query_name
 
-    def _get_algo_paths(self, algo_dict: dict) -> dict:
-        def get_paths(d: dict, result: dict) -> None:
+    def _get_algo_details(self, algo_dict: dict) -> dict:
+        def get_details(d: dict, paths: dict, types: dict) -> None:
             if "name" in d.keys():
                 if "path" not in d.keys():
                     raise Exception(
                         "Cannot find path for {} in the manifest file".format(d["name"])
                     )
-                result[d["name"]] = [pjoin(self.repo, p) for p in d["path"].split(";")]
+                paths[d["name"]] = [pjoin(self.repo, p) for p in d["path"].split(";")]
+                if "value_type" in d.keys():
+                    types[d["name"]] = d["value_type"]
                 return
             for k in d:
                 if isinstance(d[k], dict):
-                    get_paths(d[k], result)
+                    get_details(d[k], paths, types)
             return
 
         algo_paths = {}
-        get_paths(algo_dict, algo_paths)
-        return algo_paths
+        algo_result_types = {}
+        get_details(algo_dict, algo_paths, algo_result_types)
+        return algo_paths, algo_result_types
 
     def _add_attribute(
         self,
@@ -339,6 +343,21 @@ class Featurizer:
             print(status)
         return "Schema change succeeded."
 
+    def _get_query(self, query_name: str) -> str:
+        if not self.algo_paths:
+            self.algo_paths, self.query_result_type = self._get_algo_details(self.algo_dict)
+        if query_name not in self.algo_paths:
+            raise ValueError("Cannot find {} in the library.".format(query_name))
+        query_path = self.algo_paths[query_name][-1]
+        if query_path.startswith("http"):
+            resp = requests.get(query_path)
+            resp.raise_for_status()
+            query = resp.text
+        else:
+            with open(query_path) as f:
+                query = f.read()
+        return query
+
     def _get_Params(self, query_name: str):
         """
         Returns default query parameters by parsing the query header.
@@ -348,12 +367,6 @@ class Featurizer:
         """
         _dict = {}
         query = self._get_query(query_name)
-        if query == "":
-            self.listAlgorithms()
-            raise ValueError(
-                "The query name is not included in the list of defined queries "
-            )
-
         try:
             input_params = query[query.find("(") + 1 : query.find(")")]
             list_params = input_params.split(",")
@@ -436,7 +449,7 @@ class Featurizer:
             print("Default parameters are:", params)
             if params:
                 if None in params.values():
-                    query_ulr = self._get_query_url(query_name)
+                    query_ulr = self.algo_paths[query_name][-1]
                     raise ValueError(
                         "Query parameters which are not initialized by default need to be initialized, visit "
                         + query_ulr
@@ -461,7 +474,7 @@ class Featurizer:
                     params["result_attr"] = feat_name
                     if query_name != "tg_fastRP":
                         if not (feat_type):
-                            feat_type = self.queryResult_type_dict[query_name]
+                            feat_type = self.query_result_type[query_name]
                         _ = self._add_attribute(
                             schema_type,
                             feat_type,
@@ -470,7 +483,7 @@ class Featurizer:
                             global_change=global_schema,
                         )
                 else:
-                    query_ulr = self._get_query_url(query_name)
+                    query_ulr = self.algo_paths[query_name][-1]
                     raise ValueError(
                         "The algorithm does not provide any feature, see the algorithm details:"
                         + query_ulr
