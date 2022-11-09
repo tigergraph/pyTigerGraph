@@ -13,8 +13,8 @@ from pyTigerGraph.gds.utilities import is_query_installed, random_string
 class test_Featurizer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
-        conn.getToken(conn.createSecret())
+        conn = TigerGraphConnection(host="http://3.22.188.182", graphname="Cora")
+        #conn.getToken(conn.createSecret())
         cls.featurizer = Featurizer(conn, algo_version="3.7")
 
     def test_get_db_version(self):

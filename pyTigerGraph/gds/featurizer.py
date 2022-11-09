@@ -288,7 +288,6 @@ class Featurizer:
         """
         # Check whether to add the attribute to vertex(vertices) or edge(s)
         self.result_attr = attr_name
-        print(schema_type, attr_type, attr_name, schema_name)
         v_type = False
         if schema_type.upper() == "VERTEX":
             target = self.conn.getVertexTypes(force=True)
