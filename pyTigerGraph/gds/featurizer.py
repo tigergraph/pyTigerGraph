@@ -468,6 +468,13 @@ class Featurizer:
         else:
             if not (custom_query):
                 _ = self._get_Params(query_name)
+            if "similarity_edge" in params.keys() or "similarity_edge_type": in results.keys():
+                if "similarity_edge" in params.keys():
+                    if params["similarity_edge"] not in self.conn.getEdgeTypes():
+                        raise ValueError("The edge type "+params["similarity_edge"]+" must be present in the graph schema with a FLOAT attribute to write to it.")
+                if "similarity_edge_type" in params.keys():
+                    if params["similarity_edge_type"] not in self.conn.getEdgeTypes():
+                        raise ValueError("The edge type "+params["similarity_edge_type"]+" must be present in the graph schema with a FLOAT attribute to write to it.")
             if "result_attr" in params.keys() or "result_attribute" in params.keys() or feat_name:
                 if custom_query and not(schema_name):
                     raise ValueError("Must specify schema_name if adding attributes for custom query")
