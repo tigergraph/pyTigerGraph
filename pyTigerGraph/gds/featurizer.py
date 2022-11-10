@@ -435,7 +435,7 @@ class Featurizer:
                 If the query is a custom query. Defaults to False.
             schema_name (list, optional):
                 List of Vertices/Edges that the attr_name need to added to them.
-                If the algorithm contains the parameters of `v_type` and `e_type`, these will be used automatically.
+                If the algorithm contains the parameters of `v_type` and `e_type` or `v_type_set` and `e_type_set`, these will be used automatically.
             global_schema (bool, optional):
                 False by default. Set to true if you want to run `GLOBAL SCHEMA_CHANGE JOB`.
                 See https://docs.tigergraph.com/gsql-ref/current/ddl-and-loading/modifying-a-graph-schema#_global_vs_local_schema_changes.
@@ -493,18 +493,26 @@ class Featurizer:
                         else:
                             schema_type = "VERTEX"
                     
-                    if schema_type == "VERTEX" and "v_type" in params:
-                        if isinstance(params["v_type"], str):
-                            schema_name = [params["v_type"]]
-                        elif isinstance(params["v_type"], list):
-                            schema_name = params["v_type"]
+                    if schema_type == "VERTEX" and ("v_type" in params or "v_type_set" in params):
+                        if "v_type" in params:
+                            key = "v_type"
+                        else:
+                            key = "v_type_set"
+                        if isinstance(params[key], str):
+                            schema_name = [params[key]]
+                        elif isinstance(params[key], list):
+                            schema_name = params[key]
                         else:
                             raise ValueError("v_type should be either a list or string")
-                    elif schema_type == "EDGE" and "e_type" in params:
-                        if isinstance(params["e_type"], str):
-                            schema_name = [params["e_type"]]
-                        elif isinstance(params["e_type"], list):
-                            schema_name = params["e_type"]
+                    elif schema_type == "EDGE" and ("e_type" in params or "e_type_set" in params):
+                        if "e_type" in params:
+                            key = "e_type"
+                        else:
+                            key = "e_type_set"
+                        if isinstance(params[key], str):
+                            schema_name = [params[key]]
+                        elif isinstance(params[key], list):
+                            schema_name = params[key]
                         else:
                             raise ValueError("e_type should be either a list or string")
 
