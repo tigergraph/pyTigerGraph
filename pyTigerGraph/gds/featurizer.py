@@ -110,7 +110,7 @@ class Featurizer:
             if category in self.algo_dict.keys():
                 print("Available algorithms for {}:".format(category))
                 print_algos(self.algo_dict[category], 1)
-                print("Call run() with the algorithm name to execute it")
+                print("Call runAlgorithm() with the algorithm name to execute it")
             else:
                 print("No available algorithms for category {}".format(category))
         else:
@@ -194,12 +194,12 @@ class Featurizer:
             + query
             + "\nInstall Query {}\n".format(query_name)
         )
-        print("Installing and optimizing the queries, it might take a minute...")
+        print("Installing and optimizing the queries, it might take a minute...", flush=True)
         resp = self.conn.gsql(query)
         status = resp.splitlines()[-1]
         if "Failed" in status:
             raise ConnectionError(resp)
-        print("Queries installed successfully")
+        print("Queries installed successfully", flush=True)
         return query_name
 
     def installAlgorithm(
@@ -339,12 +339,13 @@ class Featurizer:
                 + "}}\nRUN GLOBAL SCHEMA_CHANGE JOB {}".format(job_name)
             )
         # Submit the job
+        print("Altering graph schema to save results...", flush=True)
         resp = self.conn.gsql(job)
         status = resp.splitlines()[-1]
         if "Failed" in status:
             raise ConnectionError(resp)
         else:
-            print(status)
+            print(status, flush=True)
         return "Schema change succeeded."
 
     def _get_query(self, query_name: str) -> str:
