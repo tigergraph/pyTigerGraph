@@ -2,7 +2,11 @@
 
 Contains functions to visualize graphs.
 """
-import ipycytoscape
+try:
+    import ipycytoscape
+except:
+    raise Exception("Please install ipycytoscape to use visualization functions")
+
 
 
 def drawSchema(schema: dict, style: list = []):
