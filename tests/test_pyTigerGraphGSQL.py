@@ -1,7 +1,5 @@
 import unittest
 
-from pyTigerGraph.gds.utilities import is_query_installed
-
 from pyTigerGraphUnitTest import pyTigerGraphUnitTest
 
 
