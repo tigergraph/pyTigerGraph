@@ -1,8 +1,5 @@
-import os
 import unittest
 
-from pyTigerGraph import TigerGraphConnection
-from pyTigerGraph.gds.featurizer import Featurizer
 from pyTigerGraph.gds.utilities import is_query_installed
 
 from pyTigerGraphUnitTest import pyTigerGraphUnitTest
