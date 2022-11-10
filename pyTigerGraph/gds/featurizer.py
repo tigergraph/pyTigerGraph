@@ -479,9 +479,9 @@ class Featurizer:
             if "result_attr" in params.keys() or "result_attribute" in params.keys() or feat_name:
                 if custom_query and not(schema_name):
                     raise ValueError("Must specify schema_name if adding attributes for custom query")
-                if "result_attr" in params.keys() and params["result_attr"] != "" and params["result_attr"] != None:
+                if "result_attr" in params.keys() and params["result_attr"]:
                     feat_name = params["result_attr"]
-                elif "result_attribute" in params.keys() and params["result_attr"] != "" and params["result_attr"] != None:
+                elif "result_attribute" in params.keys() and params["result_attribute"]:
                     feat_name = params["result_attribute"]
                 if not(query_name == "tg_fastRP" and int(self.major) <= 3 and int(self.minor) <= 7): # fastRP in 3.7 creates attribute at install time
                     if not(custom_query):
