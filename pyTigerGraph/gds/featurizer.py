@@ -483,7 +483,7 @@ class Featurizer:
                     feat_name = params["result_attr"]
                 elif "result_attribute" in params.keys() and params["result_attribute"]:
                     feat_name = params["result_attribute"]
-                if not(query_name == "tg_fastRP" and int(self.major) <= 3 and int(self.minor) <= 7): # fastRP in 3.7 creates attribute at install time
+                if not(query_name == "tg_fastRP" and int(self.major_ver) <= 3 and int(self.minor_ver) <= 7): # fastRP in 3.7 creates attribute at install time
                     if not(custom_query):
                         feat_type = self.query_result_type[query_name]
                         schema_type = self.sch_type[query_name]
