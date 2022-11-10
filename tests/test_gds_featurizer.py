@@ -7,13 +7,13 @@ from unittest.mock import patch
 
 from pyTigerGraph import TigerGraphConnection
 from pyTigerGraph.gds.featurizer import Featurizer
-from pyTigerGraph.gds.utilities import is_query_installed, random_string
+from pyTigerGraph.gds.utilities import is_query_installed
 
 
 class test_Featurizer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        conn = TigerGraphConnection(host="http://3.22.188.182", graphname="Cora")
+        conn = TigerGraphConnection(host="http://127.0.0.1", graphname="tests")
         #conn.getToken(conn.createSecret())
         cls.featurizer = Featurizer(conn, algo_version="3.7")
 
@@ -37,7 +37,7 @@ class test_Featurizer(unittest.TestCase):
         truth = """\
             Available algorithms per category:
             - Centrality: 10 algorithms
-            - Classification: 6 algorithms
+            - Classification: 3 algorithms
             - Community: 6 algorithms
             - Embeddings: 1 algorithms
             - Path: 3 algorithms
@@ -75,7 +75,7 @@ class test_Featurizer(unittest.TestCase):
                 09. name: tg_eigenvector_cent
               harmonic:
                 10. name: tg_harmonic_cent
-            Call run() with the algorithm name to execute it
+            Call runAlgorithm() with the algorithm name to execute it
             """
         self.maxDiff=None
         self.assertEqual(mock_stdout.getvalue(), dedent(truth))
