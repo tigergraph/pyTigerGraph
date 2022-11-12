@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from pyTigerGraph import TigerGraphConnection
@@ -17,7 +18,7 @@ class TestGDSUtilsQuery(unittest.TestCase):
     def test_install_query_file(self):
         resp = utils.install_query_file(
             self.conn,
-            "./tests/fixtures/create_query_simple.gsql"
+            os.path.join(os.path.dirname(__file__), "fixtures/create_query_simple.gsql")
         )
         self.assertEqual(resp, "simple_query")
         self.assertTrue(utils.is_query_installed(self.conn, "simple_query"))
@@ -25,7 +26,7 @@ class TestGDSUtilsQuery(unittest.TestCase):
     def test_install_exist_query(self):
         resp = utils.install_query_file(
             self.conn,
-            "./tests/fixtures/create_query_simple.gsql"
+            os.path.join(os.path.dirname(__file__), "fixtures/create_query_simple.gsql")
         )
         self.assertEqual(resp, "simple_query")
 
@@ -36,7 +37,7 @@ class TestGDSUtilsQuery(unittest.TestCase):
         }
         resp = utils.install_query_file(
             self.conn,
-            "./tests/fixtures/create_query_template.gsql", 
+            os.path.join(os.path.dirname(__file__), "fixtures/create_query_template.gsql"),
             replace
         )
         self.assertEqual(resp, "simple_query_something_special")

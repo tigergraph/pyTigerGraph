@@ -274,7 +274,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSVertexLoader("test_init"))
     suite.addTest(TestGDSVertexLoader("test_iterate"))
     suite.addTest(TestGDSVertexLoader("test_all_vertices"))
-    suite.addTest(TestGDSVertexLoader("test_sasl_plaintext"))
+    # suite.addTest(TestGDSVertexLoader("test_sasl_plaintext"))
     # suite.addTest(TestGDSVertexLoader("test_sasl_ssl"))
     suite.addTest(TestGDSVertexLoaderREST("test_init"))
     suite.addTest(TestGDSVertexLoaderREST("test_iterate"))

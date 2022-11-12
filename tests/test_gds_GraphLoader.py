@@ -471,7 +471,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSGraphLoader("test_iterate_pyg"))
     suite.addTest(TestGDSGraphLoader("test_iterate_df"))
     suite.addTest(TestGDSGraphLoader("test_edge_attr"))
-    suite.addTest(TestGDSGraphLoader("test_sasl_plaintext"))
+    # suite.addTest(TestGDSGraphLoader("test_sasl_plaintext"))
     # suite.addTest(TestGDSGraphLoader("test_sasl_ssl"))
     suite.addTest(TestGDSGraphLoaderREST("test_init"))
     suite.addTest(TestGDSGraphLoaderREST("test_iterate_pyg"))

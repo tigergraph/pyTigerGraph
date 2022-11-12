@@ -263,7 +263,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSEdgeLoader("test_iterate"))
     suite.addTest(TestGDSEdgeLoader("test_whole_edgelist"))
     suite.addTest(TestGDSEdgeLoader("test_iterate_attr"))
-    suite.addTest(TestGDSEdgeLoader("test_sasl_plaintext"))
+    # suite.addTest(TestGDSEdgeLoader("test_sasl_plaintext"))
     # suite.addTest(TestGDSEdgeLoader("test_sasl_ssl"))
     suite.addTest(TestGDSEdgeLoaderREST("test_init"))
     suite.addTest(TestGDSEdgeLoaderREST("test_iterate"))
