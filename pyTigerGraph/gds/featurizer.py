@@ -555,11 +555,11 @@ class Featurizer:
                     + "."
                 )
             '''
-            if "v_type" in params or "v_type_set" in params:
-                if "v_type" in params:
-                    key = "v_type"
+            if "source" in params or "v_start" in params:
+                if "source" in params:
+                    key = "source"
                 else:
-                    key = "v_type_set"
+                    key = "v_start"
                 if isinstance(params[key], tuple):
                     params[key] = {"id": params[key][0], "type": params[key][1]}
                 elif isinstance(params[key], list):
