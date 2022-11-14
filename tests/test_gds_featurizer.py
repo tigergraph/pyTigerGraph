@@ -146,40 +146,19 @@ class test_Featurizer(unittest.TestCase):
             'damping': 0.85,
             'top_k': 100,
             'print_accum': True,
-            'result_attr': '', 
+            'result_attr': 'pagerank', 
             'file_path': '',
             'display_edges': True}
-        message = "Test value is not none."
-        self.assertIsNotNone(self.featurizer.runAlgorithm("tg_pagerank", params=params, feat_name="pagerank", timeout=2147480, global_schema=False), message)
+        self.assertIsNotNone(self.featurizer.runAlgorithm("tg_pagerank", params=params))
 
     def test02_runAlgorithm(self):
         with self.assertRaises(ValueError):
             self.featurizer.runAlgorithm("tg_pagerank", timeout=2147480)
 
     def test03_runAlgorithm(self):
-        params = {'v_type': 'Paper', 'e_type': ['Cite'], 'weights': '1,1,2', 'beta': -0.85, 'k': 3, 'reduced_dim': 128,
-          'sampling_constant': 1, 'random_seed': 42, 'print_accum': False,'result_attr':"",'file_path' :""}
-        with self.assertRaises(Exception):
-            self.featurizer.runAlgorithm("tg_fastRP", params=params, feat_name="fastrp_embedding", timeout=1, global_schema=False)
-
-    def test04_runAlgorithm(self):
-        params = {'v_type': 'Paper', 'e_type': ['Cite'], 'weights': '1,1,2', 'beta': -0.85, 'k': 3, 'reduced_dim': 128, 
-          'sampling_constant': 1, 'random_seed': 42, 'print_accum': False,'result_attr':"",'file_path' :""}
-        with self.assertRaises(Exception):
-            self.featurizer.runAlgorithm("tg_fastRP", params=params, feat_name="fastrp_embedding", sizeLimit=1, global_schema=False)
-    
-    def test05_runAlgorithm(self):
-        params = {'v_type': 'Paper',
-            'e_type': 'Cite',
-            'max_change': 0.001,
-            'max_iter': 25,
-            'damping': 0.85,
-            'top_k': 100,
-            'print_accum': True,
-            'file_path': '',
-            'display_edges': True}
-        message = "Test value is not none."
-        self.assertIsNotNone(self.featurizer.runAlgorithm("tg_pagerank", params=params, timeout=2147480, global_schema=False), message)
+        params = {'v_type': ['Paper'], 'e_type': ['Cite'], 'weights': '1,1,2', 'beta': -0.85, 'k': 3, 'reduced_dim': 128,
+          'sampling_constant': 1, 'random_seed': 42, 'print_accum': False,'result_attr':"embedding"}
+        self.featurizer.runAlgorithm("tg_fastRP", params=params)
 
     def test06_installCustomAlgorithm(self):
         path = os.path.dirname(os.path.realpath(__file__))
@@ -188,7 +167,7 @@ class test_Featurizer(unittest.TestCase):
         self.assertEqual(out, "simple_query")
     
     def test07_runCustomAlgorithm(self):
-        out = self.featurizer.runAlgorithm("simple_query", params={}, feat_name="test_feat", feat_type="INT", schema_name=["Paper"], custom_query=True, global_schema=False)
+        out = self.featurizer.runAlgorithm("simple_query", params={}, custom_query=True)
         self.assertEqual(out[0]['"Hello World!"'], "Hello World!")
 
 if __name__ == '__main__':
@@ -210,8 +189,6 @@ if __name__ == '__main__':
     suite.addTest(test_Featurizer("test01_runAlgorithm"))
     suite.addTest(test_Featurizer("test02_runAlgorithm"))
     suite.addTest(test_Featurizer("test03_runAlgorithm")) 
-    suite.addTest(test_Featurizer("test04_runAlgorithm"))
-    suite.addTest(test_Featurizer("test05_runAlgorithm"))
     suite.addTest(test_Featurizer("test06_installCustomAlgorithm"))
     suite.addTest(test_Featurizer("test07_runCustomAlgorithm"))
     
