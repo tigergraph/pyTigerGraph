@@ -7,6 +7,7 @@ import json
 import tarfile
 from abc import ABC, abstractmethod
 from os import makedirs
+from os.path import isdir
 from os.path import join as pjoin
 from shutil import rmtree
 from urllib.parse import urljoin
@@ -66,7 +67,14 @@ class Datasets(BaseDataset):
         self.dataset_url = dataset_url
 
         # Download the dataset and extract
-        self.download_extract()
+        if isdir(pjoin(tmp_dir, name)):
+            print(
+                "A folder with name {} already exists in {}. Skip downloading.".format(
+                    name, tmp_dir
+                )
+            )
+        else:
+            self.download_extract()
 
         self.ingest_ready = True
 
