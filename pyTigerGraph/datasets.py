@@ -47,11 +47,11 @@ class Datasets(BaseDataset):
         downloaded to local `tmp_dir` automatically when this class is instantiated.
 
         Args:
-            name (str, optional): 
+            name (str, optional):
                 Name of the dataset to get. Defaults to None.
-            tmp_dir (str, optional): 
+            tmp_dir (str, optional):
                 Where to store the artifacts of this dataset. Defaults to "./tmp".
-        """        
+        """
         super().__init__(name)
         self.base_url = "https://tigergraph-public-data.s3.us-west-1.amazonaws.com/"
         self.tmp_dir = tmp_dir
@@ -117,22 +117,19 @@ class Datasets(BaseDataset):
             resp = conn.gsql(infile.read())
         return resp
 
-    def run_load_job(self, conn) -> None:
+    def run_load_job(self, conn) -> dict:
         "NO DOC"
         with open(pjoin(self.tmp_dir, self.name, "run_load_job.json"), "r") as infile:
             jobs = json.load(infile)
 
-        resp = []
         for job in jobs:
-            resp.append(
-                conn.runLoadingJobWithFile(
-                    pjoin(self.tmp_dir, self.name, job["filePath"]),
-                    job["fileTag"],
-                    job["jobName"],
-                    sep=job.get("sep", ","),
-                    eol=job.get("eol", "\n"),
-                    timeout=job.get("timeout", 60000),
-                    sizeLimit=job.get("sizeLimit", 128000000)
-                )
+            resp = conn.runLoadingJobWithFile(
+                pjoin(self.tmp_dir, self.name, job["filePath"]),
+                job["fileTag"],
+                job["jobName"],
+                sep=job.get("sep", ","),
+                eol=job.get("eol", "\n"),
+                timeout=job.get("timeout", 60000),
+                sizeLimit=job.get("sizeLimit", 128000000),
             )
-        return resp
+            yield resp
