@@ -426,7 +426,9 @@ class Featurizer:
             query_name (str):
                 The name of the query to be executed.
             params (dict):
-                Query parameters. A dictionary.
+                Query parameters. A dictionary that corresponds to the algorithm parameters. 
+                If specifying vertices as sources or destinations, must use the following form:
+                `{"id": "vertex_id", "type": "vertex_type"}`, such as `params = {"source": {"id": "Bob", "type": "Person"}}`
             feat_name (str, optional):
                 An attribute name that needs to be added to the vertex/edge. If the result attribute parameter is specified in the parameters, that will be used.
             feat_type (str, optional):

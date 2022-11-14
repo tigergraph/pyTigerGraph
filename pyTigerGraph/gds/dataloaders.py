@@ -1624,7 +1624,7 @@ class NeighborLoader(BaseLoader):
         _payload["num_hops"] = self._payload["num_hops"]
         _payload["input_vertices"] = []
         for i in vertices:
-            _payload["input_vertices"].append((i["primary_id"], i["type"]))
+            _payload["input_vertices"].append({"id": i["primary_id"], "type": i["type"]})
         resp = self._graph.runInstalledQuery(
             self.query_name, params=_payload, timeout=self.timeout, usePost=True
         )

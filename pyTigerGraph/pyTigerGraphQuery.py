@@ -125,7 +125,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
         return ret
 
     def runInstalledQuery(self, queryName: str, params: Union[str, dict] = None,
-            timeout: int = None, sizeLimit: int = None, usePost: bool = True, runAsync: bool = False,
+            timeout: int = None, sizeLimit: int = None, usePost: bool = False, runAsync: bool = False,
             replica: int = None, threadLimit: int = None) -> list:
         """Runs an installed query.
 
@@ -146,9 +146,8 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
                 Maximum size of response (in bytes).
                 See xref:tigergraph-server:API:index.adoc#_response_size[Response size]
             usePost:
-                Defaults to True. The RESTPP accepts a maximum URL length of 8192 characters. 
-                Use POST if additional parameters cause you to exceed this limit. You cannot pass
-                empty sets as parameters if usePost is False.
+                Defaults to False. The RESTPP accepts a maximum URL length of 8192 characters. Use POST if additional parameters cause
+                you to exceed this limit, or if you choose to pass an empty set into a query for database versions >= 3.8
             runAsync:
                 Run the query in asynchronous mode. 
                 See xref:gsql-ref:querying:query-operations#_detached_mode_async_option[Async operation]
