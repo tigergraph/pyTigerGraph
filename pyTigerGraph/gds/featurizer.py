@@ -555,19 +555,6 @@ class Featurizer:
                     + "."
                 )
             '''
-            if "source" in params or "v_start" in params:
-                if "source" in params:
-                    key = "source"
-                else:
-                    key = "v_start"
-                if isinstance(params[key], tuple):
-                    params[key] = {"id": params[key][0], "type": params[key][1]}
-                elif isinstance(params[key], list):
-                    if isinstance(params[key][0], tuple):
-                        dictList = []
-                        for x in params[key]:
-                            dictList.append({"id": params[key][0], "type": params[key][1]})
-                        params[key] = dictList
         if not(query_name in [x.split("/")[-1] for x in self.conn.getInstalledQueries().keys()]) and not(custom_query):
             self.installAlgorithm(query_name)
         result = self.conn.runInstalledQuery(
