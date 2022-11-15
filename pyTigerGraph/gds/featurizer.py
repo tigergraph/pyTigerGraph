@@ -445,6 +445,7 @@ class Featurizer:
                                 global_types.append(e_type)
                     if len(global_types) > 0 or global_schema:
                         _ = add_attribute(
+                            conn = self.conn,
                             schema_type=schema_type,
                             attr_type=feat_type,
                             attr_name=feat_name,
@@ -453,6 +454,7 @@ class Featurizer:
                         )
                     if len(local_types) > 0 or not(global_schema):
                         _ = add_attribute(
+                            conn = self.conn,
                             schema_type = schema_type,
                             attr_type = feat_type,
                             attr_name = feat_name,
