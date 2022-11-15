@@ -181,7 +181,7 @@ class Featurizer:
             for placeholder in replace:
                 query = query.replace(placeholder, replace[placeholder])
         self.query = query
-        if query_name == "tg_fastRP":
+        if query_name == "tg_fastRP" and int(self.major_ver) <= 3 and int(self.minor_ver) <= 7:
             # Drop all jobs on the graph
             self.conn.gsql("USE GRAPH {}\n".format(self.conn.graphname) + "drop job *")
             res = add_attribute(self.conn, schema_type="VERTEX",attr_type=" LIST<DOUBLE>",attr_name="fastrp_embedding",global_change=global_change)
@@ -471,7 +471,7 @@ class Featurizer:
                 )
             '''
         if not(query_name in [x.split("/")[-1] for x in self.conn.getInstalledQueries().keys()]) and not(custom_query):
-            self.installAlgorithm(query_name)
+            self.installAlgorithm(query_name, global_change=global_schema)
         result = self.conn.runInstalledQuery(
             query_name, params, timeout=timeout, sizeLimit=sizeLimit, usePost=True
         )
