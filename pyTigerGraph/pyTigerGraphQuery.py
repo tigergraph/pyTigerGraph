@@ -146,8 +146,8 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
                 Maximum size of response (in bytes).
                 See xref:tigergraph-server:API:index.adoc#_response_size[Response size]
             usePost:
-                The RESTPP accepts a maximum URL length of 8192 characters. Use POST if additional parameters cause
-                you to exceed this limit.
+                Defaults to False. The RESTPP accepts a maximum URL length of 8192 characters. Use POST if additional parameters cause
+                you to exceed this limit, or if you choose to pass an empty set into a query for database versions >= 3.8
             runAsync:
                 Run the query in asynchronous mode. 
                 See xref:gsql-ref:querying:query-operations#_detached_mode_async_option[Async operation]
@@ -201,14 +201,11 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
         if replica:
             headers["GSQL-REPLICA"] = str(replica)
         if threadLimit:
-            headers["GSQL-THREAD-LIMIT"] = str(threadLimit)
-
-        if isinstance(params, dict):
-            params = self._parseQueryParameters(params)
+            headers["GSQL-THREAD-LIMIT"] = str(threadLimit) 
 
         if usePost:
             ret = self._post(self.restppUrl + "/query/" + self.graphname + "/" + queryName,
-                data=params, headers=headers, resKey=res_key)
+                data=params, headers=headers, resKey=res_key, jsonData=True)
 
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(ret))
@@ -216,6 +213,8 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
 
             return ret
         else:
+            if isinstance(params, dict):
+                params = self._parseQueryParameters(params)
             ret = self._get(self.restppUrl + "/query/" + self.graphname + "/" + queryName,
                 params=params, headers=headers, resKey=res_key)
 

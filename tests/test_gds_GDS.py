@@ -174,7 +174,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSDataLoaders("test_edgeLoader"))
     suite.addTest(TestGDSDataLoaders("test_edgeNeighborLoader"))
     suite.addTest(TestGDSDataLoaders("test_configureKafka"))
-    suite.addTest(TestGDSDataLoaders("test_configureKafka_sasl_plaintext"))
+    # suite.addTest(TestGDSDataLoaders("test_configureKafka_sasl_plaintext"))
     # suite.addTest(TestGDSDataLoaders("test_configureKafka_sasl_ssl"))
 
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)

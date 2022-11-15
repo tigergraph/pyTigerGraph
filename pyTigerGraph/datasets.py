@@ -1,12 +1,13 @@
-"""datasets
+"""Datasets
 
-In-stock datasets that can be ingested into a TigerGraph database through the `ingestDataset`
+Stock datasets that can be ingested into a TigerGraph database through the `ingestDataset`
 function in pyTigerGraph.
 """
 import json
 import tarfile
 from abc import ABC, abstractmethod
 from os import makedirs
+from os.path import isdir
 from os.path import join as pjoin
 from shutil import rmtree
 from urllib.parse import urljoin
@@ -16,6 +17,7 @@ from tqdm.auto import tqdm
 
 
 class BaseDataset(ABC):
+    "NO DOC"
     def __init__(self, name: str = None) -> None:
         self.name = name
         self.ingest_ready = False
@@ -39,18 +41,18 @@ class BaseDataset(ABC):
 
 class Datasets(BaseDataset):
     def __init__(self, name: str = None, tmp_dir: str = "./tmp") -> None:
-        """In-stock datasets.
+        """Stock datasets.
 
-        Please see "https://tigergraph-public-data.s3.us-west-1.amazonaws.com/inventory.json"
+        Please see https://tigergraph-public-data.s3.us-west-1.amazonaws.com/inventory.json[this link]
         for datasets that are currently available. The files for the dataset with `name` will be
         downloaded to local `tmp_dir` automatically when this class is instantiated.
 
         Args:
-            name (str, optional): 
+            name (str, optional):
                 Name of the dataset to get. Defaults to None.
-            tmp_dir (str, optional): 
+            tmp_dir (str, optional):
                 Where to store the artifacts of this dataset. Defaults to "./tmp".
-        """        
+        """
         super().__init__(name)
         self.base_url = "https://tigergraph-public-data.s3.us-west-1.amazonaws.com/"
         self.tmp_dir = tmp_dir
@@ -65,11 +67,19 @@ class Datasets(BaseDataset):
         self.dataset_url = dataset_url
 
         # Download the dataset and extract
-        self.download_extract()
+        if isdir(pjoin(tmp_dir, name)):
+            print(
+                "A folder with name {} already exists in {}. Skip downloading.".format(
+                    name, tmp_dir
+                )
+            )
+        else:
+            self.download_extract()
 
         self.ingest_ready = True
 
     def get_dataset_url(self) -> str:
+        "NO DOC"
         inventory_url = urljoin(self.base_url, "inventory.json")
         resp = requests.get(inventory_url)
         resp.raise_for_status()
@@ -80,6 +90,7 @@ class Datasets(BaseDataset):
             return None
 
     def download_extract(self) -> None:
+        "NO DOC"
         makedirs(self.tmp_dir, exist_ok=True)
         with requests.get(self.dataset_url, stream=True) as resp:
             total_length = int(resp.headers.get("Content-Length"))
@@ -90,41 +101,43 @@ class Datasets(BaseDataset):
                     tarobj.extractall(path=self.tmp_dir)
 
     def clean_up(self) -> None:
+        "NO DOC"
         rmtree(pjoin(self.tmp_dir, self.name))
         self.ingest_ready = False
 
     def create_graph(self, conn) -> str:
+        "NO DOC"
         with open(pjoin(self.tmp_dir, self.name, "create_graph.gsql"), "r") as infile:
             resp = conn.gsql(infile.read())
         return resp
 
     def create_schema(self, conn) -> str:
+        "NO DOC"
         with open(pjoin(self.tmp_dir, self.name, "create_schema.gsql"), "r") as infile:
             resp = conn.gsql(infile.read())
         return resp
 
     def create_load_job(self, conn) -> None:
+        "NO DOC"
         with open(
             pjoin(self.tmp_dir, self.name, "create_load_job.gsql"), "r"
         ) as infile:
             resp = conn.gsql(infile.read())
         return resp
 
-    def run_load_job(self, conn) -> None:
+    def run_load_job(self, conn) -> dict:
+        "NO DOC"
         with open(pjoin(self.tmp_dir, self.name, "run_load_job.json"), "r") as infile:
             jobs = json.load(infile)
 
-        resp = []
         for job in jobs:
-            resp.append(
-                conn.runLoadingJobWithFile(
-                    pjoin(self.tmp_dir, self.name, job["filePath"]),
-                    job["fileTag"],
-                    job["jobName"],
-                    sep=job.get("sep", ","),
-                    eol=job.get("eol", "\n"),
-                    timeout=job.get("timeout", 60000),
-                    sizeLimit=job.get("sizeLimit", 128000000)
-                )
+            resp = conn.runLoadingJobWithFile(
+                pjoin(self.tmp_dir, self.name, job["filePath"]),
+                job["fileTag"],
+                job["jobName"],
+                sep=job.get("sep", ","),
+                eol=job.get("eol", "\n"),
+                timeout=job.get("timeout", 60000),
+                sizeLimit=job.get("sizeLimit", 128000000),
             )
-        return resp
+            yield resp

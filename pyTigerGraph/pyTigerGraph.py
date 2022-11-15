@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Union
 
 import urllib3
 
-from pyTigerGraph.pyTigerGraphAuth import pyTigerGraphAuth
 from pyTigerGraph.pyTigerGraphEdge import pyTigerGraphEdge
 from pyTigerGraph.pyTigerGraphLoading import pyTigerGraphLoading
 from pyTigerGraph.pyTigerGraphPath import pyTigerGraphPath
@@ -23,7 +22,7 @@ if not sys.warnoptions:
 
 # TODO Proper deprecation handling; import deprecation?
 
-class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT, pyTigerGraphAuth,
+class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT,
     pyTigerGraphLoading, pyTigerGraphPath, pyTigerGraphDataset, object):
     """Python wrapper for TigerGraph's REST++ and GSQL APIs"""
 
@@ -31,7 +30,7 @@ class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT
             gsqlSecret: str = "", username: str = "tigergraph", password: str = "tigergraph",
             tgCloud: bool = False, restppPort: Union[int, str] = "9000",
             gsPort: Union[int, str] = "14240", gsqlVersion: str = "", version: str = "",
-            apiToken: str = "", useCert: bool = None, certPath: str = None, debug: bool = False,
+            apiToken: str = "", useCert: bool = None, certPath: str = None, debug: bool = None,
             sslPort: Union[int, str] = "443", gcp: bool = False):
         super().__init__(host, graphname, gsqlSecret, username, password, tgCloud, restppPort,
             gsPort, gsqlVersion, version, apiToken, useCert, certPath, debug, sslPort, gcp)

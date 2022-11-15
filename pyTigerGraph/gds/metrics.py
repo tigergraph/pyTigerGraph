@@ -121,7 +121,7 @@ class BinaryRecall(Accumulator):
             labels
         ), "The lists of predictions and labels must have same length"
         self._cumsum += float((preds * labels).sum())
-        self._count += labels.sum()
+        self._count += int(labels.sum())
 
     @property
     def value(self) -> float:
@@ -161,7 +161,7 @@ class BinaryPrecision(Accumulator):
             labels
         ), "The lists of predictions and labels must have same length"
         self._cumsum += float((preds * labels).sum())
-        self._count += preds.sum()
+        self._count += int(preds.sum())
 
     @property
     def value(self) -> float:

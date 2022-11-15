@@ -207,7 +207,7 @@ class pyTigerGraphBase(object):
 
     def _req(self, method: str, url: str, authMode: str = "token", headers: dict = None,
             data: Union[dict, list, str] = None, resKey: str = "results", skipCheck: bool = False,
-            params: Union[dict, list, str] = None) -> Union[dict, list]:
+            params: Union[dict, list, str] = None, strictJson: bool = True, jsonData: bool = False) -> Union[dict, list]:
         """Generic REST++ API request.
 
         Args:
@@ -228,6 +228,10 @@ class pyTigerGraphBase(object):
                 action is not applicable. This argument skips error checking.
             params:
                 Request URL parameters.
+            strictJson:
+                If JSON should load the response in strict mode or not.
+            jsonData:
+                If data in data var is a JSON document.
 
         Returns:
             The (relevant part of the) response from the request (as a dictionary).
@@ -258,14 +262,18 @@ class pyTigerGraphBase(object):
             _data = None
 
         if self.useCert is True or self.certPath is not None:
-            res = requests.request(method, url, headers=_headers, data=_data, params=params,
-                verify=False)
+            verify = False
         else:
-            res = requests.request(method, url, headers=_headers, data=_data, params=params)
+            verify = True
+
+        if jsonData:
+            res = requests.request(method, url, headers=_headers, json=_data, params=params, verify=verify)
+        else:
+            res = requests.request(method, url, headers=_headers, data=_data, params=params, verify=verify)
 
         if res.status_code != 200:
             res.raise_for_status()
-        res = json.loads(res.text)
+        res = json.loads(res.text, strict=strictJson)
         if not skipCheck:
             self._errorCheck(res)
         if not resKey:
@@ -282,7 +290,7 @@ class pyTigerGraphBase(object):
         return res[resKey]
 
     def _get(self, url: str, authMode: str = "token", headers: dict = None, resKey: str = "results",
-            skipCheck: bool = False, params: Union[dict, list, str] = None) -> Union[dict, list]:
+            skipCheck: bool = False, params: Union[dict, list, str] = None, strictJson: bool = True) -> Union[dict, list]:
         """Generic GET method.
 
         Args:
@@ -307,7 +315,7 @@ class pyTigerGraphBase(object):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        res = self._req("GET", url, authMode, headers, None, resKey, skipCheck, params)
+        res = self._req("GET", url, authMode, headers, None, resKey, skipCheck, params, strictJson)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -317,7 +325,7 @@ class pyTigerGraphBase(object):
 
     def _post(self, url: str, authMode: str = "token", headers: dict = None,
             data: Union[dict, list, str, bytes] = None, resKey: str = "results", skipCheck: bool = False,
-            params: Union[dict, list, str] = None) -> Union[dict, list]:
+            params: Union[dict, list, str] = None, jsonData: bool = False) -> Union[dict, list]:
         """Generic POST method.
 
         Args:
@@ -344,7 +352,7 @@ class pyTigerGraphBase(object):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        res = self._req("POST", url, authMode, headers, data, resKey, skipCheck, params)
+        res = self._req("POST", url, authMode, headers, data, resKey, skipCheck, params, jsonData=jsonData)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
