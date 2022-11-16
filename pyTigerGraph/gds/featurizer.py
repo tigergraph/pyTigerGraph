@@ -43,7 +43,7 @@ class AsyncFeaturizerResult():
             raise TigerGraphException("Algorithm timed-out. Increase your timeout and try again.")
 
     def _getAlgorithmResults(self):
-        res = self.conn.getQueryResults(self.query_id)
+        res = self.conn.getQueryResult(self.query_id)
         self.results = res
         return res
 
@@ -53,7 +53,7 @@ class AsyncFeaturizerResult():
             return self.results
         else:
             if self.algorithmComplete():
-                return self._getQueryResults()
+                return self._getAlgorithmResults()
             else:
                 return "Algorithm Results not Available Yet"
 
