@@ -30,6 +30,7 @@ class AsyncFeaturizerResult():
             if self.algorithmComplete():
                 return self._getAlgorithmResults()
             time.sleep(refresh)
+        return self.results
 
     def algorithmComplete(self):
         res = self.conn.checkQueryStatus(self.query_id)[0]
