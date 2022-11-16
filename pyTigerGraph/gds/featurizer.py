@@ -20,12 +20,24 @@ from .utilities import is_query_installed, random_string
 
 class AsyncFeaturizerResult():
     def __init__(self, conn, algorithm, query_id, results=None):
+        """NO DOC: 
+            class for asynchronous featurizer results. Populated during `runAlgorithm()` if `runAsync = True`.
+        """
         self.conn = conn
         self.algorithm = algorithm
         self.query_id = query_id
         self.results = results
 
-    def wait(self, refresh=1):
+    def wait(self, refresh:float=1):
+        """
+        Function call to block all execution if called until algorithm result is returned.
+        Args:
+            refresh (float):
+                How often to check for results. Defaults to 1 time every second.
+            
+        Returns:
+            Algorithm results when they become available.
+        """
         while not(self.results):
             if self.algorithmComplete():
                 return self._getAlgorithmResults()
@@ -33,6 +45,13 @@ class AsyncFeaturizerResult():
         return self.results
 
     def algorithmComplete(self):
+        """
+        Function to check if the algorithm has completed execution.
+        Returns:
+            True if algorithm has completed, False if the algorithm is still running.
+        Raises:
+            TigerGraphException if the algorithm was aborted or timed out.
+        """
         res = self.conn.checkQueryStatus(self.query_id)[0]
         if res["status"] == "success":
             return True
@@ -44,12 +63,18 @@ class AsyncFeaturizerResult():
             raise TigerGraphException("Algorithm timed-out. Increase your timeout and try again.")
 
     def _getAlgorithmResults(self):
+        """NO DOC: internal function to get algorithm results."""
         res = self.conn.getQueryResult(self.query_id)
         self.results = res
         return res
 
     @property
     def result(self):
+        """
+        Property to get the results of an algorithm's execution.
+        If the results are available, returns them.
+        If the results are not available yet, returns the string 'Algorithm Results not Available Yet'
+        """
         if self.results:
             return self.results
         else:
