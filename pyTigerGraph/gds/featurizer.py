@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, List, Tuple
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
 
-from ..pyTigerGraph.pyTigerGraphException import TigerGraphException
+from ..pyTigerGraphException import TigerGraphException
 import json
 import re
 import time
