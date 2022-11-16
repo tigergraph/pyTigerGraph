@@ -9,12 +9,52 @@ if TYPE_CHECKING:
 
 import json
 import re
+import time
 from os.path import join as pjoin
 
 import requests
 
 from .utilities import is_query_installed, random_string
 
+
+class AsyncFeaturizerResult():
+    def __init__(self, conn, algorithm, query_id, results=None):
+        self.conn = conn
+        self.algorithm = algorithm
+        self.query_id = query_id
+        self.results = results
+
+    def wait(self, refresh=1):
+        while not(self.results):
+            if self.algorithmComplete():
+                return self._getAlgorithmResults()
+            time.sleep(refresh)
+
+    def algorithmComplete(self):
+        res = self.conn.checkQueryStatus(self.query_id)[0]
+        if res["status"] == "success":
+            return True
+        elif res["status"] == "running":
+            return False
+        elif res["status"] == "aborted":
+            raise TigerGraphException("Algorithm was aborted")
+        else:
+            raise TigerGraphException("Algorithm timed-out. Increase your timeout and try again.")
+
+    def _getAlgorithmResults(self):
+        res = self.conn.getQueryResults(self.query_id)
+        self.results = res
+        return res
+
+    @property
+    def result(self):
+        if self.results:
+            return self.results
+        else:
+            if self.algorithmComplete():
+                return self._getQueryResults()
+            else:
+                return "Algorithm Results not Available Yet"
 
 class Featurizer:
     def __init__(
@@ -408,6 +448,8 @@ class Featurizer:
         self,
         query_name: str,
         params: dict = None,
+        runAsync: bool = False,
+        threadLimit: int = None, 
         feat_name: str = None,
         feat_type: str = None,
         custom_query: bool = False,
@@ -429,6 +471,11 @@ class Featurizer:
                 Query parameters. A dictionary that corresponds to the algorithm parameters. 
                 If specifying vertices as sources or destinations, must use the following form:
                 `{"id": "vertex_id", "type": "vertex_type"}`, such as `params = {"source": {"id": "Bob", "type": "Person"}}`
+            runAsync (bool, optional):
+                If True, runs the algorithm in asynchronous mode and returns a `AsyncFeaturizerResult` object. Defaults to False.
+            threadLimit:
+                Specify a limit of the number of threads the query is allowed to use on each node of the TigerGraph cluster.
+                See xref:tigergraph-server:API:built-in-endpoints#_specify_thread_limit[Thread limit]
             feat_name (str, optional):
                 An attribute name that needs to be added to the vertex/edge. If the result attribute parameter is specified in the parameters, that will be used.
             feat_type (str, optional):
@@ -560,7 +607,9 @@ class Featurizer:
         if not(query_name in [x.split("/")[-1] for x in self.conn.getInstalledQueries().keys()]) and not(custom_query):
             self.installAlgorithm(query_name, global_change=global_schema)
         result = self.conn.runInstalledQuery(
-            query_name, params, timeout=timeout, sizeLimit=sizeLimit, usePost=True
-        )
+            query_name, params, timeout=timeout, sizeLimit=sizeLimit, usePost=True, runAsync=runAsync, threadLimit=threadLimit)
         if result != None:
-            return result
+            if runAsync:
+                return AsyncFeaturizerResult(self.conn, query_name, result)
+            else:
+                return result
