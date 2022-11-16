@@ -5,7 +5,7 @@ The Featurizer class provides methods for installing and running Graph Data Scie
 from typing import TYPE_CHECKING, Any, List, Tuple
 
 if TYPE_CHECKING:
-    from ..pyTigerGraph import TigerGraphConnection
+    from ..pyTigerGraph import TigerGraphConnection, TigerGraphException
 
 import json
 import re
