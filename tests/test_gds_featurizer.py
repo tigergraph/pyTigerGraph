@@ -170,6 +170,36 @@ class test_Featurizer(unittest.TestCase):
         out = self.featurizer.runAlgorithm("simple_query", params={}, custom_query=True)
         self.assertEqual(out[0]['"Hello World!"'], "Hello World!")
 
+    def test08_runAlgorithm_async_qid(self):
+        params = {'v_type': 'Paper',
+            'e_type': 'Cite',
+            'max_change': 0.001,
+            'max_iter': 25,
+            'damping': 0.85,
+            'top_k': 100,
+            'print_accum': True,
+            'result_attr': 'pagerank', 
+            'file_path': '',
+            'display_edges': True}
+        ret = self.featurizer.runAlgorithm("tg_pagerank", params=params, runAsync=True)
+        self.assertIsNotNone(ret.query_id)
+
+    def test09_runAlgorithm_async_wait(self):
+        params = {'v_type': 'Paper',
+            'e_type': 'Cite',
+            'max_change': 0.001,
+            'max_iter': 25,
+            'damping': 0.85,
+            'top_k': 100,
+            'print_accum': True,
+            'result_attr': 'pagerank', 
+            'file_path': '',
+            'display_edges': True}
+        ret = self.featurizer.runAlgorithm("tg_pagerank", params=params, runAsync=True)
+        self.assertIsNotNone(ret.wait())
+
+
+
 if __name__ == '__main__':
     suite = unittest.TestSuite()
     suite.addTest(test_Featurizer("test_get_db_version"))
@@ -191,6 +221,8 @@ if __name__ == '__main__':
     suite.addTest(test_Featurizer("test03_runAlgorithm")) 
     suite.addTest(test_Featurizer("test06_installCustomAlgorithm"))
     suite.addTest(test_Featurizer("test07_runCustomAlgorithm"))
+    suite.addTest(test_Featurizer("test08_runAlgorithm_async_qid"))
+    suite.addTest(test_Featurizer("test09_runAlgorithm_async_wait"))
     
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)
