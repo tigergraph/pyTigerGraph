@@ -39,7 +39,7 @@ class TestGDSAccuracy(unittest.TestCase):
         preds = np.array([1, 0, 1])
         truth = np.array([1, 0, 0])
         measure.update(preds, truth)
-        self.assertEqual(measure.value, 3 / 5)
+        self.assertEqual(measure.value, 2 / 5)
 
 
 class TestGDSRecall(unittest.TestCase):
