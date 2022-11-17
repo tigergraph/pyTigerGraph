@@ -29,7 +29,7 @@ class test_pyTigerGraphUtils(pyTigerGraphUnitTest):
     def test_02_echo(self):
         res = self.conn.echo()
         self.assertIsInstance(res, str)
-        self.assertEqual("Hello SQL", res)
+        self.assertEqual("Lalala", res)
         res = self.conn.echo(True)
         self.assertIsInstance(res, str)
         self.assertEqual("Hello GSQL", res)
