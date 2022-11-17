@@ -430,46 +430,81 @@ class Featurizer:
                 query = f.read()
         return query
 
-    def _get_Params(self, query_name: str):
-        """
-        Returns default query parameters by parsing the query header.
+    def getParams(self, query_name: str, printout: bool = True) -> dict:
+        """Get paramters for an algorithm.
+
         Args:
             query_name (str):
-                The name of the query to be executed.
-        """
-        _dict = {}
+                Name of the algorithm.
+            printout (bool, optional): 
+                Whether to print out the parameters. Defaults to True.
+
+        Returns:
+            Parameter dict the algorithm takes as input.
+        """        
         query = self._get_query(query_name)
-        try:
-            input_params = query[query.find("(") + 1 : query.find(")")]
-            list_params = input_params.split(",")
-            for i in range(len(list_params)):
-                if "=" in list_params[i]:
-                    params_type = list_params[i].split("=")[0].split()[0]
-                    if (
-                        params_type.lower() == "float"
-                        or params_type.lower() == "double"
-                    ):
-                        _dict[list_params[i].split("=")[0].split()[1]] = float(
-                            list_params[i].split("=")[1]
-                        )
-                    if params_type.lower() == "bool":
-                        _dict[list_params[i].split("=")[0].split()[1]] = bool(
-                            list_params[i].split("=")[1]
-                        )
-                    if params_type.lower() == "int":
-                        _dict[list_params[i].split("=")[0].split()[1]] = int(
-                            list_params[i].split("=")[1]
-                        )
-                    if params_type.lower() == "string":
-                        _dict[list_params[i].split("=")[0].split()[1]] = (
-                            list_params[i].split("=")[1].split()[0][1:-2]
-                        )
+        param_values, param_types = self._get_params(query)
+        if printout:
+            print("Parameters for {} (parameter: type [= default value]):".format(query_name))
+            for param in param_values:
+                if param_values[param] is not None:
+                    if param_types[param] == "str":
+                        print('- {}: {} = "{}"'.format(param, param_types[param], param_values[param]))
+                    else:
+                        print("- {}: {} = {}".format(param, param_types[param], param_values[param]))
                 else:
-                    _dict[list_params[i].split()[1]] = None
-        except:
-            print("The algorithm does not have any input parameter.")
-        self.params_dict[query_name] = _dict
-        return _dict
+                    print("- {}: {}".format(param, param_types[param]))
+        return param_values
+
+    def _get_params(self, query: str):
+        """
+        Returns query parameters and their types by parsing the query header.
+
+        Args:
+            query (str):
+                Content of the query as a string.
+        """
+        param_values = {}
+        param_types = {}
+        header = query[query.find("(") + 1 : query.find(")")].strip()
+        if not header:
+            return {}, {}
+        header = header.split(",")
+        for i in header:
+            param_type, param_raw = i.strip().split(maxsplit=1)
+            param_type = param_type.strip()
+            if "=" in param_raw:
+                param, default = param_raw.strip().split("=")
+                param = param.strip()
+                default = default.strip()
+            else: 
+                param, default = param_raw.strip(), None
+            
+            if (
+                param_type.lower() == "float"
+                or param_type.lower() == "double"
+            ):
+                param_values[param] = float(default) if default else None
+                param_types[param] = "float"
+            elif param_type.lower() == "int":
+                param_values[param] = int(default) if default else None
+                param_types[param] = "int"
+            elif param_type.lower() == "bool":
+                if default and default.lower() == "true":
+                    param_values[param] = True
+                elif default and default.lower() == "false":
+                    param_values[param] = False
+                else:
+                    param_values[param] = None
+                param_types[param] = "bool"
+            elif param_type.lower() == "string":
+                param_values[param] = default.strip('"').strip("'") if default else None
+                param_types[param] = "str"
+            else:
+                param_values[param] = default
+                param_types[param] = param_type
+
+        return param_values, param_types
 
     def runAlgorithm(
         self,
@@ -524,27 +559,30 @@ class Featurizer:
             The output of the query, a list of output elements (vertex sets, edge sets, variables,
             accumulators, etc.)
         """
-        if params == None:
-            if not (custom_query):
-                params = self._get_Params(query_name)
-            print("Default parameters are:", params)
+        if params is None:
+            if not custom_query:
+                params = self.getParams(query_name, printout=False)
             if params:
-                if None in params.values():
-                    query_ulr = self.algo_paths[query_name][-1]
+                missing_params = [k for k,v in params.items() if v is None]
+                if missing_params:
                     raise ValueError(
-                        "Query parameters which are not initialized by default need to be initialized, visit "
-                        + query_ulr
-                        + "."
+                        'Missing mandatory parameters: {}. Please run getParams("{}") for parameter details.'.format(list(missing_params), query_name)
                     )
-            else:
-                result = self.conn.runInstalledQuery(
-                    query_name, timeout=timeout, sizeLimit=sizeLimit, usePost=True
-                )
-                if result != None:
-                    return result
         else:
-            if not (custom_query):
-                _ = self._get_Params(query_name)
+            if not custom_query:
+                query_params = self.getParams(query_name, printout=False)
+                unknown_params = set(params.keys()) - set(query_params.keys())
+                if unknown_params:
+                    raise ValueError(
+                        'Unknown parameters: {}. Please run getParams("{}") for required parameters.'.format(list(unknown_params), query_name)
+                    )
+                query_params.update(params)
+                missing_params = [k for k,v in query_params.items() if v is None]
+                if missing_params:
+                    raise ValueError(
+                        'Missing mandatory parameters: {}. Please run getParams("{}") for parameter details.'.format(list(missing_params), query_name)
+                    )
+                params = query_params
             if "similarity_edge" in params.keys() or "similarity_edge_type" in params.keys():
                 if "similarity_edge" in params.keys():
                     if params["similarity_edge"] not in self.conn.getEdgeTypes():
