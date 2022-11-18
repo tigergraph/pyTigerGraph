@@ -101,18 +101,86 @@ class test_Featurizer(unittest.TestCase):
             {'tg_bfs': "INT", 
              'tg_shortest_ss_no_wt': "INT"})
 
-    def test_get_Params(self):
-        _dict = {'v_type': None,
+    def test_get_params(self):
+        query = """
+        Create QUERY myquery(
+            SET<STRING> v_type, 
+            SET<STRING> e_type, 
+            VERTEX source,
+            STRING iteration_weights,
+            STRING wt_attr ="weight",
+            INT max_iter= 10, 
+            STRING file_path="", 
+            BOOL print_info = FALSE
+        )
+        """
+        true_values = {
+            'v_type': None,
             'e_type': None,
-            'max_change': 0.001,
-            'max_iter': 25,
-            'damping': 0.85,
-            'top_k': 100,
-            'print_accum': True,
-            'result_attr': '', 
+            'source': None,
+            'iteration_weights': None,
+            'wt_attr': "weight",
+            'max_iter': 10,
             'file_path': '',
-            'display_edges': True}
-        self.assertEqual(self.featurizer._get_Params("tg_pagerank"), _dict)
+            'print_info': False
+        }
+        true_types = {
+            'v_type': "SET<STRING>",
+            'e_type': "SET<STRING>",
+            'source': "VERTEX",
+            'iteration_weights': "str",
+            'wt_attr': "str",
+            'max_iter': "int",
+            'file_path': "str",
+            'print_info': "bool"
+        }
+        param_values, param_types = self.featurizer._get_params(query)
+        self.assertDictEqual(param_values, true_values)
+        self.assertDictEqual(param_types, true_types)
+
+    def test_get_params_emtpy(self):
+        query = """
+        Create query no_param()
+        """
+
+        param_values, param_types = self.featurizer._get_params(query)
+        self.assertDictEqual(param_values, {})
+        self.assertDictEqual(param_types, {})
+
+    def test_getParams(self):
+        params = self.featurizer.getParams("tg_pagerank", printout=False)
+        print(params)
+        truth = {
+            "v_type": None, 
+            "e_type": None,
+            "max_change": 0.001, 
+            "max_iter": 25, 
+            "damping": 0.85, 
+            "top_k": 100,
+            "print_accum": True, 
+            "result_attr": "", 
+            "file_path": "",
+            "display_edges": False
+        }
+        self.assertDictEqual(params, truth)
+
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_getParams_print(self, mock_stdout):
+        _ = self.featurizer.getParams("tg_pagerank", printout=True)
+        truth = """\
+            Parameters for tg_pagerank (parameter: type [= default value]):
+            - v_type: str
+            - e_type: str
+            - max_change: float = 0.001
+            - max_iter: int = 25
+            - damping: float = 0.85
+            - top_k: int = 100
+            - print_accum: bool = True
+            - result_attr: str = ""
+            - file_path: str = ""
+            - display_edges: bool = False
+            """
+        self.assertEqual(mock_stdout.getvalue(), dedent(truth))
 
     def test01_add_attribute(self):
         self.assertEqual(self.featurizer._add_attribute("VERTEX", "FLOAT", "attr1", global_change=False), 'Schema change succeeded.')
@@ -152,8 +220,17 @@ class test_Featurizer(unittest.TestCase):
         self.assertIsNotNone(self.featurizer.runAlgorithm("tg_pagerank", params=params))
 
     def test02_runAlgorithm(self):
-        with self.assertRaises(ValueError):
-            self.featurizer.runAlgorithm("tg_pagerank", timeout=2147480)
+        with self.assertRaises(ValueError) as error:
+            self.featurizer.runAlgorithm("tg_pagerank")
+        self.assertIn('Missing mandatory parameters:', str(error.exception))
+
+        with self.assertRaises(ValueError) as error:
+            self.featurizer.runAlgorithm("tg_pagerank", params= {'v_type': 'Paper'})
+        self.assertIn('Missing mandatory parameters:', str(error.exception))
+
+        with self.assertRaises(ValueError) as error:
+            self.featurizer.runAlgorithm("tg_pagerank", params= {'foo': 'bar'})
+        self.assertIn("Unknown parameters: ['foo']", str(error.exception))
 
     def test03_runAlgorithm(self):
         params = {'v_type': ['Paper'], 'e_type': ['Cite'], 'weights': '1,1,2', 'beta': -0.85, 'k': 3, 'reduced_dim': 128,
@@ -208,7 +285,10 @@ if __name__ == '__main__':
     suite.addTest(test_Featurizer("test_listAlgorithms_category"))
     suite.addTest(test_Featurizer("test_install_query_file"))
     suite.addTest(test_Featurizer("test_get_algo_details"))
-    suite.addTest(test_Featurizer("test_get_Params"))
+    suite.addTest(test_Featurizer("test_get_params_emtpy"))
+    suite.addTest(test_Featurizer("test_get_params"))
+    suite.addTest(test_Featurizer("test_getParams"))
+    suite.addTest(test_Featurizer("test_getParams_print"))
     suite.addTest(test_Featurizer("test01_add_attribute"))
     suite.addTest(test_Featurizer("test02_add_attribute"))
     suite.addTest(test_Featurizer("test03_add_attribute"))
