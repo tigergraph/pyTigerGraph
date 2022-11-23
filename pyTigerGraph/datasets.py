@@ -44,6 +44,7 @@ class Datasets(BaseDataset):
         """Stock datasets.
 
         Please see https://tigergraph-public-data.s3.us-west-1.amazonaws.com/inventory.json[this link]
+        or call the member function `list()`
         for datasets that are currently available. The files for the dataset with `name` will be
         downloaded to local `tmp_dir` automatically when this class is instantiated.
 
@@ -141,3 +142,14 @@ class Datasets(BaseDataset):
                 sizeLimit=job.get("sizeLimit", 128000000),
             )
             yield resp
+
+    def list(self) -> None:
+        """List available stock datasets
+        """
+        inventory_url = urljoin(self.base_url, "inventory.json")
+        resp = requests.get(inventory_url)
+        resp.raise_for_status()
+        print("Available datasets:")
+        for k in resp.json():
+            print("- {}".format(k))
+

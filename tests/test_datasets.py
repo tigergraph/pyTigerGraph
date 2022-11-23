@@ -1,7 +1,11 @@
 import unittest
+from io import StringIO
+from os.path import exists
+from textwrap import dedent
+from unittest.mock import patch
 
 from pyTigerGraph.datasets import Datasets
-from os.path import exists
+
 
 class TestDatasets(unittest.TestCase):
     def test_get_dataset_url(self):
@@ -34,12 +38,29 @@ class TestDatasets(unittest.TestCase):
         dataset.clean_up()
         self.assertFalse(exists("./tmp/Cora"))
 
+    @patch("sys.stdout", new_callable=StringIO)
+    def test_list(self, mock_stdout):
+        dataset = Datasets()
+        dataset.list()
+        truth = """\
+            Available datasets:
+            - Cora
+            - Ethereum
+            - ldbc_snb
+            - LastFM
+            - imdb
+            - movie
+            - social
+            """
+        self.assertEqual(mock_stdout.getvalue(), dedent(truth))
+
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(TestDatasets("test_get_dataset_url"))
     suite.addTest(TestDatasets("test_download_extract"))
     suite.addTest(TestDatasets("test_clean_up"))
+    suite.addTest(TestDatasets("test_list"))
 
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)
