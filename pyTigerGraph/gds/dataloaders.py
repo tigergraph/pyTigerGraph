@@ -20,6 +20,7 @@ from threading import Event, Thread
 from time import sleep
 import pickle
 from typing import TYPE_CHECKING, Any, Iterator, NoReturn, Tuple, Union, Callable
+import re
 
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
@@ -716,7 +717,7 @@ class BaseLoader:
 
             for col in attr_names:
                 dtype = attr_types[col].lower()
-                if dtype.startswith("str"):
+                if dtype.startswith("str") or dtype.startswith("map"):
                     if mode == "dgl":
                         if vetype is None:
                             # Homogeneous graph, add column directly to extra data
@@ -756,7 +757,7 @@ class BaseLoader:
                             )
                         elif mode == "spektral":
                             data[col] = attr_df[col].str.split(expand=True).to_numpy().astype(dtype2)
-                elif dtype.startswith("set") or dtype.startswith("map") or dtype.startswith("date"):
+                elif dtype.startswith("set") or dtype.startswith("date"):
                     raise NotImplementedError(
                         "{} type not supported for extra features yet.".format(dtype))
                 elif dtype == "bool":
@@ -782,7 +783,7 @@ class BaseLoader:
                 v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
                 data = pd.read_csv(io.StringIO(raw), header=None, names=v_attributes)
             else:
-                v_file = (line.split(',') for line in raw.split('\n') if line)
+                v_file = (re.split(r',\s*(?![^[]]*\))', line) for line in raw.split('\n') if line)
                 v_file_dict = defaultdict(list)
                 for line in v_file:
                     v_file_dict[line[0]].append(line[1:])
@@ -793,6 +794,10 @@ class BaseLoader:
                                    v_out_labels.get(vtype, []) + \
                                    v_extra_feats.get(vtype, [])
                     vertices[vtype] = pd.DataFrame(v_file_dict[vtype], columns=v_attributes)
+                    for v_attr in v_extra_feats.get(vtype, []):
+                        if v_attr_types[vtype][v_attr] == "MAP":
+                            # I am sorry that this is this ugly...
+                            vertices[vtype][v_attr] = vertices[vtype][v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
                 data = vertices
         elif in_format == "edge":
             # String of edges in format source_vid,target_vid
@@ -800,7 +805,7 @@ class BaseLoader:
                 e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
                 data = pd.read_csv(io.StringIO(raw), header=None, names=e_attributes)
             else:
-                e_file = (line.split(',') for line in raw.split('\n') if line)
+                e_file = (re.split(r',\s*(?![^[]]*\))', line) for line in raw.split('\n') if line)
                 e_file_dict = defaultdict(list)
                 for line in e_file:
                     e_file_dict[line[0]].append(line[1:])
@@ -811,6 +816,10 @@ class BaseLoader:
                                    e_out_labels.get(etype, [])  + \
                                    e_extra_feats.get(etype, [])
                     edges[etype] = pd.DataFrame(e_file_dict[etype], columns=e_attributes)
+                    for e_attr in e_extra_feats.get(etype, []):
+                        if e_attr_types[etype][e_attr] == "MAP":
+                            # I am sorry that this is this ugly...
+                            edges[etype][e_attr] = edges[etype][e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
                 del e_file_dict, e_file
                 data = edges
         elif in_format == "graph":
@@ -828,7 +837,7 @@ class BaseLoader:
                 edges = pd.read_csv(io.StringIO(e_file), header=None, names=e_attributes, dtype="object")
                 data = (vertices, edges)
             else:
-                v_file = (line.split(',') for line in v_file.split('\n') if line)
+                v_file = (re.split(r',\s*(?![^[]]*\))', line) for line in v_file.split('\n') if line)
                 v_file_dict = defaultdict(list)
                 for line in v_file:
                     v_file_dict[line[0]].append(line[1:])
@@ -839,6 +848,10 @@ class BaseLoader:
                                    v_out_labels.get(vtype, []) + \
                                    v_extra_feats.get(vtype, [])
                     vertices[vtype] = pd.DataFrame(v_file_dict[vtype], columns=v_attributes, dtype="object")
+                    for v_attr in v_extra_feats.get(vtype, []):
+                        if v_attr_types[vtype][v_attr] == "MAP":
+                            # I am sorry that this is this ugly...
+                            vertices[vtype][v_attr] = vertices[vtype][v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
                 if primary_id:
                     id_map = pd.DataFrame({"vid": primary_id.keys(), "primary_id": primary_id.values()},
                                           dtype="object")
@@ -857,6 +870,10 @@ class BaseLoader:
                                    e_out_labels.get(etype, [])  + \
                                    e_extra_feats.get(etype, [])
                     edges[etype] = pd.DataFrame(e_file_dict[etype], columns=e_attributes, dtype="object")
+                    for e_attr in e_extra_feats.get(etype, []):
+                        if e_attr_types[etype][e_attr] == "MAP":
+                            # I am sorry that this is this ugly...
+                            edges[etype][e_attr] = edges[etype][e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
                 del e_file_dict, e_file
                 data = (vertices, edges)
         else:
@@ -1471,7 +1488,7 @@ class NeighborLoader(BaseLoader):
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
-                        "stringify(s.{})".format(attr)
+                        "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                         for attr in v_attr_names
                     )
                     print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + ",1\\n")\n'.format(
@@ -1498,7 +1515,7 @@ class NeighborLoader(BaseLoader):
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
-                        "stringify(e.{})".format(attr)
+                        "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'
                         for attr in e_attr_names
                     )
                     print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")\n'.format(
@@ -1514,7 +1531,7 @@ class NeighborLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "stringify(s.{})".format(attr)
+                    "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'
                     for attr in v_attr_names
                 )
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + ",1\\n")'.format(
@@ -1535,7 +1552,7 @@ class NeighborLoader(BaseLoader):
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
-                    "stringify(e.{})".format(attr)
+                    "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                     for attr in e_attr_names
                 )
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")'.format(
@@ -1865,7 +1882,7 @@ class EdgeLoader(BaseLoader):
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
-                        "stringify(e.{})".format(attr)
+                        "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                         for attr in e_attr_names
                     )
                     print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")\n'.format(
@@ -1881,7 +1898,7 @@ class EdgeLoader(BaseLoader):
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
-                    "stringify(e.{})".format(attr)
+                    "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                     for attr in e_attr_names
                 )
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")'.format(
@@ -2135,7 +2152,7 @@ class VertexLoader(BaseLoader):
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
-                        "stringify(s.{})".format(attr)
+                        "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                         for attr in v_attr_names
                     )
                     print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + "\\n")\n'.format(
@@ -2151,7 +2168,7 @@ class VertexLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "stringify(s.{})".format(attr)
+                    "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                     for attr in v_attr_names
                 )
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + "\\n")'.format(
@@ -2440,7 +2457,7 @@ class GraphLoader(BaseLoader):
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
-                        "stringify(s.{})".format(attr)
+                        "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                         for attr in v_attr_names
                     )
                     print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + "\\n")\n'.format(
@@ -2461,7 +2478,7 @@ class GraphLoader(BaseLoader):
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
-                        "stringify(e.{})".format(attr)
+                        "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                         for attr in e_attr_names
                     )
                     print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")\n'.format(
@@ -2477,7 +2494,7 @@ class GraphLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "stringify(s.{})".format(attr)
+                    "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                     for attr in v_attr_names
                 )
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + "\\n")'.format(
@@ -2491,7 +2508,7 @@ class GraphLoader(BaseLoader):
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
-                    "stringify(e.{})".format(attr)
+                    "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                     for attr in e_attr_names
                 )
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")'.format(
@@ -2749,7 +2766,7 @@ class EdgeNeighborLoader(BaseLoader):
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
-                        "stringify(s.{})".format(attr)
+                        "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                         for attr in v_attr_names
                     )
                     print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + "\\n")\n'.format(
@@ -2771,7 +2788,7 @@ class EdgeNeighborLoader(BaseLoader):
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
-                        "stringify(e.{})".format(attr)
+                        "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                         for attr in e_attr_names
                     )
                     print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + ",1\\n")\n'.format(
@@ -2793,7 +2810,7 @@ class EdgeNeighborLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "stringify(s.{})".format(attr)
+                    "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                     for attr in v_attr_names
                 )
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + "\\n")'.format(
@@ -2808,7 +2825,7 @@ class EdgeNeighborLoader(BaseLoader):
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
-                    "stringify(e.{})".format(attr)
+                   "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                     for attr in e_attr_names
                 )
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + ",1\\n")'.format(
@@ -3134,7 +3151,7 @@ class NodePieceLoader(BaseLoader):
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
-                        "stringify(s.{})".format(attr)
+                        "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                         for attr in v_attr_names
                     )
                     print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + s.@rel_context_set + "," + s.@ancs + "," + {} + "\\n")\n'.format(
@@ -3152,7 +3169,7 @@ class NodePieceLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "stringify(s.{})".format(attr)
+                   "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                     for attr in v_attr_names
                 )
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + s.@rel_context_set + "," + s.@ancs + "," + {} + "\\n")'.format(
