@@ -125,9 +125,7 @@ CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
               IF use_cache AND cache_empty THEN
                 s.{ANCHOR_CACHE_ATTRIBUTE} = s.@conv_map
               END,
-              IF s.type == "Paper" THEN 
- @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + s.@rel_context_set + "," + s.@ancs + "," + stringify(s.y)+","+stringify(s.features) + "\n")
-END;
+              {VERTEXATTRS};
       
       IF kafka_address IS NOT NULL THEN
         # Write to kafka
