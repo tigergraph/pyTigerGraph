@@ -1531,7 +1531,7 @@ class NeighborLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'
+                    "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                     for attr in v_attr_names
                 )
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + ",1\\n")'.format(
