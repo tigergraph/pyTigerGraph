@@ -3067,6 +3067,14 @@ class NodePieceLoader(BaseLoader):
             self._payload["e_types"] = list(self._e_schema.keys())
         # Compute Anchors
         if compute_anchors:
+            to_change = []
+            for v_type in self._vtypes:
+                if anchor_attribute not in self._v_schema[v_type].keys():
+                    to_change.append(v_type)
+            if to_change != []:
+                print("Adding anchor attribute")
+                ret = add_attribute(self._graph, "VERTEX", "BOOL", anchor_attribute, to_change, global_change=global_schema_change)
+                print(ret)
             self._compute_anchors(anchor_attribute, anchor_method)
         if anchor_cache_attr:
             to_change = []
@@ -3075,6 +3083,7 @@ class NodePieceLoader(BaseLoader):
                     # add anchor cache attribute
                     to_change.append(v_type)
             if to_change != []:
+                print("Adding anchor cache attribute")
                 ret = add_attribute(self._graph, "VERTEX", "MAP<INT, INT>", anchor_cache_attr, to_change, global_change=global_schema_change)
                 print(ret)
         # Install query
