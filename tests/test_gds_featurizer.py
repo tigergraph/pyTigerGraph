@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from pyTigerGraph import TigerGraphConnection
 from pyTigerGraph.gds.featurizer import Featurizer
-from pyTigerGraph.gds.utilities import is_query_installed
+from pyTigerGraph.gds.utilities import is_query_installed, add_attribute
 
 
 class test_Featurizer(unittest.TestCase):
@@ -115,21 +115,21 @@ class test_Featurizer(unittest.TestCase):
         self.assertEqual(self.featurizer._get_Params("tg_pagerank"), _dict)
 
     def test01_add_attribute(self):
-        self.assertEqual(self.featurizer._add_attribute("VERTEX", "FLOAT", "attr1", global_change=False), 'Schema change succeeded.')
+        self.assertEqual(add_attribute("VERTEX", "FLOAT", "attr1", global_change=False), 'Schema change succeeded.')
 
     def test02_add_attribute(self):
-        self.assertEqual(self.featurizer._add_attribute("Edge", "BOOL", "attr2", global_change=False), 'Schema change succeeded.')
+        self.assertEqual(add_attribute("Edge", "BOOL", "attr2", global_change=False), 'Schema change succeeded.')
     
     def test03_add_attribute(self):
-        self.assertEqual(self.featurizer._add_attribute("Vertex", "BOOL", "attr1", global_change=False), 'Attribute already exists')
+        self.assertEqual(add_attribute("Vertex", "BOOL", "attr1", global_change=False), 'Attribute already exists')
 
     def test04_add_attribute(self):
         with self.assertRaises(Exception) as context:
-            self.featurizer._add_attribute("Something","BOOL","attr3")
+            add_attribute("Something","BOOL","attr3")
         self.assertTrue('schema_type has to be VERTEX or EDGE' in str(context.exception))
     
     def test05_add_attribute(self):
-        self.assertEqual(self.featurizer._add_attribute("VERTEX", "BOOL", "attr4", ['Paper'], global_change=False), 'Schema change succeeded.')
+        self.assertEqual(add_attribute("VERTEX", "BOOL", "attr4", ['Paper'], global_change=False), 'Schema change succeeded.')
 
     def test01_installAlgorithm(self):
        self.assertEqual(self.featurizer.installAlgorithm("tg_pagerank"), "tg_pagerank")
