@@ -44,13 +44,13 @@ class Datasets(BaseDataset):
         """Stock datasets.
 
         Please see https://tigergraph-public-data.s3.us-west-1.amazonaws.com/inventory.json[this link]
-        or call the member function `list()`
         for datasets that are currently available. The files for the dataset with `name` will be
         downloaded to local `tmp_dir` automatically when this class is instantiated.
 
         Args:
             name (str, optional):
-                Name of the dataset to get. Defaults to None.
+                Name of the dataset to get. If not provided or None, available datasets will be printed out.
+                Defaults to None.
             tmp_dir (str, optional):
                 Where to store the artifacts of this dataset. Defaults to "./tmp".
         """
@@ -59,6 +59,7 @@ class Datasets(BaseDataset):
         self.tmp_dir = tmp_dir
 
         if not name:
+            self.list()
             return
 
         # Check if it is an in-stock dataset.

@@ -41,7 +41,6 @@ class TestDatasets(unittest.TestCase):
     @patch("sys.stdout", new_callable=StringIO)
     def test_list(self, mock_stdout):
         dataset = Datasets()
-        dataset.list()
         truth = """\
             Available datasets:
             - Cora
@@ -52,7 +51,7 @@ class TestDatasets(unittest.TestCase):
             - movie
             - social
             """
-        self.assertEqual(mock_stdout.getvalue(), dedent(truth))
+        self.assertIn(dedent(truth), mock_stdout.getvalue())
 
 
 if __name__ == "__main__":
