@@ -44,7 +44,8 @@ setup(
     install_requires=[
         'pyTigerDriver',
         'validators',
-        'requests'],
+        'requests',
+        'tqdm'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',  # 3 - Alpha, 4 - Beta or 5 - Production/Stable
         'Intended Audience :: Developers',
