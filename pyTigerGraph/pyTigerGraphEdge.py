@@ -75,6 +75,49 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
 
         return {}
 
+    def _getAttrType(self, attrType: dict) -> str:
+        """
+
+        Args:
+            attribute:
+
+        Returns:
+
+        """
+        ret = attrType["Name"]
+        if "KeyTypeName" in attrType:
+            ret += "(" + attrType["KeyTypeName"] + "," + attrType["ValueTypeName"] + ")"
+        elif "ValueTypeName" in attrType:
+            ret += "(" + attrType["ValueTypeName"] + ")"
+
+        return ret
+
+    def getAttributes(self, edgeType: str) -> list:
+        """Returns the names and types of the attributes of the edge type.
+
+        Args:
+            edgeType:
+                The name of the edge type.
+
+        Returns:
+            A list of (attribute_name, attribute_type) tuples.
+        """
+        logger.info("entry: getAttributes")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        et = self.getEdgeType(edgeType)
+        ret = []
+
+        for at in et["Attributes"]:
+            ret.append((at["AttributeName"], self._getAttrType(at["AttributeType"])))
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: getAttributes")
+
+        return ret
+
     def getEdgeSourceVertexType(self, edgeType: str) -> Union[str, set]:
         """Returns the type(s) of the edge type's source vertex.
 
@@ -248,6 +291,56 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
 
         return ""
         # TODO Should return some other value or raise exception?
+
+    def isMultiEdge(self, edgeType: str) -> bool:
+        """Can the edge have multiple instances between the same pair of vertices?
+
+        Args:
+            edgeType:
+                The name of the edge type.
+
+        Returns:
+            `True`, if the edge can have multiple instances between the same pair of vertices.
+        """
+        logger.info("entry: isMultiEdge")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        et = self.getEdgeType(edgeType)
+        ret = ("DiscriminatorCount" in et) and et["DiscriminatorCount"] > 0
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: isMultiEdge")
+
+        return ret
+
+    def getDiscriminators(self, edgeType: str) -> list:
+        """Returns the names and types of the discriminators of the edge type.
+
+        Args:
+            edgeType:
+                The name of the edge type.
+
+        Returns:
+            A list of (attribute_name, attribute_type) tuples.
+        """
+        logger.info("entry: getDiscriminators")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        et = self.getEdgeType(edgeType)
+        ret = []
+
+        for at in et["Attributes"]:
+            if "IsDiscriminator" in at and at["IsDiscriminator"]:
+                ret.append((at["AttributeName"], self._getAttrType(at["AttributeType"])))
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: getDiscriminators")
+
+        return ret
 
     def getEdgeCountFrom(self, sourceVertexType: str = "", sourceVertexId: Union[str, int] = None,
             edgeType: str = "", targetVertexType: str = "", targetVertexId: Union[str, int] = None,
