@@ -5,6 +5,7 @@ function in pyTigerGraph.
 """
 import json
 import tarfile
+import warnings
 from abc import ABC, abstractmethod
 from os import makedirs
 from os.path import isdir
@@ -13,7 +14,6 @@ from shutil import rmtree
 from urllib.parse import urljoin
 
 import requests
-from tqdm.auto import tqdm
 
 
 class BaseDataset(ABC):
@@ -93,12 +93,19 @@ class Datasets(BaseDataset):
         "NO DOC"
         makedirs(self.tmp_dir, exist_ok=True)
         with requests.get(self.dataset_url, stream=True) as resp:
-            total_length = int(resp.headers.get("Content-Length"))
-            with tqdm.wrapattr(
-                resp.raw, "read", total=total_length, desc="Downloading"
-            ) as raw:
-                with tarfile.open(fileobj=raw, mode="r|gz") as tarobj:
+            try:
+                from tqdm.auto import tqdm
+                total_length = int(resp.headers.get("Content-Length"))
+                with tqdm.wrapattr(
+                    resp.raw, "read", total=total_length, desc="Downloading"
+                ) as raw:
+                    with tarfile.open(fileobj=raw, mode="r|gz") as tarobj:
+                        tarobj.extractall(path=self.tmp_dir)
+            except ImportError:
+                warnings.warn("Cannot import tqdm. Downloading without progress report.")
+                with tarfile.open(fileobj=resp.raw, mode="r|gz") as tarobj:
                     tarobj.extractall(path=self.tmp_dir)
+                print("Dataset downloaded.")
 
     def clean_up(self) -> None:
         "NO DOC"
