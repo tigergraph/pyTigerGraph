@@ -828,6 +828,9 @@ class BaseLoader:
             if not is_hetero:
                 v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
                 e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
+                print(v_file)
+                #print(re.split(r',\s*(?![^[]]*\))', v_file.split("\n")))
+                print(re.split(r',\s*(?![^[]]*\))', v_file))
                 vertices = pd.read_csv(io.StringIO(v_file), header=None, names=v_attributes, dtype="object")
                 if primary_id:
                     id_map = pd.DataFrame({"vid": primary_id.keys(), "primary_id": primary_id.values()}, 
