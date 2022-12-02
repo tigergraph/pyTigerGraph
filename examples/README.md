@@ -2,12 +2,12 @@
 We broke down some examples of the usage of pyTigerGraph into the core functions and GDS functions, while also including some community projects for further inspiration. You can find these resources below.
 
 ## Core Functions
-The Core Functions of pyTigerGraph have been included into one notebook found in this directory, called `pyTigerGraphCoreFunctions.ipynb`. A companion YouTube video by Dan Barkus can be found below.
+The Core Functions of pyTigerGraph have been included into one notebook found in this directory, called `pyTigerGraph_101.ipynb`. A companion YouTube video by Dan Barkus can be found below.
 
 [![Watch the video](https://img.youtube.com/vi/2BcC3C-qfX4/hqdefault.jpg)](https://www.youtube.com/watch?v=2BcC3C-qfX4)
 
 ## Graph Data Science Functions
-The Graph Data Science examples can be found [here](https://docs.tigergraph.com/ml-workbench/current/tutorials/).
+The Graph Data Science examples can be found [here](https://github.com/tigergraph/graph-ml-notebooks).
 
 ## Community Projects
 We enjoy featuring community projects that leverage pyTigerGraph. Here are a few selections:
