@@ -781,9 +781,17 @@ class BaseLoader:
             # String of vertices in format vid,v_in_feats,v_out_labels,v_extra_feats
             if not is_hetero:
                 v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
-                data = pd.read_csv(io.StringIO(raw), header=None, names=v_attributes)
+                double_list = [re.split(r'(?![^)(]*\([^)(]*?\)\)),(?![^\[]*\])', x) for x in raw.split("\n")]
+                if len(double_list) > 1: # strip off empty row at bottom if length greater than 1.
+                    double_list = double_list[:-1]
+                data = pd.DataFrame(double_list, dtype="object")
+                data.columns = v_attributes
+                for v_attr in v_attributes:
+                    if v_attr_types.get(v_attr, "") == "MAP":
+                        # I am sorry that this is this ugly...
+                        data[v_attr] = data[v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
             else:
-                v_file = (re.split(r',\s*(?![^[]]*\))', line) for line in raw.split('\n') if line)
+                v_file = (re.split(r'(?![^)(]*\([^)(]*?\)\)),(?![^\[]*\])', line) for line in raw.split('\n') if line)
                 v_file_dict = defaultdict(list)
                 for line in v_file:
                     v_file_dict[line[0]].append(line[1:])
@@ -803,9 +811,17 @@ class BaseLoader:
             # String of edges in format source_vid,target_vid
             if not is_hetero:
                 e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
-                data = pd.read_csv(io.StringIO(raw), header=None, names=e_attributes)
+                double_list = [re.split(r'(?![^)(]*\([^)(]*?\)\)),(?![^\[]*\])', x) for x in raw.split("\n")]
+                if len(double_list) > 1: # strip off empty row at bottom if length greater than 1.
+                    double_list = double_list[:-1]
+                data = pd.DataFrame(double_list, dtype="object")
+                data.columns = e_attributes
+                for e_attr in e_attributes:
+                    if e_attr_types.get(e_attr, "") == "MAP":
+                        # I am sorry that this is this ugly...
+                        data[e_attr] = data[e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
             else:
-                e_file = (re.split(r',\s*(?![^[]]*\))', line) for line in raw.split('\n') if line)
+                e_file = (re.split(r'(?![^)(]*\([^)(]*?\)\)),(?![^\[]*\])', line) for line in raw.split('\n') if line)
                 e_file_dict = defaultdict(list)
                 for line in e_file:
                     e_file_dict[line[0]].append(line[1:])
@@ -828,10 +844,15 @@ class BaseLoader:
             if not is_hetero:
                 v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
                 e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
-                print(v_file)
-                #print(re.split(r',\s*(?![^[]]*\))', v_file.split("\n")))
-                print(re.split(r',\s*(?![^[]]*\))', v_file))
-                vertices = pd.read_csv(io.StringIO(v_file), header=None, names=v_attributes, dtype="object")
+                double_list = [re.split(r'(?![^)(]*\([^)(]*?\)\)),(?![^\[]*\])', x) for x in v_file.split("\n")]
+                if len(double_list) > 1: # strip off empty row at bottom if length greater than 1.
+                    double_list = double_list[:-1]
+                vertices = pd.DataFrame(double_list, dtype="object")
+                vertices.columns = v_attributes
+                for v_attr in v_extra_feats:
+                    if v_attr_types[v_attr] == "MAP":
+                        # I am sorry that this is this ugly...
+                        vertices[v_attr] = vertices[v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
                 if primary_id:
                     id_map = pd.DataFrame({"vid": primary_id.keys(), "primary_id": primary_id.values()}, 
                                           dtype="object")
@@ -840,7 +861,7 @@ class BaseLoader:
                 edges = pd.read_csv(io.StringIO(e_file), header=None, names=e_attributes, dtype="object")
                 data = (vertices, edges)
             else:
-                v_file = (re.split(r',\s*(?![^[]]*\))', line) for line in v_file.split('\n') if line)
+                v_file = (re.split(r'(?![^)(]*\([^)(]*?\)\)),(?![^\[]*\])', line) for line in v_file.split('\n') if line)
                 v_file_dict = defaultdict(list)
                 for line in v_file:
                     v_file_dict[line[0]].append(line[1:])
@@ -862,7 +883,7 @@ class BaseLoader:
                         vertices[vtype] = vertices[vtype].merge(id_map, on="vid")
                         v_extra_feats[vtype].append("primary_id")
                 del v_file_dict, v_file
-                e_file = (line.split(',') for line in e_file.split('\n') if line)
+                e_file = (re.split(r'(?![^)(]*\([^)(]*?\)\)),(?![^\[]*\])', line) for line in v_file.split('\n') if line)
                 e_file_dict = defaultdict(list)
                 for line in e_file:
                     e_file_dict[line[0]].append(line[1:])
