@@ -885,8 +885,7 @@ class GDS:
             anchor_method (str, optional):
                 "random" by default. Currently, "random" anchor selection strategy is the only strategy supported.
             anchor_cache_attr (str, optional):
-                Defines the attribute name to store the cached anchor search results in. By default, None.
-                Must be defined if `use_cache` is True.
+                Defines the attribute name to store the cached anchor search results in. By default, the attribute is "anchors".
             max_distance (int, optional):
                 The max number of hops away in the graph to search for anchors. Defaults to 5.
             max_anchors (int, optional):

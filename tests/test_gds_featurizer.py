@@ -16,6 +16,7 @@ class test_Featurizer(unittest.TestCase):
         conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
         conn.getToken(conn.createSecret())
         cls.featurizer = Featurizer(conn, algo_version="3.7")
+        cls.conn = conn
 
     def test_get_db_version(self):
         major_ver, minor_ver, patch_ver = self.featurizer._get_db_version()
@@ -115,21 +116,21 @@ class test_Featurizer(unittest.TestCase):
         self.assertEqual(self.featurizer._get_Params("tg_pagerank"), _dict)
 
     def test01_add_attribute(self):
-        self.assertEqual(self.featurizer._add_attribute("VERTEX", "FLOAT", "attr1", global_change=False), 'Schema change succeeded.')
+        self.assertEqual(add_attribute(self.conn, "VERTEX", "FLOAT", "attr1", global_change=False), 'Schema change succeeded.')
 
     def test02_add_attribute(self):
-        self.assertEqual(self.featurizer._add_attribute("Edge", "BOOL", "attr2", global_change=False), 'Schema change succeeded.')
+        self.assertEqual(add_attribute(self.conn, "Edge", "BOOL", "attr2", global_change=False), 'Schema change succeeded.')
     
     def test03_add_attribute(self):
-        self.assertEqual(self.featurizer._add_attribute("Vertex", "BOOL", "attr1", global_change=False), 'Attribute already exists')
+        self.assertEqual(add_attribute(self.conn, "Vertex", "BOOL", "attr1", global_change=False), 'Attribute already exists')
 
     def test04_add_attribute(self):
         with self.assertRaises(Exception) as context:
-            self.featurizer._add_attribute("Something","BOOL","attr3")
+            add_attribute(self.conn, "Something","BOOL","attr3")
         self.assertTrue('schema_type has to be VERTEX or EDGE' in str(context.exception))
     
     def test05_add_attribute(self):
-        self.assertEqual(self.featurizer._add_attribute("VERTEX", "BOOL", "attr4", ['Paper'], global_change=False), 'Schema change succeeded.')
+        self.assertEqual(add_attribute(self.conn, "VERTEX", "BOOL", "attr4", ['Paper'], global_change=False), 'Schema change succeeded.')
 
     def test01_installAlgorithm(self):
        self.assertEqual(self.featurizer.installAlgorithm("tg_pagerank"), "tg_pagerank")

@@ -2963,7 +2963,7 @@ class NodePieceLoader(BaseLoader):
         use_cache: bool = False,
         clear_cache: bool = False,
         anchor_method: str = "random",
-        anchor_cache_attr: str = None,
+        anchor_cache_attr: str = "anchors",
         special_tokens: list = ["MASK", "CLS", "SEP"],
         max_distance: int = 5,
         max_anchors: int = 10,
