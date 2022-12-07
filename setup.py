@@ -38,7 +38,7 @@ setup(
     long_description_content_type='text/markdown',
     author='TigerGraph Inc.',
     author_email='support@tigergraph.com',
-    url='https://docs.tigergraph.com/home/',
+    url='https://docs.tigergraph.com/pytigergraph/current/intro/',
     download_url='',
     keywords=['TigerGraph', 'Graph Database', 'Data Science', 'Machine Learning'],
     install_requires=[
@@ -60,7 +60,7 @@ setup(
         'Programming Language :: Python :: 3.10',
     ],
     extras_require={
-        "gds": ["pandas", "kafka-python", "numpy"],
+        "gds": ["pandas", "kafka-python", "numpy", "tqdm"],
     },
     project_urls={
         "Bug Reports": "https://github.com/tigergraph/pyTigerGraph/issues",

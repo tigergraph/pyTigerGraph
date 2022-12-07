@@ -49,6 +49,7 @@ class pyTigerGraphDataset(pyTigerGraphAuth):
                 "A graph with name {} already exists in the database. "
                 "Skip ingestion.".format(dataset.name)
             )
+            print("Graph name is set to {} for this connection.".format(dataset.name))
             return
 
         print("---- Creating graph ----", flush=True)
