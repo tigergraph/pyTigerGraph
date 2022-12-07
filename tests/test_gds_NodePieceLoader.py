@@ -17,6 +17,8 @@ class TestGDSNodePieceLoader(unittest.TestCase):
         loader = NodePieceLoader(
             graph=self.conn,
             v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
+            compute_anchors=True,
+            anchor_percentage=0.5,
             batch_size=16,
             shuffle=True,
             filter_by="train_mask",
@@ -31,9 +33,11 @@ class TestGDSNodePieceLoader(unittest.TestCase):
         loader = NodePieceLoader(
             graph=self.conn,
             v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
+            compute_anchors=True,
             batch_size=16,
             shuffle=True,
             filter_by="train_mask",
+            anchor_percentage=0.5,
             loader_id=None,
             buffer_size=4,
             kafka_address="kafka:9092",
@@ -56,9 +60,10 @@ class TestGDSNodePieceLoader(unittest.TestCase):
         loader = NodePieceLoader(
             graph=self.conn,
             v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
-            num_batches=1,
-            shuffle=False,
+            compute_anchors=True,
+            shuffle=True,
             filter_by="train_mask",
+            anchor_percentage=0.5,
             loader_id=None,
             buffer_size=4,
             kafka_address="kafka:9092",
@@ -78,9 +83,11 @@ class TestGDSNodePieceLoader(unittest.TestCase):
         loader = NodePieceLoader(
             graph=self.conn,
             v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
+            compute_anchors=True,
             batch_size=16,
             shuffle=True,
             filter_by="train_mask",
+            anchor_percentage=0.5,
             loader_id=None,
             buffer_size=4,
             kafka_address="34.127.11.236:9092",
@@ -107,9 +114,11 @@ class TestGDSNodePieceLoader(unittest.TestCase):
         loader = NodePieceLoader(
             graph=self.conn,
             v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
+            compute_anchors=True,
             batch_size=16,
             shuffle=True,
             filter_by="train_mask",
+            anchor_percentage=0.5,
             loader_id=None,
             buffer_size=4,
             kafka_address="pkc-6ojv2.us-west4.gcp.confluent.cloud:9092",
@@ -145,11 +154,13 @@ class TestGDSNodePieceLoaderREST(unittest.TestCase):
         loader = NodePieceLoader(
             graph=self.conn,
             v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
+            compute_anchors=True,
             batch_size=16,
             shuffle=True,
             filter_by="train_mask",
+            anchor_percentage=0.5,
             loader_id=None,
-            buffer_size=4,
+            buffer_size=4
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
         self.assertEqual(loader.num_batches, 9)
@@ -158,11 +169,13 @@ class TestGDSNodePieceLoaderREST(unittest.TestCase):
         loader = NodePieceLoader(
             graph=self.conn,
             v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
+            compute_anchors=True,
             batch_size=16,
             shuffle=True,
             filter_by="train_mask",
+            anchor_percentage=0.5,
             loader_id=None,
-            buffer_size=4,
+            buffer_size=4
         )
         num_batches = 0
         for data in loader:
@@ -182,11 +195,12 @@ class TestGDSNodePieceLoaderREST(unittest.TestCase):
         loader = NodePieceLoader(
             graph=self.conn,
             v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
-            num_batches=1,
-            shuffle=False,
+            compute_anchors=True,
+            shuffle=True,
             filter_by="train_mask",
+            anchor_percentage=0.5,
             loader_id=None,
-            buffer_size=4,
+            buffer_size=4
         )
         data = loader.data
         # print(data)
@@ -203,17 +217,18 @@ class TestGDSNodePieceLoaderREST(unittest.TestCase):
         conn = TigerGraphConnection(host="http://tigergraph", graphname="Social")
         conn.getToken(conn.createSecret())
         loader = NodePieceLoader(
-            graph=conn,
+            graph=self.conn,
             v_feats=["age", "state"],
-            num_batches=1,
-            shuffle=False,
+            compute_anchors=True,
+            shuffle=True,
+            filter_by="train_mask",
+            anchor_percentage=0.5,
             loader_id=None,
-            buffer_size=4,
+            buffer_size=4
         )
         data = loader.data
         # print(data)
         self.assertIsInstance(data, DataFrame)
-        self.assertEqual(data.shape[0], 7)
         self.assertIn("age", data.columns)
         self.assertIn("state", data.columns)
 
@@ -227,6 +242,8 @@ class TestGDSHeteroNodePieceLoaderREST(unittest.TestCase):
     def test_init(self):
         loader = NodePieceLoader(
             graph=self.conn,
+            compute_anchors=True,
+            anchor_percentage=0.5,
             v_feats={"v0": ["x", "y"],
                         "v1": ["x"]},
             batch_size=20,
@@ -240,6 +257,8 @@ class TestGDSHeteroNodePieceLoaderREST(unittest.TestCase):
 
     def test_iterate(self):
         loader = NodePieceLoader(
+            compute_anchors=True,
+            anchor_percentage=0.5,
             graph=self.conn,
             v_feats={"v0": ["x", "y"],
                         "v1": ["x"]},
@@ -267,6 +286,8 @@ class TestGDSHeteroNodePieceLoaderREST(unittest.TestCase):
     def test_all_vertices(self):
         loader = NodePieceLoader(
             graph=self.conn,
+            compute_anchors=True,
+            anchor_percentage=0.5,
             v_feats={"v0": ["x", "y"],
                         "v1": ["x"]},
             num_batches=1,
@@ -291,7 +312,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSNodePieceLoader("test_init"))
     suite.addTest(TestGDSNodePieceLoader("test_iterate"))
     suite.addTest(TestGDSNodePieceLoader("test_all_vertices"))
-    suite.addTest(TestGDSNodePieceLoader("test_sasl_plaintext"))
+    #suite.addTest(TestGDSNodePieceLoader("test_sasl_plaintext"))
     # suite.addTest(TestGDSNodePieceLoader("test_sasl_ssl"))
     suite.addTest(TestGDSNodePieceLoaderREST("test_init"))
     suite.addTest(TestGDSNodePieceLoaderREST("test_iterate"))

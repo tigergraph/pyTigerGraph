@@ -3047,10 +3047,13 @@ class NodePieceLoader(BaseLoader):
         # Initialize parameters for the query
         if isinstance(target_vertex_types, str):
             self._seed_types = [target_vertex_types]
+            self._target_v_types = target_vertex_types
         elif isinstance(target_vertex_types, list):
             self._seed_types = target_vertex_types
+            self._target_v_types = target_vertex_types
         else:
             self._seed_types = self._vtypes
+            self._target_v_types = self._vtypes
         if batch_size:
             if not filter_by:
                 num_vertices = sum(self._graph.getVertexCount(self._seed_types).values())
@@ -3071,7 +3074,6 @@ class NodePieceLoader(BaseLoader):
         else:
             # Otherwise, take the number of batches as is.
             self.num_batches = num_batches
-        self._target_v_types = target_vertex_types
         self.filter_by = filter_by
         self._payload["num_batches"] = self.num_batches
         if filter_by:
@@ -3089,6 +3091,7 @@ class NodePieceLoader(BaseLoader):
             self._payload["e_types"] = e_types
         else:
             self._payload["e_types"] = list(self._e_schema.keys())
+            e_types = list(self._e_schema.keys())
         # Compute Anchors
         if compute_anchors:
             to_change = []
@@ -3239,13 +3242,21 @@ class NodePieceLoader(BaseLoader):
             dists += [self.idToIdx["PAD"] for x in range(len(dists), self._payload["max_anchors"])]
             toks += [self.idToIdx["PAD"] for x in range(len(toks), self._payload["max_anchors"])]
             return {"ancs":toks, "dists": dists}
-        for v_type in data.keys():
-            data[v_type]["relational_context"] = data[v_type]["relational_context"].apply(lambda x: processRelContext(x))
-            ancs = data[v_type]["closest_anchors"].apply(lambda x: processAnchors(x))
+        if self.is_hetero:
+            for v_type in data.keys():
+                data[v_type]["relational_context"] = data[v_type]["relational_context"].apply(lambda x: processRelContext(x))
+                ancs = data[v_type]["closest_anchors"].apply(lambda x: processAnchors(x))
+                ancs = pd.DataFrame(list(ancs))
+                data[v_type].drop(columns="closest_anchors", inplace=True)
+                data[v_type]["anchors"] = ancs["ancs"]
+                data[v_type]["anchor_distances"] = ancs["dists"]
+        else:
+            data["relational_context"] = data["relational_context"].apply(lambda x: processRelContext(x))
+            ancs = data["closest_anchors"].apply(lambda x: processAnchors(x))
             ancs = pd.DataFrame(list(ancs))
-            data[v_type].drop(columns="closest_anchors", inplace=True)
-            data[v_type]["anchors"] = ancs["ancs"]
-            data[v_type]["anchor_distances"] = ancs["dists"]
+            data.drop(columns="closest_anchors", inplace=True)
+            data["anchors"] = ancs["ancs"]
+            data["anchor_distances"] = ancs["dists"]
         return data
 
     def _start(self) -> None:
