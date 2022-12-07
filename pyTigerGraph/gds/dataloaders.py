@@ -883,7 +883,7 @@ class BaseLoader:
                         vertices[vtype] = vertices[vtype].merge(id_map, on="vid")
                         v_extra_feats[vtype].append("primary_id")
                 del v_file_dict, v_file
-                e_file = (re.split(r'(?![^)(]*\([^)(]*?\)\)),(?![^\[]*\])', line) for line in v_file.split('\n') if line)
+                e_file = (re.split(r'(?![^)(]*\([^)(]*?\)\)),(?![^\[]*\])', line) for line in e_file.split('\n') if line)
                 e_file_dict = defaultdict(list)
                 for line in e_file:
                     e_file_dict[line[0]].append(line[1:])
