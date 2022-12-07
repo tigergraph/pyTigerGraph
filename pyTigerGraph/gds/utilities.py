@@ -174,7 +174,7 @@ def add_attribute(conn: "TigerGraphConnection", schema_type: str, attr_type: str
         schema_type (str): 
             Vertex or edge
         attr_type (str): 
-            Type of attribute which can be INT, DOUBLE,FLOAT,BOOL, or LIST
+            Type of attribute which can be INT, DOUBLE, FLOAT, BOOL, or LIST
         attr_name (str): 
             An attribute name that needs to be added to the vertex/edge
         schema_name (List[str]):

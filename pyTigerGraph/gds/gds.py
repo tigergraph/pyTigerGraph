@@ -843,18 +843,15 @@ class GDS:
                         buffer_size: int = 4,
                         reverse_edge: bool = False,
                         timeout: int = 300000) -> NodePieceLoader:
-        """Returns a `NodePieceLoader`instance.
+        """Returns a `NodePieceLoader` instance.
         A `NodePieceLoader` instance loads all edges from the graph in batches, along with the vertices that are connected with each edge.
 
         The NodePiece algorithm borrows the idea of "tokenization" from Natural Language Processing. The dataloader offers the functionality
         to "tokenize" the graph in the form of randomly selecting "anchor vertices". If you are running NodePiece for the first time,
         anchors have to be created.
 
-        NOTE: When you initialize the loader on a graph for the first time,
-        the initialization might take a minute as it installs the corresponding
-        query to the database. However, the query installation only
-        needs to be done once, so it will take no time when you initialize the loader
-        on the same graph again.
+        NOTE: The first time you initialize the loader on a graph, it must first install the corresponding query to the database. 
+        However, the query installation only needs to be done once, so you will not need to wait when you initialize the loader on the same graph again.
 
         There are two ways to use the data loader:
 
@@ -874,13 +871,13 @@ class GDS:
                 A list or string of vertex types that are going to be used for training the model.
                 If None, the vertex types specified in v_feats will be used.
             compute_anchors (bool, optional):
-                False by default. If set to true, the dataloader will compute anchors and store them in the attribute
+                False by default. If set to True, the dataloader will compute anchors and store them in the attribute
                 defined by `anchor_attribute`. 
             use_cache (bool, optional):
-                False by default. If true, will cache the result of the anchor search process onto the attribute
+                False by default. If True, will cache the result of the anchor search process onto the attribute
                 defined by `anchor_cache_attr`. Must define `anchor_cache_attr` if True.
             clear_cache (bool, optional):
-                False by default. If true, the cache of the anchor search process will be cleared for the attribute
+                False by default. If True, the cache of the anchor search process will be cleared for the attribute
                 defined by `anchor_cache_attr`.
             anchor_method (str, optional):
                 "random" by default. Currently, "random" anchor selection strategy is the only strategy supported.
@@ -899,7 +896,7 @@ class GDS:
             e_types (list, optional):
                 List of edge types to use in traversing the graph. Defaults to all edge types.
             global_schema_change (bool, optional):
-                By default False. Must set to True if altering the schema of global namespace graphs.
+                By default False. Must be True if altering the schema of global namespace graphs.
             tokenMap (dict or str, optional):
                 Optional, for use when wanting to transfer the token -> index map from one NodePiece dataloader instance to another.
                 Takes in a dictonary of token -> index, or a filepath to a pickle file containing the map. This map can be produced using the
