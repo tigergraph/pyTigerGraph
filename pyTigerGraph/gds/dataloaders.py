@@ -3345,3 +3345,11 @@ class NodePieceLoader(BaseLoader):
                                     primary_id=resp[0]["pids"],
                                     callback_fn=self.nodepiece_process)
         return data
+
+    def precompute(self) -> None:
+        _payload = dict(self._payload)
+        _payload["precompute"] = True
+        resp = self._graph.runInstalledQuery(
+            self.query_name, params=_payload, timeout=self.timeout, usePost=True
+        )
+       
