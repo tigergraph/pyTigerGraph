@@ -208,6 +208,7 @@ class BaseLoader:
             self.loader_id = random_string(RANDOM_TOPIC_LEN)
         else:
             self.loader_id = loader_id
+        self.kafka_group_id = self.loader_id
         self.num_batches = num_batches
         self.output_format = output_format
         self.buffer_size = buffer_size
@@ -248,7 +249,8 @@ class BaseLoader:
                     ssl_keyfile=kafka_consumer_key_location,
                     ssl_password=kafka_consumer_key_password,
                     sasl_kerberos_service_name=kafka_sasl_kerberos_service_name,
-                    sasl_kerberos_domain_name=kafka_sasl_kerberos_domain_name
+                    sasl_kerberos_domain_name=kafka_sasl_kerberos_domain_name,
+                    group_id=self.kafka_group_id
                 )
                 self._kafka_admin = KafkaAdminClient(
                     bootstrap_servers=self.kafka_address_consumer,
@@ -548,15 +550,19 @@ class BaseLoader:
         num_batches: int,
         out_tuple: bool,
         kafka_consumer: "KafkaConsumer",
+        max_wait_time: int = 30
     ) -> NoReturn:
         delivered_batch = 0
         buffer = {}
-        while not exit_event.is_set():
+        wait_time = 0
+        while (not exit_event.is_set()) and (wait_time < max_wait_time):
             if delivered_batch == num_batches:
                 break
             resp = kafka_consumer.poll(1000)
             if not resp:
+                wait_time += 1
                 continue
+            wait_time = 0
             for msgs in resp.values():
                 for message in msgs:
                     key = message.key.decode("utf-8")
