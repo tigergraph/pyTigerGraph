@@ -213,25 +213,6 @@ class TestGDSNodePieceLoaderREST(unittest.TestCase):
         self.assertIn("val_mask", data.columns)
         self.assertIn("test_mask", data.columns)
 
-    def test_string_attr(self):
-        conn = TigerGraphConnection(host="http://tigergraph", graphname="Social")
-        conn.getToken(conn.createSecret())
-        loader = NodePieceLoader(
-            graph=conn,
-            v_feats=["age", "state"],
-            compute_anchors=True,
-            shuffle=True,
-            filter_by="train_mask",
-            anchor_percentage=0.5,
-            loader_id=None,
-            buffer_size=4
-        )
-        data = loader.data
-        # print(data)
-        self.assertIsInstance(data, DataFrame)
-        self.assertIn("age", data.columns)
-        self.assertIn("state", data.columns)
-
 
 class TestGDSHeteroNodePieceLoaderREST(unittest.TestCase):
     @classmethod
@@ -317,7 +298,6 @@ if __name__ == "__main__":
     suite.addTest(TestGDSNodePieceLoaderREST("test_init"))
     suite.addTest(TestGDSNodePieceLoaderREST("test_iterate"))
     suite.addTest(TestGDSNodePieceLoaderREST("test_all_vertices"))
-    suite.addTest(TestGDSNodePieceLoaderREST("test_string_attr"))
     suite.addTest(TestGDSHeteroNodePieceLoaderREST("test_init"))
     suite.addTest(TestGDSHeteroNodePieceLoaderREST("test_iterate"))
     suite.addTest(TestGDSHeteroNodePieceLoaderREST("test_all_vertices"))
