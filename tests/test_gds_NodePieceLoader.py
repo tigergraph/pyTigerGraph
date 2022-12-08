@@ -280,12 +280,14 @@ class TestGDSHeteroNodePieceLoaderREST(unittest.TestCase):
         data = loader.data
         # print(data)
         self.assertIsInstance(data["v0"], DataFrame)
-        self.assertTupleEqual(data["v0"].shape, (76, 3))
+        self.assertTupleEqual(data["v0"].shape, (76, 6))
         self.assertIsInstance(data["v1"], DataFrame)
-        self.assertTupleEqual(data["v1"].shape, (110, 2))
         self.assertIn("x", data["v0"].columns)
         self.assertIn("y", data["v0"].columns)
         self.assertIn("x", data["v1"].columns)
+        self.assertIn("anchors", data["v0"].columns)
+        self.assertIn("relational_context", data["v0"].columns)
+        self.assertIn("anchors", data["v1"].columns)
 
 
 if __name__ == "__main__":
