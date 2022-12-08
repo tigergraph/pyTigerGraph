@@ -3328,7 +3328,6 @@ class NodePieceLoader(BaseLoader):
         _payload["input_vertices"] = []
         for i in vertices:
             _payload["input_vertices"].append({"id": i["primary_id"], "type": i["type"]})
-        print(_payload)
         resp = self._graph.runInstalledQuery(
             self.query_name, params=_payload, timeout=self.timeout, usePost=True
         )
