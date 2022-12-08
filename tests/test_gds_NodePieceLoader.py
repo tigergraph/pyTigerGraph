@@ -217,7 +217,7 @@ class TestGDSNodePieceLoaderREST(unittest.TestCase):
         conn = TigerGraphConnection(host="http://tigergraph", graphname="Social")
         conn.getToken(conn.createSecret())
         loader = NodePieceLoader(
-            graph=self.conn,
+            graph=conn,
             v_feats=["age", "state"],
             compute_anchors=True,
             shuffle=True,
