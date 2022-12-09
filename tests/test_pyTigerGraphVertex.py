@@ -37,6 +37,7 @@ class test_pyTigerGraphVertex(unittest.TestCase):
         # TODO This will need to be reviewed if/when getVertexType() return value changes from {} in
         #      case of invalid/non-existing edge type name is specified (e.g. an exception will be
         #      raised instead of returning {}
+        # test comment
 
     def test_03_getVertexCount(self):
         res = self.conn.getVertexCount("*")
