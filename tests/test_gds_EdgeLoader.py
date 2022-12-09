@@ -201,7 +201,7 @@ class TestGDSEdgeLoaderREST(unittest.TestCase):
 class TestGDSHeteroEdgeLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = make_connection(graphname="Cora")
+        cls.conn = make_connection(graphname="hetero")
 
     def test_init(self):
         loader = EdgeLoader(

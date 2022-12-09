@@ -15,7 +15,7 @@ def make_connection(graphname: str = None):
         "restppPort": "9000",
         "gsPort": "14240",
         "gsqlVersion": "",
-        "userCert": False,
+        "userCert": None,
         "certPath": None,
         "sslPort": "443",
         "tgCloud": False,

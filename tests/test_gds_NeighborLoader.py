@@ -418,7 +418,7 @@ class TestGDSNeighborLoaderREST(unittest.TestCase):
 class TestGDSHeteroNeighborLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = make_connection(graphname="Cora")
+        cls.conn = make_connection(graphname="hetero")
 
     def test_init(self):
         loader = NeighborLoader(
