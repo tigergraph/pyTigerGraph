@@ -249,7 +249,7 @@ class Featurizer:
         if query_name == "tg_fastRP" and int(self.major_ver) <= 3 and int(self.minor_ver) <= 7:
             # Drop all jobs on the graph
             self.conn.gsql("USE GRAPH {}\n".format(self.conn.graphname) + "drop job *")
-            res = add_attribute(self.conn, schema_type="VERTEX",attr_type=" LIST<DOUBLE>",attr_name="fastrp_embedding",global_change=global_change)
+            res = add_attribute(self.conn, schema_type="VERTEX",attr_type=" LIST<DOUBLE>",attr_name="embedding",global_change=global_change)
         # TODO: Check if Distributed query is needed.
         query = (
             "USE GRAPH {}\n".format(self.conn.graphname)
