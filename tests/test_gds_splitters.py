@@ -1,14 +1,15 @@
 import json
 import unittest
 
+from pyTigerGraphUnitTest import make_connection
+
 from pyTigerGraph import TigerGraphConnection
 
 
 class TestGDSRandomVertexSplit(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
-        cls.conn.getToken(cls.conn.createSecret())
+        cls.conn = make_connection(graphname="Cora")
 
     def test_no_attr(self):
         with self.assertRaises(ValueError):
@@ -101,9 +102,7 @@ def get_edge_count(conn: TigerGraphConnection, attribute: str):
 class TestGDSRandomEdgeSplit(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
-        # cls.conn.gsql("drop query all")
-        cls.conn.getToken(cls.conn.createSecret())
+        cls.conn = make_connection(graphname="Cora")
 
     def test_no_attr(self):
         with self.assertRaises(ValueError):

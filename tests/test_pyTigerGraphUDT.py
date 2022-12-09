@@ -1,10 +1,12 @@
 import unittest
 
-from pyTigerGraphUnitTest import pyTigerGraphUnitTest
+from pyTigerGraphUnitTest import make_connection
 
 
-class test_pyTigerGraphUDT(pyTigerGraphUnitTest):
-    conn = None
+class test_pyTigerGraphUDT(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.conn = make_connection()
 
     def test_01_getUDTs(self):
         res = self.conn.getUDTs()

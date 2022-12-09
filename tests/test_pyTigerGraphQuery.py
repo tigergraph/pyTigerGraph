@@ -2,11 +2,13 @@ import unittest
 from datetime import datetime
 from time import sleep
 
-from pyTigerGraphUnitTest import pyTigerGraphUnitTest
+from pyTigerGraphUnitTest import make_connection
 
 
-class test_pyTigerGraphQuery(pyTigerGraphUnitTest):
-    conn = None
+class test_pyTigerGraphQuery(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.conn = make_connection()
 
     def test_01_getQueries(self):
         # TODO Once pyTigerGraphQuery.getQueries() is available

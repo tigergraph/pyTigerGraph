@@ -1,11 +1,14 @@
 import unittest
 
+from pyTigerGraphUnitTest import make_connection
+
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
-from pyTigerGraphUnitTest import pyTigerGraphUnitTest
 
 
-class test_pyTigerGraphPath(pyTigerGraphUnitTest):
-    conn = None
+class test_pyTigerGraphPath(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.conn = make_connection()
 
     def test_01_getSecrets(self):
         res = self.conn.showSecrets()

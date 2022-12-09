@@ -2,11 +2,13 @@ import re
 import unittest
 from datetime import datetime
 
-from pyTigerGraphUnitTest import pyTigerGraphUnitTest
+from pyTigerGraphUnitTest import make_connection
 
 
-class test_pyTigerGraphUtils(pyTigerGraphUnitTest):
-    conn = None
+class test_pyTigerGraphUtils(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.conn = make_connection()
 
     def test_01_safeChar(self):
         res = self.conn._safeChar(" _space")

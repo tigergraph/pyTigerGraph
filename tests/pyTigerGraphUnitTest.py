@@ -1,54 +1,49 @@
+import json
 import os
-import unittest
 from os.path import exists
 
-import pyTigerGraph as pyTG
+from pyTigerGraph import TigerGraphConnection
 
 
-class pyTigerGraphUnitTest(unittest.TestCase):
-    conn = None
+def make_connection(graphname: str = None):
+    server_config = {
+        "host": "http://127.0.0.1",
+        "graphname": "tests",
+        "username": "tigergraph",
+        "password": "tigergraph",
+        "gsqlSecret": "",
+        "restppPort": "9000",
+        "gsPort": "14240",
+        "gsqlVersion": "",
+        "userCert": False,
+        "certPath": None,
+        "sslPort": "443",
+        "tgCloud": False,
+        "gcp": False,
+    }
 
-    def setUp(self):
-        params = {
-            "host": "http://127.0.0.1",
-            "graphname": "tests",
-            "username": "tigergraph",
-            "password": "tigergraph",
-            "gsqlSecret": "",
-            "restppPort": "9000",
-            "gsPort": "14240",
-            "gsqlVersion": "",
-            "userCert": False,
-            "certPath": None,
-            "sslPort": "443",
-            "tgCloud": False,
-            "gcp": False
-        }
+    path = os.path.dirname(os.path.realpath(__file__))
+    fname = os.path.join(path, "testserver.json")
+    if exists(fname):
+        with open(fname, "r") as config_file:
+            config = json.load(config_file)
+        server_config.update(config)
 
-        path = os.path.dirname(os.path.realpath(__file__))
-        fname = os.path.join(path, "testserver.cfg")
-        if exists(fname):
-            try:
-                cfg = open(fname, "r")
+    conn = TigerGraphConnection(
+        host=server_config["host"],
+        graphname=graphname if graphname else server_config["graphname"],
+        username=server_config["username"],
+        password=server_config["password"],
+        tgCloud=server_config["tgCloud"],
+        restppPort=server_config["restppPort"],
+        gsPort=server_config["gsPort"],
+        gsqlVersion=server_config["gsqlVersion"],
+        useCert=server_config["userCert"],
+        certPath=server_config["certPath"],
+        sslPort=server_config["sslPort"],
+        gcp=server_config["gcp"],
+    )
+    if server_config.get("getToken", False):
+        conn.getToken(conn.createSecret())
 
-                lines = cfg.readlines()
-
-                for l in lines:
-                    if l.strip()[0] != "#":
-                        ll = l.rstrip("\n").split("=")
-                        if ll[1]:
-                            if ll[1] in ["True", "False"]:
-                                params[ll[0]] = ll[1] == "True"
-                            else:
-                                params[ll[0]] = ll[1]
-
-            except OSError as e:
-                print(e.strerror)
-
-        self.conn = pyTG.TigerGraphConnection(host=params["host"], graphname=params["graphname"],
-            username=params["username"], password=params["password"], tgCloud=params["tgCloud"],
-            restppPort=params["restppPort"], gsPort=params["gsPort"],
-            gsqlVersion=params["gsqlVersion"], useCert=params["userCert"],
-            certPath=params["certPath"], sslPort=params["sslPort"], gcp=params["gcp"])
-        if params.get("getToken", False):
-            self.conn.getToken(self.conn.createSecret())
+    return conn

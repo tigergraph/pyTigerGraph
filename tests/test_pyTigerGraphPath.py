@@ -1,12 +1,10 @@
 import json
 import unittest
 
-from pyTigerGraphUnitTest import pyTigerGraphUnitTest
+from pyTigerGraphUnitTest import make_connection
 
 
-class test_pyTigerGraphPath(pyTigerGraphUnitTest):
-    conn = None
-
+class test_pyTigerGraphPath(unittest.TestCase):
     vs = [
         (10, {"a01": 999}),
         (20, {"a01": 999}),
@@ -31,8 +29,11 @@ class test_pyTigerGraphPath(pyTigerGraphUnitTest):
         (30, 60, {"a01": 999})
     ]
 
+    @classmethod
+    def setUpClass(cls):
+        cls.conn = make_connection()
+
     def setUp(self):
-        super().setUp()
         self.conn.upsertVertices("vertex4", self.vs)
         self.conn.upsertEdges("vertex4", "edge6_loop", "vertex4", self.es)
 
