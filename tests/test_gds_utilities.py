@@ -8,7 +8,8 @@ from pyTigerGraph.gds import utilities as utils
 class TestGDSUtilsQuery(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://35.230.92.92", graphname="Cora")
+        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
+        cls.conn.getToken(cls.conn.createSecret())
         cls.conn.gsql("drop query simple_query")
         cls.conn.gsql("drop query simple_query_something_special")
 
