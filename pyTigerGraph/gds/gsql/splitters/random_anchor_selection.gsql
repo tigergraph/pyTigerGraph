@@ -4,7 +4,7 @@ CREATE QUERY random_anchor_selection(
   SET<STRING> v_type,
   SET<STRING> tgt_v_type,
   STRING anchor_attr,
-  INT random_seed) {
+  INT random_seed) SYNTAX v2{
 
   SumAccum<FLOAT> @score;
   SetAccum<STRING> @@not_tgt_type;
