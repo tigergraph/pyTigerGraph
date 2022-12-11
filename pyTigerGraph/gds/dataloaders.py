@@ -786,7 +786,7 @@ class BaseLoader:
                 double_list = [RE_SPLITTER.split(x) for x in raw.split("\n") if x]
                 #if len(double_list) > 1: # strip off empty row at bottom if length greater than 1.
                 #    double_list = double_list[:-1]
-                data = pd.DataFrame(double_list)
+                data = pd.DataFrame(double_list).convert_dtypes()
                 data.columns = v_attributes
                 for v_attr in v_attributes:
                     if v_attr_types.get(v_attr, "") == "MAP":
@@ -803,7 +803,7 @@ class BaseLoader:
                                    v_in_feats.get(vtype, []) + \
                                    v_out_labels.get(vtype, []) + \
                                    v_extra_feats.get(vtype, [])
-                    vertices[vtype] = pd.DataFrame(v_file_dict[vtype], columns=v_attributes)
+                    vertices[vtype] = pd.DataFrame(v_file_dict[vtype], columns=v_attributes).convert_dtypes()
                     for v_attr in v_extra_feats.get(vtype, []):
                         if v_attr_types[vtype][v_attr] == "MAP":
                             # I am sorry that this is this ugly...
@@ -813,10 +813,8 @@ class BaseLoader:
             # String of edges in format source_vid,target_vid
             if not is_hetero:
                 e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
-                double_list = [RE_SPLITTER.split(x) for x in raw.split("\n")]
-                if len(double_list) > 1: # strip off empty row at bottom if length greater than 1.
-                    double_list = double_list[:-1]
-                data = pd.DataFrame(double_list, dtype="object")
+                double_list = [RE_SPLITTER.split(x) for x in raw.split("\n") if x]
+                data = pd.DataFrame(double_list).convert_dtypes()
                 data.columns = e_attributes
                 for e_attr in e_attributes:
                     if e_attr_types.get(e_attr, "") == "MAP":
@@ -833,7 +831,7 @@ class BaseLoader:
                                    e_in_feats.get(etype, []) + \
                                    e_out_labels.get(etype, [])  + \
                                    e_extra_feats.get(etype, [])
-                    edges[etype] = pd.DataFrame(e_file_dict[etype], columns=e_attributes)
+                    edges[etype] = pd.DataFrame(e_file_dict[etype], columns=e_attributes).convert_dtypes()
                     for e_attr in e_extra_feats.get(etype, []):
                         if e_attr_types[etype][e_attr] == "MAP":
                             # I am sorry that this is this ugly...
@@ -846,10 +844,8 @@ class BaseLoader:
             if not is_hetero:
                 v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
                 e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
-                double_list = [RE_SPLITTER.split(x) for x in v_file.split("\n")]
-                if len(double_list) > 1: # strip off empty row at bottom if length greater than 1.
-                    double_list = double_list[:-1]
-                vertices = pd.DataFrame(double_list, dtype="object")
+                double_list = [RE_SPLITTER.split(x) for x in v_file.split("\n") if x]
+                vertices = pd.DataFrame(double_list)
                 vertices.columns = v_attributes
                 for v_attr in v_extra_feats:
                     if v_attr_types[v_attr] == "MAP":
@@ -860,8 +856,13 @@ class BaseLoader:
                                           dtype="object")
                     vertices = vertices.merge(id_map, on="vid")
                     v_extra_feats.append("primary_id")
-                edges = pd.read_csv(io.StringIO(e_file), header=None, names=e_attributes, dtype="object")
-                data = (vertices, edges)
+                double_list = [RE_SPLITTER.split(x) for x in e_file.split("\n") if x]
+                edges = pd.DataFrame(double_list, dtype="object")
+                edges.columns = e_attributes
+                for e_attr in e_attributes:
+                    if e_attr_types.get(e_attr, "") == "MAP":
+                        # I am sorry that this is this ugly...
+                        edges[e_attr] = edges[e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
             else:
                 v_file = (RE_SPLITTER.split(line) for line in v_file.split('\n') if line)
                 v_file_dict = defaultdict(list)
