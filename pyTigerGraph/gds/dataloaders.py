@@ -784,9 +784,7 @@ class BaseLoader:
             if not is_hetero:
                 v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
                 double_list = [RE_SPLITTER.split(x) for x in raw.split("\n") if x]
-                #if len(double_list) > 1: # strip off empty row at bottom if length greater than 1.
-                #    double_list = double_list[:-1]
-                data = pd.DataFrame(double_list).convert_dtypes()
+                data = pd.DataFrame(double_list)
                 data.columns = v_attributes
                 for v_attr in v_attributes:
                     if v_attr_types.get(v_attr, "") == "MAP":
@@ -803,7 +801,7 @@ class BaseLoader:
                                    v_in_feats.get(vtype, []) + \
                                    v_out_labels.get(vtype, []) + \
                                    v_extra_feats.get(vtype, [])
-                    vertices[vtype] = pd.DataFrame(v_file_dict[vtype], columns=v_attributes).convert_dtypes()
+                    vertices[vtype] = pd.DataFrame(v_file_dict[vtype], columns=v_attributes)
                     for v_attr in v_extra_feats.get(vtype, []):
                         if v_attr_types[vtype][v_attr] == "MAP":
                             # I am sorry that this is this ugly...
@@ -814,7 +812,7 @@ class BaseLoader:
             if not is_hetero:
                 e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
                 double_list = [RE_SPLITTER.split(x) for x in raw.split("\n") if x]
-                data = pd.DataFrame(double_list).convert_dtypes()
+                data = pd.DataFrame(double_list, dtype="object")
                 data.columns = e_attributes
                 for e_attr in e_attributes:
                     if e_attr_types.get(e_attr, "") == "MAP":
@@ -831,7 +829,7 @@ class BaseLoader:
                                    e_in_feats.get(etype, []) + \
                                    e_out_labels.get(etype, [])  + \
                                    e_extra_feats.get(etype, [])
-                    edges[etype] = pd.DataFrame(e_file_dict[etype], columns=e_attributes).convert_dtypes()
+                    edges[etype] = pd.DataFrame(e_file_dict[etype], columns=e_attributes)
                     for e_attr in e_extra_feats.get(etype, []):
                         if e_attr_types[etype][e_attr] == "MAP":
                             # I am sorry that this is this ugly...
