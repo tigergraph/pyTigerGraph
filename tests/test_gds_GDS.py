@@ -1,14 +1,14 @@
 import unittest
 
-from pyTigerGraph import TigerGraphConnection
+from pyTigerGraphUnitTest import make_connection
+
 from pyTigerGraph.gds.utilities import is_query_installed
 
 
 class TestGDSDataLoaders(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
-        cls.conn.getToken(cls.conn.createSecret())
+        cls.conn = make_connection(graphname="Cora")
 
     def test_neighborLoader(self):
         loader = self.conn.gds.neighborLoader(

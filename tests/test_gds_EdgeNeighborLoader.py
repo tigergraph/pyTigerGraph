@@ -1,16 +1,16 @@
 import unittest
 
-from pyTigerGraph import TigerGraphConnection
+from pyTigerGraphUnitTest import make_connection
+from torch_geometric.data import Data as pygData
+
 from pyTigerGraph.gds.dataloaders import EdgeNeighborLoader
 from pyTigerGraph.gds.utilities import is_query_installed
-from torch_geometric.data import Data as pygData
 
 
 class TestGDSEdgeNeighborLoaderKafka(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
-        cls.conn.getToken(cls.conn.createSecret())
+        cls.conn = make_connection(graphname="Cora")
 
     def test_iterate_pyg(self):
         loader = EdgeNeighborLoader(
@@ -79,8 +79,7 @@ class TestGDSEdgeNeighborLoaderKafka(unittest.TestCase):
 class TestGDSEdgeNeighborLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
-        cls.conn.getToken(cls.conn.createSecret())
+        cls.conn = make_connection(graphname="Cora")
 
     def test_init(self):
         loader = EdgeNeighborLoader(

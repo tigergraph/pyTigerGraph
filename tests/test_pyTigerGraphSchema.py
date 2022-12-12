@@ -1,11 +1,13 @@
 import json
 import unittest
 
-from pyTigerGraphUnitTest import pyTigerGraphUnitTest
+from pyTigerGraphUnitTest import make_connection
 
 
-class test_pyTigerGraphSchema(pyTigerGraphUnitTest):
-    conn = None
+class test_pyTigerGraphSchema(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.conn = make_connection()
 
     def test_01_getUDTs(self):
         res = self.conn._getUDTs()

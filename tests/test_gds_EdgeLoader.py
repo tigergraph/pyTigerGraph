@@ -1,7 +1,8 @@
 import unittest
 
 from pandas import DataFrame
-from pyTigerGraph import TigerGraphConnection
+from pyTigerGraphUnitTest import make_connection
+
 from pyTigerGraph.gds.dataloaders import EdgeLoader
 from pyTigerGraph.gds.utilities import is_query_installed
 
@@ -9,8 +10,7 @@ from pyTigerGraph.gds.utilities import is_query_installed
 class TestGDSEdgeLoader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
-        cls.conn.getToken(cls.conn.createSecret())
+        cls.conn = make_connection(graphname="Cora")
 
     def test_init(self):
         loader = EdgeLoader(
@@ -133,8 +133,7 @@ class TestGDSEdgeLoader(unittest.TestCase):
 class TestGDSEdgeLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
-        cls.conn.getToken(cls.conn.createSecret())
+        cls.conn = make_connection(graphname="Cora")
 
     def test_init(self):
         loader = EdgeLoader(
@@ -202,8 +201,7 @@ class TestGDSEdgeLoaderREST(unittest.TestCase):
 class TestGDSHeteroEdgeLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="hetero")
-        cls.conn.getToken(cls.conn.createSecret())
+        cls.conn = make_connection(graphname="hetero")
 
     def test_init(self):
         loader = EdgeLoader(

@@ -2,12 +2,13 @@ import json
 import unittest
 
 import pandas
+from pyTigerGraphUnitTest import make_connection
 
-from pyTigerGraphUnitTest import pyTigerGraphUnitTest
 
-
-class test_pyTigerGraphEdge(pyTigerGraphUnitTest):
-    conn = None
+class test_pyTigerGraphEdge(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.conn = make_connection()
 
     def test_01_getEdgeTypes(self):
         res = sorted(self.conn.getEdgeTypes())

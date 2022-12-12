@@ -1,7 +1,8 @@
 import unittest
 
 from pandas import DataFrame
-from pyTigerGraph import TigerGraphConnection
+from pyTigerGraphUnitTest import make_connection
+
 from pyTigerGraph.gds.dataloaders import VertexLoader
 from pyTigerGraph.gds.utilities import is_query_installed
 
@@ -9,8 +10,7 @@ from pyTigerGraph.gds.utilities import is_query_installed
 class TestGDSVertexLoader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
-        cls.conn.getToken(cls.conn.createSecret())
+        cls.conn = make_connection(graphname="Cora")
 
     def test_init(self):
         loader = VertexLoader(
@@ -129,8 +129,7 @@ class TestGDSVertexLoader(unittest.TestCase):
 class TestGDSVertexLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
-        cls.conn.getToken(cls.conn.createSecret())
+        cls.conn = make_connection(graphname="Cora")
 
     def test_init(self):
         loader = VertexLoader(
@@ -187,8 +186,8 @@ class TestGDSVertexLoaderREST(unittest.TestCase):
         self.assertIn("test_mask", data.columns)
 
     def test_string_attr(self):
-        conn = TigerGraphConnection(host="http://tigergraph", graphname="Social")
-        conn.getToken(conn.createSecret())
+        conn = make_connection(graphname="Social")
+
         loader = VertexLoader(
             graph=conn,
             attributes=["age", "state"],
@@ -208,8 +207,7 @@ class TestGDSVertexLoaderREST(unittest.TestCase):
 class TestGDSHeteroVertexLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="hetero")
-        cls.conn.getToken(cls.conn.createSecret())
+        cls.conn = make_connection(graphname="hetero")
 
     def test_init(self):
         loader = VertexLoader(
