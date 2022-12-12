@@ -844,7 +844,7 @@ class BaseLoader:
                 e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
                 double_list = [RE_SPLITTER.split(x) for x in v_file.split("\n") if x]
                 file = "\n".join([",".join(x) for x in double_list])
-                vertices = pd.read_csv(io.StringIO(file), header=None, names=v_attributes)
+                vertices = pd.read_csv(io.StringIO(file), header=None, names=v_attributes, dtype="object")
                 for v_attr in v_extra_feats:
                     if v_attr_types[v_attr] == "MAP":
                         # I am sorry that this is this ugly...
@@ -856,7 +856,7 @@ class BaseLoader:
                     v_extra_feats.append("primary_id")
                 double_list = [RE_SPLITTER.split(x) for x in e_file.split("\n") if x]
                 file = "\n".join([",".join(x) for x in double_list])
-                edges = pd.read_csv(io.StringIO(file), header=None, names=e_attributes)
+                edges = pd.read_csv(io.StringIO(file), header=None, names=e_attributes, dtype="object")
                 for e_attr in e_attributes:
                     if e_attr_types.get(e_attr, "") == "MAP":
                         # I am sorry that this is this ugly...
