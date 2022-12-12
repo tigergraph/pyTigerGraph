@@ -164,7 +164,6 @@ class TestGDSBaseLoader(unittest.TestCase):
             io.StringIO(raw),
             header=None,
             names=["vid", "x", "y", "train_mask", "is_seed"],
-            dtype="object"
         )
         assert_frame_equal(data, truth)
         data = data_q.get()
@@ -197,7 +196,6 @@ class TestGDSBaseLoader(unittest.TestCase):
             io.StringIO(raw),
             header=None,
             names=["source", "target", "x", "time", "y", "is_train"],
-            dtype="object"
         )
         assert_frame_equal(data, truth)
         data = data_q.get()
@@ -707,8 +705,8 @@ class TestGDSBaseLoader(unittest.TestCase):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
-    suite.addTest(TestGDSBaseLoader("test_get_schema"))
-    suite.addTest(TestGDSBaseLoader("test_get_schema_no_primary_id_attr"))
+    #suite.addTest(TestGDSBaseLoader("test_get_schema"))
+    #suite.addTest(TestGDSBaseLoader("test_get_schema_no_primary_id_attr"))
     suite.addTest(TestGDSBaseLoader("test_validate_vertex_attributes"))
     suite.addTest(TestGDSBaseLoader("test_validate_edge_attributes"))
     suite.addTest(TestGDSBaseLoader("test_read_vertex"))
