@@ -254,7 +254,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         return ret
 
     def upsertVertexDataFrame(self, df: 'pd.DataFrame', vertexType: str, v_id: bool = None,
-            attributes: dict = "") -> int:
+            attributes: dict = None) -> int:
         """Upserts vertices from a Pandas DataFrame.
 
         Args:
