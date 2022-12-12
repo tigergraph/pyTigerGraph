@@ -5,6 +5,8 @@ from textwrap import dedent
 from unittest import runner
 from unittest.mock import patch
 
+from pyTigerGraphUnitTest import make_connection
+
 from pyTigerGraph import TigerGraphConnection
 from pyTigerGraph.gds.featurizer import Featurizer
 from pyTigerGraph.gds.utilities import is_query_installed, add_attribute
@@ -13,8 +15,7 @@ from pyTigerGraph.gds.utilities import is_query_installed, add_attribute
 class test_Featurizer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
-        conn.getToken(conn.createSecret())
+        conn = make_connection(graphname="Cora")
         cls.featurizer = Featurizer(conn, algo_version="3.7")
         cls.conn = conn
 

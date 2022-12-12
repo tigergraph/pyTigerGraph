@@ -5,19 +5,20 @@ from threading import Event
 
 import pandas as pd
 import torch
+from dgl import DGLGraph
 from pandas.testing import assert_frame_equal
-from pyTigerGraph import TigerGraphConnection
-from pyTigerGraph.gds.dataloaders import BaseLoader
+from pyTigerGraphUnitTest import make_connection
 from torch.testing import assert_close as assert_close_torch
 from torch_geometric.data import Data as pygData
 from torch_geometric.data import HeteroData as pygHeteroData
-from dgl import DGLGraph
+
+from pyTigerGraph.gds.dataloaders import BaseLoader
 
 
 class TestGDSBaseLoader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
+        cls.conn = make_connection(graphname="Cora")
         cls.loader = BaseLoader(cls.conn)
 
     def test_get_schema(self):

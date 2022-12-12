@@ -2,13 +2,15 @@ import json
 import unittest
 
 import pandas
+from pyTigerGraphUnitTest import make_connection
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
-from pyTigerGraphUnitTest import pyTigerGraphUnitTest
 
 
-class test_pyTigerGraphVertex(pyTigerGraphUnitTest):
-    conn = None
+class test_pyTigerGraphVertex(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.conn = make_connection()
 
     def test_01_getVertexTypes(self):
         res = sorted(self.conn.getVertexTypes())

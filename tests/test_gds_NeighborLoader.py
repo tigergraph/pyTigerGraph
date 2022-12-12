@@ -1,17 +1,17 @@
 import unittest
 
-from pyTigerGraph import TigerGraphConnection
-from pyTigerGraph.gds.dataloaders import NeighborLoader
-from pyTigerGraph.gds.utilities import is_query_installed
+from pyTigerGraphUnitTest import make_connection
 from torch_geometric.data import Data as pygData
 from torch_geometric.data import HeteroData as pygHeteroData
+
+from pyTigerGraph.gds.dataloaders import NeighborLoader
+from pyTigerGraph.gds.utilities import is_query_installed
 
 
 class TestGDSNeighborLoaderKafka(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
-        cls.conn.getToken(cls.conn.createSecret())
+        cls.conn = make_connection(graphname="Cora")
 
     def test_init(self):
         loader = NeighborLoader(
@@ -213,8 +213,7 @@ class TestGDSNeighborLoaderKafka(unittest.TestCase):
 class TestGDSNeighborLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
-        cls.conn.getToken(cls.conn.createSecret())
+        cls.conn = make_connection(graphname="Cora")
 
     def test_init(self):
         loader = NeighborLoader(
@@ -419,8 +418,7 @@ class TestGDSNeighborLoaderREST(unittest.TestCase):
 class TestGDSHeteroNeighborLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="hetero")
-        cls.conn.getToken(cls.conn.createSecret())
+        cls.conn = make_connection(graphname="hetero")
 
     def test_init(self):
         loader = NeighborLoader(

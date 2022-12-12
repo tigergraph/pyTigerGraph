@@ -1,15 +1,15 @@
 import os
 import unittest
 
-from pyTigerGraph import TigerGraphConnection
+from pyTigerGraphUnitTest import make_connection
+
 from pyTigerGraph.gds import utilities as utils
 
 
 class TestGDSUtilsQuery(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
-        cls.conn.getToken(cls.conn.createSecret())
+        cls.conn = make_connection(graphname="Cora")
         cls.conn.gsql("drop query simple_query")
         cls.conn.gsql("drop query simple_query_something_special")
 
