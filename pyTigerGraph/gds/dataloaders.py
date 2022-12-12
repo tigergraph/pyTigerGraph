@@ -900,7 +900,7 @@ class BaseLoader:
                             # I am sorry that this is this ugly...
                             edges[etype][e_attr] = edges[etype][e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
                 del e_file_dict, e_file
-                data = (vertices, edges)
+            data = (vertices, edges)
         else:
             raise NotImplementedError
         # Convert dataframes into PyG or DGL graphs
