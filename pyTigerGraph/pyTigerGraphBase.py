@@ -272,7 +272,10 @@ class pyTigerGraphBase(object):
             res = requests.request(method, url, headers=_headers, data=_data, params=params, verify=verify)
 
         if res.status_code != 200:
-            res.raise_for_status()
+            try:
+                res.raise_for_status()
+            except:
+                self._errorCheck(res)
         res = json.loads(res.text, strict=strictJson)
         if not skipCheck:
             self._errorCheck(res)
