@@ -7,6 +7,7 @@ You can define an instance of each data loader class through a link:https://docs
 Requires `querywriters` user permissions for full functionality. 
 """
 
+from ast import Call
 import hashlib
 import io
 import json
@@ -17,7 +18,11 @@ from collections import defaultdict
 from queue import Empty, Queue
 from threading import Event, Thread
 from time import sleep
-from typing import TYPE_CHECKING, Any, Iterator, NoReturn, Tuple, Union
+import pickle
+from typing import TYPE_CHECKING, Any, Iterator, NoReturn, Tuple, Union, Callable
+import re
+
+RE_SPLITTER = re.compile(r',(?![^\[]*\])')
 
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
@@ -34,9 +39,9 @@ import numpy as np
 import pandas as pd
 
 from ..pyTigerGraphException import TigerGraphException
-from .utilities import install_query_file, random_string
+from .utilities import install_query_file, random_string, add_attribute
 
-__all__ = ["VertexLoader", "EdgeLoader", "NeighborLoader", "GraphLoader", "EdgeNeighborLoader"]
+__all__ = ["VertexLoader", "EdgeLoader", "NeighborLoader", "GraphLoader", "EdgeNeighborLoader", "NodePieceLoader"]
 
 RANDOM_TOPIC_LEN = 8
 
@@ -568,7 +573,8 @@ class BaseLoader:
         e_attr_types: dict = {},
         add_self_loop: bool = False,
         reindex: bool = True,
-        is_hetero: bool = False
+        is_hetero: bool = False,
+        callback_fn: Callable = None,
     ) -> NoReturn:
         while not exit_event.is_set():
             raw = in_q.get()
@@ -591,7 +597,8 @@ class BaseLoader:
                 add_self_loop = add_self_loop,
                 reindex = reindex,
                 primary_id = {},
-                is_hetero = is_hetero
+                is_hetero = is_hetero,
+                callback_fn = callback_fn
             )
             out_q.put(data)
             in_q.task_done()
@@ -612,7 +619,8 @@ class BaseLoader:
         add_self_loop: bool = False,
         reindex: bool = True,
         primary_id: dict = {},
-        is_hetero: bool = False
+        is_hetero: bool = False,
+        callback_fn: Callable = None,
     ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, pd.DataFrame], "dgl.DGLGraph", "pyg.data.Data", "spektral.data.graph.Graph",
                dict, Tuple[dict, dict], "pyg.data.HeteroData"]:
         """Parse raw data into dataframes, DGL graphs, or PyG graphs.
@@ -711,7 +719,7 @@ class BaseLoader:
 
             for col in attr_names:
                 dtype = attr_types[col].lower()
-                if dtype.startswith("str"):
+                if dtype.startswith("str") or dtype.startswith("map"):
                     if mode == "dgl":
                         if vetype is None:
                             # Homogeneous graph, add column directly to extra data
@@ -751,7 +759,7 @@ class BaseLoader:
                             )
                         elif mode == "spektral":
                             data[col] = attr_df[col].str.split(expand=True).to_numpy().astype(dtype2)
-                elif dtype.startswith("set") or dtype.startswith("map") or dtype.startswith("date"):
+                elif dtype.startswith("set") or dtype.startswith("date"):
                     raise NotImplementedError(
                         "{} type not supported for extra features yet.".format(dtype))
                 elif dtype == "bool":
@@ -775,9 +783,15 @@ class BaseLoader:
             # String of vertices in format vid,v_in_feats,v_out_labels,v_extra_feats
             if not is_hetero:
                 v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
-                data = pd.read_csv(io.StringIO(raw), header=None, names=v_attributes)
+                double_list = [RE_SPLITTER.split(x) for x in raw.split("\n") if x]
+                file = "\n".join([",".join(x) for x in double_list])
+                data = pd.read_csv(io.StringIO(file), header=None, names=v_attributes)
+                for v_attr in v_attributes:
+                    if v_attr_types.get(v_attr, "") == "MAP":
+                        # I am sorry that this is this ugly...
+                        data[v_attr] = data[v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
             else:
-                v_file = (line.split(',') for line in raw.split('\n') if line)
+                v_file = (RE_SPLITTER.split(line) for line in raw.split('\n') if line)
                 v_file_dict = defaultdict(list)
                 for line in v_file:
                     v_file_dict[line[0]].append(line[1:])
@@ -788,14 +802,24 @@ class BaseLoader:
                                    v_out_labels.get(vtype, []) + \
                                    v_extra_feats.get(vtype, [])
                     vertices[vtype] = pd.DataFrame(v_file_dict[vtype], columns=v_attributes)
+                    for v_attr in v_extra_feats.get(vtype, []):
+                        if v_attr_types[vtype][v_attr] == "MAP":
+                            # I am sorry that this is this ugly...
+                            vertices[vtype][v_attr] = vertices[vtype][v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
                 data = vertices
         elif in_format == "edge":
             # String of edges in format source_vid,target_vid
             if not is_hetero:
                 e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
-                data = pd.read_csv(io.StringIO(raw), header=None, names=e_attributes)
+                double_list = [RE_SPLITTER.split(x) for x in raw.split("\n") if x]
+                file = "\n".join([",".join(x) for x in double_list])
+                data = pd.read_csv(io.StringIO(file), header=None, names=e_attributes)
+                for e_attr in e_attributes:
+                    if e_attr_types.get(e_attr, "") == "MAP":
+                        # I am sorry that this is this ugly...
+                        data[e_attr] = data[e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
             else:
-                e_file = (line.split(',') for line in raw.split('\n') if line)
+                e_file = (RE_SPLITTER.split(line) for line in raw.split('\n') if line)
                 e_file_dict = defaultdict(list)
                 for line in e_file:
                     e_file_dict[line[0]].append(line[1:])
@@ -806,6 +830,10 @@ class BaseLoader:
                                    e_out_labels.get(etype, [])  + \
                                    e_extra_feats.get(etype, [])
                     edges[etype] = pd.DataFrame(e_file_dict[etype], columns=e_attributes)
+                    for e_attr in e_extra_feats.get(etype, []):
+                        if e_attr_types[etype][e_attr] == "MAP":
+                            # I am sorry that this is this ugly...
+                            edges[etype][e_attr] = edges[etype][e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
                 del e_file_dict, e_file
                 data = edges
         elif in_format == "graph":
@@ -814,16 +842,27 @@ class BaseLoader:
             if not is_hetero:
                 v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
                 e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
-                vertices = pd.read_csv(io.StringIO(v_file), header=None, names=v_attributes, dtype="object")
+                double_list = [RE_SPLITTER.split(x) for x in v_file.split("\n") if x]
+                file = "\n".join([",".join(x) for x in double_list])
+                vertices = pd.read_csv(io.StringIO(file), header=None, names=v_attributes, dtype="object")
+                for v_attr in v_extra_feats:
+                    if v_attr_types[v_attr] == "MAP":
+                        # I am sorry that this is this ugly...
+                        vertices[v_attr] = vertices[v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
                 if primary_id:
                     id_map = pd.DataFrame({"vid": primary_id.keys(), "primary_id": primary_id.values()}, 
                                           dtype="object")
                     vertices = vertices.merge(id_map, on="vid")
                     v_extra_feats.append("primary_id")
-                edges = pd.read_csv(io.StringIO(e_file), header=None, names=e_attributes, dtype="object")
-                data = (vertices, edges)
+                double_list = [RE_SPLITTER.split(x) for x in e_file.split("\n") if x]
+                file = "\n".join([",".join(x) for x in double_list])
+                edges = pd.read_csv(io.StringIO(file), header=None, names=e_attributes, dtype="object")
+                for e_attr in e_attributes:
+                    if e_attr_types.get(e_attr, "") == "MAP":
+                        # I am sorry that this is this ugly...
+                        edges[e_attr] = edges[e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
             else:
-                v_file = (line.split(',') for line in v_file.split('\n') if line)
+                v_file = (RE_SPLITTER.split(line) for line in v_file.split('\n') if line)
                 v_file_dict = defaultdict(list)
                 for line in v_file:
                     v_file_dict[line[0]].append(line[1:])
@@ -834,6 +873,10 @@ class BaseLoader:
                                    v_out_labels.get(vtype, []) + \
                                    v_extra_feats.get(vtype, [])
                     vertices[vtype] = pd.DataFrame(v_file_dict[vtype], columns=v_attributes, dtype="object")
+                    for v_attr in v_extra_feats.get(vtype, []):
+                        if v_attr_types[vtype][v_attr] == "MAP":
+                            # I am sorry that this is this ugly...
+                            vertices[vtype][v_attr] = vertices[vtype][v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
                 if primary_id:
                     id_map = pd.DataFrame({"vid": primary_id.keys(), "primary_id": primary_id.values()},
                                           dtype="object")
@@ -841,7 +884,7 @@ class BaseLoader:
                         vertices[vtype] = vertices[vtype].merge(id_map, on="vid")
                         v_extra_feats[vtype].append("primary_id")
                 del v_file_dict, v_file
-                e_file = (line.split(',') for line in e_file.split('\n') if line)
+                e_file = (RE_SPLITTER.split(line) for line in e_file.split('\n') if line)
                 e_file_dict = defaultdict(list)
                 for line in e_file:
                     e_file_dict[line[0]].append(line[1:])
@@ -852,8 +895,12 @@ class BaseLoader:
                                    e_out_labels.get(etype, [])  + \
                                    e_extra_feats.get(etype, [])
                     edges[etype] = pd.DataFrame(e_file_dict[etype], columns=e_attributes, dtype="object")
+                    for e_attr in e_extra_feats.get(etype, []):
+                        if e_attr_types[etype][e_attr] == "MAP":
+                            # I am sorry that this is this ugly...
+                            edges[etype][e_attr] = edges[etype][e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
                 del e_file_dict, e_file
-                data = (vertices, edges)
+            data = (vertices, edges)
         else:
             raise NotImplementedError
         # Convert dataframes into PyG or DGL graphs
@@ -912,7 +959,10 @@ class BaseLoader:
                     "Spektral is not installed. Please install it to use spektral output."
                 )
         elif out_format.lower() == "dataframe":
-            return data
+            if callback_fn:
+                return callback_fn(data)
+            else:
+                return data
         else:
             raise NotImplementedError
         # Reformat as a graph.
@@ -1075,7 +1125,10 @@ class BaseLoader:
                     add_sep_attr(v_extra_feats[vtype], v_attr_types[vtype], vertices[vtype],
                                 data, is_hetero, mode, "vertex", vtype)   
             del vertices
-        return data
+        if callback_fn:
+            return callback_fn(data)
+        else:
+            return data
 
     def _start_request(self, out_tuple: bool, resp_type: str):
         # If using kafka
@@ -1460,7 +1513,7 @@ class NeighborLoader(BaseLoader):
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
-                        "stringify(s.{})".format(attr)
+                        "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                         for attr in v_attr_names
                     )
                     print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + ",1\\n")\n'.format(
@@ -1487,7 +1540,7 @@ class NeighborLoader(BaseLoader):
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
-                        "stringify(e.{})".format(attr)
+                        "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'
                         for attr in e_attr_names
                     )
                     print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")\n'.format(
@@ -1503,7 +1556,7 @@ class NeighborLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "stringify(s.{})".format(attr)
+                    "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                     for attr in v_attr_names
                 )
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + ",1\\n")'.format(
@@ -1524,7 +1577,7 @@ class NeighborLoader(BaseLoader):
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
-                    "stringify(e.{})".format(attr)
+                    "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                     for attr in e_attr_names
                 )
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")'.format(
@@ -1854,7 +1907,7 @@ class EdgeLoader(BaseLoader):
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
-                        "stringify(e.{})".format(attr)
+                        "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                         for attr in e_attr_names
                     )
                     print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")\n'.format(
@@ -1870,7 +1923,7 @@ class EdgeLoader(BaseLoader):
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
-                    "stringify(e.{})".format(attr)
+                    "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                     for attr in e_attr_names
                 )
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")'.format(
@@ -2124,7 +2177,7 @@ class VertexLoader(BaseLoader):
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
-                        "stringify(s.{})".format(attr)
+                        "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                         for attr in v_attr_names
                     )
                     print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + "\\n")\n'.format(
@@ -2140,7 +2193,7 @@ class VertexLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "stringify(s.{})".format(attr)
+                    "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                     for attr in v_attr_names
                 )
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + "\\n")'.format(
@@ -2429,7 +2482,7 @@ class GraphLoader(BaseLoader):
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
-                        "stringify(s.{})".format(attr)
+                        "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                         for attr in v_attr_names
                     )
                     print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + "\\n")\n'.format(
@@ -2450,7 +2503,7 @@ class GraphLoader(BaseLoader):
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
-                        "stringify(e.{})".format(attr)
+                        "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                         for attr in e_attr_names
                     )
                     print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")\n'.format(
@@ -2466,7 +2519,7 @@ class GraphLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "stringify(s.{})".format(attr)
+                    "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                     for attr in v_attr_names
                 )
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + "\\n")'.format(
@@ -2480,7 +2533,7 @@ class GraphLoader(BaseLoader):
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
-                    "stringify(e.{})".format(attr)
+                    "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                     for attr in e_attr_names
                 )
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")'.format(
@@ -2738,7 +2791,7 @@ class EdgeNeighborLoader(BaseLoader):
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = '+","+'.join(
-                        "stringify(s.{})".format(attr)
+                        "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                         for attr in v_attr_names
                     )
                     print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + "\\n")\n'.format(
@@ -2760,7 +2813,7 @@ class EdgeNeighborLoader(BaseLoader):
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = '+","+'.join(
-                        "stringify(e.{})".format(attr)
+                        "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                         for attr in e_attr_names
                     )
                     print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + ",1\\n")\n'.format(
@@ -2782,7 +2835,7 @@ class EdgeNeighborLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = '+","+'.join(
-                    "stringify(s.{})".format(attr)
+                    "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                     for attr in v_attr_names
                 )
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + "\\n")'.format(
@@ -2797,7 +2850,7 @@ class EdgeNeighborLoader(BaseLoader):
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = '+","+'.join(
-                    "stringify(e.{})".format(attr)
+                   "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                     for attr in e_attr_names
                 )
                 print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + ",1\\n")'.format(
@@ -2873,3 +2926,443 @@ class EdgeNeighborLoader(BaseLoader):
         The `data` property stores all data if all data is loaded in a single batch.
         If there are multiple batches of data, the `data` property returns the instance itself"""
         return super().data
+
+
+class NodePieceLoader(BaseLoader):
+    """NodePieceLoader.
+
+    A data loader that performs NodePiece sampling from the graph.
+    You can declare a `NodePieceLoader` instance with the factory function `nodePieceLoader()`.
+
+    A NodePiece loader is an iterable.
+    When you loop through a loader instance, it loads one batch of data from the graph to which you established a connection.
+
+    In every iteration, the NodePiece loader selects a group of seed vertices of size batch size. 
+    For each vertex in the batch, it will produce a set of the k closest "anchor" vertices in the graph,
+    as well as up to j edge types. For more information on the NodePiece data loading scheme, the
+    https://towardsdatascience.com/nodepiece-tokenizing-knowledge-graphs-6dd2b91847aa[blog article] and
+    https://arxiv.org/abs/2106.12144[paper] are good places to start.
+
+    You can iterate on the instance until every vertex has been picked as seed.
+
+    Examples:
+
+    The following example iterates over an NodePiece loader instance.
+    [.wrap,python]
+    ----
+    for i, batch in enumerate(node_piece_loader):
+        print("----Batch {}----".format(i))
+        print(batch)
+    ----
+    """
+    def __init__(
+        self,
+        graph: "TigerGraphConnection",
+        v_feats: Union[list, dict] = None,
+        target_vertex_types: Union[str, list] = None,
+        compute_anchors: bool = False,
+        use_cache: bool = False,
+        clear_cache: bool = False,
+        anchor_method: str = "random",
+        anchor_cache_attr: str = "anchors",
+        special_tokens: list = ["MASK", "CLS", "SEP"],
+        max_distance: int = 5,
+        max_anchors: int = 10,
+        max_relational_context: int = 10,
+        anchor_percentage: float = 0.01,
+        anchor_attribute: str = "is_anchor",
+        tokenMap: Union[dict, str] = None,
+        e_types: list = None,
+        global_schema_change: bool = False,
+        batch_size: int = None,
+        num_batches: int = 1,
+        shuffle: bool = False,
+        filter_by: str = None,
+        output_format: str = "dataframe",
+        loader_id: str = None,
+        buffer_size: int = 4,
+        reverse_edge: bool = False,
+        timeout: int = 300000,
+        kafka_address: str = None,
+        kafka_max_msg_size: int = 104857600,
+        kafka_num_partitions: int = 1,
+        kafka_replica_factor: int = 1,
+        kafka_retention_ms: int = 60000,
+        kafka_auto_del_topic: bool = True,
+        kafka_address_consumer: str = None,
+        kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
+        kafka_skip_produce: bool = False,
+        kafka_auto_offset_reset: str = "earliest",
+        kafka_del_topic_per_epoch: bool = False,
+        kafka_add_topic_per_epoch: bool = False
+    ) -> None:
+        """
+        NO DOC
+        """
+        super().__init__(
+            graph,
+            loader_id,
+            num_batches,
+            buffer_size,
+            output_format,
+            reverse_edge,
+            timeout,
+            kafka_address,
+            kafka_max_msg_size,
+            kafka_num_partitions,
+            kafka_replica_factor,
+            kafka_retention_ms,
+            kafka_auto_del_topic,
+            kafka_address_consumer,
+            kafka_address_producer,
+            kafka_security_protocol,
+            kafka_sasl_mechanism,
+            kafka_sasl_plain_username,
+            kafka_sasl_plain_password,
+            kafka_producer_ca_location,
+            kafka_consumer_ca_location,
+            kafka_skip_produce,
+            kafka_auto_offset_reset,
+            kafka_del_topic_per_epoch,
+            kafka_add_topic_per_epoch
+        )
+        # Resolve attributes
+        is_hetero = isinstance(v_feats, dict)
+        self.is_hetero = is_hetero
+        self.anchor_cache_attr = anchor_cache_attr
+        self.attributes = self._validate_vertex_attributes(v_feats, is_hetero)
+        self._anchor_perc = anchor_percentage
+        if is_hetero:
+            self._vtypes = list(self.attributes.keys())
+            if not self._vtypes:
+                self._vtypes = list(self._v_schema.keys())
+        else:
+            self._vtypes = list(self._v_schema.keys())
+        self._vtypes = sorted(self._vtypes)
+        # Initialize parameters for the query
+        if isinstance(target_vertex_types, str):
+            self._seed_types = [target_vertex_types]
+            self._target_v_types = target_vertex_types
+        elif isinstance(target_vertex_types, list):
+            self._seed_types = target_vertex_types
+            self._target_v_types = target_vertex_types
+        else:
+            self._seed_types = self._vtypes
+            self._target_v_types = self._vtypes
+        if batch_size:
+            if not filter_by:
+                num_vertices = sum(self._graph.getVertexCount(self._seed_types).values())
+            elif isinstance(filter_by, str):
+                num_vertices = sum(
+                    self._graph.getVertexCount(k, where="{}!=0".format(filter_by))
+                    for k in self._seed_types
+                )
+            elif isinstance(filter_by, dict):
+                self._seed_types = list(filter_by.keys())
+                num_vertices = sum(
+                    self._graph.getVertexCount(k, where="{}!=0".format(filter_by[k]))
+                    for k in self._seed_types
+                )
+            else:
+                raise ValueError("filter_by should be None, attribute name, or dict of {type name: attribute name}.")
+            self.num_batches = math.ceil(num_vertices / batch_size)
+        else:
+            # Otherwise, take the number of batches as is.
+            self.num_batches = num_batches
+        self.filter_by = filter_by
+        self._payload["num_batches"] = self.num_batches
+        if filter_by:
+            self._payload["filter_by"] = filter_by
+        self._payload["shuffle"] = shuffle
+        self._payload["v_types"] = self._vtypes
+        self._payload["seed_types"] = self._seed_types
+        self._payload["max_distance"] = max_distance
+        self._payload["max_anchors"] = max_anchors
+        self._payload["max_rel_context"] = max_relational_context
+        self._payload["anchor_attr"] = anchor_attribute
+        self._payload["use_cache"] = use_cache
+        self._payload["clear_cache"] = clear_cache
+        if e_types:
+            self._payload["e_types"] = e_types
+        else:
+            self._payload["e_types"] = list(self._e_schema.keys())
+            e_types = list(self._e_schema.keys())
+        # Compute Anchors
+        if compute_anchors:
+            to_change = []
+            for v_type in self._vtypes:
+                if anchor_attribute not in self._v_schema[v_type].keys():
+                    to_change.append(v_type)
+            if to_change != []:
+                print("Adding anchor attribute")
+                ret = add_attribute(self._graph, "VERTEX", "BOOL", anchor_attribute, to_change, global_change=global_schema_change)
+                print(ret)
+            self._compute_anchors(anchor_attribute, anchor_method)
+        if anchor_cache_attr:
+            to_change = []
+            for v_type in self._vtypes:
+                if anchor_cache_attr not in self._v_schema[v_type].keys():
+                    # add anchor cache attribute
+                    to_change.append(v_type)
+            if to_change != []:
+                print("Adding anchor cache attribute")
+                ret = add_attribute(self._graph, "VERTEX", "MAP<INT, INT>", anchor_cache_attr, to_change, global_change=global_schema_change)
+                print(ret)
+        # Install query
+        self.query_name = self._install_query()
+
+        if self.is_hetero:
+            for key in self.attributes.keys():
+                self.attributes[key] = ["relational_context", "closest_anchors"] + self.attributes[key]
+        else:
+            self.attributes = ["relational_context", "closest_anchors"] + self.attributes
+
+        # Get number of tokens for embedding table
+        if tokenMap:
+            if isinstance(tokenMap, dict):
+                self.idToIdx = tokenMap
+            elif isinstance(tokenMap, str):
+                self.idToIdx = pickle.load(open(tokenMap, "rb"))
+        else:
+            self.idToIdx = {}
+            self.curIdx = 0
+            self.specialTokens = ["PAD"] + special_tokens
+            self.baseTokens = self.specialTokens + ["dist_"+str(i) for i in range(self._payload["max_distance"]+1)] + e_types
+            query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "dataloaders",
+                "get_anchors.gsql",
+            )
+            params = {"anchor_attr": anchor_attribute, "v_types": self._vtypes}
+            install_query_file(self._graph, query_path)
+            ancs = self._graph.runInstalledQuery("get_anchors", params=params)[0]["@@vids"]
+            print("Number of Anchors:", len(ancs))
+            for tok in self.baseTokens + ancs:
+                self.idToIdx[str(tok)] = self.curIdx
+                self.curIdx += 1
+            
+        self.num_tokens = len(self.idToIdx.keys())
+
+    def saveTokens(self, filename) -> None:
+        pickle.dump(self.idToIdx, open(filename, "wb"))
+
+    def _compute_anchors(self, anchor_attr, method="random") -> str:
+        if method.lower() == "random":
+            query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "splitters",
+                "random_anchor_selection.gsql",
+            )
+            install_query_file(self._graph, query_path)
+            params = {
+                "percentage": self._anchor_perc,
+                "filter_by": self.filter_by,
+                "v_type": self._vtypes,
+                "tgt_v_type": self._target_v_types,
+                "anchor_attr": anchor_attr,
+                "random_seed": 42
+            }
+            self._graph.runInstalledQuery("random_anchor_selection", params=params)
+        else:
+            raise NotImplementedError("{} anchor selection method is not supported. Please try 'random' anchor selection method".format(method))
+
+    def _install_query(self) -> str:
+        # Install the right GSQL query for the loader.
+        query_suffix = []
+        query_replace = {}
+
+        if isinstance(self.attributes, dict):
+            # Multiple vertex types
+            print_query = ""
+            for idx, vtype in enumerate(self._seed_types):
+                v_attr_names = self.attributes.get(vtype, [])
+                query_suffix.extend(v_attr_names)
+                v_attr_types = self._v_schema[vtype]
+                if v_attr_names:
+                    print_attr = '+","+'.join(
+                        "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
+                        for attr in v_attr_names
+                    )
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + s.@rel_context_set + "," + s.@ancs + "," + {} + "\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", vtype, print_attr)
+                else:
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + s.@rel_context_set + "," + s.@ancs + "\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", vtype)
+            print_query += "END"
+            query_replace["{VERTEXATTRS}"] = print_query
+            query_suffix = list(dict.fromkeys(query_suffix))
+        else:
+            # Ignore vertex types
+            v_attr_names = self.attributes
+            query_suffix.extend(v_attr_names)
+            v_attr_types = next(iter(self._v_schema.values()))
+            if v_attr_names:
+                print_attr = '+","+'.join(
+                   "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
+                    for attr in v_attr_names
+                )
+                print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + s.@rel_context_set + "," + s.@ancs + "," + {} + "\\n")'.format(
+                    print_attr
+                )
+            else:
+                print_query = '@@v_batch += (int_to_string(getvid(s)) + "\\n")'
+            query_replace["{VERTEXATTRS}"] = print_query
+        query_replace["{QUERYSUFFIX}"] = "_".join(query_suffix)
+        query_replace["{ANCHOR_CACHE_ATTRIBUTE}"] = self.anchor_cache_attr
+        # Install query
+        query_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "gsql",
+            "dataloaders",
+            "nodepiece_loader.gsql",
+        )
+        return install_query_file(self._graph, query_path, query_replace)
+
+    def nodepiece_process(self, data):
+        def processRelContext(row):
+            context = row.split(" ")[:-1]
+            context = [self.idToIdx[str(x)] for x in context][:self._payload["max_rel_context"]]
+            context = context + [self.idToIdx["PAD"] for x in range(len(context), self._payload["max_rel_context"])]
+            return context
+        def processAnchors(row):
+            ancs = row.split(" ")[:-1]
+            dists = []
+            toks = []
+            for anc in ancs:
+                tmp = anc.split(":")
+                dists.append(self.idToIdx["dist_"+str(tmp[1])])
+                toks.append(self.idToIdx[str(tmp[0])])
+            dists += [self.idToIdx["PAD"] for x in range(len(dists), self._payload["max_anchors"])]
+            toks += [self.idToIdx["PAD"] for x in range(len(toks), self._payload["max_anchors"])]
+            return {"ancs":toks, "dists": dists}
+        if self.is_hetero:
+            for v_type in data.keys():
+                data[v_type]["relational_context"] = data[v_type]["relational_context"].apply(lambda x: processRelContext(x))
+                ancs = data[v_type]["closest_anchors"].apply(lambda x: processAnchors(x))
+                ancs = pd.DataFrame(list(ancs))
+                data[v_type].drop(columns="closest_anchors", inplace=True)
+                data[v_type]["anchors"] = ancs["ancs"]
+                data[v_type]["anchor_distances"] = ancs["dists"]
+        else:
+            data["relational_context"] = data["relational_context"].apply(lambda x: processRelContext(x))
+            ancs = data["closest_anchors"].apply(lambda x: processAnchors(x))
+            ancs = pd.DataFrame(list(ancs))
+            data.drop(columns="closest_anchors", inplace=True)
+            data["anchors"] = ancs["ancs"]
+            data["anchor_distances"] = ancs["dists"]
+        return data
+
+    def _start(self) -> None:
+        # Create task and result queues
+        self._read_task_q = Queue(self.buffer_size * 2)
+        self._data_q = Queue(self.buffer_size)
+        self._exit_event = Event()
+
+        self._start_request(False, "vertex")
+            
+        # Start reading thread.
+        if not self.is_hetero:
+            v_attr_types = next(iter(self._v_schema.values()))
+        else:
+            v_attr_types = self._v_schema
+        self._reader = Thread(
+            target=self._read_data,
+            args=(
+                self._exit_event,
+                self._read_task_q,
+                self._data_q,
+                "vertex",
+                self.output_format,
+                self.attributes,
+                {} if self.is_hetero else [],
+                {} if self.is_hetero else [],
+                v_attr_types,
+                [],
+                [],
+                [],
+                {},
+                False,
+                False,
+                self.is_hetero,
+                self.nodepiece_process
+            ),
+        )
+        self._reader.start()
+
+    @property
+    def data(self) -> Any:
+        """A property of the instance.
+        The `data` property stores all data if all data is loaded in a single batch.
+        If there are multiple batches of data, the `data` property returns the instance itself."""
+        return super().data
+
+    def fetch(self, vertices: list) -> None:
+        if not vertices:
+            return None
+        if not isinstance(vertices, list):
+            raise ValueError(
+                'Input to fetch() should be in format: [{"primary_id": ..., "type": ...}, ...]'
+            )
+        for i in vertices:
+            if not (isinstance(i, dict) and ("primary_id" in i) and ("type" in i)):
+                raise ValueError(
+                    'Input to fetch() should be in format: [{"primary_id": ..., "type": ...}, ...]'
+                )
+        _payload = {}
+        _payload["v_types"] = self._vtypes
+        _payload["max_distance"] = self._payload["max_distance"]
+        _payload["max_anchors"] = self._payload["max_anchors"]
+        _payload["max_rel_context"] = self._payload["max_rel_context"]
+        _payload["anchor_attr"] = self._payload["anchor_attr"]
+        _payload["use_cache"] = self._payload["use_cache"]
+        _payload["clear_cache"] = self._payload["clear_cache"]
+        _payload["e_types"] = self._payload["e_types"]
+        _payload["seed_types"] = []
+        _payload["input_vertices"] = []
+        for i in vertices:
+            _payload["input_vertices"].append({"id": i["primary_id"], "type": i["type"]})
+        resp = self._graph.runInstalledQuery(
+            self.query_name, params=_payload, timeout=self.timeout, usePost=True
+        )
+        attributes = self.attributes
+        if not self.is_hetero:
+            v_attr_types = next(iter(self._v_schema.values()))
+        else:
+            v_attr_types = self._v_schema
+        if self.is_hetero:
+            data = self._parse_data(resp[0]["vertex_batch"], 
+                                    v_in_feats=attributes, 
+                                    v_out_labels = {},
+                                    v_extra_feats = {},
+                                    v_attr_types=v_attr_types,
+                                    reindex=False, 
+                                    is_hetero=self.is_hetero, 
+                                    primary_id=resp[0]["pids"],
+                                    callback_fn=self.nodepiece_process)
+        else:
+            data = self._parse_data(resp[0]["vertex_batch"], 
+                                    v_in_feats=attributes, 
+                                    v_out_labels = [],
+                                    v_extra_feats = [],
+                                    v_attr_types=v_attr_types,
+                                    reindex=False, 
+                                    is_hetero=self.is_hetero, 
+                                    primary_id=resp[0]["pids"],
+                                    callback_fn=self.nodepiece_process)
+        return data
+
+    def precompute(self) -> None:
+        _payload = dict(self._payload)
+        _payload["precompute"] = True
+        resp = self._graph.runInstalledQuery(
+            self.query_name, params=_payload, timeout=self.timeout, usePost=True
+        )
+       

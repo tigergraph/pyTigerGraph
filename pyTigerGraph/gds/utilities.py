@@ -163,3 +163,72 @@ def install_query_file(
     else:
         print(status)
     return query_name
+
+
+def add_attribute(conn: "TigerGraphConnection", schema_type: str, attr_type: str, attr_name: str=None, schema_name:list = None, global_change:bool = False):
+    '''
+    If the current attribute is not already added to the schema, it will create the schema job to do that.
+    Check whether to add the attribute to vertex(vertices) or edge(s).
+
+    Args:
+        schema_type (str): 
+            Vertex or edge
+        attr_type (str): 
+            Type of attribute which can be INT, DOUBLE, FLOAT, BOOL, or LIST
+        attr_name (str): 
+            An attribute name that needs to be added to the vertex/edge
+        schema_name (List[str]):
+            List of Vertices/Edges that need the `attr_name` added to them.
+        global_change (bool):
+            False by default. Set to true if you want to run `GLOBAL SCHEMA_CHANGE JOB`.
+            See https://docs.tigergraph.com/gsql-ref/current/ddl-and-loading/modifying-a-graph-schema#_global_vs_local_schema_changes.
+            If the schema change should be global or local.
+    '''
+    # Check whether to add the attribute to vertex(vertices) or edge(s)
+    v_type = False
+    if schema_type.upper() == "VERTEX":
+        target = conn.getVertexTypes(force=True)
+        v_type = True
+    elif schema_type.upper() == "EDGE":
+        target = conn.getEdgeTypes(force=True)
+    else:
+        raise Exception('schema_type has to be VERTEX or EDGE')
+    # If attribute should be added to a specific vertex/edge name
+    if schema_name != None:
+        target.clear()
+        target = schema_name
+    # For every vertex or edge type
+    tasks = []
+    for t in target:
+        attributes = []
+        if v_type:
+            meta_data =  conn.getVertexType(t, force=True)
+        else:
+            meta_data = conn.getEdgeType(t, force=True)
+        for i in range(len(meta_data['Attributes'])):
+            attributes.append(meta_data['Attributes'][i]['AttributeName'])
+        # If attribute is not in list of vertex attributes, do the schema change to add it
+        if attr_name != None and attr_name  not in attributes:
+            tasks.append("ALTER {} {} ADD ATTRIBUTE ({} {});\n".format(
+                    schema_type, t, attr_name, attr_type))
+    # If attribute already exists for schema type t, nothing to do
+    if not tasks:
+        return "Attribute already exists"
+    # Drop all jobs on the graph
+    # self.conn.gsql("USE GRAPH {}\n".format(self.conn.graphname) + "DROP JOB *")
+    # Create schema change job 
+    job_name = "add_{}_attr_{}".format(schema_type,random_string(6)) 
+    if not(global_change):
+        job = "USE GRAPH {}\n".format(conn.graphname) + "CREATE SCHEMA_CHANGE JOB {} {{\n".format(
+            job_name) + ''.join(tasks) + "}}\nRUN SCHEMA_CHANGE JOB {}".format(job_name)
+    else:
+        job = "USE GRAPH {}\n".format(conn.graphname) + "CREATE GLOBAL SCHEMA_CHANGE JOB {} {{\n".format(
+            job_name) + ''.join(tasks) + "}}\nRUN GLOBAL SCHEMA_CHANGE JOB {}".format(job_name)
+    # Submit the job
+    resp = conn.gsql(job)
+    status = resp.splitlines()[-1]
+    if "Failed" in status:
+        raise ConnectionError(status)
+    else:
+        print(status)
+    return 'Schema change succeeded.'

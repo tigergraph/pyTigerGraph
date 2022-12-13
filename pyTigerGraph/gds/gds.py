@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
 
 from .dataloaders import (EdgeLoader, EdgeNeighborLoader, GraphLoader,
-                          NeighborLoader, VertexLoader)
+                          NeighborLoader, VertexLoader, NodePieceLoader)
 from .featurizer import Featurizer
 from .splitters import RandomEdgeSplitter, RandomVertexSplitter
 # from ..pyTigerGraph import pyTigerGraphGSQL
@@ -818,6 +818,143 @@ class GDS:
             return EdgeNeighborLoader(**params)
         else:
             return EdgeNeighborLoader(**params)
+
+    def nodepieceLoader(self, 
+                        v_feats: Union[list, dict] = None,
+                        target_vertex_types: Union[str, list] = None,
+                        compute_anchors: bool = False,
+                        use_cache: bool = False,
+                        clear_cache: bool = False,
+                        anchor_method: str = "random",
+                        anchor_cache_attr: str = "anchors",
+                        max_distance: int = 5,
+                        max_anchors: int = 10,
+                        max_relational_context: int = 10,
+                        anchor_percentage: float = 0.01,
+                        anchor_attribute: str = "is_anchor",
+                        e_types: list = None,
+                        global_schema_change: bool = False,
+                        tokenMap: Union[dict, str] = None,
+                        batch_size: int = None,
+                        num_batches: int = 1,
+                        shuffle: bool = False,
+                        filter_by: str = None,
+                        loader_id: str = None,
+                        buffer_size: int = 4,
+                        reverse_edge: bool = False,
+                        timeout: int = 300000) -> NodePieceLoader:
+        """Returns a `NodePieceLoader` instance.
+        A `NodePieceLoader` instance loads all edges from the graph in batches, along with the vertices that are connected with each edge.
+
+        The NodePiece algorithm borrows the idea of "tokenization" from Natural Language Processing. The dataloader offers the functionality
+        to "tokenize" the graph in the form of randomly selecting "anchor vertices". If you are running NodePiece for the first time,
+        anchors have to be created.
+
+        NOTE: The first time you initialize the loader on a graph, it must first install the corresponding query to the database. 
+        However, the query installation only needs to be done once, so you will not need to wait when you initialize the loader on the same graph again.
+
+        There are two ways to use the data loader:
+
+        * It can be used as an iterable, which means you can loop through
+          it to get every batch of data. If you load all data at once (`num_batches=1`),
+          there will be only one batch (of all the data) in the iterator.
+        * You can access the `data` property of the class directly. If there is
+          only one batch of data to load, it will give you the batch directly instead
+          of an iterator, which might make more sense in that case. If there are
+          multiple batches of data to load, it will return the loader itself.
+
+        Args:
+            v_feats (list or dict, optional):
+                A list or dictionary of vertex features to load. If None, all vertex types will be used, but
+                no vertex attributes will be loaded. If not None, only vertex types specified will be used.
+            target_vertex_types (str or list, optional):
+                A list or string of vertex types that are going to be used for training the model.
+                If None, the vertex types specified in v_feats will be used.
+            compute_anchors (bool, optional):
+                False by default. If set to True, the dataloader will compute anchors and store them in the attribute
+                defined by `anchor_attribute`. 
+            use_cache (bool, optional):
+                False by default. If True, will cache the result of the anchor search process onto the attribute
+                defined by `anchor_cache_attr`. Must define `anchor_cache_attr` if True.
+            clear_cache (bool, optional):
+                False by default. If True, the cache of the anchor search process will be cleared for the attribute
+                defined by `anchor_cache_attr`.
+            anchor_method (str, optional):
+                "random" by default. Currently, "random" anchor selection strategy is the only strategy supported.
+            anchor_cache_attr (str, optional):
+                Defines the attribute name to store the cached anchor search results in. By default, the attribute is "anchors".
+            max_distance (int, optional):
+                The max number of hops away in the graph to search for anchors. Defaults to 5.
+            max_anchors (int, optional):
+                The max number of anchors used to generate representation of target vertex. Defaults to 10.
+            max_relational_context (int, optional):
+                The max number of edge types to collect to generate representation of target vertex. Defaults to 10.
+            anchor_percentage (float, optional):
+                The percentage of vertices to use as anchors. Defaults to 0.01 (1%).
+            anchor_attribute (str, optional):
+                Attribute to store if a vertex is an anchor. Defaults to "is_anchor".
+            e_types (list, optional):
+                List of edge types to use in traversing the graph. Defaults to all edge types.
+            global_schema_change (bool, optional):
+                By default False. Must be True if altering the schema of global namespace graphs.
+            tokenMap (dict or str, optional):
+                Optional, for use when wanting to transfer the token -> index map from one NodePiece dataloader instance to another.
+                Takes in a dictonary of token -> index, or a filepath to a pickle file containing the map. This map can be produced using the
+                `saveTokens()` method of the NodePiece loader.
+            batch_size (int, optional):
+                The batch size to iterate through. Defaults to None.
+            num_batches (int, optional):
+                The number of batches to produce. Defaults to 1.
+            shuffle (bool, optional):
+                Whether to shuffle the vertices before loading data.
+                Defaults to False.
+            filter_by (str, optional):
+                A boolean attribute used to indicate which vertices
+                can be included as seeds. Defaults to None.
+            loader_id (str, optional):
+                An identifier of the loader which can be any string. It is
+                also used as the Kafka topic name. If `None`, a random string will be generated
+                for it. Defaults to None.
+            buffer_size (int, optional):
+                Number of data batches to prefetch and store in memory. Defaults to 4.
+            reverse_edge (bool, optional):
+                Whether to traverse along reverse edge types. Defaults to False.
+            timeout (int, optional):
+                Timeout value for GSQL queries, in ms. Defaults to 300000.
+        See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_graphloader.ipynb[the ML Workbench tutorial notebook for graph loaders]
+         for examples.
+        """
+        params = {
+            "graph": self.conn,
+            "v_feats": v_feats,
+            "use_cache": use_cache,
+            "clear_cache": clear_cache,
+            "target_vertex_types": target_vertex_types,
+            "compute_anchors": compute_anchors,
+            "anchor_method": anchor_method,
+            "anchor_cache_attr": anchor_cache_attr,
+            "max_distance": max_distance,
+            "max_anchors": max_anchors,
+            "max_relational_context": max_relational_context, 
+            "anchor_percentage": anchor_percentage,
+            "anchor_attribute": anchor_attribute,
+            "e_types": e_types,
+            "tokenMap": tokenMap,
+            "global_schema_change": global_schema_change,
+            "batch_size": batch_size,
+            "num_batches": num_batches,
+            "shuffle": shuffle,
+            "filter_by": filter_by,
+            "loader_id": loader_id,
+            "buffer_size": buffer_size,
+            "reverse_edge": reverse_edge,
+            "timeout": timeout
+        }
+        if self.kafkaConfig:
+            params.update(self.kafkaConfig)
+            return NodePieceLoader(**params)
+        else:
+            return NodePieceLoader(**params)
 
     def featurizer(self) -> Featurizer:
         """Get a featurizer.

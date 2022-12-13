@@ -705,8 +705,8 @@ class TestGDSBaseLoader(unittest.TestCase):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
-    suite.addTest(TestGDSBaseLoader("test_get_schema"))
-    suite.addTest(TestGDSBaseLoader("test_get_schema_no_primary_id_attr"))
+    #suite.addTest(TestGDSBaseLoader("test_get_schema"))
+    #suite.addTest(TestGDSBaseLoader("test_get_schema_no_primary_id_attr"))
     suite.addTest(TestGDSBaseLoader("test_validate_vertex_attributes"))
     suite.addTest(TestGDSBaseLoader("test_validate_edge_attributes"))
     suite.addTest(TestGDSBaseLoader("test_read_vertex"))

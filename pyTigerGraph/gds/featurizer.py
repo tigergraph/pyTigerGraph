@@ -15,7 +15,7 @@ from os.path import join as pjoin
 
 import requests
 
-from .utilities import is_query_installed, random_string
+from .utilities import is_query_installed, random_string, add_attribute
 
 
 class AsyncFeaturizerResult():
@@ -249,12 +249,7 @@ class Featurizer:
         if query_name == "tg_fastRP" and int(self.major_ver) <= 3 and int(self.minor_ver) <= 7:
             # Drop all jobs on the graph
             self.conn.gsql("USE GRAPH {}\n".format(self.conn.graphname) + "drop job *")
-            res = self._add_attribute(
-                schema_type="VERTEX",
-                attr_type=" LIST<DOUBLE>",
-                attr_name="embedding",
-                global_change=global_change,
-            )
+            res = add_attribute(self.conn, schema_type="VERTEX",attr_type=" LIST<DOUBLE>",attr_name="embedding",global_change=global_change)
         # TODO: Check if Distributed query is needed.
         query = (
             "USE GRAPH {}\n".format(self.conn.graphname)
@@ -303,6 +298,7 @@ class Featurizer:
         self.query_name = query_name
         return self.query_name
 
+
     def _get_algo_details(self, algo_dict: dict) -> dict:
         def get_details(d: dict, paths: dict, types: dict, sch_obj: dict) -> None:
             if "name" in d.keys():
@@ -327,93 +323,6 @@ class Featurizer:
         get_details(algo_dict, algo_paths, algo_result_types, sch_types)
         return algo_paths, algo_result_types, sch_types
 
-    def _add_attribute(
-        self,
-        schema_type: str,
-        attr_type: str,
-        attr_name: str,
-        schema_name: List[str] = None,
-        global_change: bool = False,
-    ):
-        """
-        If the current attribute is not already added to the schema, it will create the schema job to do that.
-        Check whether to add the attribute to vertex(vertices) or edge(s).
-
-        Args:
-            schema_type (str):
-                Vertex or edge
-            attr_type (str):
-                Type of attribute which can be INT, DOUBLE,FLOAT,BOOL, or LIST
-            attr_name (str):
-                An attribute name that needs to be added to the vertex/edge
-            schema_name (List[str]):
-                List of Vertices/Edges that need the `attr_name` added to them.
-            global_change (bool):
-                False by default. Set to true if you want to run `GLOBAL SCHEMA_CHANGE JOB`.
-                See https://docs.tigergraph.com/gsql-ref/current/ddl-and-loading/modifying-a-graph-schema#_global_vs_local_schema_changes.
-                If the schema change should be global or local.
-        """
-        # Check whether to add the attribute to vertex(vertices) or edge(s)
-        self.result_attr = attr_name
-        v_type = False
-        if schema_type.upper() == "VERTEX":
-            target = self.conn.getVertexTypes(force=True)
-            v_type = True
-        elif schema_type.upper() == "EDGE":
-            target = self.conn.getEdgeTypes(force=True)
-        else:
-            raise Exception("schema_type has to be VERTEX or EDGE")
-        # If attribute should be added to a specific vertex/edge name
-        if schema_name != None:
-            target.clear()
-            target = schema_name
-        # For every vertex or edge type
-        tasks = []
-        for t in target:
-            attributes = []
-            if v_type:
-                meta_data = self.conn.getVertexType(t, force=True)
-            else:
-                meta_data = self.conn.getEdgeType(t, force=True)
-            for i in range(len(meta_data["Attributes"])):
-                attributes.append(meta_data["Attributes"][i]["AttributeName"])
-            # If attribute is not in list of vertex attributes, do the schema change to add it
-            if attr_name != None and attr_name not in attributes:
-                tasks.append(
-                    "ALTER {} {} ADD ATTRIBUTE ({} {});\n".format(
-                        schema_type, t, attr_name, attr_type
-                    )
-                )
-        # If attribute already exists for schema type t, nothing to do
-        if not tasks:
-            return "Attribute already exists"
-        # Drop all jobs on the graph
-        # self.conn.gsql("USE GRAPH {}\n".format(self.conn.graphname) + "DROP JOB *")
-        # Create schema change job
-        job_name = "add_{}_attr_{}".format(schema_type, random_string(6))
-        if not (global_change):
-            job = (
-                "USE GRAPH {}\n".format(self.conn.graphname)
-                + "CREATE SCHEMA_CHANGE JOB {} {{\n".format(job_name)
-                + "".join(tasks)
-                + "}}\nRUN SCHEMA_CHANGE JOB {}".format(job_name)
-            )
-        else:
-            job = (
-                "USE GRAPH {}\n".format(self.conn.graphname)
-                + "CREATE GLOBAL SCHEMA_CHANGE JOB {} {{\n".format(job_name)
-                + "".join(tasks)
-                + "}}\nRUN GLOBAL SCHEMA_CHANGE JOB {}".format(job_name)
-            )
-        # Submit the job
-        print("Altering graph schema to save results...", flush=True)
-        resp = self.conn.gsql(job)
-        status = resp.splitlines()[-1]
-        if "Failed" in status:
-            raise ConnectionError(resp)
-        else:
-            print(status, flush=True)
-        return "Schema change succeeded."
 
     def _get_query(self, query_name: str) -> str:
         if not self.algo_paths:
@@ -645,7 +554,8 @@ class Featurizer:
                             else:
                                 global_types.append(e_type)
                     if len(global_types) > 0 or global_schema:
-                        _ = self._add_attribute(
+                        _ = add_attribute(
+                            conn = self.conn,
                             schema_type=schema_type,
                             attr_type=feat_type,
                             attr_name=feat_name,
@@ -653,7 +563,8 @@ class Featurizer:
                             global_change=True,
                         )
                     if len(local_types) > 0 or not(global_schema):
-                        _ = self._add_attribute(
+                        _ = add_attribute(
+                            conn = self.conn,
                             schema_type = schema_type,
                             attr_type = feat_type,
                             attr_name = feat_name,
