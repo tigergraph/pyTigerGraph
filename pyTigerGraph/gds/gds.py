@@ -26,7 +26,7 @@ You can find the reference for those classes on the following pages:
 * link:https://docs.tigergraph.com/pytigergraph/current/gds/metrics[Metrics]
 * link:https://docs.tigergraph.com/pytigergraph/current/gds/splitters[Splitters]
 """
-from typing import TYPE_CHECKING, Union, List
+from typing import TYPE_CHECKING, Union, List, Callable
 
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
@@ -164,6 +164,7 @@ class GDS:
         buffer_size: int = 4,
         reverse_edge: bool = False,
         timeout: int = 300000,
+        callback_fn: Callable = None
     ) -> NeighborLoader:
         """Returns a `NeighborLoader` instance.
         A `NeighborLoader` instance performs neighbor sampling from vertices in the graph in batches in the following manner:
@@ -300,6 +301,7 @@ class GDS:
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
             "timeout": timeout,
+            "callback_fn": callback_fn
         }
 
         if self.kafkaConfig:
@@ -320,6 +322,7 @@ class GDS:
         buffer_size: int = 4,
         reverse_edge: bool = False,
         timeout: int = 300000,
+        callback_fn: Callable = None
     ) -> EdgeLoader:
         """Returns an `EdgeLoader` instance. 
         An `EdgeLoader` instance loads all edges in the graph in batches.
@@ -397,6 +400,7 @@ class GDS:
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
             "timeout": timeout,
+            "callback_fn": callback_fn
         }
         if self.kafkaConfig:
             params.update(self.kafkaConfig)
@@ -416,6 +420,7 @@ class GDS:
             buffer_size: int = 4,
             reverse_edge: bool = False,
             timeout: int = 300000,
+            callback_fn: Callable = None
     ) -> VertexLoader:
         """Returns a `VertexLoader` instance.
         A `VertexLoader` can load all vertices of a graph in batches.
@@ -493,6 +498,7 @@ class GDS:
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
             "timeout": timeout,
+            "callback_fn": callback_fn
         }
 
         if self.kafkaConfig:
@@ -519,6 +525,7 @@ class GDS:
         buffer_size: int = 4,
         reverse_edge: bool = False,
         timeout: int = 300000,
+        callback_fn: Callable = None
     ) -> GraphLoader:
         """Returns a `GraphLoader`instance.
         A `GraphLoader` instance loads all edges from the graph in batches, along with the vertices that are connected with each edge.
@@ -646,6 +653,7 @@ class GDS:
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
             "timeout": timeout,
+            "callback_fn": callback_fn
         }
 
         if self.kafkaConfig:
@@ -674,6 +682,7 @@ class GDS:
         buffer_size: int = 4,
         reverse_edge: bool = False,
         timeout: int = 300000,
+        callback_fn: Callable = None
     ) -> EdgeNeighborLoader:
         """Returns an `EdgeNeighborLoader` instance.
         An `EdgeNeighborLoader` instance performs neighbor sampling from all edges in the graph in batches in the following manner:
@@ -811,6 +820,7 @@ class GDS:
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
             "timeout": timeout,
+            "callback_fn": callback_fn
         }
 
         if self.kafkaConfig:
@@ -842,7 +852,8 @@ class GDS:
                         loader_id: str = None,
                         buffer_size: int = 4,
                         reverse_edge: bool = False,
-                        timeout: int = 300000) -> NodePieceLoader:
+                        timeout: int = 300000,
+                        callback_fn: Callable = None) -> NodePieceLoader:
         """Returns a `NodePieceLoader` instance.
         A `NodePieceLoader` instance loads all edges from the graph in batches, along with the vertices that are connected with each edge.
 
@@ -948,7 +959,8 @@ class GDS:
             "loader_id": loader_id,
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
-            "timeout": timeout
+            "timeout": timeout,
+            "callback_fn": callback_fn
         }
         if self.kafkaConfig:
             params.update(self.kafkaConfig)
