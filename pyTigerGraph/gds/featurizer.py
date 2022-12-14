@@ -493,6 +493,14 @@ class Featurizer:
             The output of the query, a list of output elements (vertex sets, edge sets, variables,
             accumulators, etc.)
         """
+        # Check if query is installed. If not, install. 
+        if not is_query_installed(self.conn, query_name):
+            if custom_query:
+                print("Please run installAlgorithm() to install this custom query first.")
+                return None
+            self.installAlgorithm(query_name, global_change=global_schema)
+
+        # Check query parameters and change schema if needed.
         if params is None:
             if not custom_query:
                 params = self.getParams(query_name, printout=False)
@@ -517,13 +525,15 @@ class Featurizer:
                         'Missing mandatory parameters: {}. Please run getParams("{}") for parameter details.'.format(list(missing_params), query_name)
                     )
                 params = query_params
-            if "similarity_edge" in params.keys() or "similarity_edge_type" in params.keys():
-                if "similarity_edge" in params.keys():
-                    if params["similarity_edge"] not in self.conn.getEdgeTypes():
-                        raise ValueError("The edge type "+params["similarity_edge"]+" must be present in the graph schema with a FLOAT attribute to write to it.")
-                if "similarity_edge_type" in params.keys():
-                    if params["similarity_edge_type"] not in self.conn.getEdgeTypes():
-                        raise ValueError("The edge type "+params["similarity_edge_type"]+" must be present in the graph schema with a FLOAT attribute to write to it.")
+                # Check if there is the attribute to store similarity
+                if "similarity_edge" in params.keys() or "similarity_edge_type" in params.keys():
+                    if "similarity_edge" in params.keys():
+                        if params["similarity_edge"] not in self.conn.getEdgeTypes():
+                            raise ValueError("The edge type "+params["similarity_edge"]+" must be present in the graph schema with a FLOAT attribute to write to it.")
+                    if "similarity_edge_type" in params.keys():
+                        if params["similarity_edge_type"] not in self.conn.getEdgeTypes():
+                            raise ValueError("The edge type "+params["similarity_edge_type"]+" must be present in the graph schema with a FLOAT attribute to write to it.")
+            # Change schema to save results if needed
             if "result_attr" in params.keys() or "result_attribute" in params.keys() or feat_name:
                 if custom_query and not(schema_name):
                     raise ValueError("Must specify schema_name if adding attributes for custom query")
@@ -540,35 +550,34 @@ class Featurizer:
                     if not(custom_query):
                         feat_type = self.query_result_type[query_name]
                         schema_type = self.sch_type[query_name]
+                        if schema_type == "VERTEX" and ("v_type" in params or "v_type_set" in params):
+                            if "v_type" in params:
+                                key = "v_type"
+                            else:
+                                key = "v_type_set"
+                            if isinstance(params[key], str):
+                                schema_name = [params[key]]
+                            elif isinstance(params[key], list):
+                                schema_name = params[key]
+                            else:
+                                raise ValueError("v_type should be either a list or string")
+                        elif schema_type == "EDGE" and ("e_type" in params or "e_type_set" in params):
+                            if "e_type" in params:
+                                key = "e_type"
+                            else:
+                                key = "e_type_set"
+                            if isinstance(params[key], str):
+                                schema_name = [params[key]]
+                            elif isinstance(params[key], list):
+                                schema_name = params[key]
+                            else:
+                                raise ValueError("e_type should be either a list or string")
                     else:
                         if schema_name[0] in self.conn.getEdgeTypes(): # assuming all schema changes are either edge types or vertex types, no mixing.
                             schema_type = "EDGE"
                         else:
                             schema_type = "VERTEX"
                     
-                    if schema_type == "VERTEX" and ("v_type" in params or "v_type_set" in params):
-                        if "v_type" in params:
-                            key = "v_type"
-                        else:
-                            key = "v_type_set"
-                        if isinstance(params[key], str):
-                            schema_name = [params[key]]
-                        elif isinstance(params[key], list):
-                            schema_name = params[key]
-                        else:
-                            raise ValueError("v_type should be either a list or string")
-                    elif schema_type == "EDGE" and ("e_type" in params or "e_type_set" in params):
-                        if "e_type" in params:
-                            key = "e_type"
-                        else:
-                            key = "e_type_set"
-                        if isinstance(params[key], str):
-                            schema_name = [params[key]]
-                        elif isinstance(params[key], list):
-                            schema_name = params[key]
-                        else:
-                            raise ValueError("e_type should be either a list or string")
-
                     global_types = []
                     local_types = []
                     if schema_type == "VERTEX":
@@ -601,19 +610,10 @@ class Featurizer:
                             schema_name = local_types,
                             global_change=False,
                         )
-            '''
-            else:
-                query_ulr = self.algo_paths[query_name][-1]
-                raise ValueError(
-                    "The algorithm does not provide any feature, see the algorithm details: "
-                    + query_ulr
-                    + "."
-                )
-            '''
-        if not(query_name in [x.split("/")[-1] for x in self.conn.getInstalledQueries().keys()]) and not(custom_query):
-            self.installAlgorithm(query_name, global_change=global_schema)
+        # Run query.
         result = self.conn.runInstalledQuery(
             query_name, params, timeout=timeout, sizeLimit=sizeLimit, usePost=True, runAsync=runAsync, threadLimit=threadLimit)
+        # Return result
         if result != None:
             if runAsync:
                 return AsyncFeaturizerResult(self.conn, query_name, result)
