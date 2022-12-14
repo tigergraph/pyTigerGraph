@@ -74,7 +74,8 @@ class BaseLoader:
         kafka_skip_produce: bool = False,
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
-        kafka_add_topic_per_epoch: bool = False
+        kafka_add_topic_per_epoch: bool = False,
+        callback_fn: Callable = None
     ) -> None:
         """Base Class for data loaders.
 
@@ -196,6 +197,7 @@ class BaseLoader:
         self.timeout = timeout
         self._iterations = 0
         self._iterator = False
+        self.callback_fn = callback_fn
         # Kafka consumer and admin
         self.max_kafka_msg_size = Kafka_max_msg_size
         self.kafka_address_consumer = (
@@ -1230,7 +1232,10 @@ class BaseLoader:
                 self._reset()
                 self._start()
                 self._data = self._data_q.get()
-            return self._data
+            if self.callback_fn:
+                return self.callback_fn(self._data)
+            else:
+                return self._data
         else:
             return self
 
@@ -1378,7 +1383,8 @@ class NeighborLoader(BaseLoader):
         kafka_skip_produce: bool = False,
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
-        kafka_add_topic_per_epoch: bool = False
+        kafka_add_topic_per_epoch: bool = False,
+        callback_fn: Callable = None
     ) -> None:
         """NO DOC"""
 
@@ -1407,7 +1413,8 @@ class NeighborLoader(BaseLoader):
             kafka_skip_produce,
             kafka_auto_offset_reset,
             kafka_del_topic_per_epoch,
-            kafka_add_topic_per_epoch
+            kafka_add_topic_per_epoch,
+            callback_fn
         )
         # Resolve attributes
         is_hetero = any(map(lambda x: isinstance(x, dict), 
@@ -1635,7 +1642,8 @@ class NeighborLoader(BaseLoader):
                 e_attr_types,
                 self.add_self_loop,
                 True,
-                self.is_hetero
+                self.is_hetero,
+                self.callback_fn
             ),
         )
         self._reader.start()
@@ -1713,7 +1721,8 @@ class NeighborLoader(BaseLoader):
             add_self_loop = self.add_self_loop,
             reindex = True,
             primary_id = i["pids"],
-            is_hetero = self.is_hetero
+            is_hetero = self.is_hetero,
+            callback_fn = self.callback_fn
         )
         # Return data
         return data
@@ -1825,7 +1834,8 @@ class EdgeLoader(BaseLoader):
         kafka_skip_produce: bool = False,
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
-        kafka_add_topic_per_epoch: bool = False
+        kafka_add_topic_per_epoch: bool = False,
+        callback_fn: Callable = None
     ) -> None:
         """
         NO DOC.
@@ -1855,7 +1865,8 @@ class EdgeLoader(BaseLoader):
             kafka_skip_produce,
             kafka_auto_offset_reset,
             kafka_del_topic_per_epoch,
-            kafka_add_topic_per_epoch
+            kafka_add_topic_per_epoch,
+            callback_fn
         )
         # Resolve attributes
         is_hetero = isinstance(attributes, dict)
@@ -1972,7 +1983,8 @@ class EdgeLoader(BaseLoader):
                 e_attr_types,
                 False,
                 False,
-                self.is_hetero
+                self.is_hetero,
+                self.callback_fn
             ),
         )
         self._reader.start()
@@ -2094,7 +2106,8 @@ class VertexLoader(BaseLoader):
         kafka_skip_produce: bool = False,
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
-        kafka_add_topic_per_epoch: bool = False
+        kafka_add_topic_per_epoch: bool = False,
+        callback_fn: Callable = None
     ) -> None:
         """
         NO DOC
@@ -2124,7 +2137,8 @@ class VertexLoader(BaseLoader):
             kafka_skip_produce,
             kafka_auto_offset_reset,
             kafka_del_topic_per_epoch,
-            kafka_add_topic_per_epoch
+            kafka_add_topic_per_epoch,
+            callback_fn
         )
         # Resolve attributes
         is_hetero = isinstance(attributes, dict)
@@ -2242,7 +2256,8 @@ class VertexLoader(BaseLoader):
                 {},
                 False,
                 False,
-                self.is_hetero
+                self.is_hetero,
+                self.callback_fn
             ),
         )
         self._reader.start()
@@ -2370,7 +2385,8 @@ class GraphLoader(BaseLoader):
         kafka_skip_produce: bool = False,
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
-        kafka_add_topic_per_epoch: bool = False
+        kafka_add_topic_per_epoch: bool = False,
+        callback_fn: Callable = None
     ) -> None:
         """
         NO DOC
@@ -2400,7 +2416,8 @@ class GraphLoader(BaseLoader):
             kafka_skip_produce,
             kafka_auto_offset_reset,
             kafka_del_topic_per_epoch,
-            kafka_add_topic_per_epoch
+            kafka_add_topic_per_epoch,
+            callback_fn
         )
         # Resolve attributes
         is_hetero = any(map(lambda x: isinstance(x, dict), 
@@ -2584,7 +2601,8 @@ class GraphLoader(BaseLoader):
                 e_attr_types,
                 self.add_self_loop,
                 True,
-                self.is_hetero
+                self.is_hetero,
+                self.callback_fn
             ),
         )
         self._reader.start()
@@ -2668,7 +2686,8 @@ class EdgeNeighborLoader(BaseLoader):
         kafka_skip_produce: bool = False,
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
-        kafka_add_topic_per_epoch: bool = False
+        kafka_add_topic_per_epoch: bool = False,
+        callback_fn: Callable = None
     ) -> None:
         """NO DOC"""
 
@@ -2697,7 +2716,8 @@ class EdgeNeighborLoader(BaseLoader):
             kafka_skip_produce,
             kafka_auto_offset_reset,
             kafka_del_topic_per_epoch,
-            kafka_add_topic_per_epoch
+            kafka_add_topic_per_epoch,
+            callback_fn
         )
         # Resolve attributes
         is_hetero = any(map(lambda x: isinstance(x, dict), 
@@ -2915,7 +2935,8 @@ class EdgeNeighborLoader(BaseLoader):
                 e_attr_types,
                 self.add_self_loop,
                 True,
-                self.is_hetero
+                self.is_hetero,
+                self.callback_fn
             ),
         )
         self._reader.start()
@@ -3000,7 +3021,8 @@ class NodePieceLoader(BaseLoader):
         kafka_skip_produce: bool = False,
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
-        kafka_add_topic_per_epoch: bool = False
+        kafka_add_topic_per_epoch: bool = False,
+        callback_fn: Callable = None
     ) -> None:
         """
         NO DOC
@@ -3030,7 +3052,8 @@ class NodePieceLoader(BaseLoader):
             kafka_skip_produce,
             kafka_auto_offset_reset,
             kafka_del_topic_per_epoch,
-            kafka_add_topic_per_epoch
+            kafka_add_topic_per_epoch,
+            callback_fn
         )
         # Resolve attributes
         is_hetero = isinstance(v_feats, dict)
@@ -3258,7 +3281,10 @@ class NodePieceLoader(BaseLoader):
             data.drop(columns="closest_anchors", inplace=True)
             data["anchors"] = ancs["ancs"]
             data["anchor_distances"] = ancs["dists"]
-        return data
+        if self.callback_fn:
+            return self.callback_fn(data)
+        else:
+            return data
 
     def _start(self) -> None:
         # Create task and result queues

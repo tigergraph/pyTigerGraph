@@ -169,6 +169,28 @@ class TestGDSBaseLoader(unittest.TestCase):
         data = data_q.get()
         self.assertIsNone(data)
 
+    def test_read_vertex_callback(self):
+        read_task_q = Queue()
+        data_q = Queue(4)
+        exit_event = Event()
+        raw = "99,1 0 0 1 ,1,0,1\n8,1 0 0 1 ,1,1,1\n"
+        read_task_q.put(raw)
+        read_task_q.put(None)
+        self.loader._read_data(
+            exit_event,
+            read_task_q,
+            data_q,
+            "vertex",
+            "dataframe",
+            ["x"],
+            ["y"],
+            ["train_mask", "is_seed"],
+            {"x": "INT", "y": "INT", "train_mask": "BOOL", "is_seed": "BOOL"},
+            callback_fn=lambda x: 1
+        )
+        data = data_q.get()
+        self.assertEqual(1, data)
+
     def test_read_edge(self):
         read_task_q = Queue()
         data_q = Queue(4)
@@ -200,6 +222,33 @@ class TestGDSBaseLoader(unittest.TestCase):
         assert_frame_equal(data, truth)
         data = data_q.get()
         self.assertIsNone(data)
+
+    def test_read_edge_callback(self):
+        read_task_q = Queue()
+        data_q = Queue(4)
+        exit_event = Event()
+        raw = "1,2,0.1,2021,1,0\n2,1,1.5,2020,0,1\n"
+        read_task_q.put(raw)
+        read_task_q.put(None)
+        self.loader._read_data(
+            exit_event,
+            read_task_q,
+            data_q,
+            "edge",
+            "dataframe",
+            [],
+            [],
+            [],
+            {},
+            ["x", "time"],
+            ["y"],
+            ["is_train"],
+            {"x": "FLOAT", "time": "INT", "y": "INT", "is_train": "BOOL"},
+            callback_fn=lambda x: 1
+        )
+        data = data_q.get()
+        self.assertEqual(data, 1)
+
 
     def test_read_graph_out_df(self):
         read_task_q = Queue()
@@ -243,6 +292,38 @@ class TestGDSBaseLoader(unittest.TestCase):
         assert_frame_equal(data[1], edges)
         data = data_q.get()
         self.assertIsNone(data)
+
+
+    def test_read_graph_out_df_callback(self):
+        read_task_q = Queue()
+        data_q = Queue(4)
+        exit_event = Event()
+        raw = (
+            "99,1 0 0 1 ,1,0,1\n8,1 0 0 1 ,1,1,1\n",
+            "1,2,0.1,2021,1,0\n2,1,1.5,2020,0,1\n",
+        )
+        read_task_q.put(raw)
+        read_task_q.put(None)
+        self.loader._read_data(
+            exit_event,
+            read_task_q,
+            data_q,
+            "graph",
+            "dataframe",
+            ["x"],
+            ["y"],
+            ["train_mask", "is_seed"],
+            {"x": "INT", "y": "INT", "train_mask": "BOOL", "is_seed": "BOOL"},
+            ["x", "time"],
+            ["y"],
+            ["is_train"],
+            {"x": "FLOAT", "time": "INT", "y": "INT", "is_train": "BOOL"},
+            callback_fn=lambda x: (1, 2)
+        )
+        data = data_q.get()
+        self.assertEqual(data[0], 1)
+        self.assertEqual(data[1], 2)
+
 
     def test_read_graph_out_pyg(self):
         read_task_q = Queue()
@@ -710,8 +791,11 @@ if __name__ == "__main__":
     suite.addTest(TestGDSBaseLoader("test_validate_vertex_attributes"))
     suite.addTest(TestGDSBaseLoader("test_validate_edge_attributes"))
     suite.addTest(TestGDSBaseLoader("test_read_vertex"))
+    suite.addTest(TestGDSBaseLoader("test_read_vertex_callback"))
     suite.addTest(TestGDSBaseLoader("test_read_edge"))
+    suite.addTest(TestGDSBaseLoader("test_read_edge_callback"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_out_df"))
+    suite.addTest(TestGDSBaseLoader("test_read_graph_out_df_callback"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_out_pyg"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_out_dgl"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_no_attr"))
