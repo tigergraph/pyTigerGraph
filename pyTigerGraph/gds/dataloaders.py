@@ -1232,10 +1232,7 @@ class BaseLoader:
                 self._reset()
                 self._start()
                 self._data = self._data_q.get()
-            if self.callback_fn:
-                return self.callback_fn(self._data)
-            else:
-                return self._data
+            return self._data
         else:
             return self
 
