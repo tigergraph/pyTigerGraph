@@ -557,6 +557,12 @@ class Featurizer:
                 )
             # Change schema if needed.
             if params.get("result_attribute", None):
+                if not self.query_result_type:
+                    (
+                        self.algo_paths,
+                        self.query_result_type,
+                        self.sch_type,
+                    ) = self._get_algo_details(self.algo_dict)
                 self._add_result_attribute(query_name, params)
             # Finally, run the query
             for k, v in params.items():
@@ -573,7 +579,9 @@ class Featurizer:
                 data=params,
                 jsonData=True,
             )
-            return resp
+            if resp["error"]:
+                raise TigerGraphException(resp["message"])
+            return resp["results"]
         # If use non-template query
         # Check if query is installed. If not, install if it is built-in.
         if not is_query_installed(self.conn, query_name):
