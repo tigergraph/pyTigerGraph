@@ -33,7 +33,7 @@ CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
     SumAccum<STRING> @ancs;
 
     MapAccum<VERTEX, SumAccum<INT>> @@token_count;
-    MapAccum<INT, INT> @conv_map;
+    MapAccum<INT, MinAccum<INT>> @conv_map;
     BOOL cache_empty = FALSE;
     INT distance;
     start = {v_types};
