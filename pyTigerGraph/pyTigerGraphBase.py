@@ -143,7 +143,10 @@ class pyTigerGraphBase(object):
             self.useCert = False
             self.certPath = ""
         elif inputHost.scheme == "https":
-            self.downloadCert = True
+            if not certPath:
+                self.downloadCert = True
+            else:
+                self.downloadCert = False
             self.useCert = True
             self.certPath = certPath
         self.sslPort = sslPort

@@ -130,7 +130,10 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
         if str(graphname).upper() == "GLOBAL" or str(graphname).upper() == "":
             graphname = ""
         if not self.gsqlInitiated:
-            self.gsqlInitiated = self._initGsql()
+            if self.certPath:
+                self.gsqlInitiated = self._initGsql(self.certPath)
+            else:
+                self.gsqlInitiated = self._initGsql()
         if self.gsqlInitiated:
             if "\n" not in query:
                 res = self.Client.query(query, graph=graphname)
