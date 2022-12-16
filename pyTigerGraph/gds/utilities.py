@@ -220,8 +220,6 @@ def add_attribute(conn: "TigerGraphConnection", schema_type:str, attr_type:str =
                     tasks.append("ALTER {} {} ADD ATTRIBUTE ({} {});\n".format(
                         schema_type, t, aname, attr_name[aname]
                     ))
-        else:
-            raise Exception("attr_name needs to be either type string or dict.")
     # If attribute already exists for schema type t, nothing to do
     if not tasks:
         return "Attribute already exists"
