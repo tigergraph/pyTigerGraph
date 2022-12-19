@@ -3235,7 +3235,9 @@ class NodePieceLoader(BaseLoader):
             else:
                 print_query = '@@v_batch += (int_to_string(getvid(s)) + "\\n")'
             query_replace["{VERTEXATTRS}"] = print_query
-        query_replace["{QUERYSUFFIX}"] = "_".join(query_suffix)
+        md5 = hashlib.md5()
+        md5.update(json.dumps(query_suffix).encode())
+        query_replace["{QUERYSUFFIX}"] = md5.hexdigest()
         query_replace["{ANCHOR_CACHE_ATTRIBUTE}"] = self.anchor_cache_attr
         # Install query
         query_path = os.path.join(
