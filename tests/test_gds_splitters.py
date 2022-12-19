@@ -52,6 +52,19 @@ class TestGDSRandomVertexSplit(unittest.TestCase):
         self.assertAlmostEqual(p2_count / num_vertices, 0.3, delta=0.05)
         self.assertAlmostEqual(p3_count / num_vertices, 0.1, delta=0.05)
 
+    def test_three_attr_add_attribute(self):
+        splitter = self.conn.gds.vertexSplitter(
+            train_mask_2=0.6, val_mask_2=0.3, test_mask_2=0.1
+        )
+        splitter.run()
+        num_vertices = self.conn.getVertexCount("Paper")
+        p1_count = self.conn.getVertexCount("Paper", where="train_mask_2!=0")
+        p2_count = self.conn.getVertexCount("Paper", where="val_mask_2!=0")
+        p3_count = self.conn.getVertexCount("Paper", where="test_mask_2!=0")
+        self.assertAlmostEqual(p1_count / num_vertices, 0.6, delta=0.05)
+        self.assertAlmostEqual(p2_count / num_vertices, 0.3, delta=0.05)
+        self.assertAlmostEqual(p3_count / num_vertices, 0.1, delta=0.05)
+
     def test_too_many_attr(self):
         with self.assertRaises(ValueError):
             splitter = self.conn.gds.vertexSplitter(
@@ -129,6 +142,15 @@ class TestGDSRandomEdgeSplit(unittest.TestCase):
         num_edges = self.conn.getEdgeCount("Cite")
         p1_count = get_edge_count(self.conn, "is_train")
         p2_count = get_edge_count(self.conn, "is_val")
+        self.assertAlmostEqual(p1_count / num_edges, 0.6, delta=0.05)
+        self.assertAlmostEqual(p2_count / num_edges, 0.3, delta=0.05)
+
+    def test_two_attr_add_attribute(self):
+        splitter = self.conn.gds.edgeSplitter(is_train_2=0.6, is_val_2=0.3)
+        splitter.run()
+        num_edges = self.conn.getEdgeCount("Cite")
+        p1_count = get_edge_count(self.conn, "is_train_2")
+        p2_count = get_edge_count(self.conn, "is_val_2")
         self.assertAlmostEqual(p1_count / num_edges, 0.6, delta=0.05)
         self.assertAlmostEqual(p2_count / num_edges, 0.3, delta=0.05)
 

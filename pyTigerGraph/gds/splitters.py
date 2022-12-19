@@ -6,7 +6,7 @@ Make sure to create the appropriate attributes in the graph before using these f
 import os.path
 from typing import TYPE_CHECKING, List
 
-from .utilities import install_query_file
+from .utilities import install_query_file, add_attribute
 
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
@@ -42,7 +42,7 @@ class BaseRandomSplitter:
         if sum(split_ratios.values()) > 1:
             raise ValueError("Sum of all partition ratios have to be <=1")
 
-    def run(self, **split_ratios) -> None:
+    def run(self, schema_type, **split_ratios) -> None:
         """Perform the split.
 
         The split ratios set in initialization can be overridden here. For example,
@@ -54,6 +54,32 @@ class BaseRandomSplitter:
             self._validate_args(split_ratios)
         else:
             split_ratios = self.split_ratios
+        global_types = []
+        local_types = []
+        if schema_type == "VERTEX":
+            for v_type in self.schema_types:
+                if "IsLocal" in self._graph.getVertexType(v_type, force=True):
+                    local_types.append(v_type)
+                else:
+                    global_types.append(v_type)
+        if schema_type == "EDGE":
+            for e_type in self.schema_types:
+                if "IsLocal" in self._graph.getEdgeType(e_type, force=True):
+                    local_types.append(e_type)
+                else:
+                    global_types.append(e_type)
+        if len(global_types) > 0:
+            add_attribute(self._graph, 
+                        schema_type, 
+                        attr_name = {key: "BOOL" for key in split_ratios},
+                        schema_name = global_types,
+                        global_change = True)
+        if len(local_types) > 0:
+            add_attribute(self._graph, 
+                        schema_type, 
+                        attr_name = {key: "BOOL" for key in split_ratios},
+                        schema_name = local_types,
+                        global_change = False)
         payload = {}
         payload["stypes"] = self.schema_types
         for i, key in enumerate(split_ratios):
@@ -150,7 +176,7 @@ class RandomVertexSplitter(BaseRandomSplitter):
 
         """
         print("Splitting vertices...")
-        resp = super().run(**split_ratios)
+        resp = super().run("VERTEX", **split_ratios)
         print(resp[0]["Status"])
 
 
@@ -241,5 +267,5 @@ class RandomEdgeSplitter(BaseRandomSplitter):
 
         """
         print("Splitting edges...")
-        resp = super().run(**split_ratios)
+        resp = super().run("EDGE", **split_ratios)
         print(resp[0]["Status"])

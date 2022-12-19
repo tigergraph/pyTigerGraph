@@ -6,7 +6,7 @@ import random
 import re
 import string
 from os.path import join as pjoin
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 from urllib.parse import urlparse
 
 if TYPE_CHECKING:
@@ -165,7 +165,7 @@ def install_query_file(
     return query_name
 
 
-def add_attribute(conn: "TigerGraphConnection", schema_type: str, attr_type: str, attr_name: str=None, schema_name:list = None, global_change:bool = False):
+def add_attribute(conn: "TigerGraphConnection", schema_type:str, attr_type:str = None, attr_name:Union[str, dict] = None, schema_name:list = None, global_change:bool = False):
     '''
     If the current attribute is not already added to the schema, it will create the schema job to do that.
     Check whether to add the attribute to vertex(vertices) or edge(s).
@@ -174,9 +174,9 @@ def add_attribute(conn: "TigerGraphConnection", schema_type: str, attr_type: str
         schema_type (str): 
             Vertex or edge
         attr_type (str): 
-            Type of attribute which can be INT, DOUBLE, FLOAT, BOOL, or LIST
-        attr_name (str): 
-            An attribute name that needs to be added to the vertex/edge
+            Type of attribute which can be INT, DOUBLE, FLOAT, BOOL, or LIST. Defaults to None. Required if attr_name is of type string.
+        attr_name (str, dict): 
+            An attribute name that needs to be added to the vertex/edge if string. If dict, must be of format {"attr_name": "attr_type"}.
         schema_name (List[str]):
             List of Vertices/Edges that need the `attr_name` added to them.
         global_change (bool):
@@ -208,9 +208,18 @@ def add_attribute(conn: "TigerGraphConnection", schema_type: str, attr_type: str
         for i in range(len(meta_data['Attributes'])):
             attributes.append(meta_data['Attributes'][i]['AttributeName'])
         # If attribute is not in list of vertex attributes, do the schema change to add it
-        if attr_name != None and attr_name  not in attributes:
-            tasks.append("ALTER {} {} ADD ATTRIBUTE ({} {});\n".format(
-                    schema_type, t, attr_name, attr_type))
+        if isinstance(attr_name, str):
+            if not attr_type:
+                raise Exception("attr_type must be defined if attr_name is of type string")
+            if attr_name != None and attr_name not in attributes:
+                tasks.append("ALTER {} {} ADD ATTRIBUTE ({} {});\n".format(
+                        schema_type, t, attr_name, attr_type))
+        elif isinstance(attr_name, dict):
+            for aname in attr_name:
+                if aname != None and aname not in attributes:
+                    tasks.append("ALTER {} {} ADD ATTRIBUTE ({} {});\n".format(
+                        schema_type, t, aname, attr_name[aname]
+                    ))
     # If attribute already exists for schema type t, nothing to do
     if not tasks:
         return "Attribute already exists"
