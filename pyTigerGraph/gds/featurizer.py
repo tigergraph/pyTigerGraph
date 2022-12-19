@@ -529,7 +529,7 @@ class Featurizer:
         # If template query is used
         if templateQuery:
             # Check if DB version is >= 3.9.
-            if int(self.major_ver) < 3 or (
+            if self.major_ver != "master" or int(self.major_ver) < 3 or (
                 int(self.major_ver) == 3 and int(self.minor_ver) < 9
             ):
                 raise ValueError(
@@ -650,6 +650,7 @@ class Featurizer:
         elif not custom_query:
             if not (
                 query_name == "tg_fastRP"
+                and self.major_ver != "master"
                 and int(self.major_ver) <= 3
                 and int(self.minor_ver) <= 7
             ):  # fastRP in 3.7 creates attribute at install time
