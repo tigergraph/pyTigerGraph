@@ -529,8 +529,8 @@ class Featurizer:
         # If template query is used
         if templateQuery:
             # Check if DB version is >= 3.9.
-            if self.major_ver != "master" or int(self.major_ver) < 3 or (
-                int(self.major_ver) == 3 and int(self.minor_ver) < 9
+            if self.major_ver != "master" and (int(self.major_ver) < 3 or (
+                int(self.major_ver) == 3 and int(self.minor_ver) < 9)
             ):
                 raise ValueError(
                     "Template query is only avaiable for database version 3.9 and above."
