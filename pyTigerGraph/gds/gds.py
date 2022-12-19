@@ -876,8 +876,10 @@ class GDS:
 
         Args:
             v_feats (list or dict, optional):
-                A list or dictionary of vertex features to load. If None, all vertex types will be used, but
-                no vertex attributes will be loaded. If not None, only vertex types specified will be used.
+                If a heterogenous graph, dictionary of the form {"VERTEX_TYPE": ["vertex_attribute1", ...]}.
+                If a homogeneous graph, list of the form ["vertex_attribute1", ...].
+                If None, all vertex types will be used, but no vertex attributes will be loaded. 
+                If not None, only vertex types specified will be used.
             target_vertex_types (str or list, optional):
                 A list or string of vertex types that are going to be used for training the model.
                 If None, the vertex types specified in v_feats will be used.
