@@ -149,7 +149,7 @@ class pyTigerGraphBase(object):
                 self.downloadCert = False
             self.useCert = True
             self.certPath = certPath
-        self.sslPort = sslPort
+        self.sslPort = str(sslPort)
 
         self.gsqlInitiated = False
 
