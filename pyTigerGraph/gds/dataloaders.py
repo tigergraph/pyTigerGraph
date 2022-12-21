@@ -3409,3 +3409,394 @@ class NodePieceLoader(BaseLoader):
             self.query_name, params=_payload, timeout=self.timeout, usePost=True
         )
        
+
+class HGTLoader(BaseLoader):
+    """HGTLoader
+
+    A data loader that performs stratified neighbor sampling as in  
+    link:https://arxiv.org/abs/2003.01332[Heterogeneous Graph Transformer].
+    You can declare a `HGTLoader` instance with the factory function `hgtLoader()`.
+
+    A HGT loader is an iterable.
+    When you loop through a HGT loader instance, it loads one batch of data at a time from the graph.
+
+    In every iteration, it first chooses a specified number of vertices as seeds,
+    then picks a specified number of neighbors of each type at random,
+    then the specified number of neighbors of every type of each neighbor, and repeat for a specified number of hops.
+    It loads both the vertices and the edges connecting them to their neighbors.
+    The vertices sampled this way along with their edges form one subgraph and is contained in one batch.
+
+    You can iterate on the instance until every vertex has been picked as seed.
+
+    Examples:
+
+    The following example iterates over a HGT loader instance.
+    [.wrap,python]
+    ----
+    for i, batch in enumerate(hgt_loader):
+        print("----Batch {}----".format(i))
+        print(batch)
+    ----
+
+    See more details about the specific sampling method in
+    link:https://arxiv.org/abs/2003.01332[Heterogeneous Graph Transformer].
+    """
+    def __init__(
+        self,
+        graph: "TigerGraphConnection",
+        num_neighbors: dict,
+        v_in_feats: Union[list, dict] = None,
+        v_out_labels: Union[list, dict] = None,
+        v_extra_feats: Union[list, dict] = None,
+        e_in_feats: Union[list, dict] = None,
+        e_out_labels: Union[list, dict] = None,
+        e_extra_feats: Union[list, dict] = None,
+        batch_size: int = None,
+        num_batches: int = 1,
+        num_hops: int = 2,
+        shuffle: bool = False,
+        filter_by: Union[str, dict] = None,
+        output_format: str = "PyG",
+        add_self_loop: bool = False,
+        loader_id: str = None,
+        buffer_size: int = 4,
+        reverse_edge: bool = False,
+        timeout: int = 300000,
+        kafka_address: str = None,
+        kafka_max_msg_size: int = 104857600,
+        kafka_num_partitions: int = 1,
+        kafka_replica_factor: int = 1,
+        kafka_retention_ms: int = 60000,
+        kafka_auto_del_topic: bool = True,
+        kafka_address_consumer: str = None,
+        kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
+        kafka_skip_produce: bool = False,
+        kafka_auto_offset_reset: str = "earliest",
+        kafka_del_topic_per_epoch: bool = False,
+        kafka_add_topic_per_epoch: bool = False,
+        callback_fn: Callable = None
+    ) -> None:
+        """NO DOC"""
+
+        super().__init__(
+            graph,
+            loader_id,
+            num_batches,
+            buffer_size,
+            output_format,
+            reverse_edge,
+            timeout,
+            kafka_address,
+            kafka_max_msg_size,
+            kafka_num_partitions,
+            kafka_replica_factor,
+            kafka_retention_ms,
+            kafka_auto_del_topic,
+            kafka_address_consumer,
+            kafka_address_producer,
+            kafka_security_protocol,
+            kafka_sasl_mechanism,
+            kafka_sasl_plain_username,
+            kafka_sasl_plain_password,
+            kafka_producer_ca_location,
+            kafka_consumer_ca_location,
+            kafka_skip_produce,
+            kafka_auto_offset_reset,
+            kafka_del_topic_per_epoch,
+            kafka_add_topic_per_epoch,
+            callback_fn
+        )
+        self.num_neighbors = num_neighbors
+        # Resolve attributes
+        is_hetero = any(map(lambda x: isinstance(x, dict), 
+                        (v_in_feats, v_out_labels, v_extra_feats,
+                         e_in_feats, e_out_labels, e_extra_feats)))
+        self.is_hetero = is_hetero
+        self.v_in_feats = self._validate_vertex_attributes(v_in_feats, is_hetero)
+        self.v_out_labels = self._validate_vertex_attributes(v_out_labels, is_hetero)
+        self.v_extra_feats = self._validate_vertex_attributes(v_extra_feats, is_hetero)
+        self.e_in_feats = self._validate_edge_attributes(e_in_feats, is_hetero)
+        self.e_out_labels = self._validate_edge_attributes(e_out_labels, is_hetero)
+        self.e_extra_feats = self._validate_edge_attributes(e_extra_feats, is_hetero)
+        if is_hetero:
+            self._vtypes = list(
+                    set(self.v_in_feats.keys())
+                    | set(self.v_out_labels.keys())
+                    | set(self.v_extra_feats.keys())
+                )
+            if not self._vtypes:
+                self._vtypes = list(self._v_schema.keys())
+            self._etypes = list(
+                set(self.e_in_feats.keys())
+                | set(self.e_out_labels.keys())
+                | set(self.e_extra_feats.keys())
+            )
+            if not self._etypes:
+                self._etypes = list(self._e_schema.keys())
+        else:
+            raise ValueError("HGTLoader only works with heterogeneous graphs. Please use the dict format for the feature parameters.")
+        self._vtypes = sorted(self._vtypes)
+        self._etypes = sorted(self._etypes)
+        # Resolve seeds
+        if batch_size:
+            # If batch_size is given, calculate the number of batches
+            if not filter_by:
+                self._seed_types = self._vtypes
+                num_vertices = sum(self._graph.getVertexCount(self._seed_types).values())
+            elif isinstance(filter_by, str):
+                self._seed_types = self._vtypes
+                num_vertices = sum(
+                    self._graph.getVertexCount(k, where="{}!=0".format(filter_by))
+                    for k in self._seed_types
+                )
+            elif isinstance(filter_by, dict):
+                self._seed_types = list(filter_by.keys())
+                num_vertices = sum(
+                    self._graph.getVertexCount(k, where="{}!=0".format(filter_by[k]))
+                    for k in self._seed_types
+                )
+            else:
+                raise ValueError("filter_by should be None, attribute name, or dict of {type name: attribute name}.")
+            self.num_batches = math.ceil(num_vertices / batch_size)
+        else:
+            # Otherwise, take the number of batches as is.
+            self._seed_types = self._vtypes if ((not filter_by) or isinstance(filter_by, str)) else list(filter_by.keys())
+            self.num_batches = num_batches
+        # Initialize parameters for the query
+        self._payload["num_batches"] = self.num_batches
+        self._payload["num_hops"] = num_hops
+        if filter_by:
+            if isinstance(filter_by, str):
+                self._payload["filter_by"] = filter_by
+            else:
+                attr = set(filter_by.values())
+                if len(attr) != 1:
+                    raise NotImplementedError("Filtering by different attributes for different vertex types is not supported. Please use the same attribute for different types.")
+                self._payload["filter_by"] = attr.pop()
+        self._payload["shuffle"] = shuffle
+        self._payload["v_types"] = self._vtypes
+        self._payload["e_types"] = self._etypes
+        self._payload["seed_types"] = self._seed_types
+        # Output
+        self.add_self_loop = add_self_loop
+        # Install query
+        self.query_name = self._install_query()
+
+    def _install_query(self):
+        # Install the right GSQL query for the loader.
+        query_suffix = {
+            "num_neighbors": self.num_neighbors,
+            "v_in_feats": self.v_in_feats,
+            "v_out_labels": self.v_out_labels,
+            "v_extra_feats": self.v_extra_feats,
+            "e_in_feats": self.e_in_feats,
+            "e_out_labels": self.e_out_labels,
+            "e_extra_feats": self.e_extra_feats,
+        }
+        md5 = hashlib.md5()
+        md5.update(json.dumps(query_suffix).encode())
+        query_replace = {"{QUERYSUFFIX}": md5.hexdigest()}
+
+        if isinstance(self.v_in_feats, dict) or isinstance(self.e_in_feats, dict):
+            # Multiple vertex types
+            print_query_seed = ""
+            print_query_other = ""
+            for idx, vtype in enumerate(self._vtypes):
+                v_attr_names = (
+                    self.v_in_feats.get(vtype, [])
+                    + self.v_out_labels.get(vtype, [])
+                    + self.v_extra_feats.get(vtype, [])
+                )
+                v_attr_types = self._v_schema[vtype]
+                if v_attr_names:
+                    print_attr = '+","+'.join(
+                        "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
+                        for attr in v_attr_names
+                    )
+                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + stringify(getvid(s)) + "," + {} + ",1\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", vtype, print_attr)
+                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + stringify(getvid(s)) + "," + {} + ",0\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", vtype, print_attr)
+                else:
+                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + stringify(getvid(s)) + ",1\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", vtype)
+                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + stringify(getvid(s)) + ",0\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", vtype)
+            print_query_seed += "END"
+            print_query_other += "END"
+            query_replace["{SEEDVERTEXATTRS}"] = print_query_seed
+            query_replace["{OTHERVERTEXATTRS}"] = print_query_other
+            # Multiple edge types
+            print_query = ""
+            for idx, etype in enumerate(self._etypes):
+                e_attr_names = (
+                    self.e_in_feats.get(etype, [])
+                    + self.e_out_labels.get(etype, [])
+                    + self.e_extra_feats.get(etype, [])
+                )
+                e_attr_types = self._e_schema[etype]
+                if e_attr_names:
+                    print_attr = '+","+'.join(
+                        "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'
+                        for attr in e_attr_names
+                    )
+                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + stringify(getvid(s)) + "," + stringify(getvid(t)) + "," + {} + "\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", etype, print_attr)
+                else:
+                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + stringify(getvid(s)) + "," + stringify(getvid(t)) + "\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", etype)
+            print_query += "END"
+            # Generate select for each type
+            print_select = ""
+            seeds = []
+            for idx, vtype in enumerate(self.num_neighbors):
+                print_select += """seed{} = SELECT t
+                    FROM seeds:s -(e_types:e)- {}:t 
+                    SAMPLE {} EDGE WHEN s.outdegree() >= 1
+                    ACCUM
+                        IF NOT @@printed_edges.contains(e) THEN
+                            @@printed_edges += e,
+                            {}
+                        END;
+                """.format(idx, vtype, self.num_neighbors[vtype], print_query)
+                seeds.append("seed{}".format(idx))
+            print_select += "seeds = {};".format(" UNION ".join(seeds))
+            query_replace["{SELECTNEIGHBORS}"] = print_select
+        # Install query
+        query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "dataloaders",
+                "hgt_loader.gsql",
+        )
+        return install_query_file(self._graph, query_path, query_replace)
+
+    def _start(self) -> None:
+        # Create task and result queues
+        self._read_task_q = Queue(self.buffer_size * 2)
+        self._data_q = Queue(self.buffer_size)
+        self._exit_event = Event()
+
+        self._start_request(True, "both")
+
+        # Start reading thread.
+        if not self.is_hetero:
+            v_extra_feats = self.v_extra_feats + ["is_seed"]
+            v_attr_types = next(iter(self._v_schema.values()))
+            v_attr_types["is_seed"] = "bool"
+            e_attr_types = next(iter(self._e_schema.values()))
+        else:
+            v_extra_feats = {}
+            for vtype in self._vtypes:
+                v_extra_feats[vtype] = self.v_extra_feats.get(vtype, []) + ["is_seed"]
+            v_attr_types = self._v_schema
+            for vtype in v_attr_types:
+                v_attr_types[vtype]["is_seed"] = "bool"
+            e_attr_types = self._e_schema
+        self._reader = Thread(
+            target=self._read_data,
+            args=(
+                self._exit_event,
+                self._read_task_q,
+                self._data_q,
+                "graph",
+                self.output_format,
+                self.v_in_feats,
+                self.v_out_labels,
+                v_extra_feats,
+                v_attr_types,
+                self.e_in_feats,
+                self.e_out_labels,
+                self.e_extra_feats,
+                e_attr_types,
+                self.add_self_loop,
+                True,
+                self.is_hetero,
+                self.callback_fn
+            ),
+        )
+        self._reader.start()
+
+    @property
+    def data(self) -> Any:
+        """A property of the instance.
+        The `data` property stores all data if all data is loaded in a single batch.
+        If there are multiple batches of data, the `data` property returns the instance itself"""
+        return super().data
+
+    def fetch(self, vertices: list) -> None:
+        """Fetch neighborhood subgraphs for specific vertices.
+
+        Args:
+            vertices (list of dict):
+                Vertices to fetch with their neighborhood subgraphs.
+                Each vertex corresponds to a dict with two mandatory keys
+                {"primary_id": ..., "type": ...}
+        """
+        # Check input
+        if not vertices:
+            return None
+        if not isinstance(vertices, list):
+            raise ValueError(
+                'Input to fetch() should be in format: [{"primary_id": ..., "type": ...}, ...]'
+            )
+        for i in vertices:
+            if not (isinstance(i, dict) and ("primary_id" in i) and ("type" in i)):
+                raise ValueError(
+                    'Input to fetch() should be in format: [{"primary_id": ..., "type": ...}, ...]'
+                )
+        # Send request
+        _payload = {}
+        _payload["v_types"] = self._payload["v_types"]
+        _payload["e_types"] = self._payload["e_types"]
+        _payload["num_batches"] = 1
+        _payload["num_hops"] = self._payload["num_hops"]
+        _payload["input_vertices"] = []
+        for i in vertices:
+            _payload["input_vertices"].append({"id": i["primary_id"], "type": i["type"]})
+        resp = self._graph.runInstalledQuery(
+            self.query_name, params=_payload, timeout=self.timeout, usePost=True
+        )
+        # Parse data        
+        if not self.is_hetero:
+            v_extra_feats = self.v_extra_feats + ["is_seed"]
+            v_attr_types = next(iter(self._v_schema.values()))
+            v_attr_types["is_seed"] = "bool"
+            v_attr_types["primary_id"] = "str"
+            e_attr_types = next(iter(self._e_schema.values()))
+        else:
+            v_extra_feats = {}
+            for vtype in self._vtypes:
+                v_extra_feats[vtype] = self.v_extra_feats.get(vtype, []) + ["is_seed"]
+            v_attr_types = self._v_schema
+            for vtype in v_attr_types:
+                v_attr_types[vtype]["is_seed"] = "bool"
+                v_attr_types[vtype]["primary_id"] = "str"
+            e_attr_types = self._e_schema
+        i = resp[0]
+        data = self._parse_data(
+            raw = (i["vertex_batch"], i["edge_batch"]),
+            in_format = "graph",
+            out_format = self.output_format,
+            v_in_feats = self.v_in_feats,
+            v_out_labels = self.v_out_labels,
+            v_extra_feats = v_extra_feats,
+            v_attr_types = v_attr_types,
+            e_in_feats = self.e_in_feats,
+            e_out_labels = self.e_out_labels,
+            e_extra_feats = self.e_extra_feats,
+            e_attr_types = e_attr_types,
+            add_self_loop = self.add_self_loop,
+            reindex = True,
+            primary_id = i["pids"],
+            is_hetero = self.is_hetero,
+            callback_fn = self.callback_fn
+        )
+        # Return data
+        return data
