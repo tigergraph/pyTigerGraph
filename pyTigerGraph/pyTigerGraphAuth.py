@@ -229,16 +229,16 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                 if self.useCert and self.certPath:
                     res = json.loads(requests.request("GET", self.restppUrl +
                         "/requesttoken?secret=" + secret +
-                        ("&lifetime=" + str(lifetime) if lifetime else "")).text)
+                        ("&lifetime=" + str(lifetime) if lifetime else ""), verify=False).text)
                 else:
                     res = json.loads(requests.request("GET", self.restppUrl +
                         "/requesttoken?secret=" + secret +
-                        ("&lifetime=" + str(lifetime) if lifetime else ""), verify=False).text)
+                        ("&lifetime=" + str(lifetime) if lifetime else "")).text)
                 if not res["error"]:
                     success = True
             except:
-                success = False
-
+                raise TigerGraphException(res["message"], (res["code"] if "code" in res else None))
+                
         if not success:
             try:
                 data = {"secret": secret}
@@ -247,12 +247,12 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                     data["lifetime"] = str(lifetime)
                 if self.useCert is True and self.certPath is not None:
                     res = json.loads(requests.post(self.restppUrl + "/requesttoken",
-                        data=json.dumps(data)).text)
+                        data=json.dumps(data), verify=False).text)
                 else:
                     res = json.loads(requests.post(self.restppUrl + "/requesttoken",
-                        data=json.dumps(data), verify=False).text)
+                        data=json.dumps(data)).text)
             except:
-                success = False
+                raise TigerGraphException(res["message"], (res["code"] if "code" in res else None))
 
         if not res["error"]:
             if setToken:
@@ -349,10 +349,10 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                 data["lifetime"] = str(lifetime)
             if self.useCert is True and self.certPath is not None:
                 res = json.loads(requests.post(self.restppUrl + "/requesttoken",
-                    data=json.dumps(data)).text)
+                    data=json.dumps(data), verify=False).text)
             else:
                 res = json.loads(requests.post(self.restppUrl + "/requesttoken",
-                    data=json.dumps(data), verify=False).text)
+                    data=json.dumps(data)).text)
             if not res["error"]:
                 success = True
             if "Endpoint is not found from url = /requesttoken" in res["message"]:
