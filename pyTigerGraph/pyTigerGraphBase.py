@@ -169,19 +169,18 @@ class pyTigerGraphBase(object):
                 raise (TigerGraphException("Incorrect graphname."))
 
         restppPort = str(restppPort)
+        sslPort = str(sslPort)
         if self.tgCloud and (restppPort == "9000" or restppPort == "443"):
-            # TODO Should not `sslPort` be used instead of hard coded value?
-            self.restppPort = "443"
-            self.restppUrl = self.host + ":443" + "/restpp"
+            self.restppPort = sslPort
+            self.restppUrl = self.host + ":"+sslPort + "/restpp"
         else:
             self.restppPort = restppPort
             self.restppUrl = self.host + ":" + self.restppPort
         self.gsPort = ""
         gsPort = str(gsPort)
         if self.tgCloud and (gsPort == "14240" or gsPort == "443"):
-            # TODO Should not `sslPort` be used instead of hard coded value?
-            self.gsPort = "443"
-            self.gsUrl = self.host + ":443"
+            self.gsPort = sslPort
+            self.gsUrl = self.host + ":" + sslPort
         else:
             self.gsPort = gsPort
             self.gsUrl = self.host + ":" + self.gsPort
