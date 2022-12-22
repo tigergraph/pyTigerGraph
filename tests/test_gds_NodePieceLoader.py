@@ -1,5 +1,6 @@
 from lib2to3.pytree import Node
 import unittest
+from pyTigerGraphUnitTest import make_connection
 
 from pandas import DataFrame
 from pyTigerGraph import TigerGraphConnection
@@ -10,8 +11,7 @@ from pyTigerGraph.gds.utilities import is_query_installed
 class TestGDSNodePieceLoader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
-        cls.conn.getToken(cls.conn.createSecret())
+        cls.conn = make_connection(graphname="Cora")
 
     def test_init(self):
         loader = NodePieceLoader(
@@ -147,8 +147,7 @@ class TestGDSNodePieceLoader(unittest.TestCase):
 class TestGDSNodePieceLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
-        cls.conn.getToken(cls.conn.createSecret())
+        cls.conn = make_connection(graphname="Cora")
 
     def test_init(self):
         loader = NodePieceLoader(
@@ -217,8 +216,7 @@ class TestGDSNodePieceLoaderREST(unittest.TestCase):
 class TestGDSHeteroNodePieceLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="hetero")
-        cls.conn.getToken(cls.conn.createSecret())
+        cls.conn = make_connection(graphname="hetero")
 
     def test_init(self):
         loader = NodePieceLoader(
