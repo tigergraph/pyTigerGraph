@@ -565,9 +565,9 @@ class Featurizer:
                     ) = self._get_algo_details(self.algo_dict)
                 self._add_result_attribute(query_name, params)
             # Finally, run the query
-            for k, v in params.items():
-                if isinstance(v, int) or isinstance(v, float) or isinstance(v, bool):
-                    params[k] = str(v)
+            # for k, v in params.items():
+            #     if isinstance(v, int) or isinstance(v, float) or isinstance(v, bool):
+            #         params[k] = str(v)
             resp = self.conn._post(
                 "{}:{}/gsqlserver/gsql/library?graph={}&functionName=GDBMS_ALGO.{}.{}".format(
                     self.conn.host,
