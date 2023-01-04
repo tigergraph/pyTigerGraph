@@ -537,7 +537,7 @@ class Featurizer:
                 )
             # Check if GDBMS_ALGO is imported. If not, import.
             if "GDBMS_ALGO" not in self.conn.gsql("SHOW PACKAGE"):
-                _ = self.conn.gsql("IMPORT PACKAGE GDBMS_ALGO.*")
+                _ = self.conn.gsql("IMPORT PACKAGE GDBMS_ALGO")
             # Check if query_name has a template query.
             if not self.template_queries:
                 self._get_template_queries()
