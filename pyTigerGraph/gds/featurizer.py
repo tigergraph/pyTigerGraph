@@ -108,13 +108,28 @@ class Featurizer:
             self.major_ver, self.minor_ver = algo_version.split(".")[:2]
         # Get repo address
         if not repo:
-            repo = "https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/{}.{}".format(
-                self.major_ver, self.minor_ver
-            )
+            if self.major_ver and self.minor_ver:
+                repo = "https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/{}.{}".format(
+                    self.major_ver, self.minor_ver
+                )
+            elif self.major_ver == "master":
+                repo = "https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/{}".format(
+                    self.major_ver
+                )
+            else:
+                raise ValueError("Database version {} not supported.".format(self.algo_ver))
         self.repo = repo
         # Get algo dict from manifest
-        manifest = pjoin(repo, "manifest.json")
-        self.algo_dict = self._get_algo_dict(manifest)
+        try:
+            manifest = pjoin(repo, "manifest.json")
+            self.algo_dict = self._get_algo_dict(manifest)
+        except:
+            print("Cannot read manifest file. Trying master branch.")
+            repo = "https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/master"
+            manifest = pjoin(repo, "manifest.json")
+            self.algo_dict = self._get_algo_dict(manifest)
+            self.repo = repo
+
         self.algo_paths = None
 
         self.params_dict = {}  # input parameter for the desired algorithm to be run
@@ -125,12 +140,17 @@ class Featurizer:
 
     def _get_db_version(self) -> Tuple[str, str, str]:
         # Get DB version
-        self.algo_ver = self.conn.getVer()
-        major_ver, minor_ver, patch_ver = self.algo_ver.split(".")
-        if int(major_ver) < 3 or (int(major_ver) == 3 and int(minor_ver) <= 7):
-            # For DB version <= 3.7, use version 3.7.
-            major_ver = "3"
-            minor_ver = "7"
+        try:
+            self.algo_ver = self.conn.getVer()
+            major_ver, minor_ver, patch_ver = self.algo_ver.split(".")
+            if int(major_ver) < 3 or (int(major_ver) == 3 and int(minor_ver) <= 7):
+                # For DB version <= 3.7, use version 3.7.
+                major_ver = "3"
+                minor_ver = "7"
+        except AttributeError:
+            version = self.conn.getVersion()
+            self.algo_ver = version[0]["version"]
+            major_ver, minor_ver, patch_ver = self.algo_ver, "", ""
         return major_ver, minor_ver, patch_ver
 
     def _get_algo_dict(self, manifest_file: str) -> dict:
@@ -246,7 +266,12 @@ class Featurizer:
             for placeholder in replace:
                 query = query.replace(placeholder, replace[placeholder])
         self.query = query
-        if query_name == "tg_fastRP" and int(self.major_ver) <= 3 and int(self.minor_ver) <= 7:
+        if (
+            query_name == "tg_fastRP" 
+            and self.major_ver != "master"
+            and int(self.major_ver) <= 3 
+            and int(self.minor_ver) <= 7
+        ):
             # Drop all jobs on the graph
             self.conn.gsql("USE GRAPH {}\n".format(self.conn.graphname) + "drop job *")
             res = add_attribute(self.conn, schema_type="VERTEX",attr_type=" LIST<DOUBLE>",attr_name="embedding",global_change=global_change)
@@ -506,7 +531,12 @@ class Featurizer:
                     feat_name = params["result_attr"]
                 elif "result_attribute" in params.keys() and params["result_attribute"]:
                     feat_name = params["result_attribute"]
-                if not(query_name == "tg_fastRP" and int(self.major_ver) <= 3 and int(self.minor_ver) <= 7): # fastRP in 3.7 creates attribute at install time
+                if not (
+                    query_name == "tg_fastRP" 
+                    and self.major_ver != "master"
+                    and int(self.major_ver) <= 3 
+                    and int(self.minor_ver) <= 7
+                ): # fastRP in 3.7 creates attribute at install time
                     if not(custom_query):
                         feat_type = self.query_result_type[query_name]
                         schema_type = self.sch_type[query_name]
