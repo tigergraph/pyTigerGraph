@@ -22,15 +22,25 @@ CREATE QUERY random_anchor_selection(
   anchor_sample_size = nodes.size() * percentage;
   @@not_tgt_type = v_type MINUS tgt_v_type;
 
-  anchors =
-    SELECT s FROM nodes:s
-    WHERE s.getAttr(filter_by, "BOOL") OR (s.type IN @@not_tgt_type)
-    POST-ACCUM 
-      s.@score = ((((getvid(s)*_mult)+_inc)+_mult*random_seed) % _mod) % digit_mod / (digit_mod * 1.0), 
-      s.setAttr(anchor_attr, FALSE)
-    ORDER BY s.@score
-    LIMIT anchor_sample_size;
-
+  IF filter_by IS NOT NULL THEN
+    anchors =
+      SELECT s FROM nodes:s
+      WHERE s.getAttr(filter_by, "BOOL") OR (s.type IN @@not_tgt_type)
+      POST-ACCUM 
+        s.@score = ((((getvid(s)*_mult)+_inc)+_mult*random_seed) % _mod) % digit_mod / (digit_mod * 1.0), 
+        s.setAttr(anchor_attr, FALSE)
+      ORDER BY s.@score
+      LIMIT anchor_sample_size;
+  ELSE
+    anchors =
+      SELECT s FROM nodes:s
+      POST-ACCUM 
+        s.@score = ((((getvid(s)*_mult)+_inc)+_mult*random_seed) % _mod) % digit_mod / (digit_mod * 1.0), 
+        s.setAttr(anchor_attr, FALSE)
+      ORDER BY s.@score
+      LIMIT anchor_sample_size;
+  END;
+   
   anchors =
     SELECT s FROM anchors:s
     POST-ACCUM s.setAttr(anchor_attr, TRUE);
