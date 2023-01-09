@@ -194,7 +194,7 @@ class GDS:
         needs to be done once, so it will take no time when you initialize the loader
         on the same graph again.
 
-        See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_neighborloader.ipynb[the ML Workbench tutorial notebook]
+        See https://github.com/tigergraph/graph-ml-notebooks/blob/main/GNNs/PyG/gcn_node_classification.ipynb[the ML Workbench tutorial notebook]
         for examples.
 
         Args:
@@ -489,7 +489,7 @@ class GDS:
             callback_fn (callable, optional):
                 A callable function to apply to each batch in the dataloader. Defaults to None.
 
-        See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_vertexloader.ipynb[the ML Workbench tutorial notebook]
+        See https://github.com/tigergraph/graph-ml-notebooks/blob/main/applications/fraud_detection/fraud_detection.ipynb[the ML Workbench tutorial notebook]
         for examples.
         """
         params = {
@@ -640,7 +640,7 @@ class GDS:
             callback_fn (callable, optional):
                 A callable function to apply to each batch in the dataloader. Defaults to None.
 
-        See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_graphloader.ipynb[the ML Workbench tutorial notebook for graph loaders]
+        See https://github.com/tigergraph/graph-ml-notebooks/blob/main/GNNs/PyG/gcn_node_classification.ipynb[the ML Workbench tutorial notebook for graph loaders]
          for examples.
         """
         params = {
@@ -720,7 +720,7 @@ class GDS:
         needs to be done once, so it will take no time when you initialize the loader
         on the same graph again.
 
-        See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_neighborloader.ipynb[the ML Workbench tutorial notebook]
+        See https://github.com/tigergraph/graph-ml-notebooks/blob/main/GNNs/PyG/gcn_link_prediction.ipynb[the ML Workbench tutorial notebook]
         for examples.
 
         Args:
@@ -944,10 +944,11 @@ class GDS:
                 Whether to traverse along reverse edge types. Defaults to False.
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
+
             callback_fn (callable, optional):
                 A callable function to apply to each batch in the dataloader. Defaults to None.
-                
-        See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_graphloader.ipynb[the ML Workbench tutorial notebook for graph loaders]
+
+        See https://github.com/tigergraph/graph-ml-notebooks/tree/main/applications/nodepiece/nodepiece.ipynb[the ML Workbench tutorial notebook for nodepiece loaders]
          for examples.
         """
         params = {
