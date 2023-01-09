@@ -153,6 +153,8 @@ class BaseLoader:
                 `kafka_add_topic_per_epoch` is True. Defaults to False.
             kafka_add_topic_per_epoch (bool, optional):  
                 Whether to add a topic for each epoch. Defaults to False.
+            callback_fn (callable, optional):
+                A callable function to apply to each batch in the dataloader. Defaults to None.
         """
         # Thread to send requests, download and load data
         self._requester = None

@@ -280,6 +280,8 @@ class GDS:
                 Whether to traverse along reverse edge types. Defaults to False.
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
+            callback_fn (callable, optional):
+                A callable function to apply to each batch in the dataloader. Defaults to None.
         """
         params = {
             "graph": self.conn,
@@ -384,6 +386,8 @@ class GDS:
                 Whether to traverse along reverse edge types. Defaults to False.
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
+            callback_fn (callable, optional):
+                A callable function to apply to each batch in the dataloader. Defaults to None.
 
         See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_edgeloader.ipynb[the ML Workbench edge loader tutorial notebook]
         for examples.
@@ -482,6 +486,8 @@ class GDS:
                 Whether to traverse along reverse edge types. Defaults to False.
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
+            callback_fn (callable, optional):
+                A callable function to apply to each batch in the dataloader. Defaults to None.
 
         See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_vertexloader.ipynb[the ML Workbench tutorial notebook]
         for examples.
@@ -631,6 +637,8 @@ class GDS:
                 Whether to traverse along reverse edge types. Defaults to False.
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
+            callback_fn (callable, optional):
+                A callable function to apply to each batch in the dataloader. Defaults to None.
 
         See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_graphloader.ipynb[the ML Workbench tutorial notebook for graph loaders]
          for examples.
@@ -798,6 +806,8 @@ class GDS:
                 Whether to traverse along reverse edge types. Defaults to False.
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
+            callback_fn (callable, optional):
+                A callable function to apply to each batch in the dataloader. Defaults to None.
         """
 
         params = {
@@ -934,6 +944,9 @@ class GDS:
                 Whether to traverse along reverse edge types. Defaults to False.
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
+            callback_fn (callable, optional):
+                A callable function to apply to each batch in the dataloader. Defaults to None.
+                
         See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_graphloader.ipynb[the ML Workbench tutorial notebook for graph loaders]
          for examples.
         """
