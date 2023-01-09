@@ -289,19 +289,23 @@ class test_Featurizer(unittest.TestCase):
         self.assertIsNotNone(ret.wait())
 
     def test_get_template_queries(self):
-        if int(self.featurizer.major_ver) < 3 or (
-            int(self.featurizer.major_ver) == 3 and int(self.featurizer.minor_ver) < 8
+        if (self.featurizer.major_ver != "master" and (
+                int(self.featurizer.major_ver) < 3 or (
+                int(self.featurizer.major_ver) == 3 and int(self.featurizer.minor_ver) < 8)
+            )
         ):
             print("Skip test_get_template_queries as the DB version is not supported.")
             return
-        self.conn.gsql("IMPORT PACKAGE GDBMS_ALGO.*")
+        self.conn.gsql("IMPORT PACKAGE GDBMS_ALGO")
         self.featurizer._get_template_queries()
         self.assertIn("centrality", self.featurizer.template_queries)
         self.assertIn("article_rank(string v_type, string e_type, float max_change, int maximum_iteration, float damping, int top_k, bool print_results, string result_attribute, string file_path)", self.featurizer.template_queries["centrality"])
 
     def test_template_query(self):
-        if int(self.featurizer.major_ver) < 3 or (
-            int(self.featurizer.major_ver) == 3 and int(self.featurizer.minor_ver) < 9
+        if (self.featurizer.major_ver != "master" and (
+                int(self.featurizer.major_ver) < 3 or (
+                int(self.featurizer.major_ver) == 3 and int(self.featurizer.minor_ver) < 9)
+            )
         ):
             print("Skip test_template_query as the DB version is not supported.")
             return
