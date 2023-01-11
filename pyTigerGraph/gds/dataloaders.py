@@ -3117,6 +3117,8 @@ class NodePieceLoader(BaseLoader):
         self._payload["clear_cache"] = clear_cache
         if e_types:
             self._payload["e_types"] = e_types
+        elif e_types == []:
+            self._payload["e_types"] = e_types
         else:
             self._payload["e_types"] = list(self._e_schema.keys())
             e_types = list(self._e_schema.keys())
