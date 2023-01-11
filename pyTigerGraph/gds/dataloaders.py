@@ -3100,7 +3100,12 @@ class NodePieceLoader(BaseLoader):
         self.filter_by = filter_by
         self._payload["num_batches"] = self.num_batches
         if filter_by:
-            self._payload["filter_by"] = filter_by
+            if isinstance(filter_by, str):
+                self._payload["filter_by"] = filter_by
+            else:
+                attr = set(filter_by.values())
+                if len(attr) != 1:
+                    raise NotImplementedError("Filtering by different attributes for different vertex types is not supported. Please use the same attribute for different types.")
         self._payload["shuffle"] = shuffle
         self._payload["v_types"] = self._vtypes
         self._payload["seed_types"] = self._seed_types
@@ -3186,12 +3191,18 @@ class NodePieceLoader(BaseLoader):
             install_query_file(self._graph, query_path)
             params = {
                 "percentage": self._anchor_perc,
-                "filter_by": self.filter_by,
                 "v_type": self._vtypes,
                 "tgt_v_type": self._target_v_types,
                 "anchor_attr": anchor_attr,
                 "random_seed": 42
             }
+            if self.filter_by:
+                if isinstance(self.filter_by, str):
+                    params["filter_by"] = self.filter_by
+                else:
+                    attr = set(self.filter_by.values())
+                    if len(attr) != 1:
+                        raise NotImplementedError("Filtering by different attributes for different vertex types is not supported. Please use the same attribute for different types.")
             self._graph.runInstalledQuery("random_anchor_selection", params=params)
         else:
             raise NotImplementedError("{} anchor selection method is not supported. Please try 'random' anchor selection method".format(method))

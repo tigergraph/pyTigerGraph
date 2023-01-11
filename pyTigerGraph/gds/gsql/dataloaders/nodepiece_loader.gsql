@@ -111,9 +111,11 @@ CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
       END;
       # Get relational context
       
-      seeds = SELECT s FROM seeds:s -(e_types:e)- v_types:t 
-              SAMPLE max_rel_context EDGE WHEN s.outdegree() >= max_rel_context
-              ACCUM s.@rel_context_set += e.type +" ";
+      IF max_rel_context > 0 THEN
+        seeds = SELECT s FROM seeds:s -(e_types:e)- v_types:t 
+                SAMPLE max_rel_context EDGE WHEN s.outdegree() >= max_rel_context
+                ACCUM s.@rel_context_set += e.type +" ";
+      END;
     
       res = SELECT s FROM seeds:s 
             POST-ACCUM
