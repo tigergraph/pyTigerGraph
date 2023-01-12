@@ -577,6 +577,7 @@ class Featurizer:
                     temp_query_name,
                 ),
                 data=params,
+                headers={"GSQL-TIMEOUT": str(timeout)},
                 jsonData=True,
             )
             if resp["error"]:
