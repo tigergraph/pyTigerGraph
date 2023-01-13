@@ -3248,7 +3248,7 @@ class NodePieceLoader(BaseLoader):
                     print_attr
                 )
             else:
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + "\\n")'
+                print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + s.@rel_context_set + "," + s.@ancs + "\\n")'
             query_replace["{VERTEXATTRS}"] = print_query
         md5 = hashlib.md5()
         md5.update(json.dumps(query_suffix).encode())
@@ -3270,7 +3270,10 @@ class NodePieceLoader(BaseLoader):
             context = context + [self.idToIdx["PAD"] for x in range(len(context), self._payload["max_rel_context"])]
             return context
         def processAnchors(row):
-            ancs = row.split(" ")[:-1]
+            try:
+                ancs = row.split(" ")[:-1]
+            except:
+                ancs = []
             dists = []
             toks = []
             for anc in ancs:
