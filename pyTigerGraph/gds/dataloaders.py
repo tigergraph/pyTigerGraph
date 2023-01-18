@@ -41,7 +41,7 @@ import pandas as pd
 from ..pyTigerGraphException import TigerGraphException
 from .utilities import install_query_file, random_string, add_attribute
 
-__all__ = ["VertexLoader", "EdgeLoader", "NeighborLoader", "GraphLoader", "EdgeNeighborLoader", "NodePieceLoader"]
+__all__ = ["VertexLoader", "EdgeLoader", "NeighborLoader", "GraphLoader", "EdgeNeighborLoader", "NodePieceLoader", "HGTLoader"]
 
 RANDOM_TOPIC_LEN = 8
 
@@ -3655,17 +3655,44 @@ class HGTLoader(BaseLoader):
             # Generate select for each type
             print_select = ""
             seeds = []
-            for idx, vtype in enumerate(self.num_neighbors):
-                print_select += """seed{} = SELECT t
-                    FROM seeds:s -(e_types:e)- {}:t 
-                    SAMPLE {} EDGE WHEN s.outdegree() >= 1
-                    ACCUM
-                        IF NOT @@printed_edges.contains(e) THEN
-                            @@printed_edges += e,
-                            {}
-                        END;
-                """.format(idx, vtype, self.num_neighbors[vtype], print_query)
-                seeds.append("seed{}".format(idx))
+            vidx = 0
+            for vtype in self.num_neighbors:
+                # Print edges and attributes
+                print_query = ""
+                eidx = 0
+                for etype in self._etypes:
+                    e_attr_names = (
+                        self.e_in_feats.get(etype, [])
+                        + self.e_out_labels.get(etype, [])
+                        + self.e_extra_feats.get(etype, [])
+                    )
+                    e_attr_types = self._e_schema[etype]
+                    if vtype!=e_attr_types["FromVertexTypeName"] and vtype!=e_attr_types["ToVertexTypeName"]:
+                        continue
+                    if e_attr_names:
+                        print_attr = '+","+'.join(
+                            "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'
+                            for attr in e_attr_names
+                        )
+                        print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + stringify(getvid(s)) + "," + stringify(getvid(t)) + "," + {} + "\\n")\n'.format(
+                                "IF" if eidx==0 else "ELSE IF", etype, print_attr)
+                    else:
+                        print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + stringify(getvid(s)) + "," + stringify(getvid(t)) + "\\n")\n'.format(
+                                "IF" if eidx==0 else "ELSE IF", etype)
+                    eidx += 1
+                if print_query:   
+                    print_query += "END"
+                    print_select += """seed{} = SELECT t
+                        FROM seeds:s -(e_types:e)- {}:t 
+                        SAMPLE {} EDGE WHEN s.outdegree() >= 1
+                        ACCUM
+                            IF NOT @@printed_edges.contains(e) THEN
+                                @@printed_edges += e,
+                                {}
+                            END;
+                    """.format(eidx, vtype, self.num_neighbors[vtype], print_query)
+                    eidx += 1
+                    seeds.append("seed{}".format(eidx))
             print_select += "seeds = {};".format(" UNION ".join(seeds))
             query_replace["{SELECTNEIGHBORS}"] = print_select
         # Install query
