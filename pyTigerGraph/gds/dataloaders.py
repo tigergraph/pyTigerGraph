@@ -3632,27 +3632,7 @@ class HGTLoader(BaseLoader):
             print_query_other += "END"
             query_replace["{SEEDVERTEXATTRS}"] = print_query_seed
             query_replace["{OTHERVERTEXATTRS}"] = print_query_other
-            # Multiple edge types
-            print_query = ""
-            for idx, etype in enumerate(self._etypes):
-                e_attr_names = (
-                    self.e_in_feats.get(etype, [])
-                    + self.e_out_labels.get(etype, [])
-                    + self.e_extra_feats.get(etype, [])
-                )
-                e_attr_types = self._e_schema[etype]
-                if e_attr_names:
-                    print_attr = '+","+'.join(
-                        "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'
-                        for attr in e_attr_names
-                    )
-                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + stringify(getvid(s)) + "," + stringify(getvid(t)) + "," + {} + "\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", etype, print_attr)
-                else:
-                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + stringify(getvid(s)) + "," + stringify(getvid(t)) + "\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", etype)
-            print_query += "END"
-            # Generate select for each type
+            # Generate select for each type of neighbors
             print_select = ""
             seeds = []
             vidx = 0
@@ -3690,9 +3670,9 @@ class HGTLoader(BaseLoader):
                                 @@printed_edges += e,
                                 {}
                             END;
-                    """.format(eidx, vtype, self.num_neighbors[vtype], print_query)
-                    eidx += 1
-                    seeds.append("seed{}".format(eidx))
+                    """.format(vidx, vtype, self.num_neighbors[vtype], print_query)
+                    vidx += 1
+                    seeds.append("seed{}".format(vidx))
             print_select += "seeds = {};".format(" UNION ".join(seeds))
             query_replace["{SELECTNEIGHBORS}"] = print_select
         # Install query
