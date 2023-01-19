@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.getLogger().getEffectiveLevel())
 
 '''
 import boto3
