@@ -3671,8 +3671,8 @@ class HGTLoader(BaseLoader):
                                 {}
                             END;
                     """.format(vidx, vtype, self.num_neighbors[vtype], print_query)
-                    vidx += 1
                     seeds.append("seed{}".format(vidx))
+                    vidx += 1          
             print_select += "seeds = {};".format(" UNION ".join(seeds))
             query_replace["{SELECTNEIGHBORS}"] = print_select
         # Install query
