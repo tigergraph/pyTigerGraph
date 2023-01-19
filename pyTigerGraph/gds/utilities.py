@@ -14,7 +14,6 @@ if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.getLogger().getEffectiveLevel())
 
 '''
 import boto3
@@ -152,8 +151,7 @@ def install_query_file(
     if distributed:
         #TODO: Add Distributed keyword.
         raise NotImplementedError
-    if logger.level == logging.DEBUG:
-        logger.debug(query)
+    logger.debug(query)
     query = (
         "USE GRAPH {}\n".format(conn.graphname)
         + query
