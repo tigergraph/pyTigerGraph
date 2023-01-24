@@ -30,7 +30,7 @@ class BaseGraphSAGEModel(bm.BaseModel):
             edge_index = batch.edge_index
         return self.model(x, edge_index)
     
-    def compute_loss(self):
+    def compute_loss(self, loss_fn = None):
         raise NotImplementedError("Loss computation not implemented for BaseGraphSAGEModel")
 
 class GraphSAGEForVertexClassification(BaseGraphSAGEModel):
@@ -50,13 +50,15 @@ class GraphSAGEForVertexClassification(BaseGraphSAGEModel):
         else:
             return logits
 
-    def compute_loss(self, logits, batch, target_vertex_type=None):
+    def compute_loss(self, logits, batch, target_vertex_type=None, loss_fn = None):
+        if not(loss_fn):
+            loss_fn = F.cross_entropy
         if self.heterogeneous:
-            loss = F.cross_entropy(logits[target_vertex_type][batch[target_vertex_type].is_seed], 
+            loss = loss_fn(logits[target_vertex_type][batch[target_vertex_type].is_seed], 
                                    batch[target_vertex_type].y[batch[target_vertex_type].is_seed].long(),
                                    self.class_weight)
         else:
-            loss = F.cross_entropy(logits[batch.is_seed], batch.y[batch.is_seed].long(), self.class_weight)
+            loss = loss_fn(logits[batch.is_seed], batch.y[batch.is_seed].long(), self.class_weight)
         return loss
 
 class GraphSAGEForVertexRegression(BaseGraphSAGEModel):
@@ -76,13 +78,14 @@ class GraphSAGEForVertexRegression(BaseGraphSAGEModel):
         else:
             return logits
 
-    def compute_loss(self, logits, batch, target_vertex_type=None):
+    def compute_loss(self, logits, batch, target_vertex_type=None, loss_fn=None):
+        if not(loss_fn):
+            loss_fn = F.mse_loss
         if self.heterogeneous:
-            loss = F.mse_loss(logits[target_vertex_type][batch[target_vertex_type].is_seed], 
-                                   batch[target_vertex_type].y[batch[target_vertex_type].is_seed].long(),
-                                   self.class_weight)
+            loss = loss_fn(logits[target_vertex_type][batch[target_vertex_type].is_seed], 
+                                   batch[target_vertex_type].y[batch[target_vertex_type].is_seed].long())
         else:
-            loss = F.mse_loss(logits[batch.is_seed], batch.y[batch.is_seed].long(), self.class_weight)
+            loss = loss_fn(logits[batch.is_seed], batch.y[batch.is_seed].long())
         return loss
 
 
@@ -112,7 +115,7 @@ class GraphSAGEForLinkPrediction(BaseGraphSAGEModel):
             neg_edges = torch.randint(0, batch.x.shape[0], pos_edges.size(), dtype=torch.long)
         return pos_edges, neg_edges
 
-    def compute_loss(self, logits, batch, target_edge_type=None):
+    def compute_loss(self, logits, batch, target_edge_type=None, loss_fn=None):
         if self.heterogeneous:
             pos_edges, neg_edges = self.generate_edges(batch, target_edge_type)
             src_h = logits[target_edge_type[0]]
