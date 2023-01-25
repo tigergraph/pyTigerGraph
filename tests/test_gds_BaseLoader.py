@@ -145,7 +145,7 @@ class TestGDSBaseLoader(unittest.TestCase):
         read_task_q = Queue()
         data_q = Queue(4)
         exit_event = Event()
-        raw = "99,1 0 0 1 ,1,0,1\n8,1 0 0 1 ,1,1,1\n"
+        raw = "99|1 0 0 1 |1|0|1\n8|1 0 0 1 |1|1|1\n"
         read_task_q.put(raw)
         read_task_q.put(None)
         self.loader._read_data(
@@ -164,6 +164,7 @@ class TestGDSBaseLoader(unittest.TestCase):
             io.StringIO(raw),
             header=None,
             names=["vid", "x", "y", "train_mask", "is_seed"],
+            sep="|"
         )
         assert_frame_equal(data, truth)
         data = data_q.get()
@@ -173,7 +174,7 @@ class TestGDSBaseLoader(unittest.TestCase):
         read_task_q = Queue()
         data_q = Queue(4)
         exit_event = Event()
-        raw = "99,1 0 0 1 ,1,0,1\n8,1 0 0 1 ,1,1,1\n"
+        raw = "99|1 0 0 1 |1|0|1\n8|1 0 0 1 |1|1|1\n"
         read_task_q.put(raw)
         read_task_q.put(None)
         self.loader._read_data(
@@ -195,7 +196,7 @@ class TestGDSBaseLoader(unittest.TestCase):
         read_task_q = Queue()
         data_q = Queue(4)
         exit_event = Event()
-        raw = "1,2,0.1,2021,1,0\n2,1,1.5,2020,0,1\n"
+        raw = "1|2|0.1|2021|1|0\n2|1|1.5|2020|0|1\n"
         read_task_q.put(raw)
         read_task_q.put(None)
         self.loader._read_data(
@@ -218,6 +219,7 @@ class TestGDSBaseLoader(unittest.TestCase):
             io.StringIO(raw),
             header=None,
             names=["source", "target", "x", "time", "y", "is_train"],
+            sep="|"
         )
         assert_frame_equal(data, truth)
         data = data_q.get()
@@ -227,7 +229,7 @@ class TestGDSBaseLoader(unittest.TestCase):
         read_task_q = Queue()
         data_q = Queue(4)
         exit_event = Event()
-        raw = "1,2,0.1,2021,1,0\n2,1,1.5,2020,0,1\n"
+        raw = "1|2|0.1|2021|1|0\n2|1|1.5|2020|0|1\n"
         read_task_q.put(raw)
         read_task_q.put(None)
         self.loader._read_data(
@@ -255,8 +257,8 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "99,1 0 0 1 ,1,0,1\n8,1 0 0 1 ,1,1,1\n",
-            "1,2,0.1,2021,1,0\n2,1,1.5,2020,0,1\n",
+            "99|1 0 0 1 |1|0|1\n8|1 0 0 1 |1|1|1\n",
+            "1|2|0.1|2021|1|0\n2|1|1.5|2020|0|1\n",
         )
         read_task_q.put(raw)
         read_task_q.put(None)
@@ -281,12 +283,14 @@ class TestGDSBaseLoader(unittest.TestCase):
             header=None,
             names=["vid", "x", "y", "train_mask", "is_seed"],
             dtype="object",
+            sep="|"
         )
         edges = pd.read_csv(
             io.StringIO(raw[1]),
             header=None,
             names=["source", "target", "x", "time", "y", "is_train"],
             dtype="object",
+            sep="|"
         )
         assert_frame_equal(data[0], vertices)
         assert_frame_equal(data[1], edges)
@@ -299,8 +303,8 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "99,1 0 0 1 ,1,0,1\n8,1 0 0 1 ,1,1,1\n",
-            "1,2,0.1,2021,1,0\n2,1,1.5,2020,0,1\n",
+            "99|1 0 0 1 |1|0|1\n8|1 0 0 1 |1|1|1\n",
+            "1|2|0.1|2021|1|0\n2|1|1.5|2020|0|1\n",
         )
         read_task_q.put(raw)
         read_task_q.put(None)
@@ -330,8 +334,8 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "99,1 0 0 1 ,1,0,Alex,1\n8,1 0 0 1 ,1,1,Bill,0\n",
-            "99,8,0.1,2021,1,0,a b \n8,99,1.5,2020,0,1,c d \n",
+            "99|1 0 0 1 |1|0|Alex|1\n8|1 0 0 1 |1|1|Bill|0\n",
+            "99|8|0.1|2021|1|0|a b \n8|99|1.5|2020|0|1|c d \n",
         )
         read_task_q.put(raw)
         read_task_q.put(None)
@@ -379,8 +383,8 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "99,1 0 0 1 ,1,0,Alex,1\n8,1 0 0 1 ,1,1,Bill,0\n",
-            "99,8,0.1,2021,1,0,a b \n8,99,1.5,2020,0,1,c d \n",
+            "99|1 0 0 1 |1|0|Alex|1\n8|1 0 0 1 |1|1|Bill|0\n",
+            "99|8|0.1|2021|1|0|a b \n8|99|1.5|2020|0|1|c d \n",
         )
         read_task_q.put(raw)
         read_task_q.put(None)
@@ -427,7 +431,7 @@ class TestGDSBaseLoader(unittest.TestCase):
         read_task_q = Queue()
         data_q = Queue(4)
         exit_event = Event()
-        raw = ("99,1\n8,0\n", "99,8\n8,99\n")
+        raw = ("99|1\n8|0\n", "99|8\n8|99\n")
         read_task_q.put(raw)
         read_task_q.put(None)
         self.loader._read_data(
@@ -463,7 +467,7 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "99,1 0 0 1 ,1,0,Alex,1\n8,1 0 0 1 ,1,1,Bill,0\n",
+            "99|1 0 0 1 |1|0|Alex|1\n8|1 0 0 1 |1|1|Bill|0\n",
             "",
         )
         read_task_q.put(raw)
@@ -508,8 +512,8 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "People,99,1 0 0 1 ,1,0,Alex,1\nPeople,8,1 0 0 1 ,1,1,Bill,0\nCompany,2,0.3,0\n",
-            "Colleague,99,8,0.1,2021,1,0\nColleague,8,99,1.5,2020,0,1\nWork,99,2\nWork,2,8\n",
+            "People|99|1 0 0 1 |1|0|Alex|1\nPeople|8|1 0 0 1 |1|1|Bill|0\nCompany|2|0.3|0\n",
+            "Colleague|99|8|0.1|2021|1|0\nColleague|8|99|1.5|2020|0|1\nWork|99|2\nWork|2|8\n",
         )
         read_task_q.put(raw)
         read_task_q.put(None)
@@ -588,7 +592,7 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "People,99,1 0 0 1 ,1,0,Alex,1\nPeople,8,1 0 0 1 ,1,1,Bill,0\nCompany,2,0.3,0\n",
+            "People|99|1 0 0 1 |1|0|Alex|1\nPeople|8|1 0 0 1 |1|1|Bill|0\nCompany|2|0.3|0\n",
             "",
         )
         read_task_q.put(raw)
@@ -658,8 +662,8 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "People,99,1 0 0 1 ,1,0,Alex,1\nPeople,8,1 0 0 1 ,1,1,Bill,0\nCompany,2,0.3,0\n",
-            "Colleague,99,8,0.1,2021,1,0\nColleague,8,99,1.5,2020,0,1\nWork,99,2,a b \nWork,2,8,c d \n",
+            "People|99|1 0 0 1 |1|0|Alex|1\nPeople|8|1 0 0 1 |1|1|Bill|0\nCompany|2|0.3|0\n",
+            "Colleague|99|8|0.1|2021|1|0\nColleague|8|99|1.5|2020|0|1\nWork|99|2|a b \nWork|2|8|c d \n",
         )
         read_task_q.put(raw)
         read_task_q.put(None)
@@ -740,8 +744,8 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "99,1 0 0 1 ,1,0,Alex,1\n8,1 0 0 1 ,1,1,Bill,0\n",
-            "99,8,0.1,2021,1,0\n8,99,1.5,2020,0,1\n",
+            "99|1 0 0 1 |1|0|Alex|1\n8|1 0 0 1 |1|1|Bill|0\n",
+            "99|8|0.1|2021|1|0\n8|99|1.5|2020|0|1\n",
         )
         read_task_q.put(raw)
         read_task_q.put(None)
