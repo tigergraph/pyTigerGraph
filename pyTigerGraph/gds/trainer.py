@@ -1,6 +1,26 @@
 from .dataloaders import BaseLoader
 from typing import Union, List
 
+class TrainerState():
+    def __init__(self):
+        self.eval_loss = None
+        self.eval_logits = None
+        self.eval_labels = None
+        
+        self.train_loss = None
+        self.train_logits = None
+        self.train_labels = None
+
+    def update_train_state(self, loss, logits, labels):
+        self.train_loss = loss
+        self.train_logits = logits
+        self.train_labels = labels
+
+    def update_eval_state(self, loss, logits, labels):
+        self.eval_loss = loss
+        self.eval_logits = logits
+        self.eval_labels = labels
+
 class Trainer():
     def __init__(self, 
                  model,
@@ -16,6 +36,7 @@ class Trainer():
             import torch
         except:
             raise Exception("PyTorch is required to use the trainer. Please install PyTorch.")
+        self.state = TrainerState()
         self.model = model
         self.train_loader = training_dataloader
         self.eval_loader = eval_dataloader
@@ -57,9 +78,9 @@ class Trainer():
                 self.model.eval()
                 for batch in self.eval_loader:
                     out = self.model(batch)
-                loss = self.model.compute_loss(out,
-                                               batch,
-                                               self.target_type,
-                                               loss_fn = self.loss_fn)
-                print("Validation Loss after {} steps: {}".format(cur_step, loss.item()))
+                    loss = self.model.compute_loss(out,
+                                                batch,
+                                                self.target_type,
+                                                loss_fn = self.loss_fn)
+                    self.state.update_eval_state(loss, out, )
                 self.model.train()
