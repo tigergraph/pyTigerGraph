@@ -984,12 +984,15 @@ class GDS:
         else:
             return NodePieceLoader(**params)
 
-    def featurizer(self) -> Featurizer:
+    def featurizer(
+        self,
+        repo: str = None, 
+        algo_version: str = None) -> Featurizer:
         """Get a featurizer.
             Returns:
                 Featurizer
         """
-        return Featurizer(self.conn)
+        return Featurizer(self.conn, repo, algo_version)
 
     def vertexSplitter(self, v_types: List[str] = None, timeout: int = 600000, **split_ratios):
         """Get a vertex splitter that splits vertices into at most 3 parts randomly.
