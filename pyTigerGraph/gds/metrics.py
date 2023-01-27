@@ -173,3 +173,37 @@ class BinaryPrecision(Accumulator):
             return self.mean
         else:
             return None
+
+
+class BaseMetrics():
+    def __init__(self):
+        self.reset_metrics()
+    
+    def reset_metrics(self):
+        raise NotImplementedError("reset_metrics() is not implemented in BaseMetrics")
+
+    def update_metrics(self):
+        raise NotImplementedError("update_metrics() is not implemented in BaseMetrics")
+
+    def get_metrics(self):
+        raise NotImplementedError("get_metrics() is not implemented in BaseMetrics")
+
+
+class ClassificationMetrics(BaseMetrics):
+    def __init__(self):
+        self.reset_metrics()
+
+    def reset_metrics(self):
+        self.loss = Accumulator()
+        self.accuracy = Accuracy()
+        self.precision = None
+        self.recall = None
+
+    def update_metrics(self, loss, out, batch):
+        self.loss.update(loss)
+        pred = out.argmax(dim=1)
+        self.accuracy.update(pred[batch.is_seed], batch.y[batch.is_seed])
+
+    def get_metrics(self):
+        return {"loss": self.loss.mean,
+                "accuracy": self.accuracy.value}
