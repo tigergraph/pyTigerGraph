@@ -1,4 +1,5 @@
 from . import base_model as bm
+from ..metrics import ClassificationMetrics
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -37,6 +38,7 @@ class GraphSAGEForVertexClassification(BaseGraphSAGEModel):
     def __init__(self, num_layers, out_dim, dropout, hidden_dim, heterogeneous=None, class_weights=None):
         super().__init__(num_layers, out_dim, dropout, hidden_dim, heterogeneous)
         self.class_weight = class_weights
+        self.metrics = ClassificationMetrics()
 
     def forward(self, batch, get_probs=False):
         logits = super().forward(batch)
@@ -66,17 +68,9 @@ class GraphSAGEForVertexRegression(BaseGraphSAGEModel):
         super().__init__(num_layers, out_dim, dropout, hidden_dim, heterogeneous)
         self.class_weight = class_weights
 
-    def forward(self, batch, get_probs=False):
+    def forward(self, batch):
         logits = super().forward(batch)
-        if get_probs:
-            if self.heterogeneous:
-                for k in logits.keys():
-                    logits[k] = F.softmax(logits[k])
-                return logits
-            else:
-                return F.softmax(logits)
-        else:
-            return logits
+        return logits
 
     def compute_loss(self, logits, batch, target_vertex_type=None, loss_fn=None):
         if not(loss_fn):
