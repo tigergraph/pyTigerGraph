@@ -140,7 +140,7 @@ class TestGDSHGTLoaderREST(unittest.TestCase):
         )
         num_batches = 0
         for data in loader:
-            print(num_batches, data)
+            # print(num_batches, data)
             self.assertIsInstance(data, pygHeteroData)
             self.assertGreater(data["v2"]["x"].shape[0], 0)
             self.assertEqual(data["v2"]["x"].shape[0], data["v2"]["is_seed"].shape[0])
