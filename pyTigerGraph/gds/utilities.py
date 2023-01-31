@@ -1,6 +1,7 @@
 """GDS Utilities
 Utilities for the Graph Data Science functions.
 """
+import logging
 import os
 import random
 import re
@@ -11,6 +12,8 @@ from urllib.parse import urlparse
 
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
+
+logger = logging.getLogger(__name__)
 
 '''
 import boto3
@@ -148,6 +151,7 @@ def install_query_file(
     if distributed:
         #TODO: Add Distributed keyword.
         raise NotImplementedError
+    logger.debug(query)
     query = (
         "USE GRAPH {}\n".format(conn.graphname)
         + query
