@@ -3176,6 +3176,11 @@ class NodePieceLoader(BaseLoader):
         self.num_tokens = len(self.idToIdx.keys())
 
     def saveTokens(self, filename) -> None:
+        """Save tokens to pickle file
+        Args:
+            filename (str):
+                Filename to save the tokens to.
+        """
         pickle.dump(self.idToIdx, open(filename, "wb"))
 
     def _compute_anchors(self, anchor_attr, method="random") -> str:
@@ -3260,6 +3265,7 @@ class NodePieceLoader(BaseLoader):
         return install_query_file(self._graph, query_path, query_replace)
 
     def nodepiece_process(self, data):
+        """NO DOC"""
         def processRelContext(row):
             context = row.split(" ")[:-1]
             context = [self.idToIdx[str(x)] for x in context][:self._payload["max_rel_context"]]
@@ -3344,6 +3350,14 @@ class NodePieceLoader(BaseLoader):
         return super().data
 
     def fetch(self, vertices: list) -> None:
+        """Fetch NodePiece results (anchors, distances, and relational context) for specific vertices.
+
+        Args:
+            vertices (list of dict):
+                Vertices to fetch with their NodePiece results.
+                Each vertex corresponds to a dict with two mandatory keys
+                {"primary_id": ..., "type": ...}
+        """
         if not vertices:
             return None
         if not isinstance(vertices, list):
@@ -3399,6 +3413,8 @@ class NodePieceLoader(BaseLoader):
         return data
 
     def precompute(self) -> None:
+        """Compute NodePiece results (anchors and their distances) to cache attribute.
+        """
         _payload = dict(self._payload)
         _payload["precompute"] = True
         resp = self._graph.runInstalledQuery(
