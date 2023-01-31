@@ -1518,14 +1518,14 @@ class NeighborLoader(BaseLoader):
                         "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                         for attr in v_attr_names
                     )
-                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + int_to_string(getvid(s)) + "|" + {} + "|1\\n")\n'.format(
+                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + stringify(getvid(s)) + "|" + {} + "|1\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
-                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + int_to_string(getvid(s)) + "|" + {} + "|0\\n")\n'.format(
+                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + stringify(getvid(s)) + "|" + {} + "|0\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
                 else:
-                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + int_to_string(getvid(s)) + "|1\\n")\n'.format(
+                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + stringify(getvid(s)) + "|1\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype)
-                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + int_to_string(getvid(s)) + "|0\\n")\n'.format(
+                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + stringify(getvid(s)) + "|0\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype)
             print_query_seed += "END"
             print_query_other += "END"
@@ -1545,10 +1545,10 @@ class NeighborLoader(BaseLoader):
                         "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'
                         for attr in e_attr_names
                     )
-                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "|" + int_to_string(getvid(s)) + "|" + int_to_string(getvid(t)) + "|" + {} + "\\n")\n'.format(
+                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "|" + stringify(getvid(s)) + "|" + stringify(getvid(t)) + "|" + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype, print_attr)
                 else:
-                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "|" + int_to_string(getvid(s)) + "|" + int_to_string(getvid(t)) + "\\n")\n'.format(
+                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "|" + stringify(getvid(s)) + "|" + stringify(getvid(t)) + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype)
             print_query += "END"
             query_replace["{EDGEATTRS}"] = print_query
@@ -1561,18 +1561,18 @@ class NeighborLoader(BaseLoader):
                     "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                     for attr in v_attr_names
                 )
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + "|" + {} + "|1\\n")'.format(
+                print_query = '@@v_batch += (stringify(getvid(s)) + "|" + {} + "|1\\n")'.format(
                     print_attr
                 )
                 query_replace["{SEEDVERTEXATTRS}"] = print_query
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + "|" + {} + "|0\\n")'.format(
+                print_query = '@@v_batch += (stringify(getvid(s)) + "|" + {} + "|0\\n")'.format(
                     print_attr
                 )
                 query_replace["{OTHERVERTEXATTRS}"] = print_query
             else:
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + ",1\\n")'
+                print_query = '@@v_batch += (stringify(getvid(s)) + ",1\\n")'
                 query_replace["{SEEDVERTEXATTRS}"] = print_query
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + ",0\\n")'
+                print_query = '@@v_batch += (stringify(getvid(s)) + ",0\\n")'
                 query_replace["{OTHERVERTEXATTRS}"] = print_query
             # Ignore edge types
             e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
@@ -1582,11 +1582,11 @@ class NeighborLoader(BaseLoader):
                     "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                     for attr in e_attr_names
                 )
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "|" + int_to_string(getvid(t)) + "|" + {} + "\\n")'.format(
+                print_query = '@@e_batch += (stringify(getvid(s)) + "|" + stringify(getvid(t)) + "|" + {} + "\\n")'.format(
                     print_attr
                 )
             else:
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "|" + int_to_string(getvid(t)) + "\\n")'
+                print_query = '@@e_batch += (stringify(getvid(s)) + "|" + stringify(getvid(t)) + "\\n")'
             query_replace["{EDGEATTRS}"] = print_query
         # Install query
         query_path = os.path.join(
@@ -1916,10 +1916,10 @@ class EdgeLoader(BaseLoader):
                         "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                         for attr in e_attr_names
                     )
-                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "|" + int_to_string(getvid(s)) + "|" + int_to_string(getvid(t)) + "|" + {} + "\\n")\n'.format(
+                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "|" + stringify(getvid(s)) + "|" + stringify(getvid(t)) + "|" + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype, print_attr)
                 else:
-                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "|" + int_to_string(getvid(s)) + "|" + int_to_string(getvid(t)) + "\\n")\n'.format(
+                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "|" + stringify(getvid(s)) + "|" + stringify(getvid(t)) + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype)
             print_query += "END"
             query_replace["{EDGEATTRS}"] = print_query
@@ -1932,11 +1932,11 @@ class EdgeLoader(BaseLoader):
                     "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                     for attr in e_attr_names
                 )
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "|" + int_to_string(getvid(t)) + "|" + {} + "\\n")'.format(
+                print_query = '@@e_batch += (stringify(getvid(s)) + "|" + stringify(getvid(t)) + "|" + {} + "\\n")'.format(
                     print_attr
                 )
             else:
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "|" + int_to_string(getvid(t)) + "\\n")'
+                print_query = '@@e_batch += (stringify(getvid(s)) + "|" + stringify(getvid(t)) + "\\n")'
             query_replace["{EDGEATTRS}"] = print_query
         # Install query
         query_path = os.path.join(
@@ -2189,10 +2189,10 @@ class VertexLoader(BaseLoader):
                         "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                         for attr in v_attr_names
                     )
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + int_to_string(getvid(s)) + "|" + {} + "\\n")\n'.format(
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + stringify(getvid(s)) + "|" + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
                 else:
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + int_to_string(getvid(s)) + "\\n")\n'.format(
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + stringify(getvid(s)) + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype)
             print_query += "END"
             query_replace["{VERTEXATTRS}"] = print_query
@@ -2205,11 +2205,11 @@ class VertexLoader(BaseLoader):
                     "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                     for attr in v_attr_names
                 )
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + "|" + {} + "\\n")'.format(
+                print_query = '@@v_batch += (stringify(getvid(s)) + "|" + {} + "\\n")'.format(
                     print_attr
                 )
             else:
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + "\\n")'
+                print_query = '@@v_batch += (stringify(getvid(s)) + "\\n")'
             query_replace["{VERTEXATTRS}"] = print_query
         # Install query
         query_path = os.path.join(
@@ -2497,10 +2497,10 @@ class GraphLoader(BaseLoader):
                         "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                         for attr in v_attr_names
                     )
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + int_to_string(getvid(s)) + "|" + {} + "\\n")\n'.format(
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + stringify(getvid(s)) + "|" + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
                 else:
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + int_to_string(getvid(s)) + "\\n")\n'.format(
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + stringify(getvid(s)) + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype)
             print_query += "END"
             query_replace["{VERTEXATTRS}"] = print_query
@@ -2518,10 +2518,10 @@ class GraphLoader(BaseLoader):
                         "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                         for attr in e_attr_names
                     )
-                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "|" + int_to_string(getvid(s)) + "|" + int_to_string(getvid(t)) + "|" + {} + "\\n")\n'.format(
+                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "|" + stringify(getvid(s)) + "|" + stringify(getvid(t)) + "|" + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype, print_attr)
                 else:
-                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "|" + int_to_string(getvid(s)) + "|" + int_to_string(getvid(t)) + "\\n")\n'.format(
+                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "|" + stringify(getvid(s)) + "|" + stringify(getvid(t)) + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype)
             print_query += "END"
             query_replace["{EDGEATTRS}"] = print_query
@@ -2534,11 +2534,11 @@ class GraphLoader(BaseLoader):
                     "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                     for attr in v_attr_names
                 )
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + "|" + {} + "\\n")'.format(
+                print_query = '@@v_batch += (stringify(getvid(s)) + "|" + {} + "\\n")'.format(
                     print_attr
                 )
             else:
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + "\\n")'
+                print_query = '@@v_batch += (stringify(getvid(s)) + "\\n")'
             query_replace["{VERTEXATTRS}"] = print_query
             # Ignore edge types
             e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
@@ -2548,11 +2548,11 @@ class GraphLoader(BaseLoader):
                     "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                     for attr in e_attr_names
                 )
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "|" + int_to_string(getvid(t)) + "|" + {} + "\\n")'.format(
+                print_query = '@@e_batch += (stringify(getvid(s)) + "|" + stringify(getvid(t)) + "|" + {} + "\\n")'.format(
                     print_attr
                 )
             else:
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "|" + int_to_string(getvid(t)) + "\\n")'
+                print_query = '@@e_batch += (stringify(getvid(s)) + "|" + stringify(getvid(t)) + "\\n")'
             query_replace["{EDGEATTRS}"] = print_query
         # Install query
         query_path = os.path.join(
@@ -2809,10 +2809,10 @@ class EdgeNeighborLoader(BaseLoader):
                         "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                         for attr in v_attr_names
                     )
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + int_to_string(getvid(s)) + "|" + {} + "\\n")\n'.format(
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + stringify(getvid(s)) + "|" + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
                 else:
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + int_to_string(getvid(s)) + "\\n")\n'.format(
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + stringify(getvid(s)) + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype)
             print_query += "END"
             query_replace["{VERTEXATTRS}"] = print_query
@@ -2831,14 +2831,14 @@ class EdgeNeighborLoader(BaseLoader):
                         "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                         for attr in e_attr_names
                     )
-                    print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "|" + int_to_string(getvid(s)) + "|" + int_to_string(getvid(t)) + "|" + {} + "|1\\n")\n'.format(
+                    print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "|" + stringify(getvid(s)) + "|" + stringify(getvid(t)) + "|" + {} + "|1\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype, print_attr)
-                    print_query_other += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "|" + int_to_string(getvid(s)) + "|" + int_to_string(getvid(t)) + "|" + {} + "|0\\n")\n'.format(
+                    print_query_other += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "|" + stringify(getvid(s)) + "|" + stringify(getvid(t)) + "|" + {} + "|0\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype, print_attr)
                 else:
-                    print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "|" + int_to_string(getvid(s)) + "|" + int_to_string(getvid(t)) + "|1\\n")\n'.format(
+                    print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "|" + stringify(getvid(s)) + "|" + stringify(getvid(t)) + "|1\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype)
-                    print_query_other += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "|" + int_to_string(getvid(s)) + "|" + int_to_string(getvid(t)) + "|0\\n")\n'.format(
+                    print_query_other += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "|" + stringify(getvid(s)) + "|" + stringify(getvid(t)) + "|0\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype)
             print_query_seed += "END"
             print_query_other += "END"
@@ -2853,12 +2853,12 @@ class EdgeNeighborLoader(BaseLoader):
                     "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                     for attr in v_attr_names
                 )
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + "|" + {} + "\\n")'.format(
+                print_query = '@@v_batch += (stringify(getvid(s)) + "|" + {} + "\\n")'.format(
                     print_attr
                 )
                 query_replace["{VERTEXATTRS}"] = print_query
             else:
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + "\\n")'
+                print_query = '@@v_batch += (stringify(getvid(s)) + "\\n")'
                 query_replace["{VERTEXATTRS}"] = print_query
             # Ignore edge types
             e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
@@ -2868,18 +2868,18 @@ class EdgeNeighborLoader(BaseLoader):
                    "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                     for attr in e_attr_names
                 )
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "|" + int_to_string(getvid(t)) + "|" + {} + "|1\\n")'.format(
+                print_query = '@@e_batch += (stringify(getvid(s)) + "|" + stringify(getvid(t)) + "|" + {} + "|1\\n")'.format(
                     print_attr
                 )
                 query_replace["{SEEDEDGEATTRS}"] = print_query
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "|" + int_to_string(getvid(t)) + "|" + {} + "|0\\n")'.format(
+                print_query = '@@e_batch += (stringify(getvid(s)) + "|" + stringify(getvid(t)) + "|" + {} + "|0\\n")'.format(
                     print_attr
                 )
                 query_replace["{OTHEREDGEATTRS}"] = print_query
             else:
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "|" + int_to_string(getvid(t)) + "|1\\n")'
+                print_query = '@@e_batch += (stringify(getvid(s)) + "|" + stringify(getvid(t)) + "|1\\n")'
                 query_replace["{SEEDEDGEATTRS}"] = print_query
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "|" + int_to_string(getvid(t)) + "|0\\n")'
+                print_query = '@@e_batch += (stringify(getvid(s)) + "|" + stringify(getvid(t)) + "|0\\n")'
                 query_replace["{OTHEREDGEATTRS}"] = print_query
         # Install query
         query_path = os.path.join(
@@ -3222,10 +3222,10 @@ class NodePieceLoader(BaseLoader):
                         "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                         for attr in v_attr_names
                     )
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + int_to_string(getvid(s)) + "|" + s.@rel_context_set + "|" + s.@ancs + "|" + {} + "\\n")\n'.format(
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + stringify(getvid(s)) + "|" + s.@rel_context_set + "|" + s.@ancs + "|" + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
                 else:
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + int_to_string(getvid(s)) + "|" + s.@rel_context_set + "|" + s.@ancs + "\\n")\n'.format(
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + stringify(getvid(s)) + "|" + s.@rel_context_set + "|" + s.@ancs + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype)
             print_query += "END"
             query_replace["{VERTEXATTRS}"] = print_query
@@ -3240,11 +3240,11 @@ class NodePieceLoader(BaseLoader):
                    "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                     for attr in v_attr_names
                 )
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + "|" + s.@rel_context_set + "|" + s.@ancs + "|" + {} + "\\n")'.format(
+                print_query = '@@v_batch += (stringify(getvid(s)) + "|" + s.@rel_context_set + "|" + s.@ancs + "|" + {} + "\\n")'.format(
                     print_attr
                 )
             else:
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + "|" + s.@rel_context_set + "|" + s.@ancs + "\\n")'
+                print_query = '@@v_batch += (stringify(getvid(s)) + "|" + s.@rel_context_set + "|" + s.@ancs + "\\n")'
             query_replace["{VERTEXATTRS}"] = print_query
         md5 = hashlib.md5()
         md5.update(json.dumps(query_suffix).encode())
