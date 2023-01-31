@@ -3615,18 +3615,18 @@ class HGTLoader(BaseLoader):
                 )
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
-                    print_attr = '+","+'.join(
+                    print_attr = '+"|"+'.join(
                         "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                         for attr in v_attr_names
                     )
-                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + stringify(getvid(s)) + "," + {} + ",1\\n")\n'.format(
+                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + stringify(getvid(s)) + "|" + {} + "|1\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
-                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + stringify(getvid(s)) + "," + {} + ",0\\n")\n'.format(
+                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + stringify(getvid(s)) + "|" + {} + "|0\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
                 else:
-                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + stringify(getvid(s)) + ",1\\n")\n'.format(
+                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + stringify(getvid(s)) + "|1\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype)
-                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + stringify(getvid(s)) + ",0\\n")\n'.format(
+                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "|" + stringify(getvid(s)) + "|0\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype)
             print_query_seed += "END"
             print_query_other += "END"
@@ -3650,14 +3650,14 @@ class HGTLoader(BaseLoader):
                     if vtype!=e_attr_types["FromVertexTypeName"] and vtype!=e_attr_types["ToVertexTypeName"]:
                         continue
                     if e_attr_names:
-                        print_attr = '+","+'.join(
+                        print_attr = '+"|"+'.join(
                             "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'
                             for attr in e_attr_names
                         )
-                        print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + stringify(getvid(s)) + "," + stringify(getvid(t)) + "," + {} + "\\n")\n'.format(
+                        print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "|" + stringify(getvid(s)) + "|" + stringify(getvid(t)) + "|" + {} + "\\n")\n'.format(
                                 "IF" if eidx==0 else "ELSE IF", etype, print_attr)
                     else:
-                        print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + stringify(getvid(s)) + "," + stringify(getvid(t)) + "\\n")\n'.format(
+                        print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "|" + stringify(getvid(s)) + "|" + stringify(getvid(t)) + "\\n")\n'.format(
                                 "IF" if eidx==0 else "ELSE IF", etype)
                     eidx += 1
                 if print_query:   
