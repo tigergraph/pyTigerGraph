@@ -856,7 +856,7 @@ class BaseLoader:
                     vertices = vertices.merge(id_map, on="vid")
                     v_extra_feats.append("primary_id")
                 file = "\n".join(x for x in e_file.split("\n") if x.strip())
-                edges = pd.read_csv(io.StringIO(file), header=None, names=e_attributes, dtype="object")
+                edges = pd.read_csv(io.StringIO(file), header=None, names=e_attributes, dtype="object", sep="|")
                 for e_attr in e_attributes:
                     if e_attr_types.get(e_attr, "") == "MAP":
                         # I am sorry that this is this ugly...
