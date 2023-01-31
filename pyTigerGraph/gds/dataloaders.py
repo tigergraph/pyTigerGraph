@@ -787,8 +787,7 @@ class BaseLoader:
             # String of vertices in format vid,v_in_feats,v_out_labels,v_extra_feats
             if not is_hetero:
                 v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
-                double_list = [x.split("|") for x in raw.split("\n") if x]
-                file = "\n".join(["|".join(x) for x in double_list])
+                file = "\n".join(x for x in raw.split("\n") if x.strip())
                 data = pd.read_csv(io.StringIO(file), header=None, names=v_attributes, sep="|")
                 for v_attr in v_attributes:
                     if v_attr_types.get(v_attr, "") == "MAP":
@@ -815,8 +814,7 @@ class BaseLoader:
             # String of edges in format source_vid,target_vid
             if not is_hetero:
                 e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
-                double_list = [x.split("|") for x in raw.split("\n") if x]
-                file = "\n".join(["|".join(x) for x in double_list])
+                file = "\n".join(x for x in raw.split("\n") if x.strip())
                 data = pd.read_csv(io.StringIO(file), header=None, names=e_attributes, sep="|")
                 for e_attr in e_attributes:
                     if e_attr_types.get(e_attr, "") == "MAP":
@@ -846,8 +844,7 @@ class BaseLoader:
             if not is_hetero:
                 v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
                 e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
-                double_list = [x.split("|") for x in v_file.split("\n") if x]
-                file = "\n".join(["|".join(x) for x in double_list])
+                file = "\n".join(x for x in v_file.split("\n") if x.strip())
                 vertices = pd.read_csv(io.StringIO(file), header=None, names=v_attributes, dtype="object", sep="|")
                 for v_attr in v_extra_feats:
                     if v_attr_types[v_attr] == "MAP":
@@ -858,8 +855,7 @@ class BaseLoader:
                                           dtype="object")
                     vertices = vertices.merge(id_map, on="vid")
                     v_extra_feats.append("primary_id")
-                double_list = [x.split("|") for x in e_file.split("\n") if x]
-                file = "\n".join([",".join(x) for x in double_list])
+                file = "\n".join(x for x in e_file.split("\n") if x.strip())
                 edges = pd.read_csv(io.StringIO(file), header=None, names=e_attributes, dtype="object")
                 for e_attr in e_attributes:
                     if e_attr_types.get(e_attr, "") == "MAP":
