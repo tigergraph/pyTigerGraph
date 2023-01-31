@@ -1,24 +1,25 @@
 from .dataloaders import BaseLoader
 from typing import Union, List, Callable
-
+import logging
+import os
 
 class BaseCallback():
     def __init__(self):
         pass
 
-    def on_init_end(self):
+    def on_init_end(self, trainer):
         pass
 
-    def on_train_step_end(self):
+    def on_train_step_end(self, trainer):
         pass
 
-    def on_epoch_end(self):
+    def on_epoch_end(self, trainer):
         pass
 
-    def on_eval_step_end(self):
+    def on_eval_step_end(self, trainer):
         pass
 
-    def on_eval_end(self):
+    def on_eval_end(self, trainer):
         pass
 
 
@@ -37,11 +38,14 @@ class DefaultCallback(BaseCallback):
     def __init__(self, output_dir="./logs"):
         self.output_dir = output_dir
         self.best_loss = float("inf")
+        os.makedirs(os.path.dirname(self.output_dir), exist_ok=True)
+        logging.basicConfig(filename=output_dir+'/train_results.log', filemode='w', encoding='utf-8', level=logging.DEBUG)
 
     def on_train_step_end(self, trainer):
-        pass
+        logging.info(trainer.train_step_metrics)
+
     def on_eval_end(self, trainer):
-        pass
+        logging.info(trainer.eval_global_metrics)
 
 
 class Trainer():
@@ -49,7 +53,7 @@ class Trainer():
                  model,
                  training_dataloader: BaseLoader,
                  eval_dataloader: BaseLoader,
-                 callbacks: List[BaseCallback] = [PrinterCallback],
+                 callbacks: List[BaseCallback] = [DefaultCallback],
                  metrics = None,
                  learning_rate = 0.001, 
                  weight_decay = 0,
@@ -64,7 +68,7 @@ class Trainer():
         self.train_loader = training_dataloader
         self.eval_loader = eval_dataloader
         self.loss_fn = loss_fn
-        self.callbacks = callbacks
+        self.callbacks = []
         if metrics:
             self.metrics = metrics
         elif self.model.metrics:
@@ -86,12 +90,15 @@ class Trainer():
         else:
             self.target_type = target_type
 
-        for callback in self.callbacks: # instantiate callbacks if not already done so
+        for callback in callbacks: # instantiate callbacks if not already done so
             if isinstance(callback, type):
                 callback = callback()
+                self.callbacks.append(callback)
+            else:
+                self.callbacks.append(callback)
 
-        for callbacks in self.callbacks:
-            callbacks.on_init_end(trainer=self)
+        for callback in self.callbacks:
+            callback.on_init_end(trainer=self)
 
 
     def train(self, num_epochs=None, max_num_steps=None, valid_freq=None):
@@ -122,13 +129,13 @@ class Trainer():
                     self.train_step_metrics = {}
                 cur_step += 1
                 for callback in self.callbacks:
-                    callback.on_train_step_end(self)
+                    callback.on_train_step_end(trainer=self)
                 if self.eval_loader:
                     if cur_step % valid_freq == 0:
                         self.eval()
 
             for callback in self.callbacks:
-                callback.on_epoch_end(self)             
+                callback.on_epoch_end(trainer=self)             
 
     def eval(self):
         self.model.eval()
@@ -141,12 +148,12 @@ class Trainer():
             if self.metrics:
                 self.metrics.update_metrics(loss, out, batch)
             for callback in self.callbacks:
-                callback.on_eval_step_end(self)
+                callback.on_eval_step_end(trainer=self)
         if self.metrics:
             self.eval_global_metrics = self.metrics.get_metrics()
         else:
             self.eval_global_metrics = {}
         for callback in self.callbacks:
-            callback.on_eval_end(self)
+            callback.on_eval_end(trainer=self)
         self.metrics.reset_metrics()
         self.model.train()
