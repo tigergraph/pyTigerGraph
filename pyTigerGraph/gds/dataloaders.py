@@ -106,6 +106,9 @@ class BaseLoader:
                 Format of the output data of the loader. Defaults to dataframe.
             reverse_edge (bool, optional):
                 Whether to traverse along reverse edge types. Defaults to False.
+            delimiter (str, optional):
+                What character (or combination of characters) to use to separate attributes as batches are being created.
+                Defaults to ",".
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
             kafka_address (str):
