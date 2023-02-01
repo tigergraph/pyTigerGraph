@@ -3,6 +3,7 @@ CREATE QUERY edge_loader_{QUERYSUFFIX}(
     BOOL shuffle=FALSE,
     STRING filter_by,
     SET<STRING> e_types,
+    STRING delimiter,
     STRING kafka_address,
     STRING kafka_topic,
     STRING security_protocol,

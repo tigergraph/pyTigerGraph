@@ -4,6 +4,7 @@ CREATE QUERY vertex_loader_{QUERYSUFFIX}(
     BOOL shuffle=FALSE,
     STRING filter_by,
     SET<STRING> v_types,
+    STRING delimiter,
     STRING kafka_address,
     STRING kafka_topic,
     STRING security_protocol,

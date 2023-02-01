@@ -53,7 +53,7 @@ class TestGDSBaseLoader(unittest.TestCase):
 
     def test_get_schema_no_primary_id_attr(self):
         self.conn.graphname = "Social"
-        self.loader = BaseLoader(self.conn)
+        self.loader = BaseLoader(self.conn, delimter="|")
         self.assertDictEqual(
             self.loader._v_schema,
             {
@@ -219,7 +219,7 @@ class TestGDSBaseLoader(unittest.TestCase):
             io.StringIO(raw),
             header=None,
             names=["source", "target", "x", "time", "y", "is_train"],
-            sep="|"
+            sep=self.loader.delimiter
         )
         assert_frame_equal(data, truth)
         data = data_q.get()
@@ -283,14 +283,14 @@ class TestGDSBaseLoader(unittest.TestCase):
             header=None,
             names=["vid", "x", "y", "train_mask", "is_seed"],
             dtype="object",
-            sep="|"
+            sep=self.loader.delimiter
         )
         edges = pd.read_csv(
             io.StringIO(raw[1]),
             header=None,
             names=["source", "target", "x", "time", "y", "is_train"],
             dtype="object",
-            sep="|"
+            sep=self.loader.delimiter
         )
         assert_frame_equal(data[0], vertices)
         assert_frame_equal(data[1], edges)

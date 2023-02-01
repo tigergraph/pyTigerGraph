@@ -164,6 +164,7 @@ class GDS:
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        delimiter: str = ",",
         timeout: int = 300000,
         callback_fn: Callable = None
     ) -> NeighborLoader:
@@ -303,6 +304,7 @@ class GDS:
             "loader_id": loader_id,
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
+            "delimiter": delimiter,
             "timeout": timeout,
             "callback_fn": callback_fn
         }
@@ -324,6 +326,7 @@ class GDS:
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        delimiter: str = ",",
         timeout: int = 300000,
         callback_fn: Callable = None
     ) -> EdgeLoader:
@@ -404,6 +407,7 @@ class GDS:
             "loader_id": loader_id,
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
+            "delimiter": delimiter,
             "timeout": timeout,
             "callback_fn": callback_fn
         }
@@ -424,6 +428,7 @@ class GDS:
             loader_id: str = None,
             buffer_size: int = 4,
             reverse_edge: bool = False,
+            delimiter: str = ",",
             timeout: int = 300000,
             callback_fn: Callable = None
     ) -> VertexLoader:
@@ -504,6 +509,7 @@ class GDS:
             "loader_id": loader_id,
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
+            "delimiter": delimiter,
             "timeout": timeout,
             "callback_fn": callback_fn
         }
@@ -531,6 +537,7 @@ class GDS:
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        delimiter: str = ",",
         timeout: int = 300000,
         callback_fn: Callable = None
     ) -> GraphLoader:
@@ -661,6 +668,7 @@ class GDS:
             "loader_id": loader_id,
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
+            "delimiter": delimiter,
             "timeout": timeout,
             "callback_fn": callback_fn
         }
@@ -690,6 +698,7 @@ class GDS:
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        delimiter: str = ",",
         timeout: int = 300000,
         callback_fn: Callable = None
     ) -> EdgeNeighborLoader:
@@ -830,6 +839,7 @@ class GDS:
             "loader_id": loader_id,
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
+            "delimiter": delimiter,
             "timeout": timeout,
             "callback_fn": callback_fn
         }
@@ -863,6 +873,7 @@ class GDS:
                         loader_id: str = None,
                         buffer_size: int = 4,
                         reverse_edge: bool = False,
+                        delimiter: str = ",",
                         timeout: int = 300000,
                         callback_fn: Callable = None) -> NodePieceLoader:
         """Returns a `NodePieceLoader` instance.
@@ -976,6 +987,7 @@ class GDS:
             "loader_id": loader_id,
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
+            "delimiter": delimiter,
             "timeout": timeout,
             "callback_fn": callback_fn
         }
@@ -1004,6 +1016,7 @@ class GDS:
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        delimiter: str = ",",
         timeout: int = 300000,
         callback_fn: Callable = None
     ) -> HGTLoader:
@@ -1138,6 +1151,7 @@ class GDS:
             "loader_id": loader_id,
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
+            "delimiter": delimiter,
             "timeout": timeout,
             "callback_fn": callback_fn
         }
