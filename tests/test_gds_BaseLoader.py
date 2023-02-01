@@ -359,6 +359,7 @@ class TestGDSBaseLoader(unittest.TestCase):
             ["y"],
             ["is_train", "category"],
             {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL", "category": "LIST:STRING"},
+            delimiter="|"
         )
         data = data_q.get()
         self.assertIsInstance(data, pygData)
@@ -408,6 +409,7 @@ class TestGDSBaseLoader(unittest.TestCase):
             ["y"],
             ["is_train", "category"],
             {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL", "category": "LIST:STRING"},
+            delimiter="|"
         )
         data = data_q.get()
         self.assertIsInstance(data, DGLGraph)
@@ -454,6 +456,7 @@ class TestGDSBaseLoader(unittest.TestCase):
             [],
             [],
             {},
+            delimiter="|"
         )
         data = data_q.get()
         self.assertIsInstance(data, pygData)
@@ -492,6 +495,7 @@ class TestGDSBaseLoader(unittest.TestCase):
             ["y"],
             ["is_train"],
             {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL"},
+            delimiter="|"
         )
         data = data_q.get()
         self.assertIsInstance(data, pygData)
@@ -556,6 +560,7 @@ class TestGDSBaseLoader(unittest.TestCase):
                 }
             },
             False,
+            "|",
             True,
             True,
         )
@@ -636,6 +641,7 @@ class TestGDSBaseLoader(unittest.TestCase):
                 }
             },
             False,
+            "|",
             True,
             True,
         )
@@ -707,6 +713,7 @@ class TestGDSBaseLoader(unittest.TestCase):
                 }
             },
             False,
+            "|",
             True,
             True,
         )
@@ -769,6 +776,7 @@ class TestGDSBaseLoader(unittest.TestCase):
             ["y"],
             ["is_train"],
             {"x": "DOUBLE", "time": "INT", "y": "BOOL", "is_train": "BOOL"},
+            delimiter="|"
         )
         data = data_q.get()
         self.assertIsInstance(data, pygData)
