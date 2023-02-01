@@ -164,7 +164,7 @@ class TestGDSBaseLoader(unittest.TestCase):
             io.StringIO(raw),
             header=None,
             names=["vid", "x", "y", "train_mask", "is_seed"],
-            sep="|"
+            sep=self.loader.delimiter
         )
         assert_frame_equal(data, truth)
         data = data_q.get()

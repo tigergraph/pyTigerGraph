@@ -578,6 +578,7 @@ class BaseLoader:
         e_extra_feats: Union[list, dict] = [],
         e_attr_types: dict = {},
         add_self_loop: bool = False,
+        delimiter: str = ",",
         reindex: bool = True,
         is_hetero: bool = False,
         callback_fn: Callable = None,
@@ -601,6 +602,7 @@ class BaseLoader:
                 e_extra_feats = e_extra_feats,
                 e_attr_types = e_attr_types,
                 add_self_loop = add_self_loop,
+                delimiter = delimiter,
                 reindex = reindex,
                 primary_id = {},
                 is_hetero = is_hetero,
@@ -609,9 +611,8 @@ class BaseLoader:
             out_q.put(data)
             in_q.task_done()
 
-    #@staticmethod
+    @staticmethod
     def _parse_data(
-        self,
         raw: Union[str, Tuple[str, str]],
         in_format: 'Literal["vertex", "edge", "graph"]' = "vertex",
         out_format: str = "dataframe",
@@ -624,6 +625,7 @@ class BaseLoader:
         e_extra_feats: Union[list, dict] = [],
         e_attr_types: dict = {},
         add_self_loop: bool = False,
+        delimiter: str = ",",
         reindex: bool = True,
         primary_id: dict = {},
         is_hetero: bool = False,
@@ -791,13 +793,13 @@ class BaseLoader:
             if not is_hetero:
                 v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
                 file = "\n".join(x for x in raw.split("\n") if x.strip())
-                data = pd.read_csv(io.StringIO(file), header=None, names=v_attributes, sep=self.delimiter)
+                data = pd.read_csv(io.StringIO(file), header=None, names=v_attributes, sep=delimiter)
                 for v_attr in v_attributes:
                     if v_attr_types.get(v_attr, "") == "MAP":
                         # I am sorry that this is this ugly...
                         data[v_attr] = data[v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
             else:
-                v_file = (line.split(self.delimiter) for line in raw.split('\n') if line)
+                v_file = (line.split(delimiter) for line in raw.split('\n') if line)
                 v_file_dict = defaultdict(list)
                 for line in v_file:
                     v_file_dict[line[0]].append(line[1:])
@@ -818,13 +820,13 @@ class BaseLoader:
             if not is_hetero:
                 e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
                 file = "\n".join(x for x in raw.split("\n") if x.strip())
-                data = pd.read_csv(io.StringIO(file), header=None, names=e_attributes, sep=self.delimiter)
+                data = pd.read_csv(io.StringIO(file), header=None, names=e_attributes, sep=delimiter)
                 for e_attr in e_attributes:
                     if e_attr_types.get(e_attr, "") == "MAP":
                         # I am sorry that this is this ugly...
                         data[e_attr] = data[e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
             else:
-                e_file = (line.split(self.delimiter) for line in raw.split('\n') if line)
+                e_file = (line.split(delimiter) for line in raw.split('\n') if line)
                 e_file_dict = defaultdict(list)
                 for line in e_file:
                     e_file_dict[line[0]].append(line[1:])
@@ -848,7 +850,7 @@ class BaseLoader:
                 v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
                 e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
                 file = "\n".join(x for x in v_file.split("\n") if x.strip())
-                vertices = pd.read_csv(io.StringIO(file), header=None, names=v_attributes, dtype="object", sep=self.delimiter)
+                vertices = pd.read_csv(io.StringIO(file), header=None, names=v_attributes, dtype="object", sep=delimiter)
                 for v_attr in v_extra_feats:
                     if v_attr_types[v_attr] == "MAP":
                         # I am sorry that this is this ugly...
@@ -859,13 +861,13 @@ class BaseLoader:
                     vertices = vertices.merge(id_map, on="vid")
                     v_extra_feats.append("primary_id")
                 file = "\n".join(x for x in e_file.split("\n") if x.strip())
-                edges = pd.read_csv(io.StringIO(file), header=None, names=e_attributes, dtype="object", sep=self.delimiter)
+                edges = pd.read_csv(io.StringIO(file), header=None, names=e_attributes, dtype="object", sep=delimiter)
                 for e_attr in e_attributes:
                     if e_attr_types.get(e_attr, "") == "MAP":
                         # I am sorry that this is this ugly...
                         edges[e_attr] = edges[e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
             else:
-                v_file = (line.split(self.delimiter) for line in v_file.split('\n') if line)
+                v_file = (line.split(delimiter) for line in v_file.split('\n') if line)
                 v_file_dict = defaultdict(list)
                 for line in v_file:
                     v_file_dict[line[0]].append(line[1:])
@@ -887,7 +889,7 @@ class BaseLoader:
                         vertices[vtype] = vertices[vtype].merge(id_map, on="vid")
                         v_extra_feats[vtype].append("primary_id")
                 del v_file_dict, v_file
-                e_file = (line.split(self.delimiter) for line in e_file.split('\n') if line)
+                e_file = (line.split(delimiter) for line in e_file.split('\n') if line)
                 e_file_dict = defaultdict(list)
                 for line in e_file:
                     e_file_dict[line[0]].append(line[1:])
@@ -1524,14 +1526,14 @@ class NeighborLoader(BaseLoader):
                         "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                         for attr in v_attr_names
                     )
-                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + "|1\\n")\n'.format(
+                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + delimiter + "1\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
-                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + "|0\\n")\n'.format(
+                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + delimiter + "0\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
                 else:
-                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + "|1\\n")\n'.format(
+                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + "1\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype)
-                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + "|0\\n")\n'.format(
+                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + "0\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype)
             print_query_seed += "END"
             print_query_other += "END"
@@ -1567,11 +1569,11 @@ class NeighborLoader(BaseLoader):
                     "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                     for attr in v_attr_names
                 )
-                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + {} + "|1\\n")'.format(
+                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + {} + delimiter + "1\\n")'.format(
                     print_attr
                 )
                 query_replace["{SEEDVERTEXATTRS}"] = print_query
-                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + {} + "|0\\n")'.format(
+                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + {} + delimiter + "0\\n")'.format(
                     print_attr
                 )
                 query_replace["{OTHERVERTEXATTRS}"] = print_query
@@ -1642,6 +1644,7 @@ class NeighborLoader(BaseLoader):
                 self.e_extra_feats,
                 e_attr_types,
                 self.add_self_loop,
+                self.delimiter,
                 True,
                 self.is_hetero,
                 self.callback_fn
@@ -1987,6 +1990,7 @@ class EdgeLoader(BaseLoader):
                 {} if self.is_hetero else [],
                 e_attr_types,
                 False,
+                self.delimiter,
                 False,
                 self.is_hetero,
                 self.callback_fn
@@ -2263,6 +2267,7 @@ class VertexLoader(BaseLoader):
                 [],
                 {},
                 False,
+                self.delimiter,
                 False,
                 self.is_hetero,
                 self.callback_fn
@@ -2611,6 +2616,7 @@ class GraphLoader(BaseLoader):
                 self.e_extra_feats,
                 e_attr_types,
                 self.add_self_loop,
+                self.delimiter,
                 True,
                 self.is_hetero,
                 self.callback_fn
@@ -2850,14 +2856,14 @@ class EdgeNeighborLoader(BaseLoader):
                         "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                         for attr in e_attr_names
                     )
-                    print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "|1\\n")\n'.format(
+                    print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + delimiter + "1\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype, print_attr)
-                    print_query_other += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "|0\\n")\n'.format(
+                    print_query_other += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + delimiter + "0\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype, print_attr)
                 else:
-                    print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + "|1\\n")\n'.format(
+                    print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + "1\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype)
-                    print_query_other += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + "|0\\n")\n'.format(
+                    print_query_other += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + "0\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype)
             print_query_seed += "END"
             print_query_other += "END"
@@ -2887,18 +2893,18 @@ class EdgeNeighborLoader(BaseLoader):
                    "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                     for attr in e_attr_names
                 )
-                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "|1\\n")'.format(
+                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + delimiter + "1\\n")'.format(
                     print_attr
                 )
                 query_replace["{SEEDEDGEATTRS}"] = print_query
-                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "|0\\n")'.format(
+                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + delimiter + "0\\n")'.format(
                     print_attr
                 )
                 query_replace["{OTHEREDGEATTRS}"] = print_query
             else:
-                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + "|1\\n")'
+                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + "1\\n")'
                 query_replace["{SEEDEDGEATTRS}"] = print_query
-                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + "|0\\n")'
+                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + "0\\n")'
                 query_replace["{OTHEREDGEATTRS}"] = print_query
         # Install query
         query_path = os.path.join(
@@ -2948,6 +2954,7 @@ class EdgeNeighborLoader(BaseLoader):
                 e_extra_feats,
                 e_attr_types,
                 self.add_self_loop,
+                self.delimiter,
                 True,
                 self.is_hetero,
                 self.callback_fn
@@ -3351,6 +3358,7 @@ class NodePieceLoader(BaseLoader):
                 [],
                 {},
                 False,
+                self.delimiter,
                 False,
                 self.is_hetero,
                 self.nodepiece_process
@@ -3641,14 +3649,14 @@ class HGTLoader(BaseLoader):
                         "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                         for attr in v_attr_names
                     )
-                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + "|1\\n")\n'.format(
+                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + delimiter + "1\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
-                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + "|0\\n")\n'.format(
+                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + delimiter + "0\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
                 else:
-                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + "|1\\n")\n'.format(
+                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + "1\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype)
-                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + "|0\\n")\n'.format(
+                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + "0\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype)
             print_query_seed += "END"
             print_query_other += "END"
@@ -3745,6 +3753,7 @@ class HGTLoader(BaseLoader):
                 self.e_extra_feats,
                 e_attr_types,
                 self.add_self_loop,
+                self.delimiter,
                 True,
                 self.is_hetero,
                 self.callback_fn
