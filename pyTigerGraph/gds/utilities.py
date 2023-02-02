@@ -238,6 +238,7 @@ def add_attribute(conn: "TigerGraphConnection", schema_type:str, attr_type:str =
         job = "USE GRAPH {}\n".format(conn.graphname) + "CREATE GLOBAL SCHEMA_CHANGE JOB {} {{\n".format(
             job_name) + ''.join(tasks) + "}}\nRUN GLOBAL SCHEMA_CHANGE JOB {}".format(job_name)
     # Submit the job
+    print("Changing schema to save results...")
     resp = conn.gsql(job)
     status = resp.splitlines()[-1]
     if "Failed" in status:

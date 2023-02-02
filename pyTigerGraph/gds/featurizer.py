@@ -692,7 +692,6 @@ class Featurizer:
         custom_query: bool = False,
         schema_name: list = [],
     ):
-        print("Changing schema to save results...")
         if custom_query:
             # For custom query, feat_name, feat_type and schema_name should be
             # provided. Infer schema type from schema name.
@@ -765,4 +764,3 @@ class Featurizer:
                 schema_name=local_types,
                 global_change=False,
             )
-        print("Schema change succeeded.")
