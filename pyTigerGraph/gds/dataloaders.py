@@ -56,7 +56,7 @@ class BaseLoader:
         buffer_size: int = 4,
         output_format: str = "dataframe",
         reverse_edge: bool = False,
-        delimter: str = ",",
+        delimiter: str = ",",
         timeout: int = 300000,
         kafka_address: str = "",
         Kafka_max_msg_size: int = 104857600,
@@ -204,7 +204,7 @@ class BaseLoader:
         self._iterations = 0
         self._iterator = False
         self.callback_fn = callback_fn
-        self.delimiter = delimter
+        self.delimiter = delimiter
         # Kafka consumer and admin
         self.max_kafka_msg_size = Kafka_max_msg_size
         self.kafka_address_consumer = (
@@ -795,7 +795,6 @@ class BaseLoader:
             # String of vertices in format vid,v_in_feats,v_out_labels,v_extra_feats
             if not is_hetero:
                 v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
-                #file = "\n".join(x for x in raw.split("\n") if x.strip())
                 #data = pd.read_table(io.StringIO(file), header=None, names=v_attributes, sep=delimiter)
                 v_file = (line.split(delimiter) for line in raw.split('\n') if line)
                 data = pd.DataFrame(v_file, columns=v_attributes, dtype="object")
