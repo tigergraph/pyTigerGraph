@@ -570,9 +570,7 @@ class Featurizer:
                     ) = self._get_algo_details(self.algo_dict)
                 self._add_result_attribute(query_name, params)
             # Finally, run the query
-            # for k, v in params.items():
-            #     if isinstance(v, int) or isinstance(v, float) or isinstance(v, bool):
-            #         params[k] = str(v)
+            print("Running the algorithm. It might take a minute to install the query if this is the first time it runs.")
             resp = self.conn._post(
                 "{}:{}/gsqlserver/gsql/library?graph={}&functionName=GDBMS_ALGO.{}.{}".format(
                     self.conn.host,
@@ -694,6 +692,7 @@ class Featurizer:
         custom_query: bool = False,
         schema_name: list = [],
     ):
+        print("Changing schema to save results...")
         if custom_query:
             # For custom query, feat_name, feat_type and schema_name should be
             # provided. Infer schema type from schema name.
@@ -766,3 +765,4 @@ class Featurizer:
                 schema_name=local_types,
                 global_change=False,
             )
+        print("Schema change succeeded.")
