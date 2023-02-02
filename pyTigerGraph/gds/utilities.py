@@ -241,7 +241,7 @@ def add_attribute(conn: "TigerGraphConnection", schema_type:str, attr_type:str =
     resp = conn.gsql(job)
     status = resp.splitlines()[-1]
     if "Failed" in status:
-        raise ConnectionError(status)
+        raise ConnectionError(resp)
     else:
         print(status)
     return 'Schema change succeeded.'
