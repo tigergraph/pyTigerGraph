@@ -546,9 +546,9 @@ class Featurizer:
             # Check if query_name has a template query.
             if not self.template_queries:
                 self._get_template_queries()
-            temp_query_name = (
-                query_name[3:] if query_name.startswith("tg_") else query_name
-            )
+            if not query_name.startswith("tg_"):
+                query_name = "tg_" + query_name
+            temp_query_name = query_name[3:]
             found_query = False
             for category, queries in self.template_queries.items():
                 if temp_query_name in queries:
