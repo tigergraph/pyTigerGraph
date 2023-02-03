@@ -797,7 +797,7 @@ class BaseLoader:
                 v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
                 #data = pd.read_table(io.StringIO(file), header=None, names=v_attributes, sep=delimiter)
                 v_file = (line.split(delimiter) for line in raw.split('\n') if line)
-                data = pd.DataFrame(v_file, columns=v_attributes, dtype="object")
+                data = pd.DataFrame(v_file, columns=v_attributes)
                 for v_attr in v_attributes:
                     if v_attr_types.get(v_attr, "") == "MAP":
                         # I am sorry that this is this ugly...
@@ -826,7 +826,7 @@ class BaseLoader:
                 #file = "\n".join(x for x in raw.split("\n") if x.strip())
                 #data = pd.read_table(io.StringIO(file), header=None, names=e_attributes, sep=delimiter)
                 e_file = (line.split(delimiter) for line in raw.split('\n') if line)
-                data = pd.DataFrame(e_file, columns=e_attributes, dtype="object")
+                data = pd.DataFrame(e_file, columns=e_attributes)
                 for e_attr in e_attributes:
                     if e_attr_types.get(e_attr, "") == "MAP":
                         # I am sorry that this is this ugly...
@@ -857,7 +857,7 @@ class BaseLoader:
                 e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
                 #file = "\n".join(x for x in v_file.split("\n") if x.strip())
                 v_file = (line.split(delimiter) for line in v_file.split('\n') if line)
-                vertices = pd.DataFrame(v_file, columns=v_attributes, dtype="object")
+                vertices = pd.DataFrame(v_file, columns=v_attributes)
                 #vertices = pd.read_table(io.StringIO(file), header=None, names=v_attributes, dtype="object", sep=delimiter)
                 for v_attr in v_extra_feats:
                     if v_attr_types[v_attr] == "MAP":
@@ -871,7 +871,7 @@ class BaseLoader:
                 #file = "\n".join(x for x in e_file.split("\n") if x.strip())
                 e_file = (line.split(delimiter) for line in e_file.split('\n') if line)
                 #edges = pd.read_table(io.StringIO(file), header=None, names=e_attributes, dtype="object", sep=delimiter)
-                edges = pd.DataFrame(e_file, columns=e_attributes, dtype="object")
+                edges = pd.DataFrame(e_file, columns=e_attributes)
                 for e_attr in e_attributes:
                     if e_attr_types.get(e_attr, "") == "MAP":
                         # I am sorry that this is this ugly...
