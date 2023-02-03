@@ -868,9 +868,8 @@ class BaseLoader:
                         # I am sorry that this is this ugly...
                         vertices[v_attr] = vertices[v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
                 if primary_id:
-                    id_map = pd.DataFrame({"vid": primary_id.keys(), "primary_id": primary_id.values()}, 
-                                          dtype="object")
-                    vertices = vertices.merge(id_map, on="vid")
+                    id_map = pd.DataFrame({"vid": primary_id.keys(), "primary_id": primary_id.values()})
+                    vertices = vertices.merge(id_map.astype({"vid": vertices["vid"].dtype}), on="vid")
                     v_extra_feats.append("primary_id")
                 #file = "\n".join(x for x in e_file.split("\n") if x.strip())
                 e_file = (line.split(delimiter) for line in e_file.split('\n') if line)

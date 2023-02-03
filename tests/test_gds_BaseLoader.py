@@ -165,8 +165,7 @@ class TestGDSBaseLoader(unittest.TestCase):
             io.StringIO(raw),
             header=None,
             names=["vid", "x", "y", "train_mask", "is_seed"],
-            sep=self.loader.delimiter,
-            dtype="object"
+            sep=self.loader.delimiter
         )
         assert_frame_equal(data, truth)
         data = data_q.get()
@@ -224,7 +223,6 @@ class TestGDSBaseLoader(unittest.TestCase):
             header=None,
             names=["source", "target", "x", "time", "y", "is_train"],
             sep=self.loader.delimiter,
-            dtype="object"
         )
         assert_frame_equal(data, truth)
         data = data_q.get()
@@ -289,14 +287,12 @@ class TestGDSBaseLoader(unittest.TestCase):
             io.StringIO(raw[0]),
             header=None,
             names=["vid", "x", "y", "train_mask", "is_seed"],
-            dtype="object",
             sep=self.loader.delimiter
         )
         edges = pd.read_csv(
             io.StringIO(raw[1]),
             header=None,
             names=["source", "target", "x", "time", "y", "is_train"],
-            dtype="object",
             sep=self.loader.delimiter
         )
         assert_frame_equal(data[0], vertices)
