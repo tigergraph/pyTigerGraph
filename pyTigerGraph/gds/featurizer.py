@@ -573,7 +573,8 @@ class Featurizer:
             # Convert vertex dict in params to tuple
             vertex = params.get("v_start", None)
             if vertex:
-                params["v_start"] = (vertex["id"], vertex["type"])
+                params["v_start"] = vertex["id"]
+                params["v_start.type"] = vertex["type"]
             # Finally, run the query
             print("Running the algorithm. It might take a minute to install the query if this is the first time it runs.")
             resp = self.conn._post(
