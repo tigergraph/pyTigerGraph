@@ -19,6 +19,9 @@ from .utilities import is_query_installed, random_string, add_attribute
 
 
 class AsyncFeaturizerResult:
+    """AsyncFeaturizerResult
+    Object to keep track of featurizer algorithms being ran in asynchronous mode. (`runAsync=True`).
+    """
     def __init__(self, conn, algorithm, query_id, results=None):
         """NO DOC:
         class for asynchronous featurizer results. Populated during `runAlgorithm()` if `runAsync = True`.
@@ -87,6 +90,8 @@ class AsyncFeaturizerResult:
 
 
 class Featurizer:
+    """The Featurizer enables installation and execution of algorithms in the Graph Data Science (GDS) libarary.
+    """
     def __init__(
         self, conn: "TigerGraphConnection", repo: str = None, algo_version: str = None
     ):
