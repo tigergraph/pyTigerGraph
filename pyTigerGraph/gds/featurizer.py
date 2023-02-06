@@ -524,7 +524,8 @@ class Featurizer:
             sizeLimit (int, optional):
                 Maximum size of response (in bytes).
             templateQuery (bool, optional):
-                Whether to call packaged template query. See https://docs.tigergraph.com/graph-ml/current/using-an-algorithm/#_packaged_template_queries.
+                Whether to call packaged template query. See https://docs.tigergraph.com/graph-ml/current/using-an-algorithm/#_packaged_template_queries for more details.
+                Note that currently not every algorithm supports template query. More will be added in the future.
                 Default: False.
 
         Returns:
