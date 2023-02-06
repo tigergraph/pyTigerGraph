@@ -14,6 +14,7 @@ CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
   INT max_rel_context,
   INT num_batches=1,
   BOOL shuffle=FALSE,
+  STRING delimiter,
   STRING kafka_address,
   STRING kafka_topic,
   STRING security_protocol,

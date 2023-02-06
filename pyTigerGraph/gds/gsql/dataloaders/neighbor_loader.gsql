@@ -8,6 +8,7 @@ CREATE QUERY neighbor_loader_{QUERYSUFFIX}(
     SET<STRING> v_types,
     SET<STRING> e_types,
     SET<STRING> seed_types,
+    STRING delimiter,
     STRING kafka_address,
     STRING kafka_topic,
     STRING security_protocol,

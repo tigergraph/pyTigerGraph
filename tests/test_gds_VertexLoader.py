@@ -185,6 +185,26 @@ class TestGDSVertexLoaderREST(unittest.TestCase):
         self.assertIn("val_mask", data.columns)
         self.assertIn("test_mask", data.columns)
 
+    def test_all_vertices_multichar_delimiter(self):
+        loader = VertexLoader(
+            graph=self.conn,
+            attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
+            num_batches=1,
+            shuffle=False,
+            filter_by="train_mask",
+            loader_id=None,
+            buffer_size=4,
+            delimiter="$|"
+        )
+        data = loader.data
+        # print(data)
+        self.assertIsInstance(data, DataFrame)
+        self.assertIn("x", data.columns)
+        self.assertIn("y", data.columns)
+        self.assertIn("train_mask", data.columns)
+        self.assertIn("val_mask", data.columns)
+        self.assertIn("test_mask", data.columns)
+
     def test_string_attr(self):
         conn = make_connection(graphname="Social")
 
@@ -266,6 +286,28 @@ class TestGDSHeteroVertexLoaderREST(unittest.TestCase):
         self.assertIn("y", data["v0"].columns)
         self.assertIn("x", data["v1"].columns)
 
+    def test_all_vertices_multichar_delimiter(self):
+        loader = VertexLoader(
+            graph=self.conn,
+            attributes={"v0": ["x", "y"],
+                        "v1": ["x"]},
+            num_batches=1,
+            shuffle=False,
+            filter_by=None,
+            loader_id=None,
+            buffer_size=4,
+            delimiter="|$"
+        )
+        data = loader.data
+        # print(data)
+        self.assertIsInstance(data["v0"], DataFrame)
+        self.assertTupleEqual(data["v0"].shape, (76, 3))
+        self.assertIsInstance(data["v1"], DataFrame)
+        self.assertTupleEqual(data["v1"].shape, (110, 2))
+        self.assertIn("x", data["v0"].columns)
+        self.assertIn("y", data["v0"].columns)
+        self.assertIn("x", data["v1"].columns)
+
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
@@ -277,10 +319,12 @@ if __name__ == "__main__":
     suite.addTest(TestGDSVertexLoaderREST("test_init"))
     suite.addTest(TestGDSVertexLoaderREST("test_iterate"))
     suite.addTest(TestGDSVertexLoaderREST("test_all_vertices"))
+    suite.addTest(TestGDSVertexLoaderREST("test_all_vertices_multichar_delimiter"))
     suite.addTest(TestGDSVertexLoaderREST("test_string_attr"))
     suite.addTest(TestGDSHeteroVertexLoaderREST("test_init"))
     suite.addTest(TestGDSHeteroVertexLoaderREST("test_iterate"))
     suite.addTest(TestGDSHeteroVertexLoaderREST("test_all_vertices"))
+    suite.addTest(TestGDSHeteroVertexLoaderREST("test_all_vertices_multichar_delimiter"))
 
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)

@@ -164,6 +164,7 @@ class GDS:
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        delimiter: str = ",",
         timeout: int = 300000,
         callback_fn: Callable = None
     ) -> NeighborLoader:
@@ -271,6 +272,9 @@ class GDS:
                 "PyG", "DGL", "spektral", and "dataframe" are supported. Defaults to "PyG".
             add_self_loop (bool, optional):
                 Whether to add self-loops to the graph. Defaults to False.
+            delimiter (str, optional):
+                What character (or combination of characters) to use to separate attributes as batches are being created.
+                Defaults to ",".
             loader_id (str, optional):
                 An identifier of the loader which can be any string. It is
                 also used as the Kafka topic name. If `None`, a random string will be generated
@@ -303,6 +307,7 @@ class GDS:
             "loader_id": loader_id,
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
+            "delimiter": delimiter,
             "timeout": timeout,
             "callback_fn": callback_fn
         }
@@ -324,6 +329,7 @@ class GDS:
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        delimiter: str = ",",
         timeout: int = 300000,
         callback_fn: Callable = None
     ) -> EdgeLoader:
@@ -385,6 +391,9 @@ class GDS:
                 Number of data batches to prefetch and store in memory. Defaults to 4.
             reverse_edge (bool, optional):
                 Whether to traverse along reverse edge types. Defaults to False.
+            delimiter (str, optional):
+                What character (or combination of characters) to use to separate attributes as batches are being created.
+                Defaults to ",".
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
             callback_fn (callable, optional):
@@ -404,6 +413,7 @@ class GDS:
             "loader_id": loader_id,
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
+            "delimiter": delimiter,
             "timeout": timeout,
             "callback_fn": callback_fn
         }
@@ -424,6 +434,7 @@ class GDS:
             loader_id: str = None,
             buffer_size: int = 4,
             reverse_edge: bool = False,
+            delimiter: str = ",",
             timeout: int = 300000,
             callback_fn: Callable = None
     ) -> VertexLoader:
@@ -485,6 +496,9 @@ class GDS:
                 Number of data batches to prefetch and store in memory. Defaults to 4.
             reverse_edge (bool, optional):
                 Whether to traverse along reverse edge types. Defaults to False.
+            delimiter (str, optional):
+                What character (or combination of characters) to use to separate attributes as batches are being created.
+                Defaults to ",".
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
             callback_fn (callable, optional):
@@ -504,6 +518,7 @@ class GDS:
             "loader_id": loader_id,
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
+            "delimiter": delimiter,
             "timeout": timeout,
             "callback_fn": callback_fn
         }
@@ -531,6 +546,7 @@ class GDS:
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        delimiter: str = ",",
         timeout: int = 300000,
         callback_fn: Callable = None
     ) -> GraphLoader:
@@ -636,6 +652,9 @@ class GDS:
                 Number of data batches to prefetch and store in memory. Defaults to 4.
             reverse_edge (bool, optional):
                 Whether to traverse along reverse edge types. Defaults to False.
+            delimiter (str, optional):
+                What character (or combination of characters) to use to separate attributes as batches are being created.
+                Defaults to ",".
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
             callback_fn (callable, optional):
@@ -661,6 +680,7 @@ class GDS:
             "loader_id": loader_id,
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
+            "delimiter": delimiter,
             "timeout": timeout,
             "callback_fn": callback_fn
         }
@@ -690,6 +710,7 @@ class GDS:
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        delimiter: str = ",",
         timeout: int = 300000,
         callback_fn: Callable = None
     ) -> EdgeNeighborLoader:
@@ -805,6 +826,9 @@ class GDS:
                 Number of data batches to prefetch and store in memory. Defaults to 4.
             reverse_edge (bool, optional):
                 Whether to traverse along reverse edge types. Defaults to False.
+            delimiter (str, optional):
+                What character (or combination of characters) to use to separate attributes as batches are being created.
+                Defaults to ",".
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
             callback_fn (callable, optional):
@@ -830,6 +854,7 @@ class GDS:
             "loader_id": loader_id,
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
+            "delimiter": delimiter,
             "timeout": timeout,
             "callback_fn": callback_fn
         }
@@ -863,6 +888,7 @@ class GDS:
                         loader_id: str = None,
                         buffer_size: int = 4,
                         reverse_edge: bool = False,
+                        delimiter: str = ",",
                         timeout: int = 300000,
                         callback_fn: Callable = None) -> NodePieceLoader:
         """Returns a `NodePieceLoader` instance.
@@ -943,9 +969,11 @@ class GDS:
                 Number of data batches to prefetch and store in memory. Defaults to 4.
             reverse_edge (bool, optional):
                 Whether to traverse along reverse edge types. Defaults to False.
+            delimiter (str, optional):
+                What character (or combination of characters) to use to separate attributes as batches are being created.
+                Defaults to ",".
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
-
             callback_fn (callable, optional):
                 A callable function to apply to each batch in the dataloader. Defaults to None.
 
@@ -976,6 +1004,7 @@ class GDS:
             "loader_id": loader_id,
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
+            "delimiter": delimiter,
             "timeout": timeout,
             "callback_fn": callback_fn
         }
@@ -1004,6 +1033,7 @@ class GDS:
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        delimiter: str = ",",
         timeout: int = 300000,
         callback_fn: Callable = None
     ) -> HGTLoader:
@@ -1116,6 +1146,9 @@ class GDS:
                 Number of data batches to prefetch and store in memory. Defaults to 4.
             reverse_edge (bool, optional):
                 Whether to traverse along reverse edge types. Defaults to False.
+            delimiter (str, optional):
+                What character (or combination of characters) to use to separate attributes as batches are being created.
+                Defaults to ",".
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
         """
@@ -1138,6 +1171,7 @@ class GDS:
             "loader_id": loader_id,
             "buffer_size": buffer_size,
             "reverse_edge": reverse_edge,
+            "delimiter": delimiter,
             "timeout": timeout,
             "callback_fn": callback_fn
         }
