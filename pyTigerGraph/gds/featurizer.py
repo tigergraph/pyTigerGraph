@@ -524,7 +524,8 @@ class Featurizer:
             sizeLimit (int, optional):
                 Maximum size of response (in bytes).
             templateQuery (bool, optional):
-                Whether to call packaged template query. See https://docs.tigergraph.com/graph-ml/current/using-an-algorithm/#_packaged_template_queries.
+                Whether to call packaged template query. See https://docs.tigergraph.com/graph-ml/current/using-an-algorithm/#_packaged_template_queries for more details.
+                Note that currently not every algorithm supports template query. More will be added in the future.
                 Default: False.
 
         Returns:
@@ -546,9 +547,9 @@ class Featurizer:
             # Check if query_name has a template query.
             if not self.template_queries:
                 self._get_template_queries()
-            temp_query_name = (
-                query_name[3:] if query_name.startswith("tg_") else query_name
-            )
+            if not query_name.startswith("tg_"):
+                query_name = "tg_" + query_name
+            temp_query_name = query_name[3:]
             found_query = False
             for category, queries in self.template_queries.items():
                 if temp_query_name in queries:
@@ -570,9 +571,7 @@ class Featurizer:
                     ) = self._get_algo_details(self.algo_dict)
                 self._add_result_attribute(query_name, params)
             # Finally, run the query
-            # for k, v in params.items():
-            #     if isinstance(v, int) or isinstance(v, float) or isinstance(v, bool):
-            #         params[k] = str(v)
+            print("Running the algorithm. It might take a minute to install the query if this is the first time it runs.")
             resp = self.conn._post(
                 "{}:{}/gsqlserver/gsql/library?graph={}&functionName=GDBMS_ALGO.{}.{}".format(
                     self.conn.host,
