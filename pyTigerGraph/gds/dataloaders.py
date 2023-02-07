@@ -86,7 +86,8 @@ class BaseLoader:
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False,
-        callback_fn: Callable = None
+        callback_fn: Callable = None,
+        kafka_group_id: str = None
     ) -> None:
         """Base Class for data loaders.
 
@@ -169,6 +170,8 @@ class BaseLoader:
                 Whether to add a topic for each epoch. Defaults to False.
             callback_fn (callable, optional):
                 A callable function to apply to each batch in the dataloader. Defaults to None.
+            kafka_group_id (str, optional):
+                Consumer group ID if joining a consumer group for dynamic partition assignment and offset commits. Defaults to None.
         """
         # Thread to send requests, download and load data
         self._requester = None
@@ -208,7 +211,7 @@ class BaseLoader:
             self.loader_id = random_string(RANDOM_TOPIC_LEN)
         else:
             self.loader_id = loader_id
-        self.kafka_group_id = self.loader_id
+        self.kafka_group_id = kafka_group_id
         self.num_batches = num_batches
         self.output_format = output_format
         self.buffer_size = buffer_size
@@ -1459,7 +1462,8 @@ class NeighborLoader(BaseLoader):
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False,
-        callback_fn: Callable = None
+        callback_fn: Callable = None,
+        kafka_group_id: str = None
     ) -> None:
         """NO DOC"""
 
@@ -1501,7 +1505,8 @@ class NeighborLoader(BaseLoader):
             kafka_auto_offset_reset,
             kafka_del_topic_per_epoch,
             kafka_add_topic_per_epoch,
-            callback_fn
+            callback_fn,
+            kafka_group_id
         )
         # Resolve attributes
         is_hetero = any(map(lambda x: isinstance(x, dict), 
@@ -1941,7 +1946,8 @@ class EdgeLoader(BaseLoader):
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False,
-        callback_fn: Callable = None
+        callback_fn: Callable = None,
+        kafka_group_id: str = None
     ) -> None:
         """
         NO DOC.
@@ -1984,7 +1990,8 @@ class EdgeLoader(BaseLoader):
             kafka_auto_offset_reset,
             kafka_del_topic_per_epoch,
             kafka_add_topic_per_epoch,
-            callback_fn
+            callback_fn,
+            kafka_group_id
         )
         # Resolve attributes
         is_hetero = isinstance(attributes, dict)
@@ -2239,7 +2246,8 @@ class VertexLoader(BaseLoader):
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False,
-        callback_fn: Callable = None
+        callback_fn: Callable = None,
+        kafka_group_id: str = None
     ) -> None:
         """
         NO DOC
@@ -2282,7 +2290,8 @@ class VertexLoader(BaseLoader):
             kafka_auto_offset_reset,
             kafka_del_topic_per_epoch,
             kafka_add_topic_per_epoch,
-            callback_fn
+            callback_fn,
+            kafka_group_id
         )
         # Resolve attributes
         is_hetero = isinstance(attributes, dict)
@@ -2548,7 +2557,8 @@ class GraphLoader(BaseLoader):
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False,
-        callback_fn: Callable = None
+        callback_fn: Callable = None,
+        kafka_group_id: str = None
     ) -> None:
         """
         NO DOC
@@ -2591,7 +2601,8 @@ class GraphLoader(BaseLoader):
             kafka_auto_offset_reset,
             kafka_del_topic_per_epoch,
             kafka_add_topic_per_epoch,
-            callback_fn
+            callback_fn,
+            kafka_group_id
         )
         # Resolve attributes
         is_hetero = any(map(lambda x: isinstance(x, dict), 
@@ -2876,7 +2887,8 @@ class EdgeNeighborLoader(BaseLoader):
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False,
-        callback_fn: Callable = None
+        callback_fn: Callable = None,
+        kafka_group_id: str = None
     ) -> None:
         """NO DOC"""
 
@@ -2918,7 +2930,8 @@ class EdgeNeighborLoader(BaseLoader):
             kafka_auto_offset_reset,
             kafka_del_topic_per_epoch,
             kafka_add_topic_per_epoch,
-            callback_fn
+            callback_fn,
+            kafka_group_id
         )
         # Resolve attributes
         is_hetero = any(map(lambda x: isinstance(x, dict), 
@@ -3237,7 +3250,8 @@ class NodePieceLoader(BaseLoader):
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False,
-        callback_fn: Callable = None
+        callback_fn: Callable = None,
+        kafka_group_id: str = None
     ) -> None:
         """
         NO DOC
@@ -3280,7 +3294,8 @@ class NodePieceLoader(BaseLoader):
             kafka_auto_offset_reset,
             kafka_del_topic_per_epoch,
             kafka_add_topic_per_epoch,
-            callback_fn
+            callback_fn,
+            kafka_group_id
         )
         # Resolve attributes
         is_hetero = isinstance(v_feats, dict)
@@ -3743,7 +3758,8 @@ class HGTLoader(BaseLoader):
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False,
-        callback_fn: Callable = None
+        callback_fn: Callable = None,
+        kafka_group_id: str = None
     ) -> None:
         """NO DOC"""
 
@@ -3785,7 +3801,8 @@ class HGTLoader(BaseLoader):
             kafka_auto_offset_reset,
             kafka_del_topic_per_epoch,
             kafka_add_topic_per_epoch,
-            callback_fn
+            callback_fn,
+            kafka_group_id
         )
         self.num_neighbors = num_neighbors
         # Resolve attributes

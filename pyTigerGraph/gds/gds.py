@@ -82,7 +82,8 @@ class GDS:
         kafka_skip_produce: bool = False,
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
-        kafka_add_topic_per_epoch: bool = False
+        kafka_add_topic_per_epoch: bool = False,
+        kafka_group_id: str = None
     ) -> None:
         """Configure the Kafka connection.
         Args:
@@ -155,6 +156,8 @@ class GDS:
                 `kafka_add_topic_per_epoch` is True. Defaults to False.
             kafka_add_topic_per_epoch (bool, optional):  
                 Whether to add a topic for each epoch. Defaults to False.
+            kafka_group_id (str, optional):
+                Consumer group ID if joining a consumer group for dynamic partition assignment and offset commits. Defaults to None.
         """
         self.kafkaConfig = {
             "kafka_address": kafka_address,
@@ -185,7 +188,8 @@ class GDS:
             "kafka_skip_produce": kafka_skip_produce,
             "kafka_auto_offset_reset": kafka_auto_offset_reset,
             "kafka_del_topic_per_epoch": kafka_del_topic_per_epoch,
-            "kafka_add_topic_per_epoch": kafka_add_topic_per_epoch
+            "kafka_add_topic_per_epoch": kafka_add_topic_per_epoch,
+            "kafka_group_id": kafka_group_id
         }
 
 
