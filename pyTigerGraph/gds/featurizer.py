@@ -573,6 +573,7 @@ class Featurizer:
             # Convert vertex dict in params to tuple
             vertex = params.get("v_start", None)
             if vertex:
+                params = params.copy()
                 params["v_start"] = vertex["id"]
                 params["v_start.type"] = vertex["type"]
             # Finally, run the query
