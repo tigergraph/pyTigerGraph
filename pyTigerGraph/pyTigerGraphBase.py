@@ -280,7 +280,10 @@ class pyTigerGraphBase(object):
                 res.raise_for_status()
             except:
                 self._errorCheck(res)
-        res = json.loads(res.text, strict=strictJson)
+        try:
+            res = json.loads(res.text, strict=strictJson)
+        except:
+            raise TigerGraphException(res.text)
         if not skipCheck:
             self._errorCheck(res)
         if not resKey:
