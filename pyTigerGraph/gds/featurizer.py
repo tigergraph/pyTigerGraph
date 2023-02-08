@@ -570,12 +570,17 @@ class Featurizer:
                         self.sch_type,
                     ) = self._get_algo_details(self.algo_dict)
                 self._add_result_attribute(query_name, params)
-            # Convert vertex dict in params to tuple
+            # Convert vertex dict in params to the right format
             vertex = params.get("v_start", None)
             if vertex:
                 params = params.copy()
                 params["v_start"] = vertex["id"]
                 params["v_start.type"] = vertex["type"]
+            vertex = params.get("source", None)
+            if vertex:
+                params = params.copy()
+                params["source"] = vertex["id"]
+                params["source.type"] = vertex["type"]
             # Finally, run the query
             print("Running the algorithm. It might take a minute to install the query if this is the first time it runs.")
             resp = self.conn._post(
