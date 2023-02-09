@@ -1,6 +1,8 @@
 from .dataloaders import BaseLoader
+from .metrics import BaseMetrics
 from typing import Union, List, Callable
 import logging
+import time
 import os
 
 class BaseCallback():
@@ -38,14 +40,21 @@ class DefaultCallback(BaseCallback):
     def __init__(self, output_dir="./logs"):
         self.output_dir = output_dir
         self.best_loss = float("inf")
-        os.makedirs(os.path.dirname(self.output_dir), exist_ok=True)
-        logging.basicConfig(filename=output_dir+'/train_results.log', filemode='w', encoding='utf-8', level=logging.DEBUG)
+        os.makedirs(self.output_dir, exist_ok=True)
+        curDT = time.time()
+        logging.basicConfig(format='%(asctime)s %(levelname)s:%(name)s:%(message)s',
+                            filename=output_dir+'/train_results_'+str(curDT)+'.log',
+                            filemode='w',
+                            encoding='utf-8',
+                            level=logging.INFO)
 
     def on_train_step_end(self, trainer):
-        logging.info(trainer.train_step_metrics)
+        logger = logging.getLogger(__name__)
+        logger.info("train_step:"+str(trainer.train_step_metrics))
 
     def on_eval_end(self, trainer):
-        logging.info(trainer.eval_global_metrics)
+        logger = logging.getLogger(__name__)
+        logger.info("evaluation:"+str(trainer.eval_global_metrics))
 
 
 class Trainer():
@@ -69,12 +78,16 @@ class Trainer():
         self.eval_loader = eval_dataloader
         self.loss_fn = loss_fn
         self.callbacks = []
+        self.metrics = []
         if metrics:
-            self.metrics = metrics
+            if isinstance(metrics, list):
+                self.metrics += metrics
+            else:
+                self.metrics.append(metrics)
         elif self.model.metrics:
-            self.metrics = self.model.metrics
+            self.metrics.append(self.model.metrics)
         else:
-            print("No metrics class defined, only calculating loss")
+            self.metrics.append(BaseMetrics())
         if optimizer:
             self.optimizer = optimizer
         else:
@@ -119,14 +132,13 @@ class Trainer():
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
-                if self.metrics:
-                    self.metrics.update_metrics(loss, out, batch)
-                    self.train_step_metrics = self.metrics.get_metrics()
+                self.train_step_metrics = {}
+                for metric in self.metrics:
+                    metric.update_metrics(loss, out, batch)
+                    self.train_step_metrics.update(metric.get_metrics())
                     self.train_step_metrics["global_step"] = cur_step
                     self.train_step_metrics["epoch"] = cur_step/self.train_loader.num_batches
-                    self.metrics.reset_metrics()
-                else:
-                    self.train_step_metrics = {}
+                    metric.reset_metrics()
                 cur_step += 1
                 for callback in self.callbacks:
                     callback.on_train_step_end(trainer=self)
@@ -145,15 +157,16 @@ class Trainer():
                                         batch,
                                         self.target_type,
                                         loss_fn = self.loss_fn)
-            if self.metrics:
-                self.metrics.update_metrics(loss, out, batch)
+            for metric in self.metrics:
+                metric.update_metrics(loss, out, batch)
             for callback in self.callbacks:
                 callback.on_eval_step_end(trainer=self)
-        if self.metrics:
-            self.eval_global_metrics = self.metrics.get_metrics()
-        else:
-            self.eval_global_metrics = {}
+        self.eval_global_metrics = {}
+        for metric in self.metrics:
+            self.eval_global_metrics.update(metric.get_metrics())
         for callback in self.callbacks:
             callback.on_eval_end(trainer=self)
-        self.metrics.reset_metrics()
+        if self.metrics:
+            for metric in self.metrics:
+                metric.reset_metrics()
         self.model.train()
