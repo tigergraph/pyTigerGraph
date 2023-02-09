@@ -1,5 +1,5 @@
 from . import base_model as bm
-from ..metrics import ClassificationMetrics
+from ..metrics import ClassificationMetrics, RegressionMetrics, LinkPredictionMetrics
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -20,7 +20,7 @@ class BaseGraphSAGEModel(bm.BaseModel):
         else:
             self.model = tmp_model
 
-    def forward(self, batch):
+    def forward(self, batch, tgt_type=None):
         if self.heterogeneous:
             x = batch.x_dict
             for k in x.keys():
@@ -67,6 +67,7 @@ class GraphSAGEForVertexRegression(BaseGraphSAGEModel):
     def __init__(self, num_layers, out_dim, dropout, hidden_dim, heterogeneous=None, class_weights=None):
         super().__init__(num_layers, out_dim, dropout, hidden_dim, heterogeneous)
         self.class_weight = class_weights
+        self.metrics = RegressionMetrics()
 
     def forward(self, batch):
         logits = super().forward(batch)
@@ -86,6 +87,7 @@ class GraphSAGEForVertexRegression(BaseGraphSAGEModel):
 class GraphSAGEForLinkPrediction(BaseGraphSAGEModel):
     def __init__(self, num_layers, out_dim, dropout, hidden_dim, heterogeneous=None):
         super().__init__(num_layers, out_dim, dropout, hidden_dim, heterogeneous)
+        self.metrics = LinkPredictionMetrics()
 
     def decode(self, src_z, dest_z, pos_edge_index, neg_edge_index):
         edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=-1) # concatenate pos and neg edges

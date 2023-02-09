@@ -174,36 +174,188 @@ class BinaryPrecision(Accumulator):
         else:
             return None
 
+class MSE(Accumulator):
+    """MSE Metrc.
+    
+    MSE = #TODO FILL IN FORMLA
+
+    This metric is for regression tasks, i.e. predicting a n-dimensional vector of float values.
+
+    Usage:
+
+    * Call the update function to add predictions and labels.
+    * Get MSE value at any point by accessing the value property.
+    """
+    def update(self, preds: ndarray, labels: ndarray) -> None:
+        """Add predictions and labels to be compared.
+
+        Args:
+            preds (ndarray): 
+                Array of predicted labels.
+            labels (ndarray): 
+                Array of true labels.
+        """
+        assert len(preds) == len(
+            labels
+        ), "The lists of predictions and labels must have same length"
+        self._cumsum += float(((preds - labels)**2).sum())
+        self._count += int(preds.sum())
+
+    @property
+    def value(self) -> float:
+        '''Get MSE score.
+            Returns:
+                MSE value (float).
+        '''
+        if self._count > 0:
+            return self.mean
+        else:
+            return None
+
+class RMSE(MSE):
+    """RMSE Metric.
+
+    RMSE = #TODO FILL IN FORMULA
+
+    This metric is for regression tasks, i.e. predicting a n-dimensional vector of float values.
+
+    Usage:
+
+    * Call the update function to add predictions and labels.
+    * Get RMSE score at any point by accessing the value property.
+    """
+
+    @property
+    def value(self) -> float:
+        '''Get RMSE value.
+            Returns:
+                RMSE value (float).
+        '''
+        if self._count > 0:
+            return self.mean**.5
+        else:
+            return None
+
+class MAE(Accumulator):
+    """MAE Metrc.
+
+    MAE = #TODO FILL IN FORMLA
+
+    This metric is for regression tasks, i.e. predicting a n-dimensional vector of float values.
+
+    Usage:
+
+    * Call the update function to add predictions and labels.
+    * Get MAE value at any point by accessing the value property.
+    """
+    def update(self, preds: ndarray, labels: ndarray) -> None:
+        """Add predictions and labels to be compared.
+
+        Args:
+            preds (ndarray): 
+                Array of predicted labels.
+            labels (ndarray): 
+                Array of true labels.
+        """
+        assert len(preds) == len(
+            labels
+        ), "The lists of predictions and labels must have same length"
+        self._cumsum += float(abs((preds - labels)).sum())
+        self._count += int(preds.sum())
+
+    @property
+    def value(self) -> float:
+        '''Get MAE score.
+            Returns:
+                MAE value (float).
+        '''
+        if self._count > 0:
+            return self.mean
+        else:
+            return None
+
 
 class BaseMetrics():
     def __init__(self):
         self.reset_metrics()
     
     def reset_metrics(self):
-        raise NotImplementedError("reset_metrics() is not implemented in BaseMetrics")
+        self.loss = Accumulator()
 
-    def update_metrics(self):
-        raise NotImplementedError("update_metrics() is not implemented in BaseMetrics")
+    def update_metrics(self, loss, out, batch):
+        self.loss.update(loss)
 
     def get_metrics(self):
-        raise NotImplementedError("get_metrics() is not implemented in BaseMetrics")
+        return {"loss": self.loss.mean}
 
 
 class ClassificationMetrics(BaseMetrics):
     def __init__(self):
+        super().__init__()
         self.reset_metrics()
 
     def reset_metrics(self):
-        self.loss = Accumulator()
+        super().reset_metrics()
         self.accuracy = Accuracy()
-        self.precision = None
-        self.recall = None
+        self.precision = None #TODO implement prcesion
+        self.recall = None #TODO implement recall
 
     def update_metrics(self, loss, out, batch):
-        self.loss.update(loss)
+        super().update_metrics(loss, out, batch)
         pred = out.argmax(dim=1)
         self.accuracy.update(pred[batch.is_seed], batch.y[batch.is_seed])
 
     def get_metrics(self):
-        return {"loss": self.loss.mean,
-                "accuracy": self.accuracy.value}
+        super_met = super().get_metrics()
+        metrics = {"accuracy": self.accuracy.value}
+        metrics.update(super_met)
+        return metrics
+
+class RegressionMetrics(BaseMetrics):
+    def __init__(self):
+        super().__init__()
+        self.reset_metrics()
+
+    def reset_metrics(self):
+        super().reset_metrics()
+        self.mse = MSE()
+        self.rmse = RMSE()
+        self.mae = MAE()
+
+    def update_metrics(self, loss, out, batch):
+        super().update_metrics(loss, out, batch)
+        self.mse.update(out[batch.is_seed], batch.y[batch.is_seed])
+        self.rmse.update(out[batch.is_seed], batch.y[batch.is_seed])
+        self.mae.update(out[batch.is_seed], batch.y[batch.is_seed])
+
+    def get_metrics(self):
+        super_met = super().get_metrics()
+        metrics = {"mse": self.mse.value,
+                   "rmse": self.rmse.value,
+                   "mae": self.mae.value}
+        metrics.update(super_met)
+        return metrics
+
+
+class LinkPredictionMetrics(BaseMetrics):
+    def __init__(self):
+        super().__init__()
+        self.reset_metrics()
+
+    def reset_metrics(self):
+        super().reset_metrics()
+        self.precision_at_1 = BinaryPrecision()
+        self.recall_at_1 = BinaryRecall()
+
+    def update_metrics(self, loss, out, batch):
+        super().update_metrics(loss, out, batch)
+        self.precision_at_1.update(out[batch.is_seed], batch.y[batch.is_seed])
+        self.recall_at_1.update(out[batch.is_seed], batch.y[batch.is_seed])
+
+    def get_metrics(self):
+        super_met = super().get_metrics()
+        metrics = {"precision_at_1": self.precision_at_1,
+                   "recall_at_1": self.recall_at_1}
+        metrics.update(super_met)
+        return metrics
+
