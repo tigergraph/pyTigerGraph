@@ -99,7 +99,7 @@ class Trainer():
             if self.is_hetero:
                 self.target_type = list(self.train_loader.v_out_labels.keys())[0]
             else:
-                self.target_type = self.train_loader.v_out_labels
+                self.target_type = None #self.train_loader.v_out_labels
         else:
             self.target_type = target_type
 
@@ -124,20 +124,20 @@ class Trainer():
             for batch in self.train_loader:
                 if cur_step >= max_num_steps:
                     break
-                out = self.model(batch)
+                out = self.model(batch, tgt_type=self.target_type)
                 loss = self.model.compute_loss(out,
                                                batch,
-                                               self.target_type,
+                                               target_type = self.target_type,
                                                loss_fn = self.loss_fn)
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
                 self.train_step_metrics = {}
                 for metric in self.metrics:
-                    metric.update_metrics(loss, out, batch)
+                    metric.update_metrics(loss, out, batch, target_type=self.target_type)
                     self.train_step_metrics.update(metric.get_metrics())
                     self.train_step_metrics["global_step"] = cur_step
-                    self.train_step_metrics["epoch"] = cur_step/self.train_loader.num_batches
+                    self.train_step_metrics["epoch"] = int(cur_step/self.train_loader.num_batches)
                     metric.reset_metrics()
                 cur_step += 1
                 for callback in self.callbacks:
@@ -152,13 +152,13 @@ class Trainer():
     def eval(self):
         self.model.eval()
         for batch in self.eval_loader:
-            out = self.model(batch)
+            out = self.model(batch, tgt_type=self.target_type)
             loss = self.model.compute_loss(out,
                                         batch,
-                                        self.target_type,
+                                        target_type = self.target_type,
                                         loss_fn = self.loss_fn)
             for metric in self.metrics:
-                metric.update_metrics(loss, out, batch)
+                metric.update_metrics(loss, out, batch, target_type=self.target_type)
             for callback in self.callbacks:
                 callback.on_eval_step_end(trainer=self)
         self.eval_global_metrics = {}

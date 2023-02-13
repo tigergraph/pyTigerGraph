@@ -40,24 +40,28 @@ class GraphSAGEForVertexClassification(BaseGraphSAGEModel):
         self.class_weight = class_weights
         self.metrics = ClassificationMetrics()
 
-    def forward(self, batch, get_probs=False):
+    def forward(self, batch, get_probs=False, tgt_type=None):
         logits = super().forward(batch)
-        if get_probs:
-            if self.heterogeneous:
+        if self.heterogeneous:
+            if get_probs:
                 for k in logits.keys():
-                    logits[k] = F.softmax(logits[k])
-                return logits
+                    logits[k] = F.softmax(logits[k], dim=-1)
+            if tgt_type:
+                return logits[tgt_type]
             else:
-                return F.softmax(logits)
+                return logits
         else:
-            return logits
+            if get_probs:
+                return F.softmax(logits, dim=-1)
+            else:
+                return logits
 
-    def compute_loss(self, logits, batch, target_vertex_type=None, loss_fn = None):
+    def compute_loss(self, logits, batch, target_type=None, loss_fn = None):
         if not(loss_fn):
             loss_fn = F.cross_entropy
         if self.heterogeneous:
-            loss = loss_fn(logits[target_vertex_type][batch[target_vertex_type].is_seed], 
-                                   batch[target_vertex_type].y[batch[target_vertex_type].is_seed].long(),
+            loss = loss_fn(logits[batch[target_type].is_seed], 
+                                   batch[target_type].y[batch[target_type].is_seed].long(),
                                    self.class_weight)
         else:
             loss = loss_fn(logits[batch.is_seed], batch.y[batch.is_seed].long(), self.class_weight)
@@ -69,7 +73,7 @@ class GraphSAGEForVertexRegression(BaseGraphSAGEModel):
         self.class_weight = class_weights
         self.metrics = RegressionMetrics()
 
-    def forward(self, batch):
+    def forward(self, batch, tgt_type=None):
         logits = super().forward(batch)
         return logits
 
@@ -88,6 +92,20 @@ class GraphSAGEForLinkPrediction(BaseGraphSAGEModel):
     def __init__(self, num_layers, out_dim, dropout, hidden_dim, heterogeneous=None):
         super().__init__(num_layers, out_dim, dropout, hidden_dim, heterogeneous)
         self.metrics = LinkPredictionMetrics()
+
+    def forward(self, batch, tgt_type=None):
+        logits = super().forward(batch, tgt_type=tgt_type)
+        if self.heterogeneous:
+            if tgt_type:
+                pos_edges, neg_edges = self.generate_edges(batch, tgt_type)
+                src_h = logits[tgt_type[0]]
+                dest_h = logits[tgt_type[-1]]
+                h = self.decode(src_h, dest_h, pos_edges, neg_edges)
+        else:
+            pos_edges, neg_edges = self.generate_edges(batch)
+            h = self.decode(logits, logits, pos_edges, neg_edges)
+        batch.y = self.get_link_labels(pos_edges, neg_edges)
+        return h
 
     def decode(self, src_z, dest_z, pos_edge_index, neg_edge_index):
         edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=-1) # concatenate pos and neg edges
@@ -111,15 +129,19 @@ class GraphSAGEForLinkPrediction(BaseGraphSAGEModel):
             neg_edges = torch.randint(0, batch.x.shape[0], pos_edges.size(), dtype=torch.long)
         return pos_edges, neg_edges
 
-    def compute_loss(self, logits, batch, target_edge_type=None, loss_fn=None):
+    def compute_loss(self, logits, batch, target_type=None, loss_fn=None):
+        '''
         if self.heterogeneous:
-            pos_edges, neg_edges = self.generate_edges(batch, target_edge_type)
-            src_h = logits[target_edge_type[0]]
-            dest_h = logits[target_edge_type[-1]]
+            pos_edges, neg_edges = self.generate_edges(batch, target_type)
+            src_h = logits[target_type[0]]
+            dest_h = logits[target_type[-1]]
             h = self.decode(src_h, dest_h, pos_edges, neg_edges)
         else:
             pos_edges, neg_edges = self.generate_edges(batch)
             h = self.decode(logits, logits, pos_edges, neg_edges)
         labels = self.get_link_labels(pos_edges, neg_edges)
-        loss = F.binary_cross_entropy_with_logits(h, labels)
+        '''
+        if not(loss_fn):
+            loss_fn = F.binary_cross_entropy_with_logits
+        loss = loss_fn(logits, batch.y)
         return loss

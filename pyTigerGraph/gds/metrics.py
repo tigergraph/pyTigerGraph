@@ -282,7 +282,7 @@ class BaseMetrics():
     def reset_metrics(self):
         self.loss = Accumulator()
 
-    def update_metrics(self, loss, out, batch):
+    def update_metrics(self, loss, out, batch, target_type=None):
         self.loss.update(loss)
 
     def get_metrics(self):
@@ -300,10 +300,13 @@ class ClassificationMetrics(BaseMetrics):
         self.precision = None #TODO implement prcesion
         self.recall = None #TODO implement recall
 
-    def update_metrics(self, loss, out, batch):
+    def update_metrics(self, loss, out, batch, target_type=None):
         super().update_metrics(loss, out, batch)
         pred = out.argmax(dim=1)
-        self.accuracy.update(pred[batch.is_seed], batch.y[batch.is_seed])
+        if target_type:
+            self.accuracy.update(pred[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
+        else:
+            self.accuracy.update(pred[batch.is_seed], batch.y[batch.is_seed])
 
     def get_metrics(self):
         super_met = super().get_metrics()
@@ -322,7 +325,7 @@ class RegressionMetrics(BaseMetrics):
         self.rmse = RMSE()
         self.mae = MAE()
 
-    def update_metrics(self, loss, out, batch):
+    def update_metrics(self, loss, out, batch, target_type=None):
         super().update_metrics(loss, out, batch)
         self.mse.update(out[batch.is_seed], batch.y[batch.is_seed])
         self.rmse.update(out[batch.is_seed], batch.y[batch.is_seed])
@@ -347,15 +350,15 @@ class LinkPredictionMetrics(BaseMetrics):
         self.precision_at_1 = BinaryPrecision()
         self.recall_at_1 = BinaryRecall()
 
-    def update_metrics(self, loss, out, batch):
+    def update_metrics(self, loss, out, batch, target_type=None):
         super().update_metrics(loss, out, batch)
-        self.precision_at_1.update(out[batch.is_seed], batch.y[batch.is_seed])
-        self.recall_at_1.update(out[batch.is_seed], batch.y[batch.is_seed])
+        self.precision_at_1.update(out, batch.y)
+        self.recall_at_1.update(out, batch.y)
 
     def get_metrics(self):
         super_met = super().get_metrics()
-        metrics = {"precision_at_1": self.precision_at_1,
-                   "recall_at_1": self.recall_at_1}
+        metrics = {"precision_at_1": self.precision_at_1.value,
+                   "recall_at_1": self.recall_at_1.value}
         metrics.update(super_met)
         return metrics
 
