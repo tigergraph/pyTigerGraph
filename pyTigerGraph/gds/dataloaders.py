@@ -189,6 +189,7 @@ class BaseLoader:
         else:
             self.delete_epoch_topic = False
         # Get graph info
+        self.delimiter = delimiter # has to be set before self._get_schema()
         self.reverse_edge = reverse_edge
         self._graph = graph
         self._v_schema, self._e_schema = self._get_schema()
@@ -204,7 +205,7 @@ class BaseLoader:
         self._iterations = 0
         self._iterator = False
         self.callback_fn = callback_fn
-        self.delimiter = delimiter
+
         # Kafka consumer and admin
         self.max_kafka_msg_size = Kafka_max_msg_size
         self.kafka_address_consumer = (
