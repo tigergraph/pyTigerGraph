@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 class pyTigerGraphEdge(pyTigerGraphQuery):
 
+    ___trgvtxids = "___trgvtxids"
+
     def getEdgeTypes(self, force: bool = False) -> list:
         """Returns the list of edge type names of the graph.
 
@@ -75,24 +77,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
 
         return {}
 
-    def _getAttrType(self, attrType: dict) -> str:
-        """
-
-        Args:
-            attribute:
-
-        Returns:
-
-        """
-        ret = attrType["Name"]
-        if "KeyTypeName" in attrType:
-            ret += "(" + attrType["KeyTypeName"] + "," + attrType["ValueTypeName"] + ")"
-        elif "ValueTypeName" in attrType:
-            ret += "(" + attrType["ValueTypeName"] + ")"
-
-        return ret
-
-    def getAttributes(self, edgeType: str) -> list:
+    def getEdgeAttrs(self, edgeType: str) -> list:
         """Returns the names and types of the attributes of the edge type.
 
         Args:
@@ -101,6 +86,11 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
 
         Returns:
             A list of (attribute_name, attribute_type) tuples.
+            The format of attribute_type is one of
+             - "scalar_type"
+             - "complex_type(scalar_type)"
+             - "map_type(key_type,value_type)"
+            and it is a string.
         """
         logger.info("entry: getAttributes")
         if logger.level == logging.DEBUG:
@@ -583,6 +573,49 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         TODO Add ack, new_vertex_only, vertex_must_exist, update_vertex_only and atomic_level
             parameters and functionality.
         """
+
+        def _dumps(data) -> str:
+            """Generates the JSON format expected by the endpoint.
+
+            The important thing this function does is converting the list of target vertex IDs and
+            the attributes belonging to the edge instances into a JSON object that can contain
+            multiple occurrences of the same key. If the these details were stored in a dictionary
+            then in case of MultiEdge only the last instance would be retained (as the key would be
+            the target vertex ID).
+
+            Args:
+                data:
+                    The Python data structure containing the edge instance details.
+
+            Returns:
+                The JSON to be sent to the endpoint.
+            """
+            ret = ""
+            if isinstance(data, dict):
+                c1 = 0
+                for k, v in data.items():
+                    if c1 > 0:
+                        ret += ","
+                    if k == self.___trgvtxids:
+                        # v should be a dict of lists
+                        ret += "{"
+                        c2 = 0
+                        for k2, v2 in v.items():
+                            if c2 > 0:
+                                ret += ","
+                            c3 = 0
+                            for v3 in v2:
+                                if c3 > 0:
+                                    ret += ","
+                                ret += '"' + k2 + '":' + json.dumps(v3)
+                                c3 += 1
+                            c2 += 1
+                        ret += "}"
+                    else:
+                        ret += '{"' + k + '":' + _dumps(data[k]) + '}'
+                    c1 += 1
+            return ret
+
         logger.info("entry: upsertEdges")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
@@ -606,9 +639,15 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             if targetVertexType not in l3:
                 l3[targetVertexType] = {}
             l4 = l3[targetVertexType]
+            if self.___trgvtxids not in l4:
+                l4[self.___trgvtxids] = {}
+            l4 = l4[self.___trgvtxids]
             # targetVertexId
-            l4[e[1]] = vals
-        data = json.dumps({"edges": data})
+            if e[1] not in l4:
+                l4[e[1]] = []
+            l4[e[1]].append(vals)
+
+        data = _dumps({"edges": data})
 
         ret = self._post(self.restppUrl + "/graph/" + self.graphname, data=data)[0][
             "accepted_edges"]
