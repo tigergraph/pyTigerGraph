@@ -47,6 +47,37 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         return ret
 
+    def getVertexAttrs(self, vertexType: str) -> list:
+        """Returns the names and types of the attributes of the vertex type.
+
+        Args:
+            vertexType:
+                The name of the vertex type.
+
+        Returns:
+            A list of (attribute_name, attribute_type) tuples.
+            The format of attribute_type is one of
+             - "scalar_type"
+             - "complex_type(scalar_type)"
+             - "map_type(key_type,value_type)"
+            and it is a string.
+        """
+        logger.info("entry: getAttributes")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        et = self.getVertexType(vertexType)
+        ret = []
+
+        for at in et["Attributes"]:
+            ret.append((at["AttributeName"], self._getAttrType(at["AttributeType"])))
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: getAttributes")
+
+        return ret
+
     def getVertexType(self, vertexType: str, force: bool = False) -> dict:
         """Returns the details of the specified vertex type.
 
