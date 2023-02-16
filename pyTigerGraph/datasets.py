@@ -5,6 +5,7 @@ function in pyTigerGraph.
 """
 import json
 import tarfile
+import warnings
 from abc import ABC, abstractmethod
 from os import makedirs
 from os.path import isdir
@@ -13,7 +14,6 @@ from shutil import rmtree
 from urllib.parse import urljoin
 
 import requests
-from tqdm.auto import tqdm
 
 
 class BaseDataset(ABC):
@@ -49,7 +49,8 @@ class Datasets(BaseDataset):
 
         Args:
             name (str, optional):
-                Name of the dataset to get. Defaults to None.
+                Name of the dataset to get. If not provided or None, available datasets will be printed out.
+                Defaults to None.
             tmp_dir (str, optional):
                 Where to store the artifacts of this dataset. Defaults to "./tmp".
         """
@@ -58,6 +59,7 @@ class Datasets(BaseDataset):
         self.tmp_dir = tmp_dir
 
         if not name:
+            self.list()
             return
 
         # Check if it is an in-stock dataset.
@@ -93,12 +95,19 @@ class Datasets(BaseDataset):
         "NO DOC"
         makedirs(self.tmp_dir, exist_ok=True)
         with requests.get(self.dataset_url, stream=True) as resp:
-            total_length = int(resp.headers.get("Content-Length"))
-            with tqdm.wrapattr(
-                resp.raw, "read", total=total_length, desc="Downloading"
-            ) as raw:
-                with tarfile.open(fileobj=raw, mode="r|gz") as tarobj:
+            try:
+                from tqdm.auto import tqdm
+                total_length = int(resp.headers.get("Content-Length"))
+                with tqdm.wrapattr(
+                    resp.raw, "read", total=total_length, desc="Downloading"
+                ) as raw:
+                    with tarfile.open(fileobj=raw, mode="r|gz") as tarobj:
+                        tarobj.extractall(path=self.tmp_dir)
+            except ImportError:
+                warnings.warn("Cannot import tqdm. Downloading without progress report.")
+                with tarfile.open(fileobj=resp.raw, mode="r|gz") as tarobj:
                     tarobj.extractall(path=self.tmp_dir)
+                print("Dataset downloaded.")
 
     def clean_up(self) -> None:
         "NO DOC"
@@ -141,3 +150,14 @@ class Datasets(BaseDataset):
                 sizeLimit=job.get("sizeLimit", 128000000),
             )
             yield resp
+
+    def list(self) -> None:
+        """List available stock datasets
+        """
+        inventory_url = urljoin(self.base_url, "inventory.json")
+        resp = requests.get(inventory_url)
+        resp.raise_for_status()
+        print("Available datasets:")
+        for k in resp.json():
+            print("- {}".format(k))
+

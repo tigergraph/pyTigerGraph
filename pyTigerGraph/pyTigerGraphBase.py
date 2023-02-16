@@ -18,7 +18,9 @@ from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
 
 def excepthook(type, value, traceback):
-    """This function prints out a given traceback and exception to sys.stderr.
+    """NO DOC
+    
+    This function prints out a given traceback and exception to sys.stderr.
 
     See: https://docs.python.org/3/library/sys.html#sys.excepthook
     """
@@ -75,7 +77,7 @@ class pyTigerGraphBase(object):
             sslPort:
                 Port for fetching SSL certificate in case of firewall.
             gcp:
-                DEPRECATED.
+                DEPRECATED. Previously used for connecting to databases provisioned on GCP in TigerGraph Cloud.
 
         Raises:
             TigerGraphException: In case on invalid URL scheme.
@@ -143,10 +145,13 @@ class pyTigerGraphBase(object):
             self.useCert = False
             self.certPath = ""
         elif inputHost.scheme == "https":
-            self.downloadCert = True
+            if not certPath:
+                self.downloadCert = True
+            else:
+                self.downloadCert = False
             self.useCert = True
             self.certPath = certPath
-        self.sslPort = sslPort
+        self.sslPort = str(sslPort)
 
         self.gsqlInitiated = False
 
@@ -166,19 +171,18 @@ class pyTigerGraphBase(object):
                 raise (TigerGraphException("Incorrect graphname."))
 
         restppPort = str(restppPort)
+        sslPort = str(sslPort)
         if self.tgCloud and (restppPort == "9000" or restppPort == "443"):
-            # TODO Should not `sslPort` be used instead of hard coded value?
-            self.restppPort = "443"
-            self.restppUrl = self.host + ":443" + "/restpp"
+            self.restppPort = sslPort
+            self.restppUrl = self.host + ":"+sslPort + "/restpp"
         else:
             self.restppPort = restppPort
             self.restppUrl = self.host + ":" + self.restppPort
         self.gsPort = ""
         gsPort = str(gsPort)
         if self.tgCloud and (gsPort == "14240" or gsPort == "443"):
-            # TODO Should not `sslPort` be used instead of hard coded value?
-            self.gsPort = "443"
-            self.gsUrl = self.host + ":443"
+            self.gsPort = sslPort
+            self.gsUrl = self.host + ":" + sslPort
         else:
             self.gsPort = gsPort
             self.gsUrl = self.host + ":" + self.gsPort
@@ -272,8 +276,14 @@ class pyTigerGraphBase(object):
             res = requests.request(method, url, headers=_headers, data=_data, params=params, verify=verify)
 
         if res.status_code != 200:
-            res.raise_for_status()
-        res = json.loads(res.text, strict=strictJson)
+            try:
+                res.raise_for_status()
+            except:
+                self._errorCheck(res)
+        try:
+            res = json.loads(res.text, strict=strictJson)
+        except:
+            raise TigerGraphException(res.text)
         if not skipCheck:
             self._errorCheck(res)
         if not resKey:

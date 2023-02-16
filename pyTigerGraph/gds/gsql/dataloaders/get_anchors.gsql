@@ -1,0 +1,6 @@
+CREATE QUERY get_anchors(STRING anchor_attr, SET<STRING> v_types) SYNTAX v2{ 
+  start = {v_types};
+  SetAccum<INT> @@vids;
+  res = SELECT s FROM start:s WHERE s.getAttr(anchor_attr, "BOOL") == TRUE ACCUM @@vids += getvid(s);
+  PRINT @@vids;
+}

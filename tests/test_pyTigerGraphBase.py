@@ -1,12 +1,15 @@
 import json
 import unittest
 
+from pyTigerGraphUnitTest import make_connection
+
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
-from pyTigerGraphUnitTest import pyTigerGraphUnitTest
 
 
-class test_pyTigerGraphBase(pyTigerGraphUnitTest):
-    conn = None
+class test_pyTigerGraphBase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.conn = make_connection()
 
     def test_00_errorCheck(self):
         json_ok1 = {

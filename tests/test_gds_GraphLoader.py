@@ -1,18 +1,18 @@
 import unittest
 
 from pandas import DataFrame
-from pyTigerGraph import TigerGraphConnection
-from pyTigerGraph.gds.dataloaders import GraphLoader
-from pyTigerGraph.gds.utilities import is_query_installed
+from pyTigerGraphUnitTest import make_connection
 from torch_geometric.data import Data as pygData
 from torch_geometric.data import HeteroData as pygHeteroData
+
+from pyTigerGraph.gds.dataloaders import GraphLoader
+from pyTigerGraph.gds.utilities import is_query_installed
 
 
 class TestGDSGraphLoader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
-        cls.conn.getToken(cls.conn.createSecret())
+        cls.conn = make_connection(graphname="Cora")
 
     def test_init(self):
         loader = GraphLoader(
@@ -195,8 +195,7 @@ class TestGDSGraphLoader(unittest.TestCase):
 class TestGDSGraphLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
-        cls.conn.getToken(cls.conn.createSecret())
+        cls.conn = make_connection(graphname="Cora")
 
     def test_init(self):
         loader = GraphLoader(
@@ -299,8 +298,8 @@ class TestGDSGraphLoaderREST(unittest.TestCase):
         self.assertEqual(num_batches, 11)
 
     def test_list_string_attr(self):
-        conn = TigerGraphConnection(host="http://tigergraph", graphname="Social")
-        conn.getToken(conn.createSecret())
+        conn = make_connection(graphname="Social")
+
         loader = GraphLoader(
             graph=conn,
             v_in_feats=["age"],
@@ -350,8 +349,7 @@ class TestGDSGraphLoaderREST(unittest.TestCase):
 class TestGDSHeteroGraphLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="hetero")
-        cls.conn.getToken(cls.conn.createSecret())
+        cls.conn = make_connection(graphname="hetero")
 
     def test_init(self):
         loader = GraphLoader(

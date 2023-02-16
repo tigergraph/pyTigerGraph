@@ -1,0 +1,177 @@
+CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
+  SET<VERTEX> input_vertices,
+  SET<STRING> v_types,
+  SET<STRING> e_types,
+  SET<STRING> seed_types,
+  BOOL compute_all = TRUE,
+  BOOL clear_cache = TRUE,
+  BOOL use_cache = TRUE,
+  BOOL precompute = FALSE,
+  STRING filter_by,
+  STRING anchor_attr,
+  INT max_distance,
+  INT max_anchors,
+  INT max_rel_context,
+  INT num_batches=1,
+  BOOL shuffle=FALSE,
+  STRING delimiter,
+  STRING kafka_address,
+  STRING kafka_topic,
+  STRING security_protocol,
+  STRING sasl_mechanism,
+  STRING sasl_username,
+  STRING sasl_password,
+  STRING ssl_ca_location) SYNTAX v1{ 
+    TYPEDEF TUPLE<INT v_id, INT distance> Distance_Tuple;
+    INT num_vertices;
+    INT temp_v;
+    INT temp_e;
+    SumAccum<INT> @tmp_id;
+    SumAccum<STRING> @@kafka_error;
+    SetAccum<VERTEX> @next_pass, @to_pass, @received;
+    HeapAccum<Distance_Tuple> (max_anchors, distance ASC) @token_heap;
+    SumAccum<STRING> @rel_context_set;
+    SumAccum<STRING> @ancs;
+
+    MapAccum<VERTEX, SumAccum<INT>> @@token_count;
+    MapAccum<INT, MinAccum<INT>> @conv_map;
+    BOOL cache_empty = FALSE;
+    INT distance;
+    start = {v_types};
+    # Perform fetch operation if desired
+    IF clear_cache THEN
+      res = SELECT s FROM start:s POST-ACCUM s.{ANCHOR_CACHE_ATTRIBUTE} = s.@conv_map;
+    END;
+    IF input_vertices.size() != 0 AND NOT compute_all THEN
+      seeds = {input_vertices};
+      res = SELECT s FROM seeds:s -(e_types)- v_types:t
+            ACCUM
+              IF s.{ANCHOR_CACHE_ATTRIBUTE}.size() != 0 THEN
+                FOREACH (key, val) IN s.{ANCHOR_CACHE_ATTRIBUTE} DO  # s.{ANCHOR_CACHE_ATTRIBUTE} should be changed to getAttr() when supported
+                  s.@token_heap += Distance_Tuple(key, val)
+                END
+              ELSE
+                FOREACH (key, val) IN t.{ANCHOR_CACHE_ATTRIBUTE} DO
+                  s.@token_heap += Distance_Tuple(key, val)
+                END
+              END
+            POST-ACCUM
+              IF s.@token_heap.size() == 0 THEN
+                cache_empty = TRUE
+              END;
+    ELSE
+      cache_empty = TRUE;
+    END;
+    IF cache_empty THEN  # computing all, shuffle vertices if needed
+        ancs = SELECT s 
+           FROM start:s 
+           WHERE s.getAttr(anchor_attr, "BOOL")
+           POST-ACCUM s.@token_heap += Distance_Tuple(getvid(s), 0);
+        start = {seed_types};
+        IF shuffle THEN
+            num_vertices = start.size();
+            res = SELECT s 
+                FROM start:s
+                POST-ACCUM s.@tmp_id = floor(rand()*num_vertices);
+        ELSE
+            res = SELECT s 
+                FROM start:s
+                POST-ACCUM s.@tmp_id = getvid(s);
+        END;
+        FOREACH i IN RANGE [1, max_distance] DO
+          ancs = SELECT t
+                 FROM ancs:s -(e_types:e)-v_types:t
+                 ACCUM 
+                  FOREACH tup IN s.@token_heap DO 
+                    t.@token_heap += Distance_Tuple(tup.v_id, i)
+                  END;
+        END;
+    END;
+    FOREACH batch_id IN RANGE[0, num_batches-1] DO
+      SumAccum<STRING> @@v_batch;
+      SetAccum<VERTEX> @@printed_vertices;
+      # Get batch seeds
+      IF input_vertices.size()==0 THEN
+        start = {seed_types};
+        IF filter_by IS NOT NULL THEN
+          seeds = SELECT s 
+                  FROM start:s 
+                  WHERE s.getAttr(filter_by, "BOOL") and s.@tmp_id % num_batches == batch_id
+                  ACCUM @@printed_vertices += s;
+        ELSE
+          seeds = SELECT s 
+                  FROM start:s 
+                  WHERE s.@tmp_id % num_batches == batch_id
+                  ACCUM @@printed_vertices += s;
+        END;
+      ELSE
+        start = input_vertices;
+        seeds = SELECT s 
+                FROM start:s
+                ACCUM @@printed_vertices += s;
+      END;
+      # Get relational context
+      
+      IF max_rel_context > 0 THEN
+        seeds = SELECT s FROM seeds:s -(e_types:e)- v_types:t 
+                SAMPLE max_rel_context EDGE WHEN s.outdegree() >= max_rel_context
+                ACCUM s.@rel_context_set += e.type +" ";
+      END;
+    
+      res = SELECT s FROM seeds:s 
+            POST-ACCUM
+              FOREACH tup IN s.@token_heap DO
+                s.@ancs += stringify(tup.v_id)+":"+stringify(tup.distance)+" ",
+                IF use_cache AND cache_empty THEN
+                  s.@conv_map += (tup.v_id -> tup.distance)
+                END
+              END,
+              IF (use_cache AND cache_empty) OR precompute THEN
+                s.{ANCHOR_CACHE_ATTRIBUTE} = s.@conv_map
+              END,
+              {VERTEXATTRS};
+      IF NOT precompute THEN # No Output if precomputing
+        IF kafka_address IS NOT NULL THEN
+          # Write to kafka
+          IF security_protocol IS NOT NULL THEN
+            temp_v = write_to_kafka(kafka_address, kafka_topic, "vertex_batch_" + stringify(batch_id), @@v_batch, security_protocol, sasl_mechanism, sasl_username, sasl_password, ssl_ca_location);
+            IF temp_v!=0 THEN
+            # If user is using the free version of UDF then add an error to inform the user they need to upgrade to use Kafka streaming function
+              IF temp_v==777 THEN             
+                @@kafka_error += ("Failed, you need to upgrade to use Kafka streaming function."+ "\n");
+              ELSE
+                @@kafka_error += ("Failed sending vertex batch " + stringify(batch_id) + "\n");
+              END;
+            END;
+
+          ELSE # Kafka not secured
+            temp_v = write_to_kafka(kafka_address, kafka_topic, "vertex_batch_" + stringify(batch_id), @@v_batch, "", "", "", "", "");
+            IF temp_v!=0 THEN
+              IF temp_v==777 THEN
+                @@kafka_error += ("Failed, you need to upgrade to use Kafka streaming function."+ "\n");
+              ELSE
+                @@kafka_error += ("Failed sending vertex batch " + stringify(batch_id) + "\n");
+              END;
+            END;
+          END;
+        ELSE # HTTP mode
+          # Add to response
+          IF input_vertices.size()==0 THEN
+            PRINT @@v_batch AS vertex_batch;  
+          ELSE
+            MapAccum<UINT, VERTEX> @@id_map;
+            MapAccum<UINT, STRING> @@type_map;
+            source = @@printed_vertices;
+            res = 
+              SELECT s 
+              FROM source:s
+              POST-ACCUM @@id_map += (getvid(s) -> s), @@type_map += (getvid(s) -> s.type);
+            PRINT @@v_batch AS vertex_batch, @@id_map AS pids, @@type_map AS types; 
+          END;
+        END;                          
+      END;
+      IF kafka_address IS NOT NULL THEN
+          PRINT @@kafka_error as kafkaError;
+      END;
+    END;
+}

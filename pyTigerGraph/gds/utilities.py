@@ -1,16 +1,19 @@
 """GDS Utilities
 Utilities for the Graph Data Science functions.
 """
+import logging
 import os
 import random
 import re
 import string
 from os.path import join as pjoin
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 from urllib.parse import urlparse
 
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
+
+logger = logging.getLogger(__name__)
 
 '''
 import boto3
@@ -148,6 +151,7 @@ def install_query_file(
     if distributed:
         #TODO: Add Distributed keyword.
         raise NotImplementedError
+    logger.debug(query)
     query = (
         "USE GRAPH {}\n".format(conn.graphname)
         + query
@@ -163,3 +167,82 @@ def install_query_file(
     else:
         print(status)
     return query_name
+
+
+def add_attribute(conn: "TigerGraphConnection", schema_type:str, attr_type:str = None, attr_name:Union[str, dict] = None, schema_name:list = None, global_change:bool = False):
+    '''
+    If the current attribute is not already added to the schema, it will create the schema job to do that.
+    Check whether to add the attribute to vertex(vertices) or edge(s).
+
+    Args:
+        schema_type (str): 
+            Vertex or edge
+        attr_type (str): 
+            Type of attribute which can be INT, DOUBLE, FLOAT, BOOL, or LIST. Defaults to None. Required if attr_name is of type string.
+        attr_name (str, dict): 
+            An attribute name that needs to be added to the vertex/edge if string. If dict, must be of format {"attr_name": "attr_type"}.
+        schema_name (List[str]):
+            List of Vertices/Edges that need the `attr_name` added to them.
+        global_change (bool):
+            False by default. Set to true if you want to run `GLOBAL SCHEMA_CHANGE JOB`.
+            See https://docs.tigergraph.com/gsql-ref/current/ddl-and-loading/modifying-a-graph-schema#_global_vs_local_schema_changes.
+            If the schema change should be global or local.
+    '''
+    # Check whether to add the attribute to vertex(vertices) or edge(s)
+    v_type = False
+    if schema_type.upper() == "VERTEX":
+        target = conn.getVertexTypes(force=True)
+        v_type = True
+    elif schema_type.upper() == "EDGE":
+        target = conn.getEdgeTypes(force=True)
+    else:
+        raise Exception('schema_type has to be VERTEX or EDGE')
+    # If attribute should be added to a specific vertex/edge name
+    if schema_name != None:
+        target.clear()
+        target = schema_name
+    # For every vertex or edge type
+    tasks = []
+    for t in target:
+        attributes = []
+        if v_type:
+            meta_data =  conn.getVertexType(t, force=True)
+        else:
+            meta_data = conn.getEdgeType(t, force=True)
+        for i in range(len(meta_data['Attributes'])):
+            attributes.append(meta_data['Attributes'][i]['AttributeName'])
+        # If attribute is not in list of vertex attributes, do the schema change to add it
+        if isinstance(attr_name, str):
+            if not attr_type:
+                raise Exception("attr_type must be defined if attr_name is of type string")
+            if attr_name != None and attr_name not in attributes:
+                tasks.append("ALTER {} {} ADD ATTRIBUTE ({} {});\n".format(
+                        schema_type, t, attr_name, attr_type))
+        elif isinstance(attr_name, dict):
+            for aname in attr_name:
+                if aname != None and aname not in attributes:
+                    tasks.append("ALTER {} {} ADD ATTRIBUTE ({} {});\n".format(
+                        schema_type, t, aname, attr_name[aname]
+                    ))
+    # If attribute already exists for schema type t, nothing to do
+    if not tasks:
+        return "Attribute already exists"
+    # Drop all jobs on the graph
+    # self.conn.gsql("USE GRAPH {}\n".format(self.conn.graphname) + "DROP JOB *")
+    # Create schema change job 
+    job_name = "add_{}_attr_{}".format(schema_type,random_string(6)) 
+    if not(global_change):
+        job = "USE GRAPH {}\n".format(conn.graphname) + "CREATE SCHEMA_CHANGE JOB {} {{\n".format(
+            job_name) + ''.join(tasks) + "}}\nRUN SCHEMA_CHANGE JOB {}".format(job_name)
+    else:
+        job = "USE GRAPH {}\n".format(conn.graphname) + "CREATE GLOBAL SCHEMA_CHANGE JOB {} {{\n".format(
+            job_name) + ''.join(tasks) + "}}\nRUN GLOBAL SCHEMA_CHANGE JOB {}".format(job_name)
+    # Submit the job
+    print("Changing schema to save results...", flush=True)
+    resp = conn.gsql(job)
+    status = resp.splitlines()[-1]
+    if "Failed" in status:
+        raise ConnectionError(resp)
+    else:
+        print(status, flush=True)
+    return 'Schema change succeeded.'

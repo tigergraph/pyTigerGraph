@@ -1,11 +1,14 @@
 import unittest
 from datetime import datetime
+from time import sleep
 
-from pyTigerGraphUnitTest import pyTigerGraphUnitTest
+from pyTigerGraphUnitTest import make_connection
 
 
-class test_pyTigerGraphQuery(pyTigerGraphUnitTest):
-    conn = None
+class test_pyTigerGraphQuery(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.conn = make_connection()
 
     def test_01_getQueries(self):
         # TODO Once pyTigerGraphQuery.getQueries() is available
@@ -81,6 +84,13 @@ class test_pyTigerGraphQuery(pyTigerGraphUnitTest):
 
     def test_05_runInstalledQueryAsync(self):
         q_id = self.conn.runInstalledQuery("query1", runAsync=True)
+        trials = 0
+        while trials < 30:
+            job = self.conn.checkQueryStatus(q_id)[0]
+            if job["status"] == "success":
+                break 
+            sleep(1)
+            trials += 1
         res = self.conn.getQueryResult(q_id)
         self.assertIn("ret", res[0])
         self.assertEqual(15, res[0]["ret"])

@@ -5,17 +5,19 @@ from textwrap import dedent
 from unittest import runner
 from unittest.mock import patch
 
+from pyTigerGraphUnitTest import make_connection
+
 from pyTigerGraph import TigerGraphConnection
 from pyTigerGraph.gds.featurizer import Featurizer
-from pyTigerGraph.gds.utilities import is_query_installed
+from pyTigerGraph.gds.utilities import is_query_installed, add_attribute
 
 
 class test_Featurizer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
-        conn.getToken(conn.createSecret())
-        cls.featurizer = Featurizer(conn, algo_version="3.7")
+        conn = make_connection(graphname="Cora")
+        cls.featurizer = Featurizer(conn, algo_version="3.8")
+        cls.conn = conn
 
     def test_get_db_version(self):
         major_ver, minor_ver, patch_ver = self.featurizer._get_db_version()
@@ -37,7 +39,7 @@ class test_Featurizer(unittest.TestCase):
         truth = """\
             Available algorithms per category:
             - Centrality: 10 algorithms
-            - Classification: 3 algorithms
+            - Classification: 6 algorithms
             - Community: 6 algorithms
             - Embeddings: 1 algorithms
             - Path: 3 algorithms
@@ -93,9 +95,9 @@ class test_Featurizer(unittest.TestCase):
         res = self.featurizer._get_algo_details(algo_dict["Path"])
         self.assertDictEqual(
             res[0],
-            {'tg_bfs': ['https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/3.7/algorithms/Path/bfs/tg_bfs.gsql'], 
-             'tg_cycle_detection_count': ['https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/3.7/algorithms/Path/cycle_detection/count/tg_cycle_detection_count.gsql'], 
-             'tg_shortest_ss_no_wt': ['https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/3.7/algorithms/Path/shortest_path/unweighted/tg_shortest_ss_no_wt.gsql']})
+            {'tg_bfs': ['https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/3.8/algorithms/Path/bfs/tg_bfs.gsql'], 
+             'tg_cycle_detection_count': ['https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/3.8/algorithms/Path/cycle_detection/count/tg_cycle_detection_count.gsql'], 
+             'tg_shortest_ss_no_wt': ['https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/3.8/algorithms/Path/shortest_path/unweighted/tg_shortest_ss_no_wt.gsql']})
         self.assertDictEqual(
             res[1],
             {'tg_bfs': "INT", 
@@ -149,16 +151,15 @@ class test_Featurizer(unittest.TestCase):
 
     def test_getParams(self):
         params = self.featurizer.getParams("tg_pagerank", printout=False)
-        print(params)
         truth = {
             "v_type": None, 
             "e_type": None,
             "max_change": 0.001, 
-            "max_iter": 25, 
+            "maximum_iteration": 25, 
             "damping": 0.85, 
             "top_k": 100,
-            "print_accum": True, 
-            "result_attr": "", 
+            "print_results": True, 
+            "result_attribute": "", 
             "file_path": "",
             "display_edges": False
         }
@@ -172,32 +173,32 @@ class test_Featurizer(unittest.TestCase):
             - v_type: str
             - e_type: str
             - max_change: float = 0.001
-            - max_iter: int = 25
+            - maximum_iteration: int = 25
             - damping: float = 0.85
             - top_k: int = 100
-            - print_accum: bool = True
-            - result_attr: str = ""
+            - print_results: bool = True
+            - result_attribute: str = ""
             - file_path: str = ""
             - display_edges: bool = False
             """
         self.assertEqual(mock_stdout.getvalue(), dedent(truth))
 
     def test01_add_attribute(self):
-        self.assertEqual(self.featurizer._add_attribute("VERTEX", "FLOAT", "attr1", global_change=False), 'Schema change succeeded.')
+        self.assertEqual(add_attribute(self.conn, "VERTEX", "FLOAT", "attr1", global_change=False), 'Schema change succeeded.')
 
     def test02_add_attribute(self):
-        self.assertEqual(self.featurizer._add_attribute("Edge", "BOOL", "attr2", global_change=False), 'Schema change succeeded.')
+        self.assertEqual(add_attribute(self.conn, "Edge", "BOOL", "attr2", global_change=False), 'Schema change succeeded.')
     
     def test03_add_attribute(self):
-        self.assertEqual(self.featurizer._add_attribute("Vertex", "BOOL", "attr1", global_change=False), 'Attribute already exists')
+        self.assertEqual(add_attribute(self.conn, "Vertex", "BOOL", "attr1", global_change=False), 'Attribute already exists')
 
     def test04_add_attribute(self):
         with self.assertRaises(Exception) as context:
-            self.featurizer._add_attribute("Something","BOOL","attr3")
+            add_attribute(self.conn, "Something","BOOL","attr3")
         self.assertTrue('schema_type has to be VERTEX or EDGE' in str(context.exception))
     
     def test05_add_attribute(self):
-        self.assertEqual(self.featurizer._add_attribute("VERTEX", "BOOL", "attr4", ['Paper'], global_change=False), 'Schema change succeeded.')
+        self.assertEqual(add_attribute(self.conn, "VERTEX", "BOOL", "attr4", ['Paper'], global_change=False), 'Schema change succeeded.')
 
     def test01_installAlgorithm(self):
        self.assertEqual(self.featurizer.installAlgorithm("tg_pagerank"), "tg_pagerank")
@@ -210,11 +211,11 @@ class test_Featurizer(unittest.TestCase):
         params = {'v_type': 'Paper',
             'e_type': 'Cite',
             'max_change': 0.001,
-            'max_iter': 25,
+            'maximum_iteration': 25,
             'damping': 0.85,
             'top_k': 100,
-            'print_accum': True,
-            'result_attr': 'pagerank', 
+            'print_results': True,
+            'result_attribute': 'pagerank', 
             'file_path': '',
             'display_edges': True}
         self.assertIsNotNone(self.featurizer.runAlgorithm("tg_pagerank", params=params))
@@ -233,8 +234,20 @@ class test_Featurizer(unittest.TestCase):
         self.assertIn("Unknown parameters: ['foo']", str(error.exception))
 
     def test03_runAlgorithm(self):
-        params = {'v_type': ['Paper'], 'e_type': ['Cite'], 'weights': '1,1,2', 'beta': -0.85, 'k': 3, 'reduced_dim': 128,
-          'sampling_constant': 1, 'random_seed': 42, 'print_accum': False,'result_attr':"embedding"}
+        params={
+            "v_type": ["Paper"],
+            "e_type": ["Cite"],
+            "output_v_type": ["Paper"],
+            "iteration_weights": "1,2,4",
+            "beta": -0.1,
+            "embedding_dimension": 128,
+            "embedding_dim_map": [],
+            "default_length": 128,
+            "sampling_constant": 3,
+            "random_seed": 42,
+            "component_attribute": "",
+            "result_attribute": "embedding",
+            "choose_k": 0}
         self.featurizer.runAlgorithm("tg_fastRP", params=params)
 
     def test06_installCustomAlgorithm(self):
@@ -251,11 +264,11 @@ class test_Featurizer(unittest.TestCase):
         params = {'v_type': 'Paper',
             'e_type': 'Cite',
             'max_change': 0.001,
-            'max_iter': 25,
+            'maximum_iteration': 25,
             'damping': 0.85,
             'top_k': 100,
-            'print_accum': True,
-            'result_attr': 'pagerank', 
+            'print_results': True,
+            'result_attribute': 'pagerank', 
             'file_path': '',
             'display_edges': True}
         ret = self.featurizer.runAlgorithm("tg_pagerank", params=params, runAsync=True)
@@ -265,17 +278,51 @@ class test_Featurizer(unittest.TestCase):
         params = {'v_type': 'Paper',
             'e_type': 'Cite',
             'max_change': 0.001,
-            'max_iter': 25,
+            'maximum_iteration': 25,
             'damping': 0.85,
             'top_k': 100,
-            'print_accum': True,
-            'result_attr': 'pagerank', 
+            'print_results': True,
+            'result_attribute': 'pagerank', 
             'file_path': '',
             'display_edges': True}
         ret = self.featurizer.runAlgorithm("tg_pagerank", params=params, runAsync=True)
         self.assertIsNotNone(ret.wait())
 
+    def test_get_template_queries(self):
+        if (self.featurizer.major_ver != "master" and (
+                int(self.featurizer.major_ver) < 3 or (
+                int(self.featurizer.major_ver) == 3 and int(self.featurizer.minor_ver) < 8)
+            )
+        ):
+            print("Skip test_get_template_queries as the DB version is not supported.")
+            return
+        self.conn.gsql("IMPORT PACKAGE GDBMS_ALGO")
+        self.featurizer._get_template_queries()
+        self.assertIn("centrality", self.featurizer.template_queries)
+        self.assertIn("article_rank(string v_type, string e_type, float max_change, int maximum_iteration, float damping, int top_k, bool print_results, string result_attribute, string file_path)", self.featurizer.template_queries["centrality"])
 
+    def test_template_query(self):
+        if (self.featurizer.major_ver != "master" and (
+                int(self.featurizer.major_ver) < 3 or (
+                int(self.featurizer.major_ver) == 3 and int(self.featurizer.minor_ver) < 9)
+            )
+        ):
+            print("Skip test_template_query as the DB version is not supported.")
+            return
+        params = {'v_type': 'Paper',
+            'e_type': 'Cite',
+            'max_change': 0.001,
+            'maximum_iteration': 25,
+            'damping': 0.85,
+            'top_k': 100,
+            'print_results': True,
+            'result_attribute': 'pagerank', 
+            'file_path': '',
+            'display_edges': False}
+        
+        resp = self.featurizer.runAlgorithm("tg_pagerank", params, templateQuery=True)
+        self.assertIn("@@top_scores_heap", resp[0])
+        self.assertEqual(len(resp[0]["@@top_scores_heap"]), 100)
 
 if __name__ == '__main__':
     suite = unittest.TestSuite()
@@ -303,6 +350,8 @@ if __name__ == '__main__':
     suite.addTest(test_Featurizer("test07_runCustomAlgorithm"))
     suite.addTest(test_Featurizer("test08_runAlgorithm_async_qid"))
     suite.addTest(test_Featurizer("test09_runAlgorithm_async_wait"))
+    suite.addTest(test_Featurizer("test_get_template_queries"))
+    suite.addTest(test_Featurizer("test_template_query"))
     
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)

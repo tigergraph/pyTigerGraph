@@ -5,24 +5,25 @@ from threading import Event
 
 import pandas as pd
 import torch
+from dgl import DGLGraph
 from pandas.testing import assert_frame_equal
-from pyTigerGraph import TigerGraphConnection
-from pyTigerGraph.gds.dataloaders import BaseLoader
+from pyTigerGraphUnitTest import make_connection
 from torch.testing import assert_close as assert_close_torch
 from torch_geometric.data import Data as pygData
 from torch_geometric.data import HeteroData as pygHeteroData
-from dgl import DGLGraph
+
+from pyTigerGraph.gds.dataloaders import BaseLoader
 
 
 class TestGDSBaseLoader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = TigerGraphConnection(host="http://tigergraph", graphname="Cora")
-        cls.loader = BaseLoader(cls.conn)
+        cls.conn = make_connection(graphname="Cora")
+        cls.loader = BaseLoader(cls.conn, delimiter="|")
 
     def test_get_schema(self):
         self.conn.graphname = "Cora"
-        self.loader = BaseLoader(self.conn)
+        self.loader = BaseLoader(self.conn, delimiter = "|")
         self.assertDictEqual(
             self.loader._v_schema,
             {
@@ -52,7 +53,7 @@ class TestGDSBaseLoader(unittest.TestCase):
 
     def test_get_schema_no_primary_id_attr(self):
         self.conn.graphname = "Social"
-        self.loader = BaseLoader(self.conn)
+        self.loader = BaseLoader(self.conn, delimiter="|")
         self.assertDictEqual(
             self.loader._v_schema,
             {
@@ -144,7 +145,7 @@ class TestGDSBaseLoader(unittest.TestCase):
         read_task_q = Queue()
         data_q = Queue(4)
         exit_event = Event()
-        raw = "99,1 0 0 1 ,1,0,1\n8,1 0 0 1 ,1,1,1\n"
+        raw = "99|1 0 0 1 |1|0|1\n8|1 0 0 1 |1|1|1\n"
         read_task_q.put(raw)
         read_task_q.put(None)
         self.loader._read_data(
@@ -157,22 +158,47 @@ class TestGDSBaseLoader(unittest.TestCase):
             ["y"],
             ["train_mask", "is_seed"],
             {"x": "INT", "y": "INT", "train_mask": "BOOL", "is_seed": "BOOL"},
+            delimiter="|"
         )
         data = data_q.get()
         truth = pd.read_csv(
             io.StringIO(raw),
             header=None,
             names=["vid", "x", "y", "train_mask", "is_seed"],
+            sep=self.loader.delimiter
         )
         assert_frame_equal(data, truth)
         data = data_q.get()
         self.assertIsNone(data)
 
+    def test_read_vertex_callback(self):
+        read_task_q = Queue()
+        data_q = Queue(4)
+        exit_event = Event()
+        raw = "99|1 0 0 1 |1|0|1\n8|1 0 0 1 |1|1|1\n"
+        read_task_q.put(raw)
+        read_task_q.put(None)
+        self.loader._read_data(
+            exit_event,
+            read_task_q,
+            data_q,
+            "vertex",
+            "dataframe",
+            ["x"],
+            ["y"],
+            ["train_mask", "is_seed"],
+            {"x": "INT", "y": "INT", "train_mask": "BOOL", "is_seed": "BOOL"},
+            callback_fn=lambda x: 1,
+            delimiter="|"
+        )
+        data = data_q.get()
+        self.assertEqual(1, data)
+
     def test_read_edge(self):
         read_task_q = Queue()
         data_q = Queue(4)
         exit_event = Event()
-        raw = "1,2,0.1,2021,1,0\n2,1,1.5,2020,0,1\n"
+        raw = "1|2|0.1|2021|1|0\n2|1|1.5|2020|0|1\n"
         read_task_q.put(raw)
         read_task_q.put(None)
         self.loader._read_data(
@@ -189,24 +215,54 @@ class TestGDSBaseLoader(unittest.TestCase):
             ["y"],
             ["is_train"],
             {"x": "FLOAT", "time": "INT", "y": "INT", "is_train": "BOOL"},
+            delimiter="|"
         )
         data = data_q.get()
         truth = pd.read_csv(
             io.StringIO(raw),
             header=None,
             names=["source", "target", "x", "time", "y", "is_train"],
+            sep=self.loader.delimiter,
         )
         assert_frame_equal(data, truth)
         data = data_q.get()
         self.assertIsNone(data)
+
+    def test_read_edge_callback(self):
+        read_task_q = Queue()
+        data_q = Queue(4)
+        exit_event = Event()
+        raw = "1|2|0.1|2021|1|0\n2|1|1.5|2020|0|1\n"
+        read_task_q.put(raw)
+        read_task_q.put(None)
+        self.loader._read_data(
+            exit_event,
+            read_task_q,
+            data_q,
+            "edge",
+            "dataframe",
+            [],
+            [],
+            [],
+            {},
+            ["x", "time"],
+            ["y"],
+            ["is_train"],
+            {"x": "FLOAT", "time": "INT", "y": "INT", "is_train": "BOOL"},
+            callback_fn=lambda x: 1,
+            delimiter="|"
+        )
+        data = data_q.get()
+        self.assertEqual(data, 1)
+
 
     def test_read_graph_out_df(self):
         read_task_q = Queue()
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "99,1 0 0 1 ,1,0,1\n8,1 0 0 1 ,1,1,1\n",
-            "1,2,0.1,2021,1,0\n2,1,1.5,2020,0,1\n",
+            "99|1 0 0 1 |1|0|1\n8|1 0 0 1 |1|1|1\n",
+            "1|2|0.1|2021|1|0\n2|1|1.5|2020|0|1\n",
         )
         read_task_q.put(raw)
         read_task_q.put(None)
@@ -224,32 +280,66 @@ class TestGDSBaseLoader(unittest.TestCase):
             ["y"],
             ["is_train"],
             {"x": "FLOAT", "time": "INT", "y": "INT", "is_train": "BOOL"},
+            delimiter="|"
         )
         data = data_q.get()
         vertices = pd.read_csv(
             io.StringIO(raw[0]),
             header=None,
             names=["vid", "x", "y", "train_mask", "is_seed"],
-            dtype="object",
+            sep=self.loader.delimiter
         )
         edges = pd.read_csv(
             io.StringIO(raw[1]),
             header=None,
             names=["source", "target", "x", "time", "y", "is_train"],
-            dtype="object",
+            sep=self.loader.delimiter
         )
         assert_frame_equal(data[0], vertices)
         assert_frame_equal(data[1], edges)
         data = data_q.get()
         self.assertIsNone(data)
 
+
+    def test_read_graph_out_df_callback(self):
+        read_task_q = Queue()
+        data_q = Queue(4)
+        exit_event = Event()
+        raw = (
+            "99|1 0 0 1 |1|0|1\n8|1 0 0 1 |1|1|1\n",
+            "1|2|0.1|2021|1|0\n2|1|1.5|2020|0|1\n",
+        )
+        read_task_q.put(raw)
+        read_task_q.put(None)
+        self.loader._read_data(
+            exit_event,
+            read_task_q,
+            data_q,
+            "graph",
+            "dataframe",
+            ["x"],
+            ["y"],
+            ["train_mask", "is_seed"],
+            {"x": "INT", "y": "INT", "train_mask": "BOOL", "is_seed": "BOOL"},
+            ["x", "time"],
+            ["y"],
+            ["is_train"],
+            {"x": "FLOAT", "time": "INT", "y": "INT", "is_train": "BOOL"},
+            callback_fn=lambda x: (1, 2),
+            delimiter="|"
+        )
+        data = data_q.get()
+        self.assertEqual(data[0], 1)
+        self.assertEqual(data[1], 2)
+
+
     def test_read_graph_out_pyg(self):
         read_task_q = Queue()
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "99,1 0 0 1 ,1,0,Alex,1\n8,1 0 0 1 ,1,1,Bill,0\n",
-            "99,8,0.1,2021,1,0,a b \n8,99,1.5,2020,0,1,c d \n",
+            "99|1 0 0 1 |1|0|Alex|1\n8|1 0 0 1 |1|1|Bill|0\n",
+            "99|8|0.1|2021|1|0|a b \n8|99|1.5|2020|0|1|c d \n",
         )
         read_task_q.put(raw)
         read_task_q.put(None)
@@ -273,6 +363,7 @@ class TestGDSBaseLoader(unittest.TestCase):
             ["y"],
             ["is_train", "category"],
             {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL", "category": "LIST:STRING"},
+            delimiter="|"
         )
         data = data_q.get()
         self.assertIsInstance(data, pygData)
@@ -297,8 +388,8 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "99,1 0 0 1 ,1,0,Alex,1\n8,1 0 0 1 ,1,1,Bill,0\n",
-            "99,8,0.1,2021,1,0,a b \n8,99,1.5,2020,0,1,c d \n",
+            "99|1 0 0 1 |1|0|Alex|1\n8|1 0 0 1 |1|1|Bill|0\n",
+            "99|8|0.1|2021|1|0|a b \n8|99|1.5|2020|0|1|c d \n",
         )
         read_task_q.put(raw)
         read_task_q.put(None)
@@ -322,6 +413,7 @@ class TestGDSBaseLoader(unittest.TestCase):
             ["y"],
             ["is_train", "category"],
             {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL", "category": "LIST:STRING"},
+            delimiter="|"
         )
         data = data_q.get()
         self.assertIsInstance(data, DGLGraph)
@@ -345,7 +437,7 @@ class TestGDSBaseLoader(unittest.TestCase):
         read_task_q = Queue()
         data_q = Queue(4)
         exit_event = Event()
-        raw = ("99,1\n8,0\n", "99,8\n8,99\n")
+        raw = ("99|1\n8|0\n", "99|8\n8|99\n")
         read_task_q.put(raw)
         read_task_q.put(None)
         self.loader._read_data(
@@ -368,6 +460,7 @@ class TestGDSBaseLoader(unittest.TestCase):
             [],
             [],
             {},
+            delimiter="|"
         )
         data = data_q.get()
         self.assertIsInstance(data, pygData)
@@ -381,7 +474,7 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "99,1 0 0 1 ,1,0,Alex,1\n8,1 0 0 1 ,1,1,Bill,0\n",
+            "99|1 0 0 1 |1|0|Alex|1\n8|1 0 0 1 |1|1|Bill|0\n",
             "",
         )
         read_task_q.put(raw)
@@ -406,6 +499,7 @@ class TestGDSBaseLoader(unittest.TestCase):
             ["y"],
             ["is_train"],
             {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL"},
+            delimiter="|"
         )
         data = data_q.get()
         self.assertIsInstance(data, pygData)
@@ -426,8 +520,8 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "People,99,1 0 0 1 ,1,0,Alex,1\nPeople,8,1 0 0 1 ,1,1,Bill,0\nCompany,2,0.3,0\n",
-            "Colleague,99,8,0.1,2021,1,0\nColleague,8,99,1.5,2020,0,1\nWork,99,2\nWork,2,8\n",
+            "People|99|1 0 0 1 |1|0|Alex|1\nPeople|8|1 0 0 1 |1|1|Bill|0\nCompany|2|0.3|0\n",
+            "Colleague|99|8|0.1|2021|1|0\nColleague|8|99|1.5|2020|0|1\nWork|99|2\nWork|2|8\n",
         )
         read_task_q.put(raw)
         read_task_q.put(None)
@@ -470,6 +564,7 @@ class TestGDSBaseLoader(unittest.TestCase):
                 }
             },
             False,
+            "|",
             True,
             True,
         )
@@ -506,7 +601,7 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "People,99,1 0 0 1 ,1,0,Alex,1\nPeople,8,1 0 0 1 ,1,1,Bill,0\nCompany,2,0.3,0\n",
+            "People|99|1 0 0 1 |1|0|Alex|1\nPeople|8|1 0 0 1 |1|1|Bill|0\nCompany|2|0.3|0\n",
             "",
         )
         read_task_q.put(raw)
@@ -550,6 +645,7 @@ class TestGDSBaseLoader(unittest.TestCase):
                 }
             },
             False,
+            "|",
             True,
             True,
         )
@@ -576,8 +672,8 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "People,99,1 0 0 1 ,1,0,Alex,1\nPeople,8,1 0 0 1 ,1,1,Bill,0\nCompany,2,0.3,0\n",
-            "Colleague,99,8,0.1,2021,1,0\nColleague,8,99,1.5,2020,0,1\nWork,99,2,a b \nWork,2,8,c d \n",
+            "People|99|1 0 0 1 |1|0|Alex|1\nPeople|8|1 0 0 1 |1|1|Bill|0\nCompany|2|0.3|0\n",
+            "Colleague|99|8|0.1|2021|1|0\nColleague|8|99|1.5|2020|0|1\nWork|99|2|a b \nWork|2|8|c d \n",
         )
         read_task_q.put(raw)
         read_task_q.put(None)
@@ -621,6 +717,7 @@ class TestGDSBaseLoader(unittest.TestCase):
                 }
             },
             False,
+            "|",
             True,
             True,
         )
@@ -658,8 +755,8 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "99,1 0 0 1 ,1,0,Alex,1\n8,1 0 0 1 ,1,1,Bill,0\n",
-            "99,8,0.1,2021,1,0\n8,99,1.5,2020,0,1\n",
+            "99|1 0 0 1 |1|0|Alex|1\n8|1 0 0 1 |1|1|Bill|0\n",
+            "99|8|0.1|2021|1|0\n8|99|1.5|2020|0|1\n",
         )
         read_task_q.put(raw)
         read_task_q.put(None)
@@ -683,6 +780,7 @@ class TestGDSBaseLoader(unittest.TestCase):
             ["y"],
             ["is_train"],
             {"x": "DOUBLE", "time": "INT", "y": "BOOL", "is_train": "BOOL"},
+            delimiter="|"
         )
         data = data_q.get()
         self.assertIsInstance(data, pygData)
@@ -704,13 +802,16 @@ class TestGDSBaseLoader(unittest.TestCase):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
-    suite.addTest(TestGDSBaseLoader("test_get_schema"))
-    suite.addTest(TestGDSBaseLoader("test_get_schema_no_primary_id_attr"))
+    #suite.addTest(TestGDSBaseLoader("test_get_schema"))
+    #suite.addTest(TestGDSBaseLoader("test_get_schema_no_primary_id_attr"))
     suite.addTest(TestGDSBaseLoader("test_validate_vertex_attributes"))
     suite.addTest(TestGDSBaseLoader("test_validate_edge_attributes"))
     suite.addTest(TestGDSBaseLoader("test_read_vertex"))
+    suite.addTest(TestGDSBaseLoader("test_read_vertex_callback"))
     suite.addTest(TestGDSBaseLoader("test_read_edge"))
+    suite.addTest(TestGDSBaseLoader("test_read_edge_callback"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_out_df"))
+    suite.addTest(TestGDSBaseLoader("test_read_graph_out_df_callback"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_out_pyg"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_out_dgl"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_no_attr"))

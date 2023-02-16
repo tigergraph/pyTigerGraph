@@ -1,10 +1,12 @@
 import unittest
 
-from pyTigerGraphUnitTest import pyTigerGraphUnitTest
+from pyTigerGraphUnitTest import make_connection
 
 
-class test_pyTigerGraphGSQL(pyTigerGraphUnitTest):
-    # conn = None
+class test_pyTigerGraphGSQL(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.conn = make_connection()
 
     def test_01_gsql(self):
         res = self.conn.gsql("help")

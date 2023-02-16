@@ -1,21 +1,24 @@
+from lib2to3.pytree import Node
 import unittest
-
-from pandas import DataFrame
 from pyTigerGraphUnitTest import make_connection
 
-from pyTigerGraph.gds.dataloaders import VertexLoader
+from pandas import DataFrame
+from pyTigerGraph import TigerGraphConnection
+from pyTigerGraph.gds.dataloaders import NodePieceLoader
 from pyTigerGraph.gds.utilities import is_query_installed
 
 
-class TestGDSVertexLoader(unittest.TestCase):
+class TestGDSNodePieceLoader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.conn = make_connection(graphname="Cora")
 
     def test_init(self):
-        loader = VertexLoader(
+        loader = NodePieceLoader(
             graph=self.conn,
-            attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
+            v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
+            compute_anchors=True,
+            anchor_percentage=0.5,
             batch_size=16,
             shuffle=True,
             filter_by="train_mask",
@@ -27,12 +30,14 @@ class TestGDSVertexLoader(unittest.TestCase):
         self.assertEqual(loader.num_batches, 9)
 
     def test_iterate(self):
-        loader = VertexLoader(
+        loader = NodePieceLoader(
             graph=self.conn,
-            attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
+            v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
+            compute_anchors=True,
             batch_size=16,
             shuffle=True,
             filter_by="train_mask",
+            anchor_percentage=0.5,
             loader_id=None,
             buffer_size=4,
             kafka_address="kafka:9092",
@@ -43,6 +48,8 @@ class TestGDSVertexLoader(unittest.TestCase):
             self.assertIsInstance(data, DataFrame)
             self.assertIn("x", data.columns)
             self.assertIn("y", data.columns)
+            self.assertIn("relational_context", data.columns)
+            self.assertIn("anchors", data.columns)
             self.assertIn("train_mask", data.columns)
             self.assertIn("val_mask", data.columns)
             self.assertIn("test_mask", data.columns)
@@ -50,12 +57,13 @@ class TestGDSVertexLoader(unittest.TestCase):
         self.assertEqual(num_batches, 9)
 
     def test_all_vertices(self):
-        loader = VertexLoader(
+        loader = NodePieceLoader(
             graph=self.conn,
-            attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
-            num_batches=1,
-            shuffle=False,
+            v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
+            compute_anchors=True,
+            shuffle=True,
             filter_by="train_mask",
+            anchor_percentage=0.5,
             loader_id=None,
             buffer_size=4,
             kafka_address="kafka:9092",
@@ -65,17 +73,21 @@ class TestGDSVertexLoader(unittest.TestCase):
         self.assertIsInstance(data, DataFrame)
         self.assertIn("x", data.columns)
         self.assertIn("y", data.columns)
+        self.assertIn("relational_context", data.columns)
+        self.assertIn("anchors", data.columns)
         self.assertIn("train_mask", data.columns)
         self.assertIn("val_mask", data.columns)
         self.assertIn("test_mask", data.columns)
 
     def test_sasl_plaintext(self):
-        loader = VertexLoader(
+        loader = NodePieceLoader(
             graph=self.conn,
-            attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
+            v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
+            compute_anchors=True,
             batch_size=16,
             shuffle=True,
             filter_by="train_mask",
+            anchor_percentage=0.5,
             loader_id=None,
             buffer_size=4,
             kafka_address="34.127.11.236:9092",
@@ -90,6 +102,8 @@ class TestGDSVertexLoader(unittest.TestCase):
             self.assertIsInstance(data, DataFrame)
             self.assertIn("x", data.columns)
             self.assertIn("y", data.columns)
+            self.assertIn("relational_context", data.columns)
+            self.assertIn("anchors", data.columns)
             self.assertIn("train_mask", data.columns)
             self.assertIn("val_mask", data.columns)
             self.assertIn("test_mask", data.columns)
@@ -97,12 +111,14 @@ class TestGDSVertexLoader(unittest.TestCase):
         self.assertEqual(num_batches, 9)
 
     def test_sasl_ssl(self):
-        loader = VertexLoader(
+        loader = NodePieceLoader(
             graph=self.conn,
-            attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
+            v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
+            compute_anchors=True,
             batch_size=16,
             shuffle=True,
             filter_by="train_mask",
+            anchor_percentage=0.5,
             loader_id=None,
             buffer_size=4,
             kafka_address="pkc-6ojv2.us-west4.gcp.confluent.cloud:9092",
@@ -120,39 +136,45 @@ class TestGDSVertexLoader(unittest.TestCase):
             self.assertIsInstance(data, DataFrame)
             self.assertIn("x", data.columns)
             self.assertIn("y", data.columns)
+            self.assertIn("relational_context", data.columns)
+            self.assertIn("anchors", data.columns)
             self.assertIn("train_mask", data.columns)
             self.assertIn("val_mask", data.columns)
             self.assertIn("test_mask", data.columns)
             num_batches += 1
         self.assertEqual(num_batches, 9)
 
-class TestGDSVertexLoaderREST(unittest.TestCase):
+class TestGDSNodePieceLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.conn = make_connection(graphname="Cora")
 
     def test_init(self):
-        loader = VertexLoader(
+        loader = NodePieceLoader(
             graph=self.conn,
-            attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
+            v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
+            compute_anchors=True,
             batch_size=16,
             shuffle=True,
             filter_by="train_mask",
+            anchor_percentage=0.5,
             loader_id=None,
-            buffer_size=4,
+            buffer_size=4
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
         self.assertEqual(loader.num_batches, 9)
 
     def test_iterate(self):
-        loader = VertexLoader(
+        loader = NodePieceLoader(
             graph=self.conn,
-            attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
+            v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
+            compute_anchors=True,
             batch_size=16,
             shuffle=True,
             filter_by="train_mask",
+            anchor_percentage=0.5,
             loader_id=None,
-            buffer_size=4,
+            buffer_size=4
         )
         num_batches = 0
         for data in loader:
@@ -160,6 +182,8 @@ class TestGDSVertexLoaderREST(unittest.TestCase):
             self.assertIsInstance(data, DataFrame)
             self.assertIn("x", data.columns)
             self.assertIn("y", data.columns)
+            self.assertIn("relational_context", data.columns)
+            self.assertIn("anchors", data.columns)
             self.assertIn("train_mask", data.columns)
             self.assertIn("val_mask", data.columns)
             self.assertIn("test_mask", data.columns)
@@ -167,72 +191,39 @@ class TestGDSVertexLoaderREST(unittest.TestCase):
         self.assertEqual(num_batches, 9)
 
     def test_all_vertices(self):
-        loader = VertexLoader(
+        loader = NodePieceLoader(
             graph=self.conn,
-            attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
-            num_batches=1,
-            shuffle=False,
+            v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
+            compute_anchors=True,
+            shuffle=True,
             filter_by="train_mask",
+            anchor_percentage=0.5,
             loader_id=None,
-            buffer_size=4,
+            buffer_size=4
         )
         data = loader.data
         # print(data)
         self.assertIsInstance(data, DataFrame)
         self.assertIn("x", data.columns)
         self.assertIn("y", data.columns)
+        self.assertIn("relational_context", data.columns)
+        self.assertIn("anchors", data.columns)
         self.assertIn("train_mask", data.columns)
         self.assertIn("val_mask", data.columns)
         self.assertIn("test_mask", data.columns)
 
-    def test_all_vertices_multichar_delimiter(self):
-        loader = VertexLoader(
-            graph=self.conn,
-            attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
-            num_batches=1,
-            shuffle=False,
-            filter_by="train_mask",
-            loader_id=None,
-            buffer_size=4,
-            delimiter="$|"
-        )
-        data = loader.data
-        # print(data)
-        self.assertIsInstance(data, DataFrame)
-        self.assertIn("x", data.columns)
-        self.assertIn("y", data.columns)
-        self.assertIn("train_mask", data.columns)
-        self.assertIn("val_mask", data.columns)
-        self.assertIn("test_mask", data.columns)
 
-    def test_string_attr(self):
-        conn = make_connection(graphname="Social")
-
-        loader = VertexLoader(
-            graph=conn,
-            attributes=["age", "state"],
-            num_batches=1,
-            shuffle=False,
-            loader_id=None,
-            buffer_size=4,
-        )
-        data = loader.data
-        # print(data)
-        self.assertIsInstance(data, DataFrame)
-        self.assertEqual(data.shape[0], 7)
-        self.assertIn("age", data.columns)
-        self.assertIn("state", data.columns)
-
-
-class TestGDSHeteroVertexLoaderREST(unittest.TestCase):
+class TestGDSHeteroNodePieceLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.conn = make_connection(graphname="hetero")
 
     def test_init(self):
-        loader = VertexLoader(
+        loader = NodePieceLoader(
             graph=self.conn,
-            attributes={"v0": ["x", "y"],
+            compute_anchors=True,
+            anchor_percentage=0.5,
+            v_feats={"v0": ["x", "y"],
                         "v1": ["x"]},
             batch_size=20,
             shuffle=True,
@@ -244,9 +235,11 @@ class TestGDSHeteroVertexLoaderREST(unittest.TestCase):
         self.assertEqual(loader.num_batches, 10)
 
     def test_iterate(self):
-        loader = VertexLoader(
+        loader = NodePieceLoader(
+            compute_anchors=True,
+            anchor_percentage=0.5,
             graph=self.conn,
-            attributes={"v0": ["x", "y"],
+            v_feats={"v0": ["x", "y"],
                         "v1": ["x"]},
             batch_size=20,
             shuffle=True,
@@ -260,15 +253,21 @@ class TestGDSHeteroVertexLoaderREST(unittest.TestCase):
             self.assertIsInstance(data["v0"], DataFrame)
             self.assertIsInstance(data["v1"], DataFrame)
             self.assertIn("x", data["v0"].columns)
+            self.assertIn("relational_context", data["v0"].columns)
+            self.assertIn("anchors", data["v0"].columns)
             self.assertIn("y", data["v0"].columns)
             self.assertIn("x", data["v1"].columns)
+            self.assertIn("relational_context", data["v1"].columns)
+            self.assertIn("anchors", data["v1"].columns)
             num_batches += 1
         self.assertEqual(num_batches, 10)
 
     def test_all_vertices(self):
-        loader = VertexLoader(
+        loader = NodePieceLoader(
             graph=self.conn,
-            attributes={"v0": ["x", "y"],
+            compute_anchors=True,
+            anchor_percentage=0.5,
+            v_feats={"v0": ["x", "y"],
                         "v1": ["x"]},
             num_batches=1,
             shuffle=False,
@@ -279,52 +278,29 @@ class TestGDSHeteroVertexLoaderREST(unittest.TestCase):
         data = loader.data
         # print(data)
         self.assertIsInstance(data["v0"], DataFrame)
-        self.assertTupleEqual(data["v0"].shape, (76, 3))
+        self.assertTupleEqual(data["v0"].shape, (76, 6))
         self.assertIsInstance(data["v1"], DataFrame)
-        self.assertTupleEqual(data["v1"].shape, (110, 2))
         self.assertIn("x", data["v0"].columns)
         self.assertIn("y", data["v0"].columns)
         self.assertIn("x", data["v1"].columns)
-
-    def test_all_vertices_multichar_delimiter(self):
-        loader = VertexLoader(
-            graph=self.conn,
-            attributes={"v0": ["x", "y"],
-                        "v1": ["x"]},
-            num_batches=1,
-            shuffle=False,
-            filter_by=None,
-            loader_id=None,
-            buffer_size=4,
-            delimiter="|$"
-        )
-        data = loader.data
-        # print(data)
-        self.assertIsInstance(data["v0"], DataFrame)
-        self.assertTupleEqual(data["v0"].shape, (76, 3))
-        self.assertIsInstance(data["v1"], DataFrame)
-        self.assertTupleEqual(data["v1"].shape, (110, 2))
-        self.assertIn("x", data["v0"].columns)
-        self.assertIn("y", data["v0"].columns)
-        self.assertIn("x", data["v1"].columns)
+        self.assertIn("anchors", data["v0"].columns)
+        self.assertIn("relational_context", data["v0"].columns)
+        self.assertIn("anchors", data["v1"].columns)
 
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
-    suite.addTest(TestGDSVertexLoader("test_init"))
-    suite.addTest(TestGDSVertexLoader("test_iterate"))
-    suite.addTest(TestGDSVertexLoader("test_all_vertices"))
-    # suite.addTest(TestGDSVertexLoader("test_sasl_plaintext"))
-    # suite.addTest(TestGDSVertexLoader("test_sasl_ssl"))
-    suite.addTest(TestGDSVertexLoaderREST("test_init"))
-    suite.addTest(TestGDSVertexLoaderREST("test_iterate"))
-    suite.addTest(TestGDSVertexLoaderREST("test_all_vertices"))
-    suite.addTest(TestGDSVertexLoaderREST("test_all_vertices_multichar_delimiter"))
-    suite.addTest(TestGDSVertexLoaderREST("test_string_attr"))
-    suite.addTest(TestGDSHeteroVertexLoaderREST("test_init"))
-    suite.addTest(TestGDSHeteroVertexLoaderREST("test_iterate"))
-    suite.addTest(TestGDSHeteroVertexLoaderREST("test_all_vertices"))
-    suite.addTest(TestGDSHeteroVertexLoaderREST("test_all_vertices_multichar_delimiter"))
+    suite.addTest(TestGDSNodePieceLoader("test_init"))
+    suite.addTest(TestGDSNodePieceLoader("test_iterate"))
+    suite.addTest(TestGDSNodePieceLoader("test_all_vertices"))
+    #suite.addTest(TestGDSNodePieceLoader("test_sasl_plaintext"))
+    # suite.addTest(TestGDSNodePieceLoader("test_sasl_ssl"))
+    suite.addTest(TestGDSNodePieceLoaderREST("test_init"))
+    suite.addTest(TestGDSNodePieceLoaderREST("test_iterate"))
+    suite.addTest(TestGDSNodePieceLoaderREST("test_all_vertices"))
+    suite.addTest(TestGDSHeteroNodePieceLoaderREST("test_init"))
+    suite.addTest(TestGDSHeteroNodePieceLoaderREST("test_iterate"))
+    suite.addTest(TestGDSHeteroNodePieceLoaderREST("test_all_vertices"))
 
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)

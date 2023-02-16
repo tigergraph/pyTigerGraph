@@ -1,7 +1,6 @@
-CREATE QUERY neighbor_loader_{QUERYSUFFIX}(
+CREATE QUERY hgt_loader_{QUERYSUFFIX}(
     SET<VERTEX> input_vertices,
     INT num_batches=1, 
-    INT num_neighbors=10, 
     INT num_hops=2, 
     BOOL shuffle=FALSE,
     STRING filter_by,
@@ -25,7 +24,6 @@ CREATE QUERY neighbor_loader_{QUERYSUFFIX}(
     Parameters :
       input_vertices : Seed vertices to gather neighborhood subgraphs.
       num_batches    : Number of batches to divide all vertices into.
-      num_neighbors  : Number of neighbors to expand from seeds.
       num_hops       : Number of hops to traverse to get neighbors.
       shuffle        : Whether to shuffle vertices before collecting data.
       filter_by      : A Boolean attribute to determine which vertices are eligible as seeds.
@@ -76,40 +74,33 @@ CREATE QUERY neighbor_loader_{QUERYSUFFIX}(
                         FROM start:s 
                         WHERE s.getAttr(filter_by, "BOOL") and s.@tmp_id % num_batches == batch_id
                         POST-ACCUM 
-                            {SEEDVERTEXATTRS},
-                            @@printed_vertices += s;
+                            @@printed_vertices += s,
+                            {SEEDVERTEXATTRS};
             ELSE
                 seeds = SELECT s 
                         FROM start:s 
                         WHERE s.@tmp_id % num_batches == batch_id
                         POST-ACCUM
-                            {SEEDVERTEXATTRS},
-                            @@printed_vertices += s;
+                            @@printed_vertices += s,
+                            {SEEDVERTEXATTRS};
             END;
         ELSE
             start = input_vertices;
             seeds = SELECT s 
                     FROM start:s 
                     POST-ACCUM
-                        {SEEDVERTEXATTRS},
-                        @@printed_vertices += s;
+                        @@printed_vertices += s,
+                        {SEEDVERTEXATTRS};
         END;
         # Get neighbors of seeeds
         FOREACH i IN RANGE[1, num_hops] DO
-            seeds = SELECT t
-                    FROM seeds:s -(e_types:e)- v_types:t 
-                    SAMPLE num_neighbors EDGE WHEN s.outdegree() >= 1
-                    ACCUM
-                        IF NOT @@printed_edges.contains(e) THEN
-                            {EDGEATTRS},
-                            @@printed_edges += e
-                        END;
+            {SELECTNEIGHBORS}
             attr = SELECT s
                 FROM seeds:s 
                 POST-ACCUM 
                     IF NOT @@printed_vertices.contains(s) THEN
-                        {OTHERVERTEXATTRS},
-                        @@printed_vertices += s
+                        @@printed_vertices += s,
+                        {OTHERVERTEXATTRS}
                     END;
         END;
         IF kafka_address IS NOT NULL THEN

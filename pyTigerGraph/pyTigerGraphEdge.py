@@ -680,9 +680,9 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                 dataframe index would be used instead.
             attributes:
                 A dictionary in the form of `{target: source}` where source is the column name in
-                the dataframe and target is the attribute name in the graph vertex. When omitted,
+                the dataframe and target is the attribute name on the edge. When omitted,
                 all columns would be upserted with their current names. In this case column names
-                must match the vertex's attribute names.
+                must match the edges's attribute names.
 
         Returns:
             The number of edges upserted.
