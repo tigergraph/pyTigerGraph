@@ -56,6 +56,9 @@ class DefaultCallback(BaseCallback):
         logger = logging.getLogger(__name__)
         logger.info("evaluation:"+str(trainer.eval_global_metrics))
 
+    def on_epoch_end(self, trainer):
+        trainer.eval()
+
 
 class Trainer():
     def __init__(self, 
@@ -114,11 +117,9 @@ class Trainer():
             callback.on_init_end(trainer=self)
 
 
-    def train(self, num_epochs=None, max_num_steps=None, valid_freq=None):
+    def train(self, num_epochs=None, max_num_steps=None):
         if num_epochs:
             max_num_steps = self.train_loader.num_batches * num_epochs
-        if not(valid_freq):
-            valid_freq = self.train_loader.num_batches
         cur_step = 0
         while cur_step < max_num_steps:
             for batch in self.train_loader:
@@ -142,9 +143,6 @@ class Trainer():
                 cur_step += 1
                 for callback in self.callbacks:
                     callback.on_train_step_end(trainer=self)
-                if self.eval_loader:
-                    if cur_step % valid_freq == 0:
-                        self.eval()
 
             for callback in self.callbacks:
                 callback.on_epoch_end(trainer=self)             

@@ -16,6 +16,3 @@ class BaseModel(torch.nn.Module):
 
     def compute_loss(self):
         raise NotImplementedError("Loss computation not implemented in BaseModel")
-
-    def compute_metrics(self):
-        raise NotImplementedError("Metrics computation not implemented in BaseModel")

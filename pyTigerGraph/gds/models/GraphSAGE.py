@@ -89,8 +89,8 @@ class GraphSAGEForVertexRegression(BaseGraphSAGEModel):
 
 
 class GraphSAGEForLinkPrediction(BaseGraphSAGEModel):
-    def __init__(self, num_layers, out_dim, dropout, hidden_dim, heterogeneous=None):
-        super().__init__(num_layers, out_dim, dropout, hidden_dim, heterogeneous)
+    def __init__(self, num_layers, embedding_dim, dropout, hidden_dim, heterogeneous=None):
+        super().__init__(num_layers, embedding_dim, dropout, hidden_dim, heterogeneous)
         self.metrics = LinkPredictionMetrics()
 
     def forward(self, batch, tgt_type=None):
@@ -130,17 +130,6 @@ class GraphSAGEForLinkPrediction(BaseGraphSAGEModel):
         return pos_edges, neg_edges
 
     def compute_loss(self, logits, batch, target_type=None, loss_fn=None):
-        '''
-        if self.heterogeneous:
-            pos_edges, neg_edges = self.generate_edges(batch, target_type)
-            src_h = logits[target_type[0]]
-            dest_h = logits[target_type[-1]]
-            h = self.decode(src_h, dest_h, pos_edges, neg_edges)
-        else:
-            pos_edges, neg_edges = self.generate_edges(batch)
-            h = self.decode(logits, logits, pos_edges, neg_edges)
-        labels = self.get_link_labels(pos_edges, neg_edges)
-        '''
         if not(loss_fn):
             loss_fn = F.binary_cross_entropy_with_logits
         loss = loss_fn(logits, batch.y)
