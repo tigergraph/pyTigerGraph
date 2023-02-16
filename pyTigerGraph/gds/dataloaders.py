@@ -20,9 +20,9 @@ from threading import Event, Thread
 from time import sleep
 import pickle
 from typing import TYPE_CHECKING, Any, Iterator, NoReturn, Tuple, Union, Callable
-import re
+#import re
 
-RE_SPLITTER = re.compile(r',(?![^\[]*\])')
+#RE_SPLITTER = re.compile(r',(?![^\[]*\])')
 
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
@@ -41,7 +41,7 @@ import pandas as pd
 from ..pyTigerGraphException import TigerGraphException
 from .utilities import install_query_file, random_string, add_attribute
 
-__all__ = ["VertexLoader", "EdgeLoader", "NeighborLoader", "GraphLoader", "EdgeNeighborLoader", "NodePieceLoader"]
+__all__ = ["VertexLoader", "EdgeLoader", "NeighborLoader", "GraphLoader", "EdgeNeighborLoader", "NodePieceLoader", "HGTLoader"]
 
 RANDOM_TOPIC_LEN = 8
 
@@ -56,6 +56,7 @@ class BaseLoader:
         buffer_size: int = 4,
         output_format: str = "dataframe",
         reverse_edge: bool = False,
+        delimiter: str = ",",
         timeout: int = 300000,
         kafka_address: str = "",
         Kafka_max_msg_size: int = 104857600,
@@ -105,6 +106,9 @@ class BaseLoader:
                 Format of the output data of the loader. Defaults to dataframe.
             reverse_edge (bool, optional):
                 Whether to traverse along reverse edge types. Defaults to False.
+            delimiter (str, optional):
+                What character (or combination of characters) to use to separate attributes as batches are being created.
+                Defaults to ",".
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
             kafka_address (str):
@@ -200,6 +204,7 @@ class BaseLoader:
         self._iterations = 0
         self._iterator = False
         self.callback_fn = callback_fn
+        self.delimiter = delimiter
         # Kafka consumer and admin
         self.max_kafka_msg_size = Kafka_max_msg_size
         self.kafka_address_consumer = (
@@ -576,6 +581,7 @@ class BaseLoader:
         e_extra_feats: Union[list, dict] = [],
         e_attr_types: dict = {},
         add_self_loop: bool = False,
+        delimiter: str = ",",
         reindex: bool = True,
         is_hetero: bool = False,
         callback_fn: Callable = None,
@@ -599,6 +605,7 @@ class BaseLoader:
                 e_extra_feats = e_extra_feats,
                 e_attr_types = e_attr_types,
                 add_self_loop = add_self_loop,
+                delimiter = delimiter,
                 reindex = reindex,
                 primary_id = {},
                 is_hetero = is_hetero,
@@ -621,6 +628,7 @@ class BaseLoader:
         e_extra_feats: Union[list, dict] = [],
         e_attr_types: dict = {},
         add_self_loop: bool = False,
+        delimiter: str = ",",
         reindex: bool = True,
         primary_id: dict = {},
         is_hetero: bool = False,
@@ -787,15 +795,16 @@ class BaseLoader:
             # String of vertices in format vid,v_in_feats,v_out_labels,v_extra_feats
             if not is_hetero:
                 v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
-                double_list = [RE_SPLITTER.split(x) for x in raw.split("\n") if x]
-                file = "\n".join([",".join(x) for x in double_list])
-                data = pd.read_csv(io.StringIO(file), header=None, names=v_attributes)
+                v_file = (line.split(delimiter) for line in raw.split('\n') if line)
+                data = pd.DataFrame(v_file, columns=v_attributes)
+                for column in data.columns:
+                    data[column] = pd.to_numeric(data[column], errors="ignore")
                 for v_attr in v_attributes:
                     if v_attr_types.get(v_attr, "") == "MAP":
                         # I am sorry that this is this ugly...
                         data[v_attr] = data[v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
             else:
-                v_file = (RE_SPLITTER.split(line) for line in raw.split('\n') if line)
+                v_file = (line.split(delimiter) for line in raw.split('\n') if line)
                 v_file_dict = defaultdict(list)
                 for line in v_file:
                     v_file_dict[line[0]].append(line[1:])
@@ -815,15 +824,18 @@ class BaseLoader:
             # String of edges in format source_vid,target_vid
             if not is_hetero:
                 e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
-                double_list = [RE_SPLITTER.split(x) for x in raw.split("\n") if x]
-                file = "\n".join([",".join(x) for x in double_list])
-                data = pd.read_csv(io.StringIO(file), header=None, names=e_attributes)
+                #file = "\n".join(x for x in raw.split("\n") if x.strip())
+                #data = pd.read_table(io.StringIO(file), header=None, names=e_attributes, sep=delimiter)
+                e_file = (line.split(delimiter) for line in raw.split('\n') if line)
+                data = pd.DataFrame(e_file, columns=e_attributes)
+                for column in data.columns:
+                    data[column] = pd.to_numeric(data[column], errors="ignore")
                 for e_attr in e_attributes:
                     if e_attr_types.get(e_attr, "") == "MAP":
                         # I am sorry that this is this ugly...
                         data[e_attr] = data[e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
             else:
-                e_file = (RE_SPLITTER.split(line) for line in raw.split('\n') if line)
+                e_file = (line.split(delimiter) for line in raw.split('\n') if line)
                 e_file_dict = defaultdict(list)
                 for line in e_file:
                     e_file_dict[line[0]].append(line[1:])
@@ -846,27 +858,31 @@ class BaseLoader:
             if not is_hetero:
                 v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
                 e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
-                double_list = [RE_SPLITTER.split(x) for x in v_file.split("\n") if x]
-                file = "\n".join([",".join(x) for x in double_list])
-                vertices = pd.read_csv(io.StringIO(file), header=None, names=v_attributes, dtype="object")
+                #file = "\n".join(x for x in v_file.split("\n") if x.strip())
+                v_file = (line.split(delimiter) for line in v_file.split('\n') if line)
+                vertices = pd.DataFrame(v_file, columns=v_attributes)
+                for column in vertices.columns:
+                    vertices[column] = pd.to_numeric(vertices[column], errors="ignore")
                 for v_attr in v_extra_feats:
                     if v_attr_types[v_attr] == "MAP":
                         # I am sorry that this is this ugly...
                         vertices[v_attr] = vertices[v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
                 if primary_id:
-                    id_map = pd.DataFrame({"vid": primary_id.keys(), "primary_id": primary_id.values()}, 
-                                          dtype="object")
-                    vertices = vertices.merge(id_map, on="vid")
+                    id_map = pd.DataFrame({"vid": primary_id.keys(), "primary_id": primary_id.values()})
+                    vertices = vertices.merge(id_map.astype({"vid": vertices["vid"].dtype}), on="vid")
                     v_extra_feats.append("primary_id")
-                double_list = [RE_SPLITTER.split(x) for x in e_file.split("\n") if x]
-                file = "\n".join([",".join(x) for x in double_list])
-                edges = pd.read_csv(io.StringIO(file), header=None, names=e_attributes, dtype="object")
+                #file = "\n".join(x for x in e_file.split("\n") if x.strip())
+                e_file = (line.split(delimiter) for line in e_file.split('\n') if line)
+                #edges = pd.read_table(io.StringIO(file), header=None, names=e_attributes, dtype="object", sep=delimiter)
+                edges = pd.DataFrame(e_file, columns=e_attributes)
+                for column in edges.columns:
+                    edges[column] = pd.to_numeric(edges[column], errors="ignore")
                 for e_attr in e_attributes:
                     if e_attr_types.get(e_attr, "") == "MAP":
                         # I am sorry that this is this ugly...
                         edges[e_attr] = edges[e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]})
             else:
-                v_file = (RE_SPLITTER.split(line) for line in v_file.split('\n') if line)
+                v_file = (line.split(delimiter) for line in v_file.split('\n') if line)
                 v_file_dict = defaultdict(list)
                 for line in v_file:
                     v_file_dict[line[0]].append(line[1:])
@@ -888,7 +904,7 @@ class BaseLoader:
                         vertices[vtype] = vertices[vtype].merge(id_map, on="vid")
                         v_extra_feats[vtype].append("primary_id")
                 del v_file_dict, v_file
-                e_file = (RE_SPLITTER.split(line) for line in e_file.split('\n') if line)
+                e_file = (line.split(delimiter) for line in e_file.split('\n') if line)
                 e_file_dict = defaultdict(list)
                 for line in e_file:
                     e_file_dict[line[0]].append(line[1:])
@@ -1364,6 +1380,7 @@ class NeighborLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        delimiter: str = ",",
         timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
@@ -1394,6 +1411,7 @@ class NeighborLoader(BaseLoader):
             buffer_size,
             output_format,
             reverse_edge,
+            delimiter,
             timeout,
             kafka_address,
             kafka_max_msg_size,
@@ -1487,6 +1505,7 @@ class NeighborLoader(BaseLoader):
         self._payload["v_types"] = self._vtypes
         self._payload["e_types"] = self._etypes
         self._payload["seed_types"] = self._seed_types
+        self._payload["delimiter"] = self.delimiter
         # Output
         self.add_self_loop = add_self_loop
         # Install query
@@ -1518,18 +1537,18 @@ class NeighborLoader(BaseLoader):
                 )
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
-                    print_attr = '+","+'.join(
+                    print_attr = '+delimiter+'.join(
                         "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                         for attr in v_attr_names
                     )
-                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + ",1\\n")\n'.format(
+                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + delimiter + "1\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
-                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + ",0\\n")\n'.format(
+                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + delimiter + "0\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
                 else:
-                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + ",1\\n")\n'.format(
+                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + "1\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype)
-                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + ",0\\n")\n'.format(
+                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + "0\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype)
             print_query_seed += "END"
             print_query_other += "END"
@@ -1545,14 +1564,14 @@ class NeighborLoader(BaseLoader):
                 )
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
-                    print_attr = '+","+'.join(
+                    print_attr = '+delimiter+'.join(
                         "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'
                         for attr in e_attr_names
                     )
-                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")\n'.format(
+                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype, print_attr)
                 else:
-                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "\\n")\n'.format(
+                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype)
             print_query += "END"
             query_replace["{EDGEATTRS}"] = print_query
@@ -1561,36 +1580,36 @@ class NeighborLoader(BaseLoader):
             v_attr_names = self.v_in_feats + self.v_out_labels + self.v_extra_feats
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
-                print_attr = '+","+'.join(
+                print_attr = '+delimiter+'.join(
                     "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                     for attr in v_attr_names
                 )
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + ",1\\n")'.format(
+                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + {} + delimiter + "1\\n")'.format(
                     print_attr
                 )
                 query_replace["{SEEDVERTEXATTRS}"] = print_query
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + ",0\\n")'.format(
+                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + {} + delimiter + "0\\n")'.format(
                     print_attr
                 )
                 query_replace["{OTHERVERTEXATTRS}"] = print_query
             else:
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + ",1\\n")'
+                print_query = '@@v_batch += (stringify(getvid(s)) + ",1\\n")'
                 query_replace["{SEEDVERTEXATTRS}"] = print_query
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + ",0\\n")'
+                print_query = '@@v_batch += (stringify(getvid(s)) + ",0\\n")'
                 query_replace["{OTHERVERTEXATTRS}"] = print_query
             # Ignore edge types
             e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
-                print_attr = '+","+'.join(
+                print_attr = '+delimiter+'.join(
                     "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                     for attr in e_attr_names
                 )
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")'.format(
+                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n")'.format(
                     print_attr
                 )
             else:
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "\\n")'
+                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + "\\n")'
             query_replace["{EDGEATTRS}"] = print_query
         # Install query
         query_path = os.path.join(
@@ -1640,6 +1659,7 @@ class NeighborLoader(BaseLoader):
                 self.e_extra_feats,
                 e_attr_types,
                 self.add_self_loop,
+                self.delimiter,
                 True,
                 self.is_hetero,
                 self.callback_fn
@@ -1682,6 +1702,7 @@ class NeighborLoader(BaseLoader):
         _payload["num_batches"] = 1
         _payload["num_neighbors"] = self._payload["num_neighbors"]
         _payload["num_hops"] = self._payload["num_hops"]
+        _payload["delimiter"] = self._payload["delimiter"]
         _payload["input_vertices"] = []
         for i in vertices:
             _payload["input_vertices"].append({"id": i["primary_id"], "type": i["type"]})
@@ -1815,6 +1836,7 @@ class EdgeLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        delimiter: str = ",",
         timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
@@ -1846,6 +1868,7 @@ class EdgeLoader(BaseLoader):
             buffer_size,
             output_format,
             reverse_edge,
+            delimiter,
             timeout,
             kafka_address,
             kafka_max_msg_size,
@@ -1896,6 +1919,7 @@ class EdgeLoader(BaseLoader):
             self._payload["filter_by"] = filter_by
         self._payload["shuffle"] = shuffle
         self._payload["e_types"] = self._etypes
+        self._payload["delimiter"] = self.delimiter
         # Output
         # Install query
         self.query_name = self._install_query()
@@ -1916,14 +1940,14 @@ class EdgeLoader(BaseLoader):
                 e_attr_names = self.attributes.get(etype, [])
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
-                    print_attr = '+","+'.join(
+                    print_attr = '+delimiter+'.join(
                         "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                         for attr in e_attr_names
                     )
-                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")\n'.format(
+                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype, print_attr)
                 else:
-                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "\\n")\n'.format(
+                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype)
             print_query += "END"
             query_replace["{EDGEATTRS}"] = print_query
@@ -1932,15 +1956,15 @@ class EdgeLoader(BaseLoader):
             e_attr_names = self.attributes
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
-                print_attr = '+","+'.join(
+                print_attr = '+delimiter+'.join(
                     "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                     for attr in e_attr_names
                 )
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")'.format(
+                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n")'.format(
                     print_attr
                 )
             else:
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "\\n")'
+                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + "\\n")'
             query_replace["{EDGEATTRS}"] = print_query
         # Install query
         query_path = os.path.join(
@@ -1981,6 +2005,7 @@ class EdgeLoader(BaseLoader):
                 {} if self.is_hetero else [],
                 e_attr_types,
                 False,
+                self.delimiter,
                 False,
                 self.is_hetero,
                 self.callback_fn
@@ -2087,6 +2112,7 @@ class VertexLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        delimiter: str = ",",
         timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
@@ -2118,6 +2144,7 @@ class VertexLoader(BaseLoader):
             buffer_size,
             output_format,
             reverse_edge,
+            delimiter,
             timeout,
             kafka_address,
             kafka_max_msg_size,
@@ -2169,6 +2196,7 @@ class VertexLoader(BaseLoader):
         if filter_by:
             self._payload["filter_by"] = filter_by
         self._payload["shuffle"] = shuffle
+        self._payload["delimiter"] = delimiter
         self._payload["v_types"] = self._vtypes
         # Install query
         self.query_name = self._install_query()
@@ -2189,14 +2217,14 @@ class VertexLoader(BaseLoader):
                 v_attr_names = self.attributes.get(vtype, [])
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
-                    print_attr = '+","+'.join(
+                    print_attr = '+delimiter+'.join(
                         "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                         for attr in v_attr_names
                     )
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + "\\n")\n'.format(
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
                 else:
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "\\n")\n'.format(
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype)
             print_query += "END"
             query_replace["{VERTEXATTRS}"] = print_query
@@ -2205,15 +2233,15 @@ class VertexLoader(BaseLoader):
             v_attr_names = self.attributes
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
-                print_attr = '+","+'.join(
+                print_attr = '+delimiter+'.join(
                     "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                     for attr in v_attr_names
                 )
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + "\\n")'.format(
+                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + {} + "\\n")'.format(
                     print_attr
                 )
             else:
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + "\\n")'
+                print_query = '@@v_batch += (stringify(getvid(s)) + "\\n")'
             query_replace["{VERTEXATTRS}"] = print_query
         # Install query
         query_path = os.path.join(
@@ -2254,6 +2282,7 @@ class VertexLoader(BaseLoader):
                 [],
                 {},
                 False,
+                self.delimiter,
                 False,
                 self.is_hetero,
                 self.callback_fn
@@ -2366,6 +2395,7 @@ class GraphLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        delimiter: str = ",",
         timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
@@ -2397,6 +2427,7 @@ class GraphLoader(BaseLoader):
             buffer_size,
             output_format,
             reverse_edge,
+            delimiter,
             timeout,
             kafka_address,
             kafka_max_msg_size,
@@ -2467,6 +2498,7 @@ class GraphLoader(BaseLoader):
         self._payload["shuffle"] = shuffle
         self._payload["v_types"] = self._vtypes
         self._payload["e_types"] = self._etypes
+        self._payload["delimiter"] = self.delimiter
         # Output
         self.add_self_loop = add_self_loop
         # Install query
@@ -2497,14 +2529,14 @@ class GraphLoader(BaseLoader):
                 )
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
-                    print_attr = '+","+'.join(
+                    print_attr = '+delimiter+'.join(
                         "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                         for attr in v_attr_names
                     )
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + "\\n")\n'.format(
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
                 else:
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "\\n")\n'.format(
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype)
             print_query += "END"
             query_replace["{VERTEXATTRS}"] = print_query
@@ -2518,14 +2550,14 @@ class GraphLoader(BaseLoader):
                 )
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
-                    print_attr = '+","+'.join(
+                    print_attr = '+delimiter+'.join(
                         "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                         for attr in e_attr_names
                     )
-                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")\n'.format(
+                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype, print_attr)
                 else:
-                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "\\n")\n'.format(
+                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype)
             print_query += "END"
             query_replace["{EDGEATTRS}"] = print_query
@@ -2534,29 +2566,29 @@ class GraphLoader(BaseLoader):
             v_attr_names = self.v_in_feats + self.v_out_labels + self.v_extra_feats
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
-                print_attr = '+","+'.join(
+                print_attr = '+delimiter+'.join(
                     "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                     for attr in v_attr_names
                 )
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + "\\n")'.format(
+                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + {} + "\\n")'.format(
                     print_attr
                 )
             else:
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + "\\n")'
+                print_query = '@@v_batch += (stringify(getvid(s)) + "\\n")'
             query_replace["{VERTEXATTRS}"] = print_query
             # Ignore edge types
             e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
-                print_attr = '+","+'.join(
+                print_attr = '+delimiter+'.join(
                     "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                     for attr in e_attr_names
                 )
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + "\\n")'.format(
+                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n")'.format(
                     print_attr
                 )
             else:
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "\\n")'
+                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + "\\n")'
             query_replace["{EDGEATTRS}"] = print_query
         # Install query
         query_path = os.path.join(
@@ -2599,6 +2631,7 @@ class GraphLoader(BaseLoader):
                 self.e_extra_feats,
                 e_attr_types,
                 self.add_self_loop,
+                self.delimiter,
                 True,
                 self.is_hetero,
                 self.callback_fn
@@ -2667,6 +2700,7 @@ class EdgeNeighborLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        delimiter: str = ",",
         timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
@@ -2697,6 +2731,7 @@ class EdgeNeighborLoader(BaseLoader):
             buffer_size,
             output_format,
             reverse_edge,
+            delimiter,
             timeout,
             kafka_address,
             kafka_max_msg_size,
@@ -2767,6 +2802,7 @@ class EdgeNeighborLoader(BaseLoader):
         self._payload["num_batches"] = self.num_batches
         self._payload["num_neighbors"] = num_neighbors
         self._payload["num_hops"] = num_hops
+        self._payload["delimiter"] = delimiter
         if filter_by:
             if isinstance(filter_by, str):
                 self._payload["filter_by"] = filter_by
@@ -2809,14 +2845,14 @@ class EdgeNeighborLoader(BaseLoader):
                 )
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
-                    print_attr = '+","+'.join(
+                    print_attr = '+delimiter+'.join(
                         "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                         for attr in v_attr_names
                     )
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + {} + "\\n")\n'.format(
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
                 else:
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "\\n")\n'.format(
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype)
             print_query += "END"
             query_replace["{VERTEXATTRS}"] = print_query
@@ -2831,18 +2867,18 @@ class EdgeNeighborLoader(BaseLoader):
                 )
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
-                    print_attr = '+","+'.join(
+                    print_attr = '+delimiter+'.join(
                         "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                         for attr in e_attr_names
                     )
-                    print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + ",1\\n")\n'.format(
+                    print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + delimiter + "1\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype, print_attr)
-                    print_query_other += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + ",0\\n")\n'.format(
+                    print_query_other += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + delimiter + "0\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype, print_attr)
                 else:
-                    print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + ",1\\n")\n'.format(
+                    print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + "1\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype)
-                    print_query_other += '{} e.type == "{}" THEN \n @@e_batch += (e.type + "," + int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + ",0\\n")\n'.format(
+                    print_query_other += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + "0\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype)
             print_query_seed += "END"
             print_query_other += "END"
@@ -2853,37 +2889,37 @@ class EdgeNeighborLoader(BaseLoader):
             v_attr_names = self.v_in_feats + self.v_out_labels + self.v_extra_feats
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
-                print_attr = '+","+'.join(
+                print_attr = '+delimiter+'.join(
                     "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                     for attr in v_attr_names
                 )
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + {} + "\\n")'.format(
+                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + {} + "\\n")'.format(
                     print_attr
                 )
                 query_replace["{VERTEXATTRS}"] = print_query
             else:
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + "\\n")'
+                print_query = '@@v_batch += (stringify(getvid(s)) + "\\n")'
                 query_replace["{VERTEXATTRS}"] = print_query
             # Ignore edge types
             e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
-                print_attr = '+","+'.join(
+                print_attr = '+delimiter+'.join(
                    "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
                     for attr in e_attr_names
                 )
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + ",1\\n")'.format(
+                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + delimiter + "1\\n")'.format(
                     print_attr
                 )
                 query_replace["{SEEDEDGEATTRS}"] = print_query
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + "," + {} + ",0\\n")'.format(
+                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + delimiter + "0\\n")'.format(
                     print_attr
                 )
                 query_replace["{OTHEREDGEATTRS}"] = print_query
             else:
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + ",1\\n")'
+                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + "1\\n")'
                 query_replace["{SEEDEDGEATTRS}"] = print_query
-                print_query = '@@e_batch += (int_to_string(getvid(s)) + "," + int_to_string(getvid(t)) + ",0\\n")'
+                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + "0\\n")'
                 query_replace["{OTHEREDGEATTRS}"] = print_query
         # Install query
         query_path = os.path.join(
@@ -2933,6 +2969,7 @@ class EdgeNeighborLoader(BaseLoader):
                 e_extra_feats,
                 e_attr_types,
                 self.add_self_loop,
+                self.delimiter,
                 True,
                 self.is_hetero,
                 self.callback_fn
@@ -3002,6 +3039,7 @@ class NodePieceLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
+        delimiter: str = ",",
         timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
@@ -3033,6 +3071,7 @@ class NodePieceLoader(BaseLoader):
             buffer_size,
             output_format,
             reverse_edge,
+            delimiter,
             timeout,
             kafka_address,
             kafka_max_msg_size,
@@ -3115,6 +3154,7 @@ class NodePieceLoader(BaseLoader):
         self._payload["anchor_attr"] = anchor_attribute
         self._payload["use_cache"] = use_cache
         self._payload["clear_cache"] = clear_cache
+        self._payload["delimiter"] = delimiter
         if e_types:
             self._payload["e_types"] = e_types
         elif e_types == []:
@@ -3180,6 +3220,11 @@ class NodePieceLoader(BaseLoader):
         self.num_tokens = len(self.idToIdx.keys())
 
     def saveTokens(self, filename) -> None:
+        """Save tokens to pickle file
+        Args:
+            filename (str):
+                Filename to save the tokens to.
+        """
         pickle.dump(self.idToIdx, open(filename, "wb"))
 
     def _compute_anchors(self, anchor_attr, method="random") -> str:
@@ -3222,14 +3267,14 @@ class NodePieceLoader(BaseLoader):
                 query_suffix.extend(v_attr_names)
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
-                    print_attr = '+","+'.join(
+                    print_attr = '+delimiter+'.join(
                         "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                         for attr in v_attr_names
                     )
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + s.@rel_context_set + "," + s.@ancs + "," + {} + "\\n")\n'.format(
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + s.@rel_context_set + delimiter + s.@ancs + delimiter + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
                 else:
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + "," + int_to_string(getvid(s)) + "," + s.@rel_context_set + "," + s.@ancs + "\\n")\n'.format(
+                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + s.@rel_context_set + delimiter + s.@ancs + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype)
             print_query += "END"
             query_replace["{VERTEXATTRS}"] = print_query
@@ -3240,15 +3285,15 @@ class NodePieceLoader(BaseLoader):
             query_suffix.extend(v_attr_names)
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
-                print_attr = '+","+'.join(
+                print_attr = '+delimiter+'.join(
                    "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
                     for attr in v_attr_names
                 )
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + s.@rel_context_set + "," + s.@ancs + "," + {} + "\\n")'.format(
+                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + s.@rel_context_set + delimiter + s.@ancs + delimiter + {} + "\\n")'.format(
                     print_attr
                 )
             else:
-                print_query = '@@v_batch += (int_to_string(getvid(s)) + "," + s.@rel_context_set + "," + s.@ancs + "\\n")'
+                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + s.@rel_context_set + delimiter + s.@ancs + "\\n")'
             query_replace["{VERTEXATTRS}"] = print_query
         md5 = hashlib.md5()
         md5.update(json.dumps(query_suffix).encode())
@@ -3264,6 +3309,7 @@ class NodePieceLoader(BaseLoader):
         return install_query_file(self._graph, query_path, query_replace)
 
     def nodepiece_process(self, data):
+        """NO DOC"""
         def processRelContext(row):
             context = row.split(" ")[:-1]
             context = [self.idToIdx[str(x)] for x in context][:self._payload["max_rel_context"]]
@@ -3333,6 +3379,7 @@ class NodePieceLoader(BaseLoader):
                 [],
                 {},
                 False,
+                self.delimiter,
                 False,
                 self.is_hetero,
                 self.nodepiece_process
@@ -3348,6 +3395,14 @@ class NodePieceLoader(BaseLoader):
         return super().data
 
     def fetch(self, vertices: list) -> None:
+        """Fetch NodePiece results (anchors, distances, and relational context) for specific vertices.
+
+        Args:
+            vertices (list of dict):
+                Vertices to fetch with their NodePiece results.
+                Each vertex corresponds to a dict with two mandatory keys
+                {"primary_id": ..., "type": ...}
+        """
         if not vertices:
             return None
         if not isinstance(vertices, list):
@@ -3369,6 +3424,7 @@ class NodePieceLoader(BaseLoader):
         _payload["clear_cache"] = self._payload["clear_cache"]
         _payload["e_types"] = self._payload["e_types"]
         _payload["seed_types"] = []
+        _payload["delimiter"] = self._payload["delimiter"]
         _payload["input_vertices"] = []
         for i in vertices:
             _payload["input_vertices"].append({"id": i["primary_id"], "type": i["type"]})
@@ -3403,9 +3459,414 @@ class NodePieceLoader(BaseLoader):
         return data
 
     def precompute(self) -> None:
+        """Compute NodePiece results (anchors and their distances) to cache attribute.
+        """
         _payload = dict(self._payload)
         _payload["precompute"] = True
         resp = self._graph.runInstalledQuery(
             self.query_name, params=_payload, timeout=self.timeout, usePost=True
         )
        
+
+class HGTLoader(BaseLoader):
+    """HGTLoader
+
+    A data loader that performs stratified neighbor sampling as in  
+    link:https://arxiv.org/abs/2003.01332[Heterogeneous Graph Transformer].
+    You can declare a `HGTLoader` instance with the factory function `hgtLoader()`.
+
+    A HGT loader is an iterable.
+    When you loop through a HGT loader instance, it loads one batch of data at a time from the graph.
+
+    In every iteration, it first chooses a specified number of vertices as seeds,
+    then picks a specified number of neighbors of each type at random,
+    then the specified number of neighbors of every type of each neighbor, and repeat for a specified number of hops.
+    It loads both the vertices and the edges connecting them to their neighbors.
+    The vertices sampled this way along with their edges form one subgraph and is contained in one batch.
+
+    You can iterate on the instance until every vertex has been picked as seed.
+
+    Examples:
+
+    The following example iterates over a HGT loader instance.
+    [.wrap,python]
+    ----
+    for i, batch in enumerate(hgt_loader):
+        print("----Batch {}----".format(i))
+        print(batch)
+    ----
+
+    See more details about the specific sampling method in
+    link:https://arxiv.org/abs/2003.01332[Heterogeneous Graph Transformer].
+    """
+    def __init__(
+        self,
+        graph: "TigerGraphConnection",
+        num_neighbors: dict,
+        v_in_feats: Union[list, dict] = None,
+        v_out_labels: Union[list, dict] = None,
+        v_extra_feats: Union[list, dict] = None,
+        e_in_feats: Union[list, dict] = None,
+        e_out_labels: Union[list, dict] = None,
+        e_extra_feats: Union[list, dict] = None,
+        batch_size: int = None,
+        num_batches: int = 1,
+        num_hops: int = 2,
+        shuffle: bool = False,
+        filter_by: Union[str, dict] = None,
+        output_format: str = "PyG",
+        add_self_loop: bool = False,
+        loader_id: str = None,
+        buffer_size: int = 4,
+        reverse_edge: bool = False,
+        delimiter: str = ",",
+        timeout: int = 300000,
+        kafka_address: str = None,
+        kafka_max_msg_size: int = 104857600,
+        kafka_num_partitions: int = 1,
+        kafka_replica_factor: int = 1,
+        kafka_retention_ms: int = 60000,
+        kafka_auto_del_topic: bool = True,
+        kafka_address_consumer: str = None,
+        kafka_address_producer: str = None,
+        kafka_security_protocol: str = "PLAINTEXT",
+        kafka_sasl_mechanism: str = None,
+        kafka_sasl_plain_username: str = None,
+        kafka_sasl_plain_password: str = None,
+        kafka_producer_ca_location: str = None,
+        kafka_consumer_ca_location: str = None,
+        kafka_skip_produce: bool = False,
+        kafka_auto_offset_reset: str = "earliest",
+        kafka_del_topic_per_epoch: bool = False,
+        kafka_add_topic_per_epoch: bool = False,
+        callback_fn: Callable = None
+    ) -> None:
+        """NO DOC"""
+
+        super().__init__(
+            graph,
+            loader_id,
+            num_batches,
+            buffer_size,
+            output_format,
+            reverse_edge,
+            delimiter,
+            timeout,
+            kafka_address,
+            kafka_max_msg_size,
+            kafka_num_partitions,
+            kafka_replica_factor,
+            kafka_retention_ms,
+            kafka_auto_del_topic,
+            kafka_address_consumer,
+            kafka_address_producer,
+            kafka_security_protocol,
+            kafka_sasl_mechanism,
+            kafka_sasl_plain_username,
+            kafka_sasl_plain_password,
+            kafka_producer_ca_location,
+            kafka_consumer_ca_location,
+            kafka_skip_produce,
+            kafka_auto_offset_reset,
+            kafka_del_topic_per_epoch,
+            kafka_add_topic_per_epoch,
+            callback_fn
+        )
+        self.num_neighbors = num_neighbors
+        # Resolve attributes
+        is_hetero = any(map(lambda x: isinstance(x, dict), 
+                        (v_in_feats, v_out_labels, v_extra_feats,
+                         e_in_feats, e_out_labels, e_extra_feats)))
+        self.is_hetero = is_hetero
+        self.v_in_feats = self._validate_vertex_attributes(v_in_feats, is_hetero)
+        self.v_out_labels = self._validate_vertex_attributes(v_out_labels, is_hetero)
+        self.v_extra_feats = self._validate_vertex_attributes(v_extra_feats, is_hetero)
+        self.e_in_feats = self._validate_edge_attributes(e_in_feats, is_hetero)
+        self.e_out_labels = self._validate_edge_attributes(e_out_labels, is_hetero)
+        self.e_extra_feats = self._validate_edge_attributes(e_extra_feats, is_hetero)
+        if is_hetero:
+            self._vtypes = list(
+                    set(self.v_in_feats.keys())
+                    | set(self.v_out_labels.keys())
+                    | set(self.v_extra_feats.keys())
+                )
+            if not self._vtypes:
+                self._vtypes = list(self._v_schema.keys())
+            self._etypes = list(
+                set(self.e_in_feats.keys())
+                | set(self.e_out_labels.keys())
+                | set(self.e_extra_feats.keys())
+            )
+            if not self._etypes:
+                self._etypes = list(self._e_schema.keys())
+        else:
+            raise ValueError("HGTLoader only works with heterogeneous graphs. Please use the dict format for the feature parameters.")
+        self._vtypes = sorted(self._vtypes)
+        self._etypes = sorted(self._etypes)
+        # Resolve seeds
+        if batch_size:
+            # If batch_size is given, calculate the number of batches
+            if not filter_by:
+                self._seed_types = self._vtypes
+                num_vertices = sum(self._graph.getVertexCount(self._seed_types).values())
+            elif isinstance(filter_by, str):
+                self._seed_types = self._vtypes
+                num_vertices = sum(
+                    self._graph.getVertexCount(k, where="{}!=0".format(filter_by))
+                    for k in self._seed_types
+                )
+            elif isinstance(filter_by, dict):
+                self._seed_types = list(filter_by.keys())
+                num_vertices = sum(
+                    self._graph.getVertexCount(k, where="{}!=0".format(filter_by[k]))
+                    for k in self._seed_types
+                )
+            else:
+                raise ValueError("filter_by should be None, attribute name, or dict of {type name: attribute name}.")
+            self.num_batches = math.ceil(num_vertices / batch_size)
+        else:
+            # Otherwise, take the number of batches as is.
+            self._seed_types = self._vtypes if ((not filter_by) or isinstance(filter_by, str)) else list(filter_by.keys())
+            self.num_batches = num_batches
+        # Initialize parameters for the query
+        self._payload["num_batches"] = self.num_batches
+        self._payload["num_hops"] = num_hops
+        if filter_by:
+            if isinstance(filter_by, str):
+                self._payload["filter_by"] = filter_by
+            else:
+                attr = set(filter_by.values())
+                if len(attr) != 1:
+                    raise NotImplementedError("Filtering by different attributes for different vertex types is not supported. Please use the same attribute for different types.")
+                self._payload["filter_by"] = attr.pop()
+        self._payload["shuffle"] = shuffle
+        self._payload["v_types"] = self._vtypes
+        self._payload["e_types"] = self._etypes
+        self._payload["seed_types"] = self._seed_types
+        self._payload["delimiter"] = self.delimiter
+        # Output
+        self.add_self_loop = add_self_loop
+        # Install query
+        self.query_name = self._install_query()
+
+    def _install_query(self):
+        # Install the right GSQL query for the loader.
+        query_suffix = {
+            "num_neighbors": self.num_neighbors,
+            "v_in_feats": self.v_in_feats,
+            "v_out_labels": self.v_out_labels,
+            "v_extra_feats": self.v_extra_feats,
+            "e_in_feats": self.e_in_feats,
+            "e_out_labels": self.e_out_labels,
+            "e_extra_feats": self.e_extra_feats,
+        }
+        md5 = hashlib.md5()
+        md5.update(json.dumps(query_suffix).encode())
+        query_replace = {"{QUERYSUFFIX}": md5.hexdigest()}
+
+        if isinstance(self.v_in_feats, dict) or isinstance(self.e_in_feats, dict):
+            # Multiple vertex types
+            print_query_seed = ""
+            print_query_other = ""
+            for idx, vtype in enumerate(self._vtypes):
+                v_attr_names = (
+                    self.v_in_feats.get(vtype, [])
+                    + self.v_out_labels.get(vtype, [])
+                    + self.v_extra_feats.get(vtype, [])
+                )
+                v_attr_types = self._v_schema[vtype]
+                if v_attr_names:
+                    print_attr = '+delimiter+'.join(
+                        "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
+                        for attr in v_attr_names
+                    )
+                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + delimiter + "1\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", vtype, print_attr)
+                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + delimiter + "0\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", vtype, print_attr)
+                else:
+                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + "1\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", vtype)
+                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + "0\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", vtype)
+            print_query_seed += "END"
+            print_query_other += "END"
+            query_replace["{SEEDVERTEXATTRS}"] = print_query_seed
+            query_replace["{OTHERVERTEXATTRS}"] = print_query_other
+            # Generate select for each type of neighbors
+            print_select = ""
+            seeds = []
+            vidx = 0
+            for vtype in self.num_neighbors:
+                # Print edges and attributes
+                print_query = ""
+                eidx = 0
+                for etype in self._etypes:
+                    e_attr_names = (
+                        self.e_in_feats.get(etype, [])
+                        + self.e_out_labels.get(etype, [])
+                        + self.e_extra_feats.get(etype, [])
+                    )
+                    e_attr_types = self._e_schema[etype]
+                    if vtype!=e_attr_types["FromVertexTypeName"] and vtype!=e_attr_types["ToVertexTypeName"]:
+                        continue
+                    if e_attr_names:
+                        print_attr = '+delimiter+'.join(
+                            "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'
+                            for attr in e_attr_names
+                        )
+                        print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n")\n'.format(
+                                "IF" if eidx==0 else "ELSE IF", etype, print_attr)
+                    else:
+                        print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + "\\n")\n'.format(
+                                "IF" if eidx==0 else "ELSE IF", etype)
+                    eidx += 1
+                if print_query:   
+                    print_query += "END"
+                    print_select += """seed{} = SELECT t
+                        FROM seeds:s -(e_types:e)- {}:t 
+                        SAMPLE {} EDGE WHEN s.outdegree() >= 1
+                        ACCUM
+                            IF NOT @@printed_edges.contains(e) THEN
+                                @@printed_edges += e,
+                                {}
+                            END;
+                    """.format(vidx, vtype, self.num_neighbors[vtype], print_query)
+                    seeds.append("seed{}".format(vidx))
+                    vidx += 1          
+            print_select += "seeds = {};".format(" UNION ".join(seeds))
+            query_replace["{SELECTNEIGHBORS}"] = print_select
+        # Install query
+        query_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "gsql",
+                "dataloaders",
+                "hgt_loader.gsql",
+        )
+        return install_query_file(self._graph, query_path, query_replace)
+
+    def _start(self) -> None:
+        # Create task and result queues
+        self._read_task_q = Queue(self.buffer_size * 2)
+        self._data_q = Queue(self.buffer_size)
+        self._exit_event = Event()
+
+        self._start_request(True, "both")
+
+        # Start reading thread.
+        if not self.is_hetero:
+            v_extra_feats = self.v_extra_feats + ["is_seed"]
+            v_attr_types = next(iter(self._v_schema.values()))
+            v_attr_types["is_seed"] = "bool"
+            e_attr_types = next(iter(self._e_schema.values()))
+        else:
+            v_extra_feats = {}
+            for vtype in self._vtypes:
+                v_extra_feats[vtype] = self.v_extra_feats.get(vtype, []) + ["is_seed"]
+            v_attr_types = self._v_schema
+            for vtype in v_attr_types:
+                v_attr_types[vtype]["is_seed"] = "bool"
+            e_attr_types = self._e_schema
+        self._reader = Thread(
+            target=self._read_data,
+            args=(
+                self._exit_event,
+                self._read_task_q,
+                self._data_q,
+                "graph",
+                self.output_format,
+                self.v_in_feats,
+                self.v_out_labels,
+                v_extra_feats,
+                v_attr_types,
+                self.e_in_feats,
+                self.e_out_labels,
+                self.e_extra_feats,
+                e_attr_types,
+                self.add_self_loop,
+                self.delimiter,
+                True,
+                self.is_hetero,
+                self.callback_fn
+            ),
+        )
+        self._reader.start()
+
+    @property
+    def data(self) -> Any:
+        """A property of the instance.
+        The `data` property stores all data if all data is loaded in a single batch.
+        If there are multiple batches of data, the `data` property returns the instance itself"""
+        return super().data
+
+    def fetch(self, vertices: list) -> None:
+        """Fetch neighborhood subgraphs for specific vertices.
+
+        Args:
+            vertices (list of dict):
+                Vertices to fetch with their neighborhood subgraphs.
+                Each vertex corresponds to a dict with two mandatory keys
+                {"primary_id": ..., "type": ...}
+        """
+        # Check input
+        if not vertices:
+            return None
+        if not isinstance(vertices, list):
+            raise ValueError(
+                'Input to fetch() should be in format: [{"primary_id": ..., "type": ...}, ...]'
+            )
+        for i in vertices:
+            if not (isinstance(i, dict) and ("primary_id" in i) and ("type" in i)):
+                raise ValueError(
+                    'Input to fetch() should be in format: [{"primary_id": ..., "type": ...}, ...]'
+                )
+        # Send request
+        _payload = {}
+        _payload["v_types"] = self._payload["v_types"]
+        _payload["e_types"] = self._payload["e_types"]
+        _payload["num_batches"] = 1
+        _payload["num_hops"] = self._payload["num_hops"]
+        _payload["delimiter"] = self._payload["delimiter"]
+        _payload["input_vertices"] = []
+        for i in vertices:
+            _payload["input_vertices"].append({"id": i["primary_id"], "type": i["type"]})
+        resp = self._graph.runInstalledQuery(
+            self.query_name, params=_payload, timeout=self.timeout, usePost=True
+        )
+        # Parse data        
+        if not self.is_hetero:
+            v_extra_feats = self.v_extra_feats + ["is_seed"]
+            v_attr_types = next(iter(self._v_schema.values()))
+            v_attr_types["is_seed"] = "bool"
+            v_attr_types["primary_id"] = "str"
+            e_attr_types = next(iter(self._e_schema.values()))
+        else:
+            v_extra_feats = {}
+            for vtype in self._vtypes:
+                v_extra_feats[vtype] = self.v_extra_feats.get(vtype, []) + ["is_seed"]
+            v_attr_types = self._v_schema
+            for vtype in v_attr_types:
+                v_attr_types[vtype]["is_seed"] = "bool"
+                v_attr_types[vtype]["primary_id"] = "str"
+            e_attr_types = self._e_schema
+        i = resp[0]
+        data = self._parse_data(
+            raw = (i["vertex_batch"], i["edge_batch"]),
+            in_format = "graph",
+            out_format = self.output_format,
+            v_in_feats = self.v_in_feats,
+            v_out_labels = self.v_out_labels,
+            v_extra_feats = v_extra_feats,
+            v_attr_types = v_attr_types,
+            e_in_feats = self.e_in_feats,
+            e_out_labels = self.e_out_labels,
+            e_extra_feats = self.e_extra_feats,
+            e_attr_types = e_attr_types,
+            add_self_loop = self.add_self_loop,
+            reindex = True,
+            primary_id = i["pids"],
+            is_hetero = self.is_hetero,
+            callback_fn = self.callback_fn
+        )
+        # Return data
+        return data

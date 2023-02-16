@@ -14,6 +14,7 @@ CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
   INT max_rel_context,
   INT num_batches=1,
   BOOL shuffle=FALSE,
+  STRING delimiter,
   STRING kafka_address,
   STRING kafka_topic,
   STRING security_protocol,
@@ -120,7 +121,7 @@ CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
       res = SELECT s FROM seeds:s 
             POST-ACCUM
               FOREACH tup IN s.@token_heap DO
-                s.@ancs += int_to_string(tup.v_id)+":"+int_to_string(tup.distance)+" ",
+                s.@ancs += stringify(tup.v_id)+":"+stringify(tup.distance)+" ",
                 IF use_cache AND cache_empty THEN
                   s.@conv_map += (tup.v_id -> tup.distance)
                 END
@@ -133,23 +134,23 @@ CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
         IF kafka_address IS NOT NULL THEN
           # Write to kafka
           IF security_protocol IS NOT NULL THEN
-            temp_v = write_to_kafka(kafka_address, kafka_topic, "vertex_batch_" + int_to_string(batch_id), @@v_batch, security_protocol, sasl_mechanism, sasl_username, sasl_password, ssl_ca_location);
+            temp_v = write_to_kafka(kafka_address, kafka_topic, "vertex_batch_" + stringify(batch_id), @@v_batch, security_protocol, sasl_mechanism, sasl_username, sasl_password, ssl_ca_location);
             IF temp_v!=0 THEN
             # If user is using the free version of UDF then add an error to inform the user they need to upgrade to use Kafka streaming function
               IF temp_v==777 THEN             
                 @@kafka_error += ("Failed, you need to upgrade to use Kafka streaming function."+ "\n");
               ELSE
-                @@kafka_error += ("Failed sending vertex batch " + int_to_string(batch_id) + "\n");
+                @@kafka_error += ("Failed sending vertex batch " + stringify(batch_id) + "\n");
               END;
             END;
 
           ELSE # Kafka not secured
-            temp_v = write_to_kafka(kafka_address, kafka_topic, "vertex_batch_" + int_to_string(batch_id), @@v_batch, "", "", "", "", "");
+            temp_v = write_to_kafka(kafka_address, kafka_topic, "vertex_batch_" + stringify(batch_id), @@v_batch, "", "", "", "", "");
             IF temp_v!=0 THEN
               IF temp_v==777 THEN
                 @@kafka_error += ("Failed, you need to upgrade to use Kafka streaming function."+ "\n");
               ELSE
-                @@kafka_error += ("Failed sending vertex batch " + int_to_string(batch_id) + "\n");
+                @@kafka_error += ("Failed sending vertex batch " + stringify(batch_id) + "\n");
               END;
             END;
           END;

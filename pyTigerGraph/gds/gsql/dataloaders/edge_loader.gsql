@@ -3,6 +3,7 @@ CREATE QUERY edge_loader_{QUERYSUFFIX}(
     BOOL shuffle=FALSE,
     STRING filter_by,
     SET<STRING> e_types,
+    STRING delimiter,
     STRING kafka_address,
     STRING kafka_topic,
     STRING security_protocol,
@@ -68,22 +69,22 @@ CREATE QUERY edge_loader_{QUERYSUFFIX}(
         IF kafka_address IS NOT NULL THEN
             # Write to kafka
             IF security_protocol IS NOT NULL THEN
-                temp = write_to_kafka(kafka_address, kafka_topic, "edge_batch_" + int_to_string(batch_id), @@e_batch, security_protocol, sasl_mechanism, sasl_username, sasl_password, ssl_ca_location);
+                temp = write_to_kafka(kafka_address, kafka_topic, "edge_batch_" + stringify(batch_id), @@e_batch, security_protocol, sasl_mechanism, sasl_username, sasl_password, ssl_ca_location);
                 IF temp!=0 THEN 
                     # If user is using the free version of UDF then add an error to inform the user they need to upgrade to use Kafka streaming function  
                     IF temp==777 THEN
                         @@kafka_error += ("Failed, you need to upgrade to use Kafka streaming function."+ "\n");
                     ELSE
-                        @@kafka_error += ("Failed sending edge batch " + int_to_string(batch_id) + "\n");
+                        @@kafka_error += ("Failed sending edge batch " + stringify(batch_id) + "\n");
                     END;
                 END;
             ELSE 
-                temp = write_to_kafka(kafka_address, kafka_topic, "edge_batch_" + int_to_string(batch_id), @@e_batch, "", "", "", "", "");
+                temp = write_to_kafka(kafka_address, kafka_topic, "edge_batch_" + stringify(batch_id), @@e_batch, "", "", "", "", "");
                 IF temp!=0 THEN 
                     IF temp==777 THEN 
                         @@kafka_error += ("Failed, you need to upgrade to use Kafka streaming function."+ "\n");
                     ELSE
-                        @@kafka_error += ("Failed sending edge batch " + int_to_string(batch_id) + "\n");
+                        @@kafka_error += ("Failed sending edge batch " + stringify(batch_id) + "\n");
                     END;
                 END;
             END;

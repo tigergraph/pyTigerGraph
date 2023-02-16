@@ -586,6 +586,65 @@ class TestGDSHeteroNeighborLoaderREST(unittest.TestCase):
             num_batches += 1
         self.assertEqual(num_batches, 18)
 
+    def test_iterate_pyg_multichar_delimiter(self):
+        loader = NeighborLoader(
+            graph=self.conn,
+            v_in_feats={"v0": ["x"], "v1": ["x"], "v2": ["x"]},
+            v_out_labels={"v0": ["y"]},
+            v_extra_feats={"v0": ["train_mask", "val_mask", "test_mask"]},
+            batch_size=16,
+            num_neighbors=10,
+            num_hops=2,
+            shuffle=False,
+            output_format="PyG",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4,
+            delimiter="|$"
+        )
+        num_batches = 0
+        for data in loader:
+            # print(num_batches, data)
+            self.assertIsInstance(data, pygHeteroData)
+            self.assertGreater(data["v0"]["x"].shape[0], 0)
+            self.assertEqual(data["v0"]["x"].shape[0], data["v0"]["y"].shape[0])
+            self.assertEqual(
+                data["v0"]["x"].shape[0], data["v0"]["train_mask"].shape[0]
+            )
+            self.assertEqual(data["v0"]["x"].shape[0], data["v0"]["test_mask"].shape[0])
+            self.assertEqual(data["v0"]["x"].shape[0], data["v0"]["is_seed"].shape[0])
+            self.assertEqual(data["v0"]["x"].shape[0], data["v0"]["val_mask"].shape[0])
+            self.assertGreater(data["v1"]["x"].shape[0], 0)
+            self.assertEqual(data["v1"]["x"].shape[0], data["v1"]["is_seed"].shape[0])
+            self.assertGreater(data["v2"]["x"].shape[0], 0)
+            self.assertEqual(data["v2"]["x"].shape[0], data["v2"]["is_seed"].shape[0])
+            self.assertTrue(
+                data["v0v0"]["edge_index"].shape[1] > 0
+                and data["v0v0"]["edge_index"].shape[1] <= 710
+            )
+            self.assertTrue(
+                data["v1v1"]["edge_index"].shape[1] > 0
+                and data["v1v1"]["edge_index"].shape[1] <= 1044
+            )
+            self.assertTrue(
+                data["v1v2"]["edge_index"].shape[1] > 0
+                and data["v1v2"]["edge_index"].shape[1] <= 1038
+            )
+            self.assertTrue(
+                data["v2v0"]["edge_index"].shape[1] > 0
+                and data["v2v0"]["edge_index"].shape[1] <= 943
+            )
+            self.assertTrue(
+                data["v2v1"]["edge_index"].shape[1] > 0
+                and data["v2v1"]["edge_index"].shape[1] <= 959
+            )
+            self.assertTrue(
+                data["v2v2"]["edge_index"].shape[1] > 0
+                and data["v2v2"]["edge_index"].shape[1] <= 966
+            )
+            num_batches += 1
+        self.assertEqual(num_batches, 18)
+
     def test_fetch(self):
         loader = NeighborLoader(
             graph=self.conn,
@@ -633,6 +692,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSHeteroNeighborLoaderREST("test_whole_graph_df"))
     suite.addTest(TestGDSHeteroNeighborLoaderREST("test_whole_graph_pyg"))
     suite.addTest(TestGDSHeteroNeighborLoaderREST("test_iterate_pyg"))
+    suite.addTest(TestGDSHeteroNeighborLoaderREST("test_iterate_pyg_multichar_delimiter"))
     suite.addTest(TestGDSHeteroNeighborLoaderREST("test_fetch"))
 
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)

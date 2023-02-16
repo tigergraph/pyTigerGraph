@@ -1,6 +1,7 @@
 """GDS Utilities
 Utilities for the Graph Data Science functions.
 """
+import logging
 import os
 import random
 import re
@@ -11,6 +12,8 @@ from urllib.parse import urlparse
 
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
+
+logger = logging.getLogger(__name__)
 
 '''
 import boto3
@@ -148,6 +151,7 @@ def install_query_file(
     if distributed:
         #TODO: Add Distributed keyword.
         raise NotImplementedError
+    logger.debug(query)
     query = (
         "USE GRAPH {}\n".format(conn.graphname)
         + query
@@ -234,10 +238,11 @@ def add_attribute(conn: "TigerGraphConnection", schema_type:str, attr_type:str =
         job = "USE GRAPH {}\n".format(conn.graphname) + "CREATE GLOBAL SCHEMA_CHANGE JOB {} {{\n".format(
             job_name) + ''.join(tasks) + "}}\nRUN GLOBAL SCHEMA_CHANGE JOB {}".format(job_name)
     # Submit the job
+    print("Changing schema to save results...", flush=True)
     resp = conn.gsql(job)
     status = resp.splitlines()[-1]
     if "Failed" in status:
-        raise ConnectionError(status)
+        raise ConnectionError(resp)
     else:
-        print(status)
+        print(status, flush=True)
     return 'Schema change succeeded.'

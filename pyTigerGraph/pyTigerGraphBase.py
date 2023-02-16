@@ -18,7 +18,9 @@ from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
 
 def excepthook(type, value, traceback):
-    """This function prints out a given traceback and exception to sys.stderr.
+    """NO DOC
+    
+    This function prints out a given traceback and exception to sys.stderr.
 
     See: https://docs.python.org/3/library/sys.html#sys.excepthook
     """
@@ -75,7 +77,7 @@ class pyTigerGraphBase(object):
             sslPort:
                 Port for fetching SSL certificate in case of firewall.
             gcp:
-                DEPRECATED.
+                DEPRECATED. Previously used for connecting to databases provisioned on GCP in TigerGraph Cloud.
 
         Raises:
             TigerGraphException: In case on invalid URL scheme.
@@ -278,7 +280,10 @@ class pyTigerGraphBase(object):
                 res.raise_for_status()
             except:
                 self._errorCheck(res)
-        res = json.loads(res.text, strict=strictJson)
+        try:
+            res = json.loads(res.text, strict=strictJson)
+        except:
+            raise TigerGraphException(res.text)
         if not skipCheck:
             self._errorCheck(res)
         if not resKey:
