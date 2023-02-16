@@ -599,7 +599,6 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                     if k1 == self.___trgvtxids:
                         # Dealing with the (possibly multiple instances of) edge details
                         # v1 should be a dict of lists
-                        ret += "{"
                         c2 = 0
                         for k2, v2 in v1.items():
                             if c2 > 0:
@@ -611,11 +610,10 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                                 ret += '"' + k2 + '":' + json.dumps(v3)
                                 c3 += 1
                             c2 += 1
-                        ret += "}"
                     else:
-                        ret += '{"' + k1 + '":' + _dumps(data[k1]) + '}'
+                        ret += '"' + k1 + '":' + _dumps(data[k1])
                     c1 += 1
-            return ret
+            return "{" + ret + "}"
 
         logger.info("entry: upsertEdges")
         if logger.level == logging.DEBUG:
