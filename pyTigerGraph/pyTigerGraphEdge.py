@@ -593,14 +593,15 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             ret = ""
             if isinstance(data, dict):
                 c1 = 0
-                for k, v in data.items():
+                for k1, v1 in data.items():
                     if c1 > 0:
                         ret += ","
-                    if k == self.___trgvtxids:
-                        # v should be a dict of lists
+                    if k1 == self.___trgvtxids:
+                        # Dealing with the (possibly multiple instances of) edge details
+                        # v1 should be a dict of lists
                         ret += "{"
                         c2 = 0
-                        for k2, v2 in v.items():
+                        for k2, v2 in v1.items():
                             if c2 > 0:
                                 ret += ","
                             c3 = 0
@@ -612,13 +613,23 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                             c2 += 1
                         ret += "}"
                     else:
-                        ret += '{"' + k + '":' + _dumps(data[k]) + '}'
+                        ret += '{"' + k1 + '":' + _dumps(data[k1]) + '}'
                     c1 += 1
             return ret
 
         logger.info("entry: upsertEdges")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
+
+        """
+            NOTE: The source and target vertex primary IDs are converted below to string as the keys
+            in a JSON document must be string.
+            This probably should not be an issue as the primary ID has a predefined data type, so if
+            the same primary ID is sent as two different literal (say: 1 as number and "1" as
+            string), it will be converted anyhow to the same (numerical or string) data type.
+            Converting the primary IDs to string here prevents inconsistencies as Python dict would
+            otherwise handle 1 and "1" as two separate keys.
+        """
 
         data = {sourceVertexType: {}}
         l1 = data[sourceVertexType]
@@ -627,10 +638,11 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                 vals = self._upsertAttrs(e[2])
             else:
                 vals = {}
-            # fromVertexId
-            if e[0] not in l1:
-                l1[e[0]] = {}
-            l2 = l1[e[0]]
+            # sourceVertexId
+            sourceVertexId = str(e[0])  # Converted to string as the key in the JSON payload must be a string
+            if sourceVertexId not in l1:
+                l1[sourceVertexId] = {}
+            l2 = l1[sourceVertexId]
             # edgeType
             if edgeType not in l2:
                 l2[edgeType] = {}
@@ -643,9 +655,10 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                 l4[self.___trgvtxids] = {}
             l4 = l4[self.___trgvtxids]
             # targetVertexId
-            if e[1] not in l4:
-                l4[e[1]] = []
-            l4[e[1]].append(vals)
+            targetVertexId = str(e[1])  # Converted to string as the key in the JSON payload must be a string
+            if targetVertexId not in l4:
+                l4[targetVertexId] = []
+            l4[targetVertexId].append(vals)
 
         data = _dumps({"edges": data})
 
