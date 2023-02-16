@@ -446,17 +446,9 @@ class BaseLoader:
         headers: dict = {},
     ) -> NoReturn:
         # Run query async
-        # TODO: change to runInstalledQuery when it supports async mode
-        _headers = {"GSQL-ASYNC": "true", "GSQL-TIMEOUT": str(timeout)}
-        _headers.update(headers)
         _payload = {}
         _payload.update(payload)
-        resp = tgraph._post(
-            tgraph.restppUrl + "/query/" + tgraph.graphname + "/" + query_name,
-            data=_payload,
-            headers=_headers,
-            resKey=None
-        )
+        resp = tgraph.runInstalledQuery(query_name, params=_payload, timeout=timeout, usePost=True, runAsync=True)
         # Check status
         try:
             _stat_payload = {
@@ -471,9 +463,7 @@ class BaseLoader:
             return
             
         while not exit_event.is_set():
-            status = tgraph._get(
-                tgraph.restppUrl + "/query_status", params=_stat_payload
-            )
+            status = tgraph.checkQueryStatus(resp["request_id"])
             if status[0]["status"] == "running":
                 sleep(1)
                 continue
