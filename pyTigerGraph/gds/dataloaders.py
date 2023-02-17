@@ -56,7 +56,7 @@ class BaseLoader:
         buffer_size: int = 4,
         output_format: str = "dataframe",
         reverse_edge: bool = False,
-        delimiter: str = ",",
+        delimiter: str = "|",
         timeout: int = 300000,
         kafka_address: str = "",
         Kafka_max_msg_size: int = 104857600,
@@ -189,6 +189,7 @@ class BaseLoader:
         else:
             self.delete_epoch_topic = False
         # Get graph info
+        self.delimiter = delimiter # has to be set before self._get_schema()
         self.reverse_edge = reverse_edge
         self._graph = graph
         self._v_schema, self._e_schema = self._get_schema()
@@ -204,7 +205,7 @@ class BaseLoader:
         self._iterations = 0
         self._iterator = False
         self.callback_fn = callback_fn
-        self.delimiter = delimiter
+
         # Kafka consumer and admin
         self.max_kafka_msg_size = Kafka_max_msg_size
         self.kafka_address_consumer = (
@@ -289,6 +290,8 @@ class BaseLoader:
                     v_schema[v][attr["AttributeName"]] = "LIST:" + attr["AttributeType"][
                         "ValueTypeName"
                     ]
+                elif attr["AttributeType"]["Name"] == "MAP" and self.delimiter == ",":
+                    raise TigerGraphException("MAP data types are not supported with the comma delimiter")
                 else:
                     v_schema[v][attr["AttributeName"]] = attr["AttributeType"]["Name"]
             if vtype["PrimaryId"].get("PrimaryIdAsAttribute"):
@@ -571,7 +574,7 @@ class BaseLoader:
         e_extra_feats: Union[list, dict] = [],
         e_attr_types: dict = {},
         add_self_loop: bool = False,
-        delimiter: str = ",",
+        delimiter: str = "|",
         reindex: bool = True,
         is_hetero: bool = False,
         callback_fn: Callable = None,
@@ -618,7 +621,7 @@ class BaseLoader:
         e_extra_feats: Union[list, dict] = [],
         e_attr_types: dict = {},
         add_self_loop: bool = False,
-        delimiter: str = ",",
+        delimiter: str = "|",
         reindex: bool = True,
         primary_id: dict = {},
         is_hetero: bool = False,
@@ -1370,7 +1373,7 @@ class NeighborLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
-        delimiter: str = ",",
+        delimiter: str = "|",
         timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
@@ -1826,7 +1829,7 @@ class EdgeLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
-        delimiter: str = ",",
+        delimiter: str = "|",
         timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
@@ -2102,7 +2105,7 @@ class VertexLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
-        delimiter: str = ",",
+        delimiter: str = "|",
         timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
@@ -2385,7 +2388,7 @@ class GraphLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
-        delimiter: str = ",",
+        delimiter: str = "|",
         timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
@@ -2690,7 +2693,7 @@ class EdgeNeighborLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
-        delimiter: str = ",",
+        delimiter: str = "|",
         timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
@@ -3029,7 +3032,7 @@ class NodePieceLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
-        delimiter: str = ",",
+        delimiter: str = "|",
         timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
@@ -3509,7 +3512,7 @@ class HGTLoader(BaseLoader):
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
-        delimiter: str = ",",
+        delimiter: str = "|",
         timeout: int = 300000,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
