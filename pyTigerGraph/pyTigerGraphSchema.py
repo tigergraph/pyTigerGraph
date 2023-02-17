@@ -35,6 +35,24 @@ class pyTigerGraphSchema(pyTigerGraphBase):
 
         return res
 
+    def _getAttrType(self, attrType: dict) -> str:
+        """Returns attribute data type in simple format.
+
+        Args:
+            attribute:
+                The details of the attribute's data type.
+
+        Returns:
+            Either "(scalar_type)" or "(complex_type, scalar_type)" string.
+        """
+        ret = attrType["Name"]
+        if "KeyTypeName" in attrType:
+            ret += "(" + attrType["KeyTypeName"] + "," + attrType["ValueTypeName"] + ")"
+        elif "ValueTypeName" in attrType:
+            ret += "(" + attrType["ValueTypeName"] + ")"
+
+        return ret
+
     def _upsertAttrs(self, attributes: dict) -> dict:
         """Transforms attributes (provided as a table) into a hierarchy as expected by the upsert
             functions.
