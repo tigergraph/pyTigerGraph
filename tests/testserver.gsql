@@ -91,16 +91,14 @@ CREATE SCHEMA_CHANGE JOB setup {
    // , a50_string_compress_udt              MAP<STRING COMPRESS, tuple2_simple>
     );
 
-
     ADD VERTEX vertex2_primary_key (
         id     INT PRIMARY KEY
       , a01    STRING
       , a02    DATETIME
     );
 
-
     ADD VERTEX vertex3_primary_key_composite (
-        a01    INT 
+        a01    INT
       , a02    STRING
       , a03    DATETIME
       , a04    BOOL
@@ -155,6 +153,8 @@ CREATE SCHEMA_CHANGE JOB setup {
         FROM *
       , TO *
     );
+
+    // TODO Add MultiEdge edge
 }
 END
 

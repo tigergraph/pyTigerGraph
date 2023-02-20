@@ -200,6 +200,7 @@ class test_pyTigerGraphEdge(unittest.TestCase):
 
         # TODO Tests with ack, new_vertex_only, vertex_must_exist, update_vertex_only and
         #   atomic_level parameters; when they will be added to pyTigerGraphEdge.upsertEdge()
+        # TODO Add MultiEdge edge to schema and add test cases
 
     def test_10_upsertEdges(self):
         es = [

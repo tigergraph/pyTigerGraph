@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 class pyTigerGraphEdge(pyTigerGraphQuery):
 
+    ___trgvtxids = "___trgvtxids"
+
     def getEdgeTypes(self, force: bool = False) -> list:
         """Returns the list of edge type names of the graph.
 
@@ -74,6 +76,37 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         logger.info("exit: getEdgeType (not found)")
 
         return {}
+
+    def getEdgeAttrs(self, edgeType: str) -> list:
+        """Returns the names and types of the attributes of the edge type.
+
+        Args:
+            edgeType:
+                The name of the edge type.
+
+        Returns:
+            A list of (attribute_name, attribute_type) tuples.
+            The format of attribute_type is one of
+             - "scalar_type"
+             - "complex_type(scalar_type)"
+             - "map_type(key_type,value_type)"
+            and it is a string.
+        """
+        logger.info("entry: getAttributes")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        et = self.getEdgeType(edgeType)
+        ret = []
+
+        for at in et["Attributes"]:
+            ret.append((at["AttributeName"], self._getAttrType(at["AttributeType"])))
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: getAttributes")
+
+        return ret
 
     def getEdgeSourceVertexType(self, edgeType: str) -> Union[str, set]:
         """Returns the type(s) of the edge type's source vertex.
@@ -248,6 +281,56 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
 
         return ""
         # TODO Should return some other value or raise exception?
+
+    def isMultiEdge(self, edgeType: str) -> bool:
+        """Can the edge have multiple instances between the same pair of vertices?
+
+        Args:
+            edgeType:
+                The name of the edge type.
+
+        Returns:
+            `True`, if the edge can have multiple instances between the same pair of vertices.
+        """
+        logger.info("entry: isMultiEdge")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        et = self.getEdgeType(edgeType)
+        ret = ("DiscriminatorCount" in et) and et["DiscriminatorCount"] > 0
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: isMultiEdge")
+
+        return ret
+
+    def getDiscriminators(self, edgeType: str) -> list:
+        """Returns the names and types of the discriminators of the edge type.
+
+        Args:
+            edgeType:
+                The name of the edge type.
+
+        Returns:
+            A list of (attribute_name, attribute_type) tuples.
+        """
+        logger.info("entry: getDiscriminators")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        et = self.getEdgeType(edgeType)
+        ret = []
+
+        for at in et["Attributes"]:
+            if "IsDiscriminator" in at and at["IsDiscriminator"]:
+                ret.append((at["AttributeName"], self._getAttrType(at["AttributeType"])))
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: getDiscriminators")
+
+        return ret
 
     def getEdgeCountFrom(self, sourceVertexType: str = "", sourceVertexId: Union[str, int] = None,
             edgeType: str = "", targetVertexType: str = "", targetVertexId: Union[str, int] = None,
@@ -490,9 +573,61 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         TODO Add ack, new_vertex_only, vertex_must_exist, update_vertex_only and atomic_level
             parameters and functionality.
         """
+
+        def _dumps(data) -> str:
+            """Generates the JSON format expected by the endpoint.
+
+            The important thing this function does is converting the list of target vertex IDs and
+            the attributes belonging to the edge instances into a JSON object that can contain
+            multiple occurrences of the same key. If the these details were stored in a dictionary
+            then in case of MultiEdge only the last instance would be retained (as the key would be
+            the target vertex ID).
+
+            Args:
+                data:
+                    The Python data structure containing the edge instance details.
+
+            Returns:
+                The JSON to be sent to the endpoint.
+            """
+            ret = ""
+            if isinstance(data, dict):
+                c1 = 0
+                for k1, v1 in data.items():
+                    if c1 > 0:
+                        ret += ","
+                    if k1 == self.___trgvtxids:
+                        # Dealing with the (possibly multiple instances of) edge details
+                        # v1 should be a dict of lists
+                        c2 = 0
+                        for k2, v2 in v1.items():
+                            if c2 > 0:
+                                ret += ","
+                            c3 = 0
+                            for v3 in v2:
+                                if c3 > 0:
+                                    ret += ","
+                                ret += '"' + k2 + '":' + json.dumps(v3)
+                                c3 += 1
+                            c2 += 1
+                    else:
+                        ret += '"' + k1 + '":' + _dumps(data[k1])
+                    c1 += 1
+            return "{" + ret + "}"
+
         logger.info("entry: upsertEdges")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
+
+        """
+            NOTE: The source and target vertex primary IDs are converted below to string as the keys
+            in a JSON document must be string.
+            This probably should not be an issue as the primary ID has a predefined data type, so if
+            the same primary ID is sent as two different literal (say: 1 as number and "1" as
+            string), it will be converted anyhow to the same (numerical or string) data type.
+            Converting the primary IDs to string here prevents inconsistencies as Python dict would
+            otherwise handle 1 and "1" as two separate keys.
+        """
 
         data = {sourceVertexType: {}}
         l1 = data[sourceVertexType]
@@ -501,10 +636,11 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                 vals = self._upsertAttrs(e[2])
             else:
                 vals = {}
-            # fromVertexId
-            if e[0] not in l1:
-                l1[e[0]] = {}
-            l2 = l1[e[0]]
+            # sourceVertexId
+            sourceVertexId = str(e[0])  # Converted to string as the key in the JSON payload must be a string
+            if sourceVertexId not in l1:
+                l1[sourceVertexId] = {}
+            l2 = l1[sourceVertexId]
             # edgeType
             if edgeType not in l2:
                 l2[edgeType] = {}
@@ -513,9 +649,16 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             if targetVertexType not in l3:
                 l3[targetVertexType] = {}
             l4 = l3[targetVertexType]
+            if self.___trgvtxids not in l4:
+                l4[self.___trgvtxids] = {}
+            l4 = l4[self.___trgvtxids]
             # targetVertexId
-            l4[e[1]] = vals
-        data = json.dumps({"edges": data})
+            targetVertexId = str(e[1])  # Converted to string as the key in the JSON payload must be a string
+            if targetVertexId not in l4:
+                l4[targetVertexId] = []
+            l4[targetVertexId].append(vals)
+
+        data = _dumps({"edges": data})
 
         ret = self._post(self.restppUrl + "/graph/" + self.graphname, data=data)[0][
             "accepted_edges"]

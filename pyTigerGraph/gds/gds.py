@@ -164,7 +164,7 @@ class GDS:
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
-        delimiter: str = ",",
+        delimiter: str = "|",
         timeout: int = 300000,
         callback_fn: Callable = None
     ) -> NeighborLoader:
@@ -274,7 +274,7 @@ class GDS:
                 Whether to add self-loops to the graph. Defaults to False.
             delimiter (str, optional):
                 What character (or combination of characters) to use to separate attributes as batches are being created.
-                Defaults to ",".
+                Defaults to "|".
             loader_id (str, optional):
                 An identifier of the loader which can be any string. It is
                 also used as the Kafka topic name. If `None`, a random string will be generated
@@ -329,7 +329,7 @@ class GDS:
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
-        delimiter: str = ",",
+        delimiter: str = "|",
         timeout: int = 300000,
         callback_fn: Callable = None
     ) -> EdgeLoader:
@@ -393,7 +393,7 @@ class GDS:
                 Whether to traverse along reverse edge types. Defaults to False.
             delimiter (str, optional):
                 What character (or combination of characters) to use to separate attributes as batches are being created.
-                Defaults to ",".
+                Defaults to "|".
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
             callback_fn (callable, optional):
@@ -434,7 +434,7 @@ class GDS:
             loader_id: str = None,
             buffer_size: int = 4,
             reverse_edge: bool = False,
-            delimiter: str = ",",
+            delimiter: str = "|",
             timeout: int = 300000,
             callback_fn: Callable = None
     ) -> VertexLoader:
@@ -498,7 +498,7 @@ class GDS:
                 Whether to traverse along reverse edge types. Defaults to False.
             delimiter (str, optional):
                 What character (or combination of characters) to use to separate attributes as batches are being created.
-                Defaults to ",".
+                Defaults to "|".
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
             callback_fn (callable, optional):
@@ -546,7 +546,7 @@ class GDS:
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
-        delimiter: str = ",",
+        delimiter: str = "|",
         timeout: int = 300000,
         callback_fn: Callable = None
     ) -> GraphLoader:
@@ -654,7 +654,7 @@ class GDS:
                 Whether to traverse along reverse edge types. Defaults to False.
             delimiter (str, optional):
                 What character (or combination of characters) to use to separate attributes as batches are being created.
-                Defaults to ",".
+                Defaults to "|".
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
             callback_fn (callable, optional):
@@ -710,7 +710,7 @@ class GDS:
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
-        delimiter: str = ",",
+        delimiter: str = "|",
         timeout: int = 300000,
         callback_fn: Callable = None
     ) -> EdgeNeighborLoader:
@@ -828,7 +828,7 @@ class GDS:
                 Whether to traverse along reverse edge types. Defaults to False.
             delimiter (str, optional):
                 What character (or combination of characters) to use to separate attributes as batches are being created.
-                Defaults to ",".
+                Defaults to "|".
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
             callback_fn (callable, optional):
@@ -888,7 +888,7 @@ class GDS:
                         loader_id: str = None,
                         buffer_size: int = 4,
                         reverse_edge: bool = False,
-                        delimiter: str = ",",
+                        delimiter: str = "|",
                         timeout: int = 300000,
                         callback_fn: Callable = None) -> NodePieceLoader:
         """Returns a `NodePieceLoader` instance.
@@ -971,7 +971,7 @@ class GDS:
                 Whether to traverse along reverse edge types. Defaults to False.
             delimiter (str, optional):
                 What character (or combination of characters) to use to separate attributes as batches are being created.
-                Defaults to ",".
+                Defaults to "|".
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
             callback_fn (callable, optional):
@@ -1033,7 +1033,7 @@ class GDS:
         loader_id: str = None,
         buffer_size: int = 4,
         reverse_edge: bool = False,
-        delimiter: str = ",",
+        delimiter: str = "|",
         timeout: int = 300000,
         callback_fn: Callable = None
     ) -> HGTLoader:
@@ -1148,7 +1148,7 @@ class GDS:
                 Whether to traverse along reverse edge types. Defaults to False.
             delimiter (str, optional):
                 What character (or combination of characters) to use to separate attributes as batches are being created.
-                Defaults to ",".
+                Defaults to "|".
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
         """
