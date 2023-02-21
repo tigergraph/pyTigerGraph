@@ -83,7 +83,8 @@ class GDS:
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False,
-        kafka_group_id: str = None
+        kafka_group_id: str = None,
+        kafka_topic: str = None
     ) -> None:
         """Configure the Kafka connection.
         Args:
@@ -158,6 +159,8 @@ class GDS:
                 Whether to add a topic for each epoch. Defaults to False.
             kafka_group_id (str, optional):
                 Consumer group ID if joining a consumer group for dynamic partition assignment and offset commits. Defaults to None.
+            kafka_topic (str, optional):
+                Name of the Kafka topic to stream data with.
         """
         self.kafkaConfig = {
             "kafka_address": kafka_address,
@@ -189,7 +192,8 @@ class GDS:
             "kafka_auto_offset_reset": kafka_auto_offset_reset,
             "kafka_del_topic_per_epoch": kafka_del_topic_per_epoch,
             "kafka_add_topic_per_epoch": kafka_add_topic_per_epoch,
-            "kafka_group_id": kafka_group_id
+            "kafka_group_id": kafka_group_id,
+            "kafka_topic": kafka_topic
         }
 
 
@@ -328,7 +332,7 @@ class GDS:
                 Defaults to "|".
             loader_id (str, optional):
                 An identifier of the loader which can be any string. It is
-                also used as the Kafka topic name. If `None`, a random string will be generated
+                also used as the Kafka topic name if Kafka topic is not given. If `None`, a random string will be generated
                 for it. Defaults to None.
             buffer_size (int, optional):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
@@ -475,7 +479,7 @@ class GDS:
                 "dataframe" is supported. Defaults to "dataframe".
             loader_id (str, optional):
                 An identifier of the loader which can be any string. It is
-                also used as the Kafka topic name. If `None`, a random string will be generated
+                also used as the Kafka topic name if Kafka topic is not given. If `None`, a random string will be generated
                 for it. Defaults to None.
             buffer_size (int, optional):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
@@ -790,7 +794,7 @@ class GDS:
                 Whether to add self-loops to the graph. Defaults to False.
             loader_id (str, optional):
                 An identifier of the loader which can be any string. It is
-                also used as the Kafka topic name. If `None`, a random string will be generated
+                also used as the Kafka topic name if Kafka topic is not given. If `None`, a random string will be generated
                 for it. Defaults to None.
             buffer_size (int, optional):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
@@ -998,7 +1002,7 @@ class GDS:
                 Whether to add self-loops to the graph. Defaults to False.
             loader_id (str, optional):
                 An identifier of the loader which can be any string. It is
-                also used as the Kafka topic name. If `None`, a random string will be generated
+                also used as the Kafka topic name if Kafka topic is not given. If `None`, a random string will be generated
                 for it. Defaults to None.
             buffer_size (int, optional):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
@@ -1176,7 +1180,7 @@ class GDS:
                 unique loader will be returned for each list element. Defaults to None.
             loader_id (str, optional):
                 An identifier of the loader which can be any string. It is
-                also used as the Kafka topic name. If `None`, a random string will be generated
+                also used as the Kafka topic name if Kafka topic is not given. If `None`, a random string will be generated
                 for it. Defaults to None.
             buffer_size (int, optional):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
@@ -1393,7 +1397,7 @@ class GDS:
                 Whether to add self-loops to the graph. Defaults to False.
             loader_id (str, optional):
                 An identifier of the loader which can be any string. It is
-                also used as the Kafka topic name. If `None`, a random string will be generated
+                also used as the Kafka topic name if Kafka topic is not given. If `None`, a random string will be generated
                 for it. Defaults to None.
             buffer_size (int, optional):
                 Number of data batches to prefetch and store in memory. Defaults to 4.
