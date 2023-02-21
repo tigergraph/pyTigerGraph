@@ -87,7 +87,8 @@ class BaseLoader:
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False,
         callback_fn: Callable = None,
-        kafka_group_id: str = None
+        kafka_group_id: str = None,
+        kafka_topic: str = None
     ) -> None:
         """Base Class for data loaders.
 
@@ -207,11 +208,17 @@ class BaseLoader:
         self._graph = graph
         self._v_schema, self._e_schema = self._get_schema()
         # Initialize basic params
-        if not loader_id:
-            self.loader_id = random_string(RANDOM_TOPIC_LEN)
-        else:
+        if loader_id:
             self.loader_id = loader_id
+        else:
+            self.loader_id = "tg_" + random_string(RANDOM_TOPIC_LEN)
         self.kafka_group_id = kafka_group_id
+        if kafka_topic:
+            self._kafka_topic_base = kafka_topic
+        elif kafka_group_id:
+            self._kafka_topic_base = kafka_group_id + "_topic"
+        else:
+            self._kafka_topic_base = self.loader_id + "_topic"
         self.num_batches = num_batches
         self.output_format = output_format
         self.buffer_size = buffer_size
@@ -444,9 +451,9 @@ class BaseLoader:
         # Generate kafka topic, add it to payload and consumer
         # Generate topic
         if self.add_epoch_topic:
-            kafka_topic = "{}_{}".format(self.loader_id, self._iterations)
+            kafka_topic = "{}_{}".format(self._kafka_topic_base, self._iterations)
         else:
-            kafka_topic = self.loader_id
+            kafka_topic = self._kafka_topic_base
         self._kafka_topic = kafka_topic
         self._payload["kafka_topic"] = kafka_topic
         self._all_kafka_topics.add(kafka_topic)
@@ -500,9 +507,8 @@ class BaseLoader:
         _payload = {}
         _payload.update(payload)
         resp = tgraph.runInstalledQuery(query_name, params=_payload, timeout=timeout, usePost=True, runAsync=True)
-        # Check status
-            
         while not exit_event.is_set():
+            # Check status
             status = tgraph.checkQueryStatus(resp)
             if status[0]["status"] == "running":
                 sleep(1)
@@ -1463,7 +1469,8 @@ class NeighborLoader(BaseLoader):
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False,
         callback_fn: Callable = None,
-        kafka_group_id: str = None
+        kafka_group_id: str = None,
+        kafka_topic: str = None
     ) -> None:
         """NO DOC"""
 
@@ -1506,7 +1513,8 @@ class NeighborLoader(BaseLoader):
             kafka_del_topic_per_epoch,
             kafka_add_topic_per_epoch,
             callback_fn,
-            kafka_group_id
+            kafka_group_id,
+            kafka_topic
         )
         # Resolve attributes
         is_hetero = any(map(lambda x: isinstance(x, dict), 
@@ -1947,7 +1955,8 @@ class EdgeLoader(BaseLoader):
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False,
         callback_fn: Callable = None,
-        kafka_group_id: str = None
+        kafka_group_id: str = None,
+        kafka_topic: str = None
     ) -> None:
         """
         NO DOC.
@@ -1991,7 +2000,8 @@ class EdgeLoader(BaseLoader):
             kafka_del_topic_per_epoch,
             kafka_add_topic_per_epoch,
             callback_fn,
-            kafka_group_id
+            kafka_group_id,
+            kafka_topic
         )
         # Resolve attributes
         is_hetero = isinstance(attributes, dict)
@@ -2247,7 +2257,8 @@ class VertexLoader(BaseLoader):
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False,
         callback_fn: Callable = None,
-        kafka_group_id: str = None
+        kafka_group_id: str = None,
+        kafka_topic: str = None
     ) -> None:
         """
         NO DOC
@@ -2291,7 +2302,8 @@ class VertexLoader(BaseLoader):
             kafka_del_topic_per_epoch,
             kafka_add_topic_per_epoch,
             callback_fn,
-            kafka_group_id
+            kafka_group_id,
+            kafka_topic
         )
         # Resolve attributes
         is_hetero = isinstance(attributes, dict)
@@ -2558,7 +2570,8 @@ class GraphLoader(BaseLoader):
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False,
         callback_fn: Callable = None,
-        kafka_group_id: str = None
+        kafka_group_id: str = None,
+        kafka_topic: str = None
     ) -> None:
         """
         NO DOC
@@ -2602,7 +2615,8 @@ class GraphLoader(BaseLoader):
             kafka_del_topic_per_epoch,
             kafka_add_topic_per_epoch,
             callback_fn,
-            kafka_group_id
+            kafka_group_id,
+            kafka_topic
         )
         # Resolve attributes
         is_hetero = any(map(lambda x: isinstance(x, dict), 
@@ -2888,7 +2902,8 @@ class EdgeNeighborLoader(BaseLoader):
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False,
         callback_fn: Callable = None,
-        kafka_group_id: str = None
+        kafka_group_id: str = None,
+        kafka_topic: str = None
     ) -> None:
         """NO DOC"""
 
@@ -2931,7 +2946,8 @@ class EdgeNeighborLoader(BaseLoader):
             kafka_del_topic_per_epoch,
             kafka_add_topic_per_epoch,
             callback_fn,
-            kafka_group_id
+            kafka_group_id,
+            kafka_topic
         )
         # Resolve attributes
         is_hetero = any(map(lambda x: isinstance(x, dict), 
@@ -3251,7 +3267,8 @@ class NodePieceLoader(BaseLoader):
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False,
         callback_fn: Callable = None,
-        kafka_group_id: str = None
+        kafka_group_id: str = None,
+        kafka_topic: str = None
     ) -> None:
         """
         NO DOC
@@ -3295,7 +3312,8 @@ class NodePieceLoader(BaseLoader):
             kafka_del_topic_per_epoch,
             kafka_add_topic_per_epoch,
             callback_fn,
-            kafka_group_id
+            kafka_group_id,
+            kafka_topic
         )
         # Resolve attributes
         is_hetero = isinstance(v_feats, dict)
@@ -3759,7 +3777,8 @@ class HGTLoader(BaseLoader):
         kafka_del_topic_per_epoch: bool = False,
         kafka_add_topic_per_epoch: bool = False,
         callback_fn: Callable = None,
-        kafka_group_id: str = None
+        kafka_group_id: str = None,
+        kafka_topic: str = None
     ) -> None:
         """NO DOC"""
 
@@ -3802,7 +3821,8 @@ class HGTLoader(BaseLoader):
             kafka_del_topic_per_epoch,
             kafka_add_topic_per_epoch,
             callback_fn,
-            kafka_group_id
+            kafka_group_id,
+            kafka_topic
         )
         self.num_neighbors = num_neighbors
         # Resolve attributes
