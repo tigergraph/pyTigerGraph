@@ -1,9 +1,9 @@
 from . import base_model as bm
 from ..metrics import ClassificationMetrics, RegressionMetrics, LinkPredictionMetrics
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
 try:
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
     from torch_geometric.nn import to_hetero
     import torch_geometric.nn as gnn
 except:
