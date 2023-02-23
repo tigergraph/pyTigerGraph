@@ -453,27 +453,14 @@ class BaseLoader:
         _payload.update(payload)
         resp = tgraph.runInstalledQuery(query_name, params=_payload, timeout=timeout, usePost=True, runAsync=True)
         # Check status
-        try:
-            _stat_payload = {
-                "graph_name": tgraph.graphname,
-                "requestid": resp["request_id"],
-            }
-        except KeyError:
-            if resp["results"][0]["kafkaError"] != '':
-                raise TigerGraphException(
-                    "Error writing to Kafka: {}".format(resp["results"][0]["kafkaError"])
-                )
-            return
             
         while not exit_event.is_set():
-            status = tgraph.checkQueryStatus(resp["request_id"])
+            status = tgraph.checkQueryStatus(resp)
             if status[0]["status"] == "running":
                 sleep(1)
                 continue
             elif status[0]["status"] == "success":
-                res = tgraph._get(
-                    tgraph.restppUrl + "/query_result", params=_stat_payload
-                )
+                res = tgraph.getQueryResult(resp)
                 if res[0]["kafkaError"]:
                     raise TigerGraphException(
                         "Error writing to Kafka: {}".format(res[0]["kafkaError"])
