@@ -12,10 +12,22 @@ class BaseCallback():
     def on_init_end(self, trainer):
         pass
 
+    def on_epoch_start(self, trainer):
+        pass
+
+    def on_train_step_start(self, trainer):
+        pass
+
     def on_train_step_end(self, trainer):
         pass
 
     def on_epoch_end(self, trainer):
+        pass
+
+    def on_eval_start(self, trainer):
+        pass
+
+    def on_eval_step_start(self, trainer):
         pass
 
     def on_eval_step_end(self, trainer):
@@ -122,9 +134,13 @@ class Trainer():
             max_num_steps = self.train_loader.num_batches * num_epochs
         cur_step = 0
         while cur_step < max_num_steps:
+            for callback in self.callbacks:
+                callback.on_epoch_start(trainer=self)
             for batch in self.train_loader:
                 if cur_step >= max_num_steps:
                     break
+                for callback in self.callbacks:
+                    callback.on_train_step_start(trainer=self)
                 out = self.model(batch, tgt_type=self.target_type)
                 loss = self.model.compute_loss(out,
                                                batch,
@@ -149,7 +165,11 @@ class Trainer():
 
     def eval(self):
         self.model.eval()
+        for callback in self.callbacks:
+            callback.on_eval_start(trainer=self)
         for batch in self.eval_loader:
+            for callback in self.callbacks:
+                callback.on_eval_step_start(trainer=self)
             out = self.model(batch, tgt_type=self.target_type)
             loss = self.model.compute_loss(out,
                                         batch,
