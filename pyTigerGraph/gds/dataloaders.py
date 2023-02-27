@@ -449,41 +449,18 @@ class BaseLoader:
         headers: dict = {},
     ) -> NoReturn:
         # Run query async
-        # TODO: change to runInstalledQuery when it supports async mode
-        _headers = {"GSQL-ASYNC": "true", "GSQL-TIMEOUT": str(timeout)}
-        _headers.update(headers)
         _payload = {}
         _payload.update(payload)
-        resp = tgraph._post(
-            tgraph.restppUrl + "/query/" + tgraph.graphname + "/" + query_name,
-            data=_payload,
-            headers=_headers,
-            resKey=None
-        )
+        resp = tgraph.runInstalledQuery(query_name, params=_payload, timeout=timeout, usePost=True, runAsync=True)
         # Check status
-        try:
-            _stat_payload = {
-                "graph_name": tgraph.graphname,
-                "requestid": resp["request_id"],
-            }
-        except KeyError:
-            if resp["results"][0]["kafkaError"] != '':
-                raise TigerGraphException(
-                    "Error writing to Kafka: {}".format(resp["results"][0]["kafkaError"])
-                )
-            return
             
         while not exit_event.is_set():
-            status = tgraph._get(
-                tgraph.restppUrl + "/query_status", params=_stat_payload
-            )
+            status = tgraph.checkQueryStatus(resp)
             if status[0]["status"] == "running":
                 sleep(1)
                 continue
             elif status[0]["status"] == "success":
-                res = tgraph._get(
-                    tgraph.restppUrl + "/query_result", params=_stat_payload
-                )
+                res = tgraph.getQueryResult(resp)
                 if res[0]["kafkaError"]:
                     raise TigerGraphException(
                         "Error writing to Kafka: {}".format(res[0]["kafkaError"])
