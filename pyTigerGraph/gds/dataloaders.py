@@ -1486,6 +1486,7 @@ class NeighborLoader(BaseLoader):
         self._payload["e_types"] = self._etypes
         self._payload["seed_types"] = self._seed_types
         self._payload["delimiter"] = self.delimiter
+        self._payload["input_vertices"] = []
         # Output
         self.add_self_loop = add_self_loop
         # Install query
@@ -3135,6 +3136,7 @@ class NodePieceLoader(BaseLoader):
         self._payload["use_cache"] = use_cache
         self._payload["clear_cache"] = clear_cache
         self._payload["delimiter"] = delimiter
+        self._payload["input_vertices"] = []
         if e_types:
             self._payload["e_types"] = e_types
         elif e_types == []:
@@ -3624,6 +3626,7 @@ class HGTLoader(BaseLoader):
         self._payload["e_types"] = self._etypes
         self._payload["seed_types"] = self._seed_types
         self._payload["delimiter"] = self.delimiter
+        self._payload["input_vertices"] = []
         # Output
         self.add_self_loop = add_self_loop
         # Install query
