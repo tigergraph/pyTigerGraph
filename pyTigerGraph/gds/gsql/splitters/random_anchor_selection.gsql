@@ -1,4 +1,4 @@
-CREATE QUERY random_anchor_selection(
+CREATE DISTRIBUTED QUERY random_anchor_selection(
   FLOAT percentage,
   STRING filter_by,
   SET<STRING> v_type,
