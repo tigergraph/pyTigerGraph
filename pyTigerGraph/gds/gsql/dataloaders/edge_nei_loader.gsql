@@ -1,4 +1,4 @@
-CREATE QUERY edge_nei_loader_{QUERYSUFFIX}(
+CREATE DISTRIBUTED QUERY edge_nei_loader_{QUERYSUFFIX}(
     INT num_batches=1, 
     INT num_neighbors=10, 
     INT num_hops=2, 

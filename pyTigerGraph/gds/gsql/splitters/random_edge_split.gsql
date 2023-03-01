@@ -1,4 +1,4 @@
-CREATE QUERY random_edge_split(
+CREATE DISTRIBUTED QUERY random_edge_split(
   STRING attr1, 
   DOUBLE ratio1, 
   STRING attr2, 

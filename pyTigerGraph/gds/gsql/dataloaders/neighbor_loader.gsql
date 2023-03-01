@@ -1,4 +1,4 @@
-CREATE QUERY neighbor_loader_{QUERYSUFFIX}(
+CREATE DISTRIBUTED QUERY neighbor_loader_{QUERYSUFFIX}(
     SET<VERTEX> input_vertices,
     INT num_batches=1, 
     INT num_neighbors=10, 

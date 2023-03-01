@@ -1,4 +1,4 @@
-CREATE QUERY random_vertex_split(
+CREATE DISTRIBUTED QUERY random_vertex_split(
   STRING attr1, 
   DOUBLE ratio1, 
   STRING attr2, 
