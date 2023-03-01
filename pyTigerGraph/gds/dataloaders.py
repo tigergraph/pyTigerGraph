@@ -2179,6 +2179,7 @@ class VertexLoader(BaseLoader):
         self._payload["shuffle"] = shuffle
         self._payload["delimiter"] = delimiter
         self._payload["v_types"] = self._vtypes
+        self._payload["input_vertices"] = []
         # Install query
         self.query_name = self._install_query()
 
