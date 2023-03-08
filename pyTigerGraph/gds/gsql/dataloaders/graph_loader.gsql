@@ -39,6 +39,9 @@ CREATE QUERY graph_loader_{QUERYSUFFIX}(
     # Shuffle vertex ID if needed
     start = {v_types};
     IF shuffle THEN
+        IF filter_by IS NOT NULL THEN
+            start = SELECT s FROM start:s WHERE s.getAttr(filter_by, "BOOL");
+        END;
         num_vertices = start.size();
         res = SELECT s 
               FROM start:s

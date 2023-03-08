@@ -40,6 +40,9 @@ CREATE QUERY vertex_loader_{QUERYSUFFIX}(
 
     # Shuffle vertex ID if needed
     start = {v_types};
+    IF filter_by IS NOT NULL THEN
+        start = SELECT s FROM start:s WHERE s.getAttr(filter_by, "BOOL");
+    END;
     IF shuffle THEN
         num_vertices = start.size();
         res = SELECT s 
