@@ -68,6 +68,9 @@ CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
            WHERE s.getAttr(anchor_attr, "BOOL")
            POST-ACCUM s.@token_heap += Distance_Tuple(getvid(s), 0);
         start = {seed_types};
+        IF filter_by IS NOT NULL THEN
+            start = SELECT s FROM start:s WHERE s.getAttr(filter_by, "BOOL");
+        END;
         IF shuffle THEN
             num_vertices = start.size();
             res = SELECT s 
