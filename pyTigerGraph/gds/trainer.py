@@ -4,6 +4,7 @@ from typing import Union, List, Callable
 import logging
 import time
 import os
+import warnings
 
 class BaseCallback():
     def __init__(self):
@@ -50,6 +51,15 @@ class PrinterCallback(BaseCallback):
 
 class DefaultCallback(BaseCallback):
     def __init__(self, output_dir="./logs"):
+        try:
+            from tqdm import tqdm
+            self.tqdm = tqdm
+            self.epoch_bar = None
+            self.batch_bar = None
+            self.valid_bar = None
+        except:
+            self.tqdm = None
+            warnings.warn("tqdm not installed. Please install tqdm if progress bar support is desired.")
         self.output_dir = output_dir
         self.best_loss = float("inf")
         os.makedirs(self.output_dir, exist_ok=True)
@@ -60,15 +70,46 @@ class DefaultCallback(BaseCallback):
                             encoding='utf-8',
                             level=logging.INFO)
 
+    def on_epoch_start(self, trainer):
+        if self.tqdm:
+            if not(self.epoch_bar):
+                if trainer.num_epochs:
+                    self.epoch_bar = self.tqdm(desc="Epochs", total=trainer.num_epochs)
+                else:
+                    self.epoch_bar = self.tqdm(desc="Training Steps", total=trainer.max_num_steps)
+            if not(self.batch_bar):
+                self.batch_bar = self.tqdm(desc="Training Batches", total=trainer.train_loader.num_batches)
+
     def on_train_step_end(self, trainer):
         logger = logging.getLogger(__name__)
         logger.info("train_step:"+str(trainer.train_step_metrics))
+        if self.batch_bar:
+            self.batch_bar.update(1)
+
+    def on_eval_start(self, trainer):
+        if self.tqdm:
+            if not(self.valid_bar):
+                self.valid_bar = self.tqdm(desc="Eval Batches", total=trainer.eval_loader.num_batches)
+
+    def on_eval_step_end(self, trainer):
+        if self.tqdm:
+            if self.valid_bar:
+                self.valid_bar.update(1)
 
     def on_eval_end(self, trainer):
         logger = logging.getLogger(__name__)
         logger.info("evaluation:"+str(trainer.eval_global_metrics))
+        if self.valid_bar:
+            self.valid_bar.close()
+            self.valid_bar = None
 
     def on_epoch_end(self, trainer):
+        if self.tqdm:
+            if self.epoch_bar:
+                self.epoch_bar.update(1)
+            if self.batch_bar:
+                self.batch_bar.close()
+                self.batch_bar = None
         trainer.eval()
 
 
@@ -129,13 +170,16 @@ class Trainer():
 
     def train(self, num_epochs=None, max_num_steps=None):
         if num_epochs:
-            max_num_steps = self.train_loader.num_batches * num_epochs
+            self.max_num_steps = self.train_loader.num_batches * num_epochs
+        else:
+            self.max_num_steps = max_num_steps
+        self.num_epochs = num_epochs
         cur_step = 0
-        while cur_step < max_num_steps:
+        while cur_step < self.max_num_steps:
             for callback in self.callbacks:
                 callback.on_epoch_start(trainer=self)
             for batch in self.train_loader:
-                if cur_step >= max_num_steps:
+                if cur_step >= self.max_num_steps:
                     break
                 for callback in self.callbacks:
                     callback.on_train_step_start(trainer=self)
