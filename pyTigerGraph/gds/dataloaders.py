@@ -1317,6 +1317,23 @@ class BaseLoader:
                 self._kafka_topic = None
         logging.debug("Successfully reset the loader")
 
+    def metadata(self, additional_v_types=None, additional_e_types=None) -> Tuple[list, list]:
+        v_types = self._vtypes
+        if additional_v_types:
+            if isinstance(additional_v_types, list):
+                v_types += additional_v_types
+            elif isinstance(additional_v_types, str):
+                v_types.append(additional_v_types)
+        edges = []
+        for e in self._etypes:
+            edges.append((self._e_schema[e]["FromVertexTypeName"], e, self._e_schema[e]["ToVertexTypeName"]))
+        if additional_e_types:
+            if isinstance(additional_e_types, list):
+                edges += additional_e_types
+            elif isinstance(additional_e_types, tuple):
+                edges.append(additional_e_types)
+        return (v_types, edges)
+    
     def fetch(self, payload: dict) -> None:
         """Fetch the specific data instances for inference/prediction.
 
@@ -1513,23 +1530,6 @@ class NeighborLoader(BaseLoader):
         self.add_self_loop = add_self_loop
         # Install query
         self.query_name = self._install_query()
-
-    def metadata(self, additional_v_types=None, additional_e_types=None) -> Tuple[list, list]:
-        v_types = self._vtypes
-        if additional_v_types:
-            if isinstance(additional_v_types, list):
-                v_types += additional_v_types
-            elif isinstance(additional_v_types, str):
-                v_types.append(additional_v_types)
-        edges = []
-        for e in self._etypes:
-            edges.append((self._e_schema[e]["FromVertexTypeName"], e, self._e_schema[e]["ToVertexTypeName"]))
-        if additional_e_types:
-            if isinstance(additional_e_types, list):
-                edges += additional_e_types
-            elif isinstance(additional_e_types, tuple):
-                edges.append(additional_e_types)
-        return (v_types, edges)
 
     def _install_query(self):
         # Install the right GSQL query for the loader.
@@ -2524,23 +2524,6 @@ class GraphLoader(BaseLoader):
         # Install query
         self.query_name = self._install_query()
 
-    def metadata(self, additional_v_types=None, additional_e_types=None) -> Tuple[list, list]:
-        v_types = self._vtypes
-        if additional_v_types:
-            if isinstance(additional_v_types, list):
-                v_types += additional_v_types
-            elif isinstance(additional_v_types, str):
-                v_types.append(additional_v_types)
-        edges = []
-        for e in self._etypes:
-            edges.append((self._e_schema[e]["FromVertexTypeName"], e, self._e_schema[e]["ToVertexTypeName"]))
-        if additional_e_types:
-            if isinstance(additional_e_types, list):
-                edges += additional_e_types
-            elif isinstance(additional_e_types, tuple):
-                edges.append(additional_e_types)
-        return (v_types, edges)
-
     def _install_query(self) -> str:
         # Install the right GSQL query for the loader.
         query_suffix = {
@@ -2966,23 +2949,6 @@ class EdgeNeighborLoader(BaseLoader):
                 "edge_nei_loader.gsql",
         )
         return install_query_file(self._graph, query_path, query_replace)
-
-    def metadata(self, additional_v_types=None, additional_e_types=None) -> Tuple[list, list]:
-        v_types = self._vtypes
-        if additional_v_types:
-            if isinstance(additional_v_types, list):
-                v_types += additional_v_types
-            elif isinstance(additional_v_types, str):
-                v_types.append(additional_v_types)
-        edges = []
-        for e in self._etypes:
-            edges.append((self._e_schema[e]["FromVertexTypeName"], e, self._e_schema[e]["ToVertexTypeName"]))
-        if additional_e_types:
-            if isinstance(additional_e_types, list):
-                edges += additional_e_types
-            elif isinstance(additional_e_types, tuple):
-                edges.append(additional_e_types)
-        return (v_types, edges)
 
     def _start(self) -> None:
         # Create task and result queues
@@ -3702,23 +3668,6 @@ class HGTLoader(BaseLoader):
         self.add_self_loop = add_self_loop
         # Install query
         self.query_name = self._install_query()
-
-    def metadata(self, additional_v_types=None, additional_e_types=None) -> Tuple[list, list]:
-        v_types = self._vtypes
-        if additional_v_types:
-            if isinstance(additional_v_types, list):
-                v_types += additional_v_types
-            elif isinstance(additional_v_types, str):
-                v_types.append(additional_v_types)
-        edges = []
-        for e in self._etypes:
-            edges.append((self._e_schema[e]["FromVertexTypeName"], e, self._e_schema[e]["ToVertexTypeName"]))
-        if additional_e_types:
-            if isinstance(additional_e_types, list):
-                edges += additional_e_types
-            elif isinstance(additional_e_types, tuple):
-                edges.append(additional_e_types)
-        return (v_types, edges)
 
     def _install_query(self):
         # Install the right GSQL query for the loader.
