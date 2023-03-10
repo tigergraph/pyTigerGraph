@@ -3,6 +3,8 @@ try:
 except:
     raise Exception("PyTorch required to use built-in models. Please install PyTorch")
 
+from ..trainer import Trainer
+
 class BaseModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
@@ -16,3 +18,11 @@ class BaseModel(torch.nn.Module):
 
     def compute_loss(self):
         raise NotImplementedError("Loss computation not implemented in BaseModel")
+
+    def fit(self, training_dataloader, eval_dataloader, number_epochs, target_type=None, trainer_kwargs={}):
+        trainer_kwargs.update({"model": self,
+                               "training_dataloader": training_dataloader,
+                               "eval_dataloader": eval_dataloader, 
+                               "target_type": target_type})
+        trainer = Trainer(**trainer_kwargs)
+        trainer.train(number_epochs)
