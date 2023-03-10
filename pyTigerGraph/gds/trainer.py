@@ -79,11 +79,10 @@ class Trainer():
                  eval_dataloader: BaseLoader,
                  callbacks: List[BaseCallback] = [DefaultCallback],
                  metrics = None,
-                 learning_rate = 0.001, 
-                 weight_decay = 0,
                  target_type = None,
                  loss_fn = None, 
-                 optimizer = None):
+                 optimizer = None,
+                 optimizer_kwargs = {}):
         try:
             import torch
         except:
@@ -103,12 +102,11 @@ class Trainer():
             self.metrics.append(self.model.metrics)
         else:
             self.metrics.append(BaseMetrics())
+        optimizer_kwargs["params"] = self.model.parameters()
         if optimizer:
-            self.optimizer = optimizer
+            self.optimizer = optimizer(**optimizer_kwargs)
         else:
-            self.optimizer = torch.optim.Adam(
-                model.parameters(), lr=learning_rate, weight_decay=weight_decay
-            )
+            self.optimizer = torch.optim.Adam(**optimizer_kwargs)
         self.is_hetero = training_dataloader.is_hetero
         if self.train_loader.v_out_labels:
             if self.is_hetero:
