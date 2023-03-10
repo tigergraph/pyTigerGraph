@@ -674,6 +674,32 @@ class TestGDSHeteroNeighborLoaderREST(unittest.TestCase):
             else:
                 self.assertFalse(data["v0"]["is_seed"][i].item())
 
+    def test_metadata(self):
+        loader = NeighborLoader(
+            graph=self.conn,
+            v_in_feats={"v0": ["x"], "v1": ["x"], "v2": ["x"]},
+            v_out_labels={"v0": ["y"]},
+            v_extra_feats={"v0": ["train_mask", "val_mask", "test_mask"]},
+            batch_size=16,
+            num_neighbors=10,
+            num_hops=2,
+            shuffle=False,
+            output_format="PyG",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4,
+        )
+
+        test = (["v0", "v1", "v2"],
+                [("v0", "v0v0", "v0"),
+                 ("v1", "v1v1", "v1"),
+                 ("v1", "v1v2", "v2"),
+                 ("v2", "v2v0", "v0"),
+                 ("v2", "v2v1", "v1"),
+                 ("v2", "v2v2", "v2")])
+        
+        metadata = loader.metadata()
+        self.assertEqual(test, metadata)
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
@@ -694,6 +720,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSHeteroNeighborLoaderREST("test_iterate_pyg"))
     suite.addTest(TestGDSHeteroNeighborLoaderREST("test_iterate_pyg_multichar_delimiter"))
     suite.addTest(TestGDSHeteroNeighborLoaderREST("test_fetch"))
+    suite.addTest(TestGDSHeteroNeighborLoaderREST("test_metadata"))
 
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)

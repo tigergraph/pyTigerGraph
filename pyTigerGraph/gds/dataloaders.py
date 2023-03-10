@@ -1294,6 +1294,23 @@ class BaseLoader:
                 self._kafka_topic = None
         logging.debug("Successfully reset the loader")
 
+    def metadata(self, additional_v_types=None, additional_e_types=None) -> Tuple[list, list]:
+        v_types = self._vtypes
+        if additional_v_types:
+            if isinstance(additional_v_types, list):
+                v_types += additional_v_types
+            elif isinstance(additional_v_types, str):
+                v_types.append(additional_v_types)
+        edges = []
+        for e in self._etypes:
+            edges.append((self._e_schema[e]["FromVertexTypeName"], e, self._e_schema[e]["ToVertexTypeName"]))
+        if additional_e_types:
+            if isinstance(additional_e_types, list):
+                edges += additional_e_types
+            elif isinstance(additional_e_types, tuple):
+                edges.append(additional_e_types)
+        return (v_types, edges)
+    
     def fetch(self, payload: dict) -> None:
         """Fetch the specific data instances for inference/prediction.
 
