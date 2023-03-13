@@ -69,7 +69,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                 )
 
         try:
-            if self.downloadCert:
+            if self.downloadCert or self.certPath:
                 if not self.certPath:
                     self.certPath = self.certLocation
                 self.Client = GSQL_Client(
