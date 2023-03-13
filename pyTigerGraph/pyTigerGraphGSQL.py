@@ -8,6 +8,8 @@ import os
 import sys
 from typing import Union
 from urllib.parse import urlparse
+import re
+
 
 import requests
 from pyTigerDriver import GSQL_Client
@@ -16,6 +18,8 @@ from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
 logger = logging.getLogger(__name__)
+
+ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 
 class pyTigerGraphGSQL(pyTigerGraphBase):
@@ -152,7 +156,9 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                 logger.debug("return: " + str(ret))
             logger.info("exit: gsql (success)")
 
-            return ret
+            string_without_ansi = ANSI_ESCAPE.sub('', ret)
+
+            return string_without_ansi
 
         else:
             logger.error("Couldn't initialize the client. See previous error.")
