@@ -1493,6 +1493,7 @@ class NeighborLoader(BaseLoader):
             self._seed_types = self._vtypes if ((not filter_by) or isinstance(filter_by, str)) else list(filter_by.keys())
             self.num_batches = num_batches
         # Initialize parameters for the query
+        self._payload["batch_size"] = batch_size
         self._payload["num_batches"] = self.num_batches
         self._payload["num_neighbors"] = num_neighbors
         self._payload["num_hops"] = num_hops
