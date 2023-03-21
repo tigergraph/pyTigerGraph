@@ -1,5 +1,6 @@
 CREATE QUERY hgt_loader_{QUERYSUFFIX}(
     SET<VERTEX> input_vertices,
+    INT batch_size,
     INT num_batches=1, 
     INT num_hops=2, 
     BOOL shuffle=FALSE,
@@ -39,6 +40,7 @@ CREATE QUERY hgt_loader_{QUERYSUFFIX}(
       sasl_password  : SASL password for Kafka. 
       ssl_ca_location: Path to CA certificate for verifying the Kafka broker key.
     */
+    TYPEDEF TUPLE<INT tmp_id, VERTEX v> ID_Tuple;
     INT num_vertices;
     INT temp_v;
     INT temp_e;
@@ -62,6 +64,11 @@ CREATE QUERY hgt_loader_{QUERYSUFFIX}(
                 POST-ACCUM s.@tmp_id = getvid(s);
         END;
     END;
+    IF batch_size IS NULL THEN
+      batch_s = ceil(res.size()/(num_batches-1));
+    ELSE  
+      batch_s = batch_size;
+    END;
 
     # Generate subgraphs
     FOREACH batch_id IN RANGE[0, num_batches-1] DO
@@ -72,20 +79,40 @@ CREATE QUERY hgt_loader_{QUERYSUFFIX}(
         # Get seeds
         IF input_vertices.size()==0 THEN
             start = {seed_types};
+            HeapAccum<ID_Tuple> (1, tmp_id ASC) @@batch_heap;
+            @@batch_heap.resize(batch_s);
             IF filter_by IS NOT NULL THEN
+                FOREACH iter IN RANGE[0,1-1] DO 
+                  _verts = SELECT s FROM start:s
+                         WHERE s.@tmp_id % 1 == iter AND NOT s.@prev_sampled AND s.getAttr(filter_by, "BOOL")
+                         POST-ACCUM @@batch_heap += ID_Tuple(s.@tmp_id, s);
+                END;
+                FOREACH elem IN @@batch_heap DO
+                  @@seeds += elem.v;
+                END;
+                seeds = {@@seeds};
                 seeds = SELECT s 
-                        FROM start:s 
-                        WHERE s.getAttr(filter_by, "BOOL") and s.@tmp_id % num_batches == batch_id
+                        FROM seeds:s 
                         POST-ACCUM 
-                            @@printed_vertices += s,
-                            {SEEDVERTEXATTRS};
+                            s.@prev_sampled += TRUE,
+                            {SEEDVERTEXATTRS},
+                            @@printed_vertices += s;
             ELSE
+                FOREACH iter IN RANGE[0,10-1] DO 
+                  _verts = SELECT s FROM start:s
+                           WHERE s.@tmp_id % 10 == iter AND NOT s.@prev_sampled
+                           POST-ACCUM @@batch_heap += ID_Tuple(s.@tmp_id, s);
+                END;
+                FOREACH elem IN @@batch_heap DO
+                  @@seeds += elem.v;
+                END;
+                seeds = {@@seeds};
                 seeds = SELECT s 
-                        FROM start:s 
-                        WHERE s.@tmp_id % num_batches == batch_id
+                        FROM start:s
                         POST-ACCUM
-                            @@printed_vertices += s,
-                            {SEEDVERTEXATTRS};
+                            s.@prev_sampled += TRUE,
+                            {SEEDVERTEXATTRS},
+                            @@printed_vertices += s;
             END;
         ELSE
             start = input_vertices;

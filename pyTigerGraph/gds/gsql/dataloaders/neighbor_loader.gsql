@@ -42,6 +42,7 @@ CREATE QUERY neighbor_loader_{QUERYSUFFIX}(
       sasl_password  : SASL password for Kafka. 
       ssl_ca_location: Path to CA certificate for verifying the Kafka broker key.
     */
+    TYPEDEF TUPLE<INT tmp_id, VERTEX v> ID_Tuple;
     INT num_vertices;
     INT temp_v;
     INT temp_e;
