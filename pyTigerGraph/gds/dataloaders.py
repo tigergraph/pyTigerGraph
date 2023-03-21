@@ -1493,7 +1493,8 @@ class NeighborLoader(BaseLoader):
             self._seed_types = self._vtypes if ((not filter_by) or isinstance(filter_by, str)) else list(filter_by.keys())
             self.num_batches = num_batches
         # Initialize parameters for the query
-        self._payload["batch_size"] = batch_size
+        if batch_size:
+            self._payload["batch_size"] = batch_size
         self._payload["num_batches"] = self.num_batches
         self._payload["num_neighbors"] = num_neighbors
         self._payload["num_hops"] = num_hops
@@ -3643,6 +3644,8 @@ class HGTLoader(BaseLoader):
                 if len(attr) != 1:
                     raise NotImplementedError("Filtering by different attributes for different vertex types is not supported. Please use the same attribute for different types.")
                 self._payload["filter_by"] = attr.pop()
+        if batch_size:
+            self._payload["batch_size"] = batch_size
         self._payload["shuffle"] = shuffle
         self._payload["v_types"] = self._vtypes
         self._payload["e_types"] = self._etypes
