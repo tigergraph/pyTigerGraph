@@ -108,12 +108,13 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         return {}  # Vertex type was not found
 
-    def getVertexCount(self, vertexType: Union[str, list], where: str = "") -> Union[int, dict]:
+    def getVertexCount(self, vertexType: Union[str, list] = "*", where: str = "") -> Union[int, dict]:
         """Returns the number of vertices of the specified type.
 
         Args:
             vertexType:
-                The name of the vertex type.
+                The name of the vertex type. If `vertexType` == "*", then count the instances of all 
+                vertex types (`where` cannot be specified in this case). Defaults to "*".
             where:
                 A comma separated list of conditions that are all applied on each vertex's
                 attributes. The conditions are in logical conjunction (i.e. they are "AND'ed"
@@ -123,8 +124,6 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             A dictionary of <vertex_type>: <vertex_count> pairs.
 
         Uses:
-            - If `vertexType` == "*": the count of the instances of all vertex types (`where` cannot
-                be specified in this case).
             - If `vertexType` is specified only: count of the instances of the given vertex type.
             - If `vertexType` and `where` are specified: count of the instances of the given vertex
                 type after being filtered by `where` condition(s).
@@ -145,8 +144,13 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         # If WHERE condition is not specified, use /builtins else use /vertices
         if isinstance(vertexType, str) and vertexType != "*":
-            res = self._get(self.restppUrl + "/graph/" + self.graphname + "/vertices/" + vertexType
-                + "?count_only=true" + ("&filter=" + where if where else ""))[0]["count"]
+            if where:
+                res = self._get(self.restppUrl + "/graph/" + self.graphname + "/vertices/" + vertexType
+                    + "?count_only=true" + "&filter=" + where)[0]["count"]
+            else:
+                res = self._post(self.restppUrl + "/builtins/" + self.graphname,
+                                 data={"function": "stat_vertex_number", "type": vertexType},
+                                 jsonData=True)[0]["count"]
 
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(res))
@@ -162,18 +166,15 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
                 raise TigerGraphException(
                     "VertexType cannot be a list if where condition is specified.", None)
 
-        if vertexType == "*":
-            # TODO Investigate: /builtins/stat_vertex_number: why it is not up-to-date after insert?
-            # data = '{"function":"stat_vertex_number","type":"' + vertexType + '"}'
-            # res = self._post(self.restppUrl + "/builtins/" + self.graphname, data=data)
-            vertexType = self.getVertexTypes()
-
-        ret = {}
-        for vt in vertexType:
-            res = self._get(self.restppUrl + "/graph/" + self.graphname + "/vertices/" + vt
-                + "?count_only=true")[0]
-            ret[res["v_type"]] = res["count"]
-
+        # TODO Investigate: /builtins/stat_vertex_number: why it is not up-to-date after insert?
+        res = self._post(self.restppUrl + "/builtins/" + self.graphname,
+                         data={"function": "stat_vertex_number", "type": "*"},
+                         jsonData=True)
+        ret = {d["v_type"]: d["count"] for d in res}
+        
+        if isinstance(vertexType, list):
+            ret = {vt: ret[vt] for vt in vertexType}
+        
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
         logger.info("exit: getVertexCount (2)")
