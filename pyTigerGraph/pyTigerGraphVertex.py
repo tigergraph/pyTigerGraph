@@ -166,7 +166,6 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
                 raise TigerGraphException(
                     "VertexType cannot be a list if where condition is specified.", None)
 
-        # TODO Investigate: /builtins/stat_vertex_number: why it is not up-to-date after insert?
         res = self._post(self.restppUrl + "/builtins/" + self.graphname,
                          data={"function": "stat_vertex_number", "type": "*"},
                          jsonData=True)
