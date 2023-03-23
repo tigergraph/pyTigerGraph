@@ -123,7 +123,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
                 Whether to get the most up-to-date number by force. When there are frequent updates happening, 
                 a slightly outdated number (up to 30 seconds delay) might be fetched. Set `realtime=True` to
                 force the system to recount the vertices, which will get a more up-to-date result but will
-                also take more time.  
+                also take more time. This parameter only works with TigerGraph DB 3.6 and above. 
 
         Returns:
             A dictionary of <vertex_type>: <vertex_count> pairs.
