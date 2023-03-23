@@ -153,7 +153,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
                 res = self._get(self.restppUrl + "/graph/" + self.graphname + "/vertices/" + vertexType
                     + "?count_only=true" + "&filter=" + where)[0]["count"]
             else:
-                res = self._post(self.restppUrl + "/builtins/" + self.graphname + "?realtime=true" if realtime else "",
+                res = self._post(self.restppUrl + "/builtins/" + self.graphname + ("?realtime=true" if realtime else ""),
                                  data={"function": "stat_vertex_number", "type": vertexType},
                                  jsonData=True)[0]["count"]
 
@@ -171,7 +171,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
                 raise TigerGraphException(
                     "VertexType cannot be a list if where condition is specified.", None)
 
-        res = self._post(self.restppUrl + "/builtins/" + self.graphname + "?realtime=true" if realtime else "",
+        res = self._post(self.restppUrl + "/builtins/" + self.graphname + ("?realtime=true" if realtime else ""),
                          data={"function": "stat_vertex_number", "type": "*"},
                          jsonData=True)
         ret = {d["v_type"]: d["count"] for d in res}
