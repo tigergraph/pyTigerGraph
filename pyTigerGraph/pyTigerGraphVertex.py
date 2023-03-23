@@ -108,7 +108,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         return {}  # Vertex type was not found
 
-    def getVertexCount(self, vertexType: Union[str, list] = "*", where: str = "") -> Union[int, dict]:
+    def getVertexCount(self, vertexType: Union[str, list] = "*", where: str = "", realtime: bool = False) -> Union[int, dict]:
         """Returns the number of vertices of the specified type.
 
         Args:
@@ -119,6 +119,11 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
                 A comma separated list of conditions that are all applied on each vertex's
                 attributes. The conditions are in logical conjunction (i.e. they are "AND'ed"
                 together).
+            realtime (bool):
+                Whether to get the most up-to-date number by force. When there are frequent updates happening, 
+                a slightly outdated number (up to 30 seconds delay) might be fetched. Set `realtime=True` to
+                force the system to recount the vertices, which will get a more up-to-date result but will
+                also take more time.  
 
         Returns:
             A dictionary of <vertex_type>: <vertex_count> pairs.
@@ -148,7 +153,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
                 res = self._get(self.restppUrl + "/graph/" + self.graphname + "/vertices/" + vertexType
                     + "?count_only=true" + "&filter=" + where)[0]["count"]
             else:
-                res = self._post(self.restppUrl + "/builtins/" + self.graphname,
+                res = self._post(self.restppUrl + "/builtins/" + self.graphname + "?realtime=true" if realtime else "",
                                  data={"function": "stat_vertex_number", "type": vertexType},
                                  jsonData=True)[0]["count"]
 
@@ -166,7 +171,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
                 raise TigerGraphException(
                     "VertexType cannot be a list if where condition is specified.", None)
 
-        res = self._post(self.restppUrl + "/builtins/" + self.graphname,
+        res = self._post(self.restppUrl + "/builtins/" + self.graphname + "?realtime=true" if realtime else "",
                          data={"function": "stat_vertex_number", "type": "*"},
                          jsonData=True)
         ret = {d["v_type"]: d["count"] for d in res}
