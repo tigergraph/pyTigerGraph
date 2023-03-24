@@ -69,7 +69,7 @@ CREATE QUERY neighbor_loader_{QUERYSUFFIX}(
         END;
     END;
     IF batch_size IS NULL THEN
-      batch_s = ceil(res.size()/(num_batches-1));
+      batch_s = ceil(res.size()/num_batches);
     ELSE  
       batch_s = batch_size;
     END;
