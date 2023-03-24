@@ -68,7 +68,7 @@ CREATE QUERY vertex_loader_{QUERYSUFFIX}(
         SumAccum<STRING> @@v_batch;
         SetAccum<VERTEX> @@seeds;
         IF input_vertices.size()==0 THEN
-            start = {seed_types};
+            start = {v_types};
             HeapAccum<ID_Tuple> (1, tmp_id ASC) @@batch_heap;
             @@batch_heap.resize(batch_s);
             IF filter_by IS NOT NULL THEN
