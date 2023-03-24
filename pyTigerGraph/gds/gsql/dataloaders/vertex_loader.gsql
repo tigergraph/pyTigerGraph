@@ -65,6 +65,7 @@ CREATE QUERY vertex_loader_{QUERYSUFFIX}(
     # Generate batches
     FOREACH batch_id IN RANGE[0, num_batches-1] DO
         SumAccum<STRING> @@v_batch;
+        SetAccum<VERTEX> @@seeds;
         IF input_vertices.size()==0 THEN
             start = {seed_types};
             HeapAccum<ID_Tuple> (1, tmp_id ASC) @@batch_heap;

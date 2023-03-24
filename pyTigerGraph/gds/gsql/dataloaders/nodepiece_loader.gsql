@@ -102,6 +102,7 @@ CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
     FOREACH batch_id IN RANGE[0, num_batches-1] DO
       SumAccum<STRING> @@v_batch;
       SetAccum<VERTEX> @@printed_vertices;
+      SetAccum<VERTEX> @@seeds;
       # Get batch seeds
       IF input_vertices.size()==0 THEN
         start = {seed_types};
@@ -120,7 +121,8 @@ CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
             seeds = SELECT s 
                     FROM seeds:s 
                     POST-ACCUM 
-                        s.@prev_sampled += TRUE;
+                        s.@prev_sampled += TRUE,
+                        @@printed_vertices += s;
         ELSE
             FOREACH iter IN RANGE[0,num_heap_inserts-1] DO 
               _verts = SELECT s FROM start:s
@@ -134,12 +136,14 @@ CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
             seeds = SELECT s 
                     FROM start:s
                     POST-ACCUM
-                        s.@prev_sampled += TRUE;
+                        s.@prev_sampled += TRUE,
+                        @@printed_vertices += s;
         END;
       ELSE
         start = input_vertices;
         seeds = SELECT s 
-                FROM start:s;
+                FROM start:s
+                ACCUM @@printed_vertices += s;
       END;
       # Get relational context
       

@@ -78,6 +78,7 @@ CREATE QUERY hgt_loader_{QUERYSUFFIX}(
         SumAccum<STRING> @@e_batch;
         SetAccum<VERTEX> @@printed_vertices;
         SetAccum<EDGE> @@printed_edges;
+        SetAccum<VERTEX> @@seeds;
         # Get seeds
         IF input_vertices.size()==0 THEN
             start = {seed_types};
