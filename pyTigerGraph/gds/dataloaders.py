@@ -265,6 +265,9 @@ class BaseLoader:
         self._payload = {}
         if self.kafka_address_producer:
             self._payload["kafka_address"] = self.kafka_address_producer
+            self._payload["kafka_topic_partitions"] = kafka_num_partitions
+            self._payload["kafka_max_size"] = str(Kafka_max_msg_size)
+            self._payload["kafka_timeout"] = self.timeout
             if kafka_security_protocol == "PLAINTEXT":
                 pass
             elif kafka_security_protocol in ("SASL_PLAINTEXT", "SASL_SSL", "SSL"):
@@ -483,7 +486,7 @@ class BaseLoader:
                 res = tgraph.getQueryResult(resp)
                 if res[0]["kafkaError"]:
                     raise TigerGraphException(
-                        "Error writing to Kafka: {}".format(res[0]["kafkaError"])
+                        "Kafka Error: {}".format(res[0]["kafkaError"])
                     )
                 else:
                     break
