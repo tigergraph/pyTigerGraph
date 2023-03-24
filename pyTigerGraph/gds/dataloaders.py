@@ -7,7 +7,6 @@ You can define an instance of each data loader class through a link:https://docs
 Requires `querywriters` user permissions for full functionality. 
 """
 
-from ast import Call
 import hashlib
 import io
 import json
@@ -70,8 +69,15 @@ class BaseLoader:
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_ssl_check_hostname: bool = None,
         kafka_producer_ca_location: str = None,
+        kafka_producer_certificate_location: str = None,
+        kafka_producer_key_location: str = None,
+        kafka_producer_key_password: str = None,
         kafka_consumer_ca_location: str = None,
+        kafka_consumer_certificate_location: str = None,
+        kafka_consumer_key_location: str = None,
+        kafka_consumer_key_password: str = None,
         kafka_skip_produce: bool = False,
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
@@ -232,7 +238,11 @@ class BaseLoader:
                     sasl_mechanism=kafka_sasl_mechanism,
                     sasl_plain_username=kafka_sasl_plain_username,
                     sasl_plain_password=kafka_sasl_plain_password,
-                    ssl_cafile=kafka_consumer_ca_location if kafka_consumer_ca_location else None
+                    ssl_cafile=kafka_consumer_ca_location,
+                    ssl_check_hostname=kafka_ssl_check_hostname,
+                    ssl_certfile=kafka_consumer_certificate_location,
+                    ssl_keyfile=kafka_consumer_key_location,
+                    ssl_password=kafka_consumer_key_password
                 )
                 self._kafka_admin = KafkaAdminClient(
                     bootstrap_servers=self.kafka_address_consumer,
@@ -241,7 +251,11 @@ class BaseLoader:
                     sasl_mechanism=kafka_sasl_mechanism,
                     sasl_plain_username=kafka_sasl_plain_username,
                     sasl_plain_password=kafka_sasl_plain_password,
-                    ssl_cafile=kafka_consumer_ca_location if kafka_consumer_ca_location else None
+                    ssl_cafile=kafka_consumer_ca_location,
+                    ssl_check_hostname=kafka_ssl_check_hostname,
+                    ssl_certfile=kafka_consumer_certificate_location,
+                    ssl_keyfile=kafka_consumer_key_location,
+                    ssl_password=kafka_consumer_key_password
                 )
             except:
                 raise ConnectionError(
@@ -253,7 +267,7 @@ class BaseLoader:
             self._payload["kafka_address"] = self.kafka_address_producer
             if kafka_security_protocol == "PLAINTEXT":
                 pass
-            elif kafka_security_protocol in ("SASL_PLAINTEXT", "SASL_SSL"):
+            elif kafka_security_protocol in ("SASL_PLAINTEXT", "SASL_SSL", "SSL"):
                 self._payload["security_protocol"] = kafka_security_protocol
                 if kafka_sasl_mechanism == "PLAIN":
                     self._payload["sasl_mechanism"] = kafka_sasl_mechanism
@@ -262,14 +276,20 @@ class BaseLoader:
                         self._payload["sasl_password"] = kafka_sasl_plain_password
                     else:
                         raise ValueError("Please provide kafka_sasl_plain_username and kafka_sasl_plain_password for Kafka.")
-                    if kafka_producer_ca_location:
-                        self._payload["ssl_ca_location"] = kafka_producer_ca_location
-                    else:
-                        self._payload["ssl_ca_location"] = ""
-                else:
+                elif kafka_sasl_mechanism:
                     raise NotImplementedError("Only PLAIN mechanism is supported for SASL.")
+                if kafka_producer_ca_location:
+                    self._payload["ssl_ca_location"] = kafka_producer_ca_location
+                if kafka_producer_certificate_location:
+                    self._payload["ssl_certificate_location"] = kafka_producer_certificate_location
+                if kafka_producer_key_location:
+                    self._payload["ssl_key_location"] = kafka_producer_key_location
+                if kafka_producer_key_password:
+                    self._payload["ssl_key_password"] = kafka_producer_key_password
+                if kafka_ssl_check_hostname:
+                    self._payload["ssl_endpoint_identification_algorithm"] = "https"
             else:
-                raise NotImplementedError("Only SASL_PLAINTEXT and SASL_SSL are supported for Kafka authentication.")
+                raise NotImplementedError("Only PLAINTEXT, SASL_PLAINTEXT, SASL_SSL, and SSL are supported as Kafka security protocol.")
             # kafka_topic will be filled in later.
         # Implement `_install_query()` that installs your query
         # self._install_query()
@@ -1391,8 +1411,15 @@ class NeighborLoader(BaseLoader):
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_ssl_check_hostname: bool = None,
         kafka_producer_ca_location: str = None,
+        kafka_producer_certificate_location: str = None,
+        kafka_producer_key_location: str = None,
+        kafka_producer_key_password: str = None,
         kafka_consumer_ca_location: str = None,
+        kafka_consumer_certificate_location: str = None,
+        kafka_consumer_key_location: str = None,
+        kafka_consumer_key_password: str = None,
         kafka_skip_produce: bool = False,
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
@@ -1422,8 +1449,15 @@ class NeighborLoader(BaseLoader):
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_ssl_check_hostname,
             kafka_producer_ca_location,
+            kafka_producer_certificate_location,
+            kafka_producer_key_location,
+            kafka_producer_key_password,
             kafka_consumer_ca_location,
+            kafka_consumer_certificate_location,
+            kafka_consumer_key_location,
+            kafka_consumer_key_password,
             kafka_skip_produce,
             kafka_auto_offset_reset,
             kafka_del_topic_per_epoch,
@@ -1851,8 +1885,15 @@ class EdgeLoader(BaseLoader):
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_ssl_check_hostname: bool = None,
         kafka_producer_ca_location: str = None,
+        kafka_producer_certificate_location: str = None,
+        kafka_producer_key_location: str = None,
+        kafka_producer_key_password: str = None,
         kafka_consumer_ca_location: str = None,
+        kafka_consumer_certificate_location: str = None,
+        kafka_consumer_key_location: str = None,
+        kafka_consumer_key_password: str = None,
         kafka_skip_produce: bool = False,
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
@@ -1883,8 +1924,15 @@ class EdgeLoader(BaseLoader):
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_ssl_check_hostname,
             kafka_producer_ca_location,
+            kafka_producer_certificate_location,
+            kafka_producer_key_location,
+            kafka_producer_key_password,
             kafka_consumer_ca_location,
+            kafka_consumer_certificate_location,
+            kafka_consumer_key_location,
+            kafka_consumer_key_password,
             kafka_skip_produce,
             kafka_auto_offset_reset,
             kafka_del_topic_per_epoch,
@@ -2127,8 +2175,15 @@ class VertexLoader(BaseLoader):
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_ssl_check_hostname: bool = None,
         kafka_producer_ca_location: str = None,
+        kafka_producer_certificate_location: str = None,
+        kafka_producer_key_location: str = None,
+        kafka_producer_key_password: str = None,
         kafka_consumer_ca_location: str = None,
+        kafka_consumer_certificate_location: str = None,
+        kafka_consumer_key_location: str = None,
+        kafka_consumer_key_password: str = None,
         kafka_skip_produce: bool = False,
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
@@ -2159,8 +2214,15 @@ class VertexLoader(BaseLoader):
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_ssl_check_hostname,
             kafka_producer_ca_location,
+            kafka_producer_certificate_location,
+            kafka_producer_key_location,
+            kafka_producer_key_password,
             kafka_consumer_ca_location,
+            kafka_consumer_certificate_location,
+            kafka_consumer_key_location,
+            kafka_consumer_key_password,
             kafka_skip_produce,
             kafka_auto_offset_reset,
             kafka_del_topic_per_epoch,
@@ -2414,8 +2476,15 @@ class GraphLoader(BaseLoader):
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_ssl_check_hostname: bool = None,
         kafka_producer_ca_location: str = None,
+        kafka_producer_certificate_location: str = None,
+        kafka_producer_key_location: str = None,
+        kafka_producer_key_password: str = None,
         kafka_consumer_ca_location: str = None,
+        kafka_consumer_certificate_location: str = None,
+        kafka_consumer_key_location: str = None,
+        kafka_consumer_key_password: str = None,
         kafka_skip_produce: bool = False,
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
@@ -2446,8 +2515,15 @@ class GraphLoader(BaseLoader):
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_ssl_check_hostname,
             kafka_producer_ca_location,
+            kafka_producer_certificate_location,
+            kafka_producer_key_location,
+            kafka_producer_key_password,
             kafka_consumer_ca_location,
+            kafka_consumer_certificate_location,
+            kafka_consumer_key_location,
+            kafka_consumer_key_password,
             kafka_skip_produce,
             kafka_auto_offset_reset,
             kafka_del_topic_per_epoch,
@@ -2720,8 +2796,15 @@ class EdgeNeighborLoader(BaseLoader):
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_ssl_check_hostname: bool = None,
         kafka_producer_ca_location: str = None,
+        kafka_producer_certificate_location: str = None,
+        kafka_producer_key_location: str = None,
+        kafka_producer_key_password: str = None,
         kafka_consumer_ca_location: str = None,
+        kafka_consumer_certificate_location: str = None,
+        kafka_consumer_key_location: str = None,
+        kafka_consumer_key_password: str = None,
         kafka_skip_produce: bool = False,
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
@@ -2751,8 +2834,15 @@ class EdgeNeighborLoader(BaseLoader):
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_ssl_check_hostname,
             kafka_producer_ca_location,
+            kafka_producer_certificate_location,
+            kafka_producer_key_location,
+            kafka_producer_key_password,
             kafka_consumer_ca_location,
+            kafka_consumer_certificate_location,
+            kafka_consumer_key_location,
+            kafka_consumer_key_password,
             kafka_skip_produce,
             kafka_auto_offset_reset,
             kafka_del_topic_per_epoch,
@@ -3059,8 +3149,15 @@ class NodePieceLoader(BaseLoader):
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_ssl_check_hostname: bool = None,
         kafka_producer_ca_location: str = None,
+        kafka_producer_certificate_location: str = None,
+        kafka_producer_key_location: str = None,
+        kafka_producer_key_password: str = None,
         kafka_consumer_ca_location: str = None,
+        kafka_consumer_certificate_location: str = None,
+        kafka_consumer_key_location: str = None,
+        kafka_consumer_key_password: str = None,
         kafka_skip_produce: bool = False,
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
@@ -3091,8 +3188,15 @@ class NodePieceLoader(BaseLoader):
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_ssl_check_hostname,
             kafka_producer_ca_location,
+            kafka_producer_certificate_location,
+            kafka_producer_key_location,
+            kafka_producer_key_password,
             kafka_consumer_ca_location,
+            kafka_consumer_certificate_location,
+            kafka_consumer_key_location,
+            kafka_consumer_key_password,
             kafka_skip_produce,
             kafka_auto_offset_reset,
             kafka_del_topic_per_epoch,
@@ -3543,8 +3647,15 @@ class HGTLoader(BaseLoader):
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_ssl_check_hostname: bool = None,
         kafka_producer_ca_location: str = None,
+        kafka_producer_certificate_location: str = None,
+        kafka_producer_key_location: str = None,
+        kafka_producer_key_password: str = None,
         kafka_consumer_ca_location: str = None,
+        kafka_consumer_certificate_location: str = None,
+        kafka_consumer_key_location: str = None,
+        kafka_consumer_key_password: str = None,
         kafka_skip_produce: bool = False,
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
@@ -3574,8 +3685,15 @@ class HGTLoader(BaseLoader):
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_ssl_check_hostname,
             kafka_producer_ca_location,
+            kafka_producer_certificate_location,
+            kafka_producer_key_location,
+            kafka_producer_key_password,
             kafka_consumer_ca_location,
+            kafka_consumer_certificate_location,
+            kafka_consumer_key_location,
+            kafka_consumer_key_password,
             kafka_skip_produce,
             kafka_auto_offset_reset,
             kafka_del_topic_per_epoch,
