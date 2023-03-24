@@ -18,17 +18,24 @@ CREATE DISTRIBUTED QUERY nodepiece_loader_{QUERYSUFFIX}(
   STRING delimiter,
   STRING kafka_address,
   STRING kafka_topic,
-  STRING security_protocol,
-  STRING sasl_mechanism,
-  STRING sasl_username,
-  STRING sasl_password,
-  STRING ssl_ca_location,
-  INT num_heap_inserts=10) SYNTAX v1{ 
+  INT kafka_topic_partitions=1,
+  STRING kafka_max_size="104857600",
+  INT kafka_timeout=300000,
+  STRING security_protocol="",
+  STRING sasl_mechanism="",
+  STRING sasl_username="",
+  STRING sasl_password="",
+  STRING ssl_ca_location="",
+  STRING ssl_certificate_location="",
+  STRING ssl_key_location="",
+  STRING ssl_key_password="",
+  STRING ssl_endpoint_identification_algorithm="",
+  INT num_heap_inserts=10
+) SYNTAX v1{ 
     TYPEDEF TUPLE<INT v_id, INT distance> Distance_Tuple;
     TYPEDEF TUPLE<INT tmp_id, VERTEX v> ID_Tuple;
     INT num_vertices;
-    INT temp_v;
-    INT temp_e;
+    INT kafka_errcode;
     INT batch_s;
     SumAccum<INT> @tmp_id;
     SumAccum<STRING> @@kafka_error;
@@ -42,6 +49,17 @@ CREATE DISTRIBUTED QUERY nodepiece_loader_{QUERYSUFFIX}(
     MapAccum<INT, MinAccum<INT>> @conv_map;
     BOOL cache_empty = FALSE;
     INT distance;
+    UINT producer;
+
+    # Initialize Kafka producer
+    IF kafka_address IS NOT NULL THEN
+        producer = init_kafka_producer(
+            kafka_address, kafka_max_size, security_protocol, 
+            sasl_mechanism, sasl_username, sasl_password, ssl_ca_location,
+            ssl_certificate_location, ssl_key_location, ssl_key_password,
+            ssl_endpoint_identification_algorithm);
+    END;
+
     start = {v_types};
     # Perform fetch operation if desired
     IF clear_cache THEN
@@ -169,26 +187,9 @@ CREATE DISTRIBUTED QUERY nodepiece_loader_{QUERYSUFFIX}(
       IF NOT precompute THEN # No Output if precomputing
         IF kafka_address IS NOT NULL THEN
           # Write to kafka
-          IF security_protocol IS NOT NULL THEN
-            temp_v = write_to_kafka(kafka_address, kafka_topic, "vertex_batch_" + stringify(batch_id), @@v_batch, security_protocol, sasl_mechanism, sasl_username, sasl_password, ssl_ca_location);
-            IF temp_v!=0 THEN
-            # If user is using the free version of UDF then add an error to inform the user they need to upgrade to use Kafka streaming function
-              IF temp_v==777 THEN             
-                @@kafka_error += ("Failed, you need to upgrade to use Kafka streaming function."+ "\n");
-              ELSE
-                @@kafka_error += ("Failed sending vertex batch " + stringify(batch_id) + "\n");
-              END;
-            END;
-
-          ELSE # Kafka not secured
-            temp_v = write_to_kafka(kafka_address, kafka_topic, "vertex_batch_" + stringify(batch_id), @@v_batch, "", "", "", "", "");
-            IF temp_v!=0 THEN
-              IF temp_v==777 THEN
-                @@kafka_error += ("Failed, you need to upgrade to use Kafka streaming function."+ "\n");
-              ELSE
-                @@kafka_error += ("Failed sending vertex batch " + stringify(batch_id) + "\n");
-              END;
-            END;
+          kafka_errcode = write_to_kafka(producer, kafka_topic, batch_id%kafka_topic_partitions, "vertex_batch_" + stringify(batch_id), @@v_batch);
+          IF kafka_errcode!=0 THEN 
+            @@kafka_error += ("Error sending vertex batch " + stringify(batch_id) + ": "+ stringify(kafka_errcode) + "\n");
           END;
         ELSE # HTTP mode
           # Add to response
@@ -206,8 +207,13 @@ CREATE DISTRIBUTED QUERY nodepiece_loader_{QUERYSUFFIX}(
           END;
         END;                          
       END;
-      IF kafka_address IS NOT NULL THEN
-          PRINT @@kafka_error as kafkaError;
-      END;
+    END;
+    
+    IF kafka_address IS NOT NULL THEN
+      kafka_errcode = close_kafka_producer(producer, kafka_timeout);
+        IF kafka_errcode!=0 THEN 
+            @@kafka_error += ("Error shutting down Kafka producer: " + stringify(kafka_errcode) + "\n");
+        END;
+        PRINT @@kafka_error as kafkaError;
     END;
 }
