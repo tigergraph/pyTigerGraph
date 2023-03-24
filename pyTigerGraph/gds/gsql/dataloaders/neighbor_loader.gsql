@@ -16,7 +16,8 @@ CREATE QUERY neighbor_loader_{QUERYSUFFIX}(
     STRING sasl_mechanism,
     STRING sasl_username,
     STRING sasl_password,
-    STRING ssl_ca_location
+    STRING ssl_ca_location,
+    INT num_heap_inserts = 10
 ) SYNTAX V1 { 
     /*
     This query generates the neighborhood subgraphs of given seed vertices (i.e., `input_vertices`).
@@ -48,6 +49,7 @@ CREATE QUERY neighbor_loader_{QUERYSUFFIX}(
     INT temp_e;
     SumAccum<INT> @tmp_id;
     SumAccum<STRING> @@kafka_error;
+    OrAccum @prev_sampled;
 
     # Shuffle vertex ID if needed
     IF input_vertices.size()==0 THEN
@@ -83,9 +85,9 @@ CREATE QUERY neighbor_loader_{QUERYSUFFIX}(
             HeapAccum<ID_Tuple> (1, tmp_id ASC) @@batch_heap;
             @@batch_heap.resize(batch_s);
             IF filter_by IS NOT NULL THEN
-                FOREACH iter IN RANGE[0,1-1] DO 
+                FOREACH iter IN RANGE[0,num_heap_inserts-1] DO 
                   _verts = SELECT s FROM start:s
-                         WHERE s.@tmp_id % 1 == iter AND NOT s.@prev_sampled AND s.getAttr(filter_by, "BOOL")
+                         WHERE s.@tmp_id % num_heap_inserts == iter AND NOT s.@prev_sampled AND s.getAttr(filter_by, "BOOL")
                          POST-ACCUM @@batch_heap += ID_Tuple(s.@tmp_id, s);
                 END;
                 FOREACH elem IN @@batch_heap DO
@@ -99,9 +101,9 @@ CREATE QUERY neighbor_loader_{QUERYSUFFIX}(
                             {SEEDVERTEXATTRS},
                             @@printed_vertices += s;
             ELSE
-                FOREACH iter IN RANGE[0,10-1] DO 
+                FOREACH iter IN RANGE[0,num_heap_inserts-1] DO 
                   _verts = SELECT s FROM start:s
-                           WHERE s.@tmp_id % 10 == iter AND NOT s.@prev_sampled
+                           WHERE s.@tmp_id % num_heap_inserts == iter AND NOT s.@prev_sampled
                            POST-ACCUM @@batch_heap += ID_Tuple(s.@tmp_id, s);
                 END;
                 FOREACH elem IN @@batch_heap DO
