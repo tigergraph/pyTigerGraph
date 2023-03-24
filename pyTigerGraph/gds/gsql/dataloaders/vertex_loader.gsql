@@ -38,6 +38,7 @@ CREATE QUERY vertex_loader_{QUERYSUFFIX}(
     TYPEDEF TUPLE<INT tmp_id, VERTEX v> ID_Tuple;
     INT num_vertices;
     INT temp;
+    INT batch_s;
     SumAccum<INT> @tmp_id;
     SumAccum<STRING> @@kafka_error;
     OrAccum @prev_sampled;

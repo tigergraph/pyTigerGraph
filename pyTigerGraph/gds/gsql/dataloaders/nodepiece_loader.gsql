@@ -29,6 +29,7 @@ CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
     INT num_vertices;
     INT temp_v;
     INT temp_e;
+    INT batch_s;
     SumAccum<INT> @tmp_id;
     SumAccum<STRING> @@kafka_error;
     SetAccum<VERTEX> @next_pass, @to_pass, @received;
