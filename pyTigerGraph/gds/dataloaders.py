@@ -205,7 +205,7 @@ class BaseLoader:
         self._iterations = 0
         self._iterator = False
         self.callback_fn = callback_fn
-
+        self.num_heap_inserts = 10
         # Kafka consumer and admin
         self.max_kafka_msg_size = Kafka_max_msg_size
         self.kafka_address_consumer = (
@@ -1493,9 +1493,12 @@ class NeighborLoader(BaseLoader):
             self._seed_types = self._vtypes if ((not filter_by) or isinstance(filter_by, str)) else list(filter_by.keys())
             self.num_batches = num_batches
         # Initialize parameters for the query
+        if batch_size:
+            self._payload["batch_size"] = batch_size
         self._payload["num_batches"] = self.num_batches
         self._payload["num_neighbors"] = num_neighbors
         self._payload["num_hops"] = num_hops
+        self._payload["num_heap_inserts"] = self.num_heap_inserts
         if filter_by:
             if isinstance(filter_by, str):
                 self._payload["filter_by"] = filter_by
@@ -2198,9 +2201,12 @@ class VertexLoader(BaseLoader):
         self._payload["num_batches"] = self.num_batches
         if filter_by:
             self._payload["filter_by"] = filter_by
+        if batch_size:
+            self._payload["batch_size"] = batch_size
         self._payload["shuffle"] = shuffle
         self._payload["delimiter"] = delimiter
         self._payload["v_types"] = self._vtypes
+        self._payload["num_heap_inserts"] = self.num_heap_inserts
         # Install query
         self.query_name = self._install_query()
 
@@ -2502,6 +2508,7 @@ class GraphLoader(BaseLoader):
         self._payload["v_types"] = self._vtypes
         self._payload["e_types"] = self._etypes
         self._payload["delimiter"] = self.delimiter
+        self._payload["num_heap_inserts"] = self.num_heap_inserts
         # Output
         self.add_self_loop = add_self_loop
         # Install query
@@ -3148,6 +3155,8 @@ class NodePieceLoader(BaseLoader):
                 attr = set(filter_by.values())
                 if len(attr) != 1:
                     raise NotImplementedError("Filtering by different attributes for different vertex types is not supported. Please use the same attribute for different types.")
+        if batch_size:
+            self._payload["batch_size"] = batch_size
         self._payload["shuffle"] = shuffle
         self._payload["v_types"] = self._vtypes
         self._payload["seed_types"] = self._seed_types
@@ -3158,6 +3167,7 @@ class NodePieceLoader(BaseLoader):
         self._payload["use_cache"] = use_cache
         self._payload["clear_cache"] = clear_cache
         self._payload["delimiter"] = delimiter
+        self._payload["num_heap_inserts"] = self.num_heap_inserts
         if e_types:
             self._payload["e_types"] = e_types
         elif e_types == []:
@@ -3642,11 +3652,14 @@ class HGTLoader(BaseLoader):
                 if len(attr) != 1:
                     raise NotImplementedError("Filtering by different attributes for different vertex types is not supported. Please use the same attribute for different types.")
                 self._payload["filter_by"] = attr.pop()
+        if batch_size:
+            self._payload["batch_size"] = batch_size
         self._payload["shuffle"] = shuffle
         self._payload["v_types"] = self._vtypes
         self._payload["e_types"] = self._etypes
         self._payload["seed_types"] = self._seed_types
         self._payload["delimiter"] = self.delimiter
+        self._payload["num_heap_inserts"] = self.num_heap_inserts
         # Output
         self.add_self_loop = add_self_loop
         # Install query
