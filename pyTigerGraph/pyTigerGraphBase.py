@@ -100,7 +100,7 @@ class pyTigerGraphBase(object):
             self.username = username
             self.password = password
         self.graphname = graphname
-
+        self.responseConfigHeader = {}
         # TODO Remove apiToken parameter
         if apiToken:
             warnings.warn(
@@ -260,6 +260,8 @@ class pyTigerGraphBase(object):
             _auth = None
         if headers:
             _headers.update(headers)
+        if self.responseConfigHeader:
+            _headers.update(self.responseConfigHeader)
         if method == "POST" or method == "PUT":
             _data = data
         else:
@@ -393,3 +395,17 @@ class pyTigerGraphBase(object):
         logger.info("exit: _delete")
 
         return res
+
+    def customizeHeader(self, timeout:int = 16_000, responseSize:int = 3.2e+7):
+        """Method to configure the request header.
+
+        Args:
+            tiemout (int, optional):
+                The timeout value desired in milliseconds. Defaults to 16,000 ms (16 sec)
+            responseSize:
+                The size of the response in bytes. Defaults to 3.2E7 bytes (32 MB).
+
+        Returns:
+            Nothing. Sets `responseConfigHeader` class attribute.
+        """
+        self.responseConfigHeader = {"GSQL-TIMEOUT": timeout, "RESPONSE-LIMIT": responseSize}
