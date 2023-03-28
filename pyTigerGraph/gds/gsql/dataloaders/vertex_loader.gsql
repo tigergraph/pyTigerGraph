@@ -20,6 +20,9 @@ CREATE DISTRIBUTED QUERY vertex_loader_{QUERYSUFFIX}(
     STRING ssl_key_location="",
     STRING ssl_key_password="",
     STRING ssl_endpoint_identification_algorithm="",
+    STRING sasl_kerberos_service_name="",
+    STRING sasl_kerberos_keytab="",
+    STRING sasl_kerberos_principal="",
     INT num_heap_inserts = 10
 ) SYNTAX V2 {
     /*
@@ -57,7 +60,8 @@ CREATE DISTRIBUTED QUERY vertex_loader_{QUERYSUFFIX}(
             kafka_address, kafka_max_size, security_protocol, 
             sasl_mechanism, sasl_username, sasl_password, ssl_ca_location,
             ssl_certificate_location, ssl_key_location, ssl_key_password,
-            ssl_endpoint_identification_algorithm);
+            ssl_endpoint_identification_algorithm, sasl_kerberos_service_name,
+            sasl_kerberos_keytab, sasl_kerberos_principal);
     END;
 
     # Shuffle vertex ID if needed
