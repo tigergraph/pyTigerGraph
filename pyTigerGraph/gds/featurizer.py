@@ -480,6 +480,7 @@ class Featurizer:
         params: dict = None,
         runAsync: bool = False,
         threadLimit: int = None,
+        memoryLimit: int = None,
         feat_name: str = None,
         feat_type: str = None,
         custom_query: bool = False,
@@ -507,6 +508,9 @@ class Featurizer:
             threadLimit:
                 Specify a limit of the number of threads the query is allowed to use on each node of the TigerGraph cluster.
                 See xref:tigergraph-server:API:built-in-endpoints#_specify_thread_limit[Thread limit]
+            memoryLimit:
+                Specify a limit to the amount of memory consumed by the query (in MB). If the limit is exceeded, the query will abort automatically.
+                See xref:tigergraph-server:system-management:memory-management#_by_http_header[Memory limit]
             feat_name (str, optional):
                 An attribute name that needs to be added to the vertex/edge. If the result attribute parameter is specified in the parameters, that will be used.
             feat_type (str, optional):
@@ -681,6 +685,7 @@ class Featurizer:
             usePost=True,
             runAsync=runAsync,
             threadLimit=threadLimit,
+            memoryLimit=memoryLimit
         )
         # Return result
         if result is not None:
