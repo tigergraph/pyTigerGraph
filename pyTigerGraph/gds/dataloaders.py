@@ -69,6 +69,10 @@ class BaseLoader:
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_sasl_kerberos_service_name: str = None,
+        kafka_sasl_kerberos_keytab: str = None,
+        kafka_sasl_kerberos_principal: str = None,
+        kafka_sasl_kerberos_domain_name: str = None,
         kafka_ssl_check_hostname: bool = None,
         kafka_producer_ca_location: str = None,
         kafka_producer_certificate_location: str = None,
@@ -242,7 +246,9 @@ class BaseLoader:
                     ssl_check_hostname=kafka_ssl_check_hostname,
                     ssl_certfile=kafka_consumer_certificate_location,
                     ssl_keyfile=kafka_consumer_key_location,
-                    ssl_password=kafka_consumer_key_password
+                    ssl_password=kafka_consumer_key_password,
+                    sasl_kerberos_service_name=kafka_sasl_kerberos_service_name,
+                    sasl_kerberos_domain_name=kafka_sasl_kerberos_domain_name
                 )
                 self._kafka_admin = KafkaAdminClient(
                     bootstrap_servers=self.kafka_address_consumer,
@@ -255,7 +261,9 @@ class BaseLoader:
                     ssl_check_hostname=kafka_ssl_check_hostname,
                     ssl_certfile=kafka_consumer_certificate_location,
                     ssl_keyfile=kafka_consumer_key_location,
-                    ssl_password=kafka_consumer_key_password
+                    ssl_password=kafka_consumer_key_password,
+                    sasl_kerberos_service_name=kafka_sasl_kerberos_service_name,
+                    sasl_kerberos_domain_name=kafka_sasl_kerberos_domain_name
                 )
             except:
                 raise ConnectionError(
@@ -270,17 +278,31 @@ class BaseLoader:
             self._payload["kafka_timeout"] = self.timeout
             if kafka_security_protocol == "PLAINTEXT":
                 pass
-            elif kafka_security_protocol in ("SASL_PLAINTEXT", "SASL_SSL", "SSL"):
+            elif kafka_security_protocol in ("SASL_PLAINTEXT", "SASL_SSL"):
                 self._payload["security_protocol"] = kafka_security_protocol
+                self._payload["sasl_mechanism"] = kafka_sasl_mechanism
                 if kafka_sasl_mechanism == "PLAIN":
-                    self._payload["sasl_mechanism"] = kafka_sasl_mechanism
                     if kafka_sasl_plain_username and kafka_sasl_plain_password:
                         self._payload["sasl_username"] = kafka_sasl_plain_username
                         self._payload["sasl_password"] = kafka_sasl_plain_password
                     else:
                         raise ValueError("Please provide kafka_sasl_plain_username and kafka_sasl_plain_password for Kafka.")
-                elif kafka_sasl_mechanism:
-                    raise NotImplementedError("Only PLAIN mechanism is supported for SASL.")
+                elif kafka_sasl_mechanism == "GSSAPI":
+                    if kafka_sasl_kerberos_service_name:
+                        self._payload["sasl_kerberos_service_name"] = kafka_sasl_kerberos_service_name
+                    else:
+                        raise ValueError("Please provide Kerberos service name for Kafka.")
+                    if kafka_sasl_kerberos_keytab:
+                        self._payload["sasl_kerberos_keytab"] = kafka_sasl_kerberos_keytab
+                    if kafka_sasl_kerberos_principal:
+                        self._payload["sasl_kerberos_principal"] = kafka_sasl_kerberos_principal
+                else:
+                    raise NotImplementedError("Only PLAIN and GSSAPI mechanisms are supported for SASL.")
+            elif kafka_security_protocol == "SSL":
+                self._payload["security_protocol"] = kafka_security_protocol
+            else:
+                raise NotImplementedError("Only PLAINTEXT, SASL_PLAINTEXT, SASL_SSL, and SSL are supported as Kafka security protocol.")
+            if kafka_security_protocol in ("SSL", "SASL_SSL"):
                 if kafka_producer_ca_location:
                     self._payload["ssl_ca_location"] = kafka_producer_ca_location
                 if kafka_producer_certificate_location:
@@ -291,8 +313,6 @@ class BaseLoader:
                     self._payload["ssl_key_password"] = kafka_producer_key_password
                 if kafka_ssl_check_hostname:
                     self._payload["ssl_endpoint_identification_algorithm"] = "https"
-            else:
-                raise NotImplementedError("Only PLAINTEXT, SASL_PLAINTEXT, SASL_SSL, and SSL are supported as Kafka security protocol.")
             # kafka_topic will be filled in later.
         # Implement `_install_query()` that installs your query
         # self._install_query()
@@ -1414,6 +1434,10 @@ class NeighborLoader(BaseLoader):
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_sasl_kerberos_service_name: str = None,
+        kafka_sasl_kerberos_keytab: str = None,
+        kafka_sasl_kerberos_principal: str = None,
+        kafka_sasl_kerberos_domain_name: str = None,
         kafka_ssl_check_hostname: bool = None,
         kafka_producer_ca_location: str = None,
         kafka_producer_certificate_location: str = None,
@@ -1452,6 +1476,10 @@ class NeighborLoader(BaseLoader):
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_sasl_kerberos_service_name,
+            kafka_sasl_kerberos_keytab,
+            kafka_sasl_kerberos_principal,
+            kafka_sasl_kerberos_domain_name,
             kafka_ssl_check_hostname,
             kafka_producer_ca_location,
             kafka_producer_certificate_location,
@@ -1888,6 +1916,10 @@ class EdgeLoader(BaseLoader):
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_sasl_kerberos_service_name: str = None,
+        kafka_sasl_kerberos_keytab: str = None,
+        kafka_sasl_kerberos_principal: str = None,
+        kafka_sasl_kerberos_domain_name: str = None,
         kafka_ssl_check_hostname: bool = None,
         kafka_producer_ca_location: str = None,
         kafka_producer_certificate_location: str = None,
@@ -1927,6 +1959,10 @@ class EdgeLoader(BaseLoader):
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_sasl_kerberos_service_name,
+            kafka_sasl_kerberos_keytab,
+            kafka_sasl_kerberos_principal,
+            kafka_sasl_kerberos_domain_name,
             kafka_ssl_check_hostname,
             kafka_producer_ca_location,
             kafka_producer_certificate_location,
@@ -2178,6 +2214,10 @@ class VertexLoader(BaseLoader):
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_sasl_kerberos_service_name: str = None,
+        kafka_sasl_kerberos_keytab: str = None,
+        kafka_sasl_kerberos_principal: str = None,
+        kafka_sasl_kerberos_domain_name: str = None,
         kafka_ssl_check_hostname: bool = None,
         kafka_producer_ca_location: str = None,
         kafka_producer_certificate_location: str = None,
@@ -2217,6 +2257,10 @@ class VertexLoader(BaseLoader):
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_sasl_kerberos_service_name,
+            kafka_sasl_kerberos_keytab,
+            kafka_sasl_kerberos_principal,
+            kafka_sasl_kerberos_domain_name,
             kafka_ssl_check_hostname,
             kafka_producer_ca_location,
             kafka_producer_certificate_location,
@@ -2479,6 +2523,10 @@ class GraphLoader(BaseLoader):
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_sasl_kerberos_service_name: str = None,
+        kafka_sasl_kerberos_keytab: str = None,
+        kafka_sasl_kerberos_principal: str = None,
+        kafka_sasl_kerberos_domain_name: str = None,
         kafka_ssl_check_hostname: bool = None,
         kafka_producer_ca_location: str = None,
         kafka_producer_certificate_location: str = None,
@@ -2518,6 +2566,10 @@ class GraphLoader(BaseLoader):
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_sasl_kerberos_service_name,
+            kafka_sasl_kerberos_keytab,
+            kafka_sasl_kerberos_principal,
+            kafka_sasl_kerberos_domain_name,
             kafka_ssl_check_hostname,
             kafka_producer_ca_location,
             kafka_producer_certificate_location,
@@ -2799,6 +2851,10 @@ class EdgeNeighborLoader(BaseLoader):
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_sasl_kerberos_service_name: str = None,
+        kafka_sasl_kerberos_keytab: str = None,
+        kafka_sasl_kerberos_principal: str = None,
+        kafka_sasl_kerberos_domain_name: str = None,
         kafka_ssl_check_hostname: bool = None,
         kafka_producer_ca_location: str = None,
         kafka_producer_certificate_location: str = None,
@@ -2837,6 +2893,10 @@ class EdgeNeighborLoader(BaseLoader):
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_sasl_kerberos_service_name,
+            kafka_sasl_kerberos_keytab,
+            kafka_sasl_kerberos_principal,
+            kafka_sasl_kerberos_domain_name,
             kafka_ssl_check_hostname,
             kafka_producer_ca_location,
             kafka_producer_certificate_location,
@@ -3152,6 +3212,10 @@ class NodePieceLoader(BaseLoader):
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_sasl_kerberos_service_name: str = None,
+        kafka_sasl_kerberos_keytab: str = None,
+        kafka_sasl_kerberos_principal: str = None,
+        kafka_sasl_kerberos_domain_name: str = None,
         kafka_ssl_check_hostname: bool = None,
         kafka_producer_ca_location: str = None,
         kafka_producer_certificate_location: str = None,
@@ -3191,6 +3255,10 @@ class NodePieceLoader(BaseLoader):
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_sasl_kerberos_service_name,
+            kafka_sasl_kerberos_keytab,
+            kafka_sasl_kerberos_principal,
+            kafka_sasl_kerberos_domain_name,
             kafka_ssl_check_hostname,
             kafka_producer_ca_location,
             kafka_producer_certificate_location,
@@ -3650,6 +3718,10 @@ class HGTLoader(BaseLoader):
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_sasl_kerberos_service_name: str = None,
+        kafka_sasl_kerberos_keytab: str = None,
+        kafka_sasl_kerberos_principal: str = None,
+        kafka_sasl_kerberos_domain_name: str = None,
         kafka_ssl_check_hostname: bool = None,
         kafka_producer_ca_location: str = None,
         kafka_producer_certificate_location: str = None,
@@ -3688,6 +3760,10 @@ class HGTLoader(BaseLoader):
             kafka_sasl_mechanism,
             kafka_sasl_plain_username,
             kafka_sasl_plain_password,
+            kafka_sasl_kerberos_service_name,
+            kafka_sasl_kerberos_keytab,
+            kafka_sasl_kerberos_principal,
+            kafka_sasl_kerberos_domain_name,
             kafka_ssl_check_hostname,
             kafka_producer_ca_location,
             kafka_producer_certificate_location,
