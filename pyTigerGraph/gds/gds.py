@@ -66,6 +66,10 @@ class GDS:
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_sasl_kerberos_service_name: str = None,
+        kafka_sasl_kerberos_keytab: str = None,
+        kafka_sasl_kerberos_principal: str = None,
+        kafka_sasl_kerberos_domain_name: str = None,
         kafka_ssl_check_hostname: bool = None,
         kafka_producer_ca_location: str = None,
         kafka_producer_certificate_location: str = None,
@@ -113,6 +117,14 @@ class GDS:
                 SASL username for Kafka. Defaults to None.
             kafka_sasl_plain_password (str, optional):
                 SASL password for Kafka. Defaults to None.
+            kafka_sasl_kerberos_service_name (str, optional):
+                Kerberos principal name that Kafka runs as. Defaults to None.
+            kafka_sasl_kerberos_keytab (str, optional):
+                Path to Kerberos keytab file. Defaults to None.
+            kafka_sasl_kerberos_principal (str, optional):
+                This client's Kerberos principal name. Defaults to None.
+            kafka_sasl_kerberos_domain_name (str, optional):
+                Kerberos domain name to use in GSSAPI mechanism handshake. Defaults to None.
             kafka_ssl_check_hostname (bool, optional): 
                 Whether SSL handshake should verify that the certificate matches 
                 the brokers hostname. Defaults to None,
@@ -157,6 +169,10 @@ class GDS:
             "kafka_sasl_mechanism": kafka_sasl_mechanism,
             "kafka_sasl_plain_username": kafka_sasl_plain_username,
             "kafka_sasl_plain_password": kafka_sasl_plain_password,
+            "kafka_sasl_kerberos_service_name": kafka_sasl_kerberos_service_name,
+            "kafka_sasl_kerberos_keytab": kafka_sasl_kerberos_keytab,
+            "kafka_sasl_kerberos_principal": kafka_sasl_kerberos_principal,
+            "kafka_sasl_kerberos_domain_name": kafka_sasl_kerberos_domain_name,
             "kafka_ssl_check_hostname": kafka_ssl_check_hostname,
             "kafka_producer_ca_location": kafka_producer_ca_location,
             "kafka_producer_certificate_location": kafka_producer_certificate_location,
