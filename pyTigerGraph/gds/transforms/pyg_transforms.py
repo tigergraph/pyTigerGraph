@@ -7,13 +7,13 @@ class BasePyGTransform():
 
 class TemporalPyGTransform(BasePyGTransform):
     def __init__(self,
-                 vertex_start_attrs,
-                 vertex_end_attrs,
-                 edge_start_attrs,
-                 edge_end_attrs,
-                 feature_transforms,
-                 start_dt,
-                 end_dt,
+                 vertex_start_attrs: dict,
+                 vertex_end_attrs: dict,
+                 edge_start_attrs: dict,
+                 edge_end_attrs: dict,
+                 feature_transforms: dict,
+                 start_dt: int,
+                 end_dt: int,
                  timestep=1):
         self.vertex_start = vertex_start_attrs
         self.vertex_end = vertex_end_attrs
@@ -88,6 +88,8 @@ class TemporalPyGTransform(BasePyGTransform):
             for i in range(self.start_dt, self.end_dt, self.timestep):
                 copy = data.clone()
                 copy.edge_index = copy.edge_index.T[torch.logical_and(data[self.vertex_start] >= i, data[self.vertex_end] < i+self.timestep)].T
+                if self.edge_start and self.edge_end:
+                    copy.edge_index = copy.edge_index.T[torch.logical_and(data[self.edge_start] >= i, data[self.edge_end] < i+self.timestep)].T
                 copy.vertex_mask = torch.logical_and(data[self.vertex_start] <= i+self.timestep, data[self.vertex_end] > i)
                 sequence.append(copy)
             return sequence
