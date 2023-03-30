@@ -161,21 +161,16 @@ class ConfusionMatrix(Accumulator):
             labels
         ), "The lists of predictions and labels must have same length"
 
-        labels_hist = {i:0 for i in range(self.num_classes)}
-        preds_hist = {i:0 for i in range(self.num_classes)}
 
-        for label in labels:
-            labels_hist[label] += 1
-        for pred in preds:
-            preds_hist[pred] += 1
-
-        confusion_mat = pd.crosstab(pd.Series(labels_hist, name="labels"), pd.Series(preds_hist, name="predictions")).values
+        confusion_mat = np.zeros((self.num_classes, self.num_classes))
+        for pair in zip(labels.tolist(), preds.tolist()):
+            confusion_mat[int(pair[0]), int(pair[1])] += 1
 
         self._cumsum += confusion_mat
         self._count += len(labels)
 
     @property
-    def value(self) -> pd.DataFrame:
+    def value(self) -> np.array:
         '''Get the confusion matrix.
             Returns:
                 Consfusion matrix in dataframe form.
@@ -203,7 +198,7 @@ class MulticlassRecall(ConfusionMatrix):
             Returns:
                 Recall score for each class (dict).
         '''
-        cm = self._cumsum.values
+        cm = self._cumsum
         recalls = {}
 
         for c in range(self.num_classes):
@@ -272,7 +267,7 @@ class MulticlassPrecision(ConfusionMatrix):
             Returns:
                 Precision score for each class (dict).
         '''
-        cm = self._cumsum.values
+        cm = self._cumsum
         precs = {}
 
         for c in range(self.num_classes):
@@ -401,8 +396,8 @@ class BaseMetrics():
 
 class ClassificationMetrics(BaseMetrics):
     def __init__(self, num_classes: int=2):
-        super().__init__()
         self.num_classes = num_classes
+        super(ClassificationMetrics, self).__init__()
         self.reset_metrics()
 
     def reset_metrics(self):
@@ -421,8 +416,14 @@ class ClassificationMetrics(BaseMetrics):
         pred = out.argmax(dim=1)
         if target_type:
             self.accuracy.update(pred[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
+            self.confusion_matrix.update(pred[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
+            self.precision.update(pred[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
+            self.recall.update(pred[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
         else:
             self.accuracy.update(pred[batch.is_seed], batch.y[batch.is_seed])
+            self.confusion_matrix.update(pred[batch.is_seed], batch.y[batch.is_seed])
+            self.precision.update(pred[batch.is_seed], batch.y[batch.is_seed])
+            self.recall.update(pred[batch.is_seed], batch.y[batch.is_seed])
 
     def get_metrics(self):
         super_met = super().get_metrics()
