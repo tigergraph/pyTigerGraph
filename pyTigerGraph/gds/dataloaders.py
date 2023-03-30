@@ -1365,6 +1365,8 @@ class BaseLoader:
         # Return data
         raise NotImplementedError
 
+    def __len__(self) -> int:
+        return self.num_batches
 
 class NeighborLoader(BaseLoader):
     """NeighborLoader
