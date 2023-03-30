@@ -50,16 +50,19 @@ class PrinterCallback(BaseCallback):
         
 
 class DefaultCallback(BaseCallback):
-    def __init__(self, output_dir="./logs"):
-        try:
-            from tqdm import tqdm
-            self.tqdm = tqdm
-            self.epoch_bar = None
-            self.batch_bar = None
-            self.valid_bar = None
-        except:
-            self.tqdm = None
-            warnings.warn("tqdm not installed. Please install tqdm if progress bar support is desired.")
+    def __init__(self, output_dir="./logs", use_tqdm=True):
+        if use_tqdm:
+            try:
+                from tqdm import tqdm
+                self.tqdm = tqdm
+                self.epoch_bar = None
+                self.batch_bar = None
+                self.valid_bar = None
+            except:
+                self.tqdm = None
+                warnings.warn("tqdm not installed. Please install tqdm if progress bar support is desired.")
+        else:
+            self.tqdm = False
         self.output_dir = output_dir
         self.best_loss = float("inf")
         os.makedirs(self.output_dir, exist_ok=True)
@@ -83,8 +86,9 @@ class DefaultCallback(BaseCallback):
     def on_train_step_end(self, trainer):
         logger = logging.getLogger(__name__)
         logger.info("train_step:"+str(trainer.train_step_metrics))
-        if self.batch_bar:
-            self.batch_bar.update(1)
+        if self.tqdm:
+            if self.batch_bar:
+                self.batch_bar.update(1)
 
     def on_eval_start(self, trainer):
         if self.tqdm:
@@ -99,9 +103,10 @@ class DefaultCallback(BaseCallback):
     def on_eval_end(self, trainer):
         logger = logging.getLogger(__name__)
         logger.info("evaluation:"+str(trainer.eval_global_metrics))
-        if self.valid_bar:
-            self.valid_bar.close()
-            self.valid_bar = None
+        if self.tqdm:
+            if self.valid_bar:
+                self.valid_bar.close()
+                self.valid_bar = None
 
     def on_epoch_end(self, trainer):
         if self.tqdm:
