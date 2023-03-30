@@ -5,6 +5,8 @@ Utility for gathering metrics for GNN predictions.
 """
 
 from numpy import ndarray
+import pandas as pd
+import numpy as np
 
 __all__ = ["Accumulator", "Accuracy", "BinaryPrecision", "BinaryRecall"]
 
@@ -96,7 +98,7 @@ class Accuracy(Accumulator):
 
 
 class BinaryRecall(Accumulator):
-    """Recall Metric.
+    """Binary Recall Metric.
 
     Recall = stem:[\frac{\sum(predictions * labels)}{\sum(labels)}]
 
@@ -134,6 +136,84 @@ class BinaryRecall(Accumulator):
         else:
             return None
 
+class ConfusionMatrix(Accumulator):
+    """Confusion Matrix Metric.
+    Updates a confusion matrix as new updates occur.
+
+    Args:
+        num_classes (int):
+            Number of classes in your classification task.
+    """
+    def __init__(self, num_classes: int) -> None:
+        super().__init__()
+        self.num_classes = num_classes
+
+    def update(self, preds: ndarray, labels: ndarray) -> None:
+        """Add predictions and labels to be compared.
+
+        Args:
+            preds (ndarray): 
+                Array of predicted labels.
+            labels (ndarray): 
+                Array of true labels.
+        """
+        assert len(preds) == len(
+            labels
+        ), "The lists of predictions and labels must have same length"
+
+        labels_hist = {i:0 for i in range(self.num_classes)}
+        preds_hist = {i:0 for i in range(self.num_classes)}
+
+        for label in labels:
+            labels_hist[label] += 1
+        for pred in preds:
+            preds_hist[pred] += 1
+
+        confusion_mat = pd.crosstab(pd.Series(labels_hist, name="labels"), pd.Series(preds_hist, name="predictions")).values
+
+        self._cumsum += confusion_mat
+        self._count += len(labels)
+
+    @property
+    def value(self) -> pd.DataFrame:
+        '''Get the confusion matrix.
+            Returns:
+                Consfusion matrix in dataframe form.
+        '''
+        if self._count > 0:
+            return self._cumsum
+        else:
+            return None
+
+class MulticlassRecall(ConfusionMatrix):
+    """Multiclass Recall Metric.
+
+    Recall = stem:[\frac{true positives}{\sum(true positives + false negatives)}
+    This metric is for multiclass classifications, i.e., both predictions and labels are arrays of multiple whole numbers.
+
+    Usage:
+
+    * Call the update function to add predictions and labels.
+    * Get recall score at any point by accessing the value property.
+    """
+
+    @property
+    def value(self) -> dict:
+        '''Get recall score for each class.
+            Returns:
+                Recall score for each class (dict).
+        '''
+        cm = self._cumsum.values
+        recalls = {}
+
+        for c in range(self.num_classes):
+            tp = cm[c,c]
+            fn = sum(cm[c, :]) - tp
+            recalls[c] = tp/(tp+fn)
+        if self._count > 0:
+            return recalls
+        else:
+            return None
 
 class BinaryPrecision(Accumulator):
     """Precision Metric.
@@ -171,6 +251,36 @@ class BinaryPrecision(Accumulator):
         '''
         if self._count > 0:
             return self.mean
+        else:
+            return None
+
+class MulticlassPrecision(ConfusionMatrix):
+    """Multiclass Precision Metric.
+
+    Recall = stem:[\frac{true positives}{\sum(true positives + false positives)}
+    This metric is for multiclass classifications, i.e., both predictions and labels are arrays of multiple whole numbers.
+
+    Usage:
+
+    * Call the update function to add predictions and labels.
+    * Get recall score at any point by accessing the value property.
+    """
+
+    @property
+    def value(self) -> dict:
+        '''Get precision score for each class.
+            Returns:
+                Precision score for each class (dict).
+        '''
+        cm = self._cumsum.values
+        precs = {}
+
+        for c in range(self.num_classes):
+            tp = cm[c,c]
+            fp = sum(cm[:, c]) - tp
+            precs[c] = tp/(tp+fp)
+        if self._count > 0:
+            return precs
         else:
             return None
 
@@ -290,15 +400,21 @@ class BaseMetrics():
 
 
 class ClassificationMetrics(BaseMetrics):
-    def __init__(self):
+    def __init__(self, num_classes: int=2):
         super().__init__()
+        self.num_classes = num_classes
         self.reset_metrics()
 
     def reset_metrics(self):
         super().reset_metrics()
         self.accuracy = Accuracy()
-        self.precision = None #TODO implement prcesion
-        self.recall = None #TODO implement recall
+        self.confusion_matrix = ConfusionMatrix(self.num_classes)
+        if self.num_classes > 2:
+            self.precision = MulticlassPrecision(self.num_classes)
+            self.recall = MulticlassRecall(self.num_classes)
+        else:
+            self.precision = BinaryPrecision()
+            self.recall = BinaryRecall()
 
     def update_metrics(self, loss, out, batch, target_type=None):
         super().update_metrics(loss, out, batch)
@@ -310,7 +426,7 @@ class ClassificationMetrics(BaseMetrics):
 
     def get_metrics(self):
         super_met = super().get_metrics()
-        metrics = {"accuracy": self.accuracy.value}
+        metrics = {"accuracy": self.accuracy.value, "precision": self.precision.value, "recall": self.recall.value, "confusion_matrix": self.confusion_matrix.value}
         metrics.update(super_met)
         return metrics
 

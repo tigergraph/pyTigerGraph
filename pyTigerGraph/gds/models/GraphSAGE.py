@@ -38,7 +38,7 @@ class GraphSAGEForVertexClassification(BaseGraphSAGEModel):
     def __init__(self, num_layers, out_dim, dropout, hidden_dim, heterogeneous=None, class_weights=None):
         super().__init__(num_layers, out_dim, dropout, hidden_dim, heterogeneous)
         self.class_weight = class_weights
-        self.metrics = ClassificationMetrics()
+        self.metrics = ClassificationMetrics(num_classes=out_dim)
 
     def forward(self, batch, get_probs=False, tgt_type=None):
         logits = super().forward(batch)
