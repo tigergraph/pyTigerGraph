@@ -1,7 +1,7 @@
 import unittest
 
 import numpy as np
-from pyTigerGraph.gds.metrics import Accumulator, Accuracy, BinaryPrecision, BinaryRecall
+from pyTigerGraph.gds.metrics import Accumulator, Accuracy, BinaryPrecision, BinaryRecall, Recall, Precision
 
 
 class TestGDSAccumulator(unittest.TestCase):
@@ -42,7 +42,7 @@ class TestGDSAccuracy(unittest.TestCase):
         self.assertEqual(measure.value, 3 / 5)
 
 
-class TestGDSRecall(unittest.TestCase):
+class TestGDSBinaryRecall(unittest.TestCase):
     def test_init(self):
         measure = BinaryRecall()
         self.assertIsNone(measure.value)
@@ -59,13 +59,46 @@ class TestGDSRecall(unittest.TestCase):
         self.assertEqual(measure.value, 2 / 3)
 
 
-class TestGDSPrecision(unittest.TestCase):
+class TestGDSBinaryPrecision(unittest.TestCase):
     def test_init(self):
         measure = BinaryPrecision()
         self.assertIsNone(measure.value)
 
     def test_update(self):
         measure = BinaryPrecision()
+        preds = np.array([1, 1])
+        truth = np.array([1, 0])
+        measure.update(preds, truth)
+        self.assertEqual(measure.value, 0.5)
+        preds = np.array([1, 0, 1])
+        truth = np.array([1, 1, 0])
+        measure.update(preds, truth)
+        self.assertEqual(measure.value, 0.5)
+
+class TestGDSRecall(unittest.TestCase):
+    def test_init(self):
+        measure = Recall(num_classes=2)
+        self.assertIsNone(measure.value)
+
+    def test_update(self):
+        measure = Recall(num_classes=2)
+        preds = np.array([1, 1])
+        truth = np.array([1, 0])
+        measure.update(preds, truth)
+        self.assertEqual(measure.value, 1.0)
+        preds = np.array([1, 0, 1])
+        truth = np.array([1, 1, 0])
+        measure.update(preds, truth)
+        self.assertEqual(measure.value, 2 / 3)
+
+
+class TestGDSPrecision(unittest.TestCase):
+    def test_init(self):
+        measure = Precision(num_classes=2)
+        self.assertIsNone(measure.value)
+
+    def test_update(self):
+        measure = Precision(num_classes=2)
         preds = np.array([1, 1])
         truth = np.array([1, 0])
         measure.update(preds, truth)

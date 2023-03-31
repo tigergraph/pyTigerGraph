@@ -7,8 +7,10 @@ Utility for gathering metrics for GNN predictions.
 from numpy import ndarray
 import pandas as pd
 import numpy as np
+import warnings
+from typing import Union
 
-__all__ = ["Accumulator", "Accuracy", "BinaryPrecision", "BinaryRecall"]
+__all__ = ["Accumulator", "Accuracy", "BinaryPrecision", "BinaryRecall", "Precision", "Recall"]
 
 
 class Accumulator:
@@ -98,7 +100,7 @@ class Accuracy(Accumulator):
 
 
 class BinaryRecall(Accumulator):
-    """Binary Recall Metric.
+    """DEPRECATED: Binary Recall Metric.
 
     Recall = stem:[\frac{\sum(predictions * labels)}{\sum(labels)}]
 
@@ -109,6 +111,11 @@ class BinaryRecall(Accumulator):
     * Call the update function to add predictions and labels.
     * Get recall score at any point by accessing the value property.
     """
+    def __init__(self) -> None:
+        super().__init__()
+        warnings.warn(
+                "The `BinaryRecall` metric is deprecated; use `Recall` metric instead.",
+                DeprecationWarning)
 
     def update(self, preds: ndarray, labels: ndarray) -> None:
         """Add predictions and labels to be compared.
@@ -176,15 +183,15 @@ class ConfusionMatrix(Accumulator):
                 Consfusion matrix in dataframe form.
         '''
         if self._count > 0:
-            return self._cumsum
+            return pd.DataFrame(self._cumsum, columns=["predicted_"+ str(i) for i in range(self.num_classes)], index=["label_"+str(i) for i in range(self.num_classes)])
         else:
             return None
 
-class MulticlassRecall(ConfusionMatrix):
-    """Multiclass Recall Metric.
+class Recall(ConfusionMatrix):
+    """Recall Metric.
 
     Recall = stem:[\frac{true positives}{\sum(true positives + false negatives)}
-    This metric is for multiclass classifications, i.e., both predictions and labels are arrays of multiple whole numbers.
+    This metric is for classification, i.e., both predictions and labels are arrays of multiple whole numbers.
 
     Usage:
 
@@ -193,25 +200,28 @@ class MulticlassRecall(ConfusionMatrix):
     """
 
     @property
-    def value(self) -> dict:
+    def value(self) -> Union[dict, float]:
         '''Get recall score for each class.
             Returns:
-                Recall score for each class (dict).
+                Recall score for each class or the average recall if `num_classes` == 2.
         '''
-        cm = self._cumsum
-        recalls = {}
-
-        for c in range(self.num_classes):
-            tp = cm[c,c]
-            fn = sum(cm[c, :]) - tp
-            recalls[c] = tp/(tp+fn)
         if self._count > 0:
-            return recalls
+            cm = self._cumsum
+            recalls = {}
+
+            for c in range(self.num_classes):
+                tp = cm[c,c]
+                fn = sum(cm[c, :]) - tp
+                recalls[c] = tp/(tp+fn)
+            if self.num_classes == 2:
+                return recalls[1]
+            else:
+                return recalls
         else:
             return None
 
 class BinaryPrecision(Accumulator):
-    """Precision Metric.
+    """DEPRECATED: Binary Precision Metric.
 
     Precision = stem:[\frac{\sum(predictions * labels)}{\sum(predictions)}]
 
@@ -222,6 +232,12 @@ class BinaryPrecision(Accumulator):
     * Call the update function to add predictions and labels.
     * Get precision score at any point by accessing the value property.
     """
+
+    def __init__(self) -> None:
+        super().__init__()
+        warnings.warn(
+                "The `BinaryPrecision` metric is deprecated; use `Precision` metric instead.",
+                DeprecationWarning)
 
     def update(self, preds: ndarray, labels: ndarray) -> None:
         """Add predictions and labels to be compared.
@@ -249,11 +265,11 @@ class BinaryPrecision(Accumulator):
         else:
             return None
 
-class MulticlassPrecision(ConfusionMatrix):
-    """Multiclass Precision Metric.
+class Precision(ConfusionMatrix):
+    """Precision Metric.
 
     Recall = stem:[\frac{true positives}{\sum(true positives + false positives)}
-    This metric is for multiclass classifications, i.e., both predictions and labels are arrays of multiple whole numbers.
+    This metric is for classification, i.e., both predictions and labels are arrays of multiple whole numbers.
 
     Usage:
 
@@ -262,20 +278,23 @@ class MulticlassPrecision(ConfusionMatrix):
     """
 
     @property
-    def value(self) -> dict:
+    def value(self) -> Union[dict, float]:
         '''Get precision score for each class.
             Returns:
-                Precision score for each class (dict).
+                Precision score for each class or the average precision if `num_classes` == 2.
         '''
-        cm = self._cumsum
-        precs = {}
-
-        for c in range(self.num_classes):
-            tp = cm[c,c]
-            fp = sum(cm[:, c]) - tp
-            precs[c] = tp/(tp+fp)
         if self._count > 0:
-            return precs
+            cm = self._cumsum
+            precs = {}
+
+            for c in range(self.num_classes):
+                tp = cm[c,c]
+                fp = sum(cm[:, c]) - tp
+                precs[c] = tp/(tp+fp)
+            if self.num_classes == 2:
+                return precs[1]
+            else:
+                return precs
         else:
             return None
 
@@ -379,6 +398,98 @@ class MAE(Accumulator):
         else:
             return None
 
+class HitsAtK(Accumulator):
+    """Hits@K Metric.
+    Hits@K = #TODO Fill in Formula
+
+    This metric is used in link prediction tasks, i.e. determining if two vertices have an edge between them.
+    Also known as Precsion@K.
+
+    Usage:
+
+    * Call the update function to add predictions and labels.
+    * Get Hits@K value at any point by accessing the value property.
+
+    Args:
+        k (int):
+            Number of classes in your classification task.
+    """
+    def __init__(self, k:int) -> None:
+        super().__init__()
+        self.k = k
+
+    def update(self, preds: ndarray, labels: ndarray) -> None:
+        """Add predictions and labels to be compared.
+
+        Args:
+            preds (ndarray): 
+                Array of predicted labels.
+            labels (ndarray): 
+                Array of true labels.
+        """
+        assert len(preds) == len(
+            labels
+        ), "The lists of predictions and labels must have same length"
+        top_indices = np.argsort(preds.detach().numpy())[:self.k]
+        self._cumsum += float(labels[top_indices].sum())
+        self._count += int(self.k)
+
+    @property
+    def value(self) -> float:
+        '''Get Hits@K score.
+            Returns:
+                Hits@K value (float).
+        '''
+        if self._count > 0:
+            return self.mean
+        else:
+            return None
+
+class RecallAtK(Accumulator):
+    """Recall@K Metric.
+    Recall@K = #TODO Fill in Formula
+
+    This metric is used in link prediction tasks, i.e. determining if two vertices have an edge between them
+
+    Usage:
+
+    * Call the update function to add predictions and labels.
+    * Get Recall@K value at any point by accessing the value property.
+
+    Args:
+        k (int):
+            Number of classes in your classification task.
+    """
+    def __init__(self, k:int) -> None:
+        super().__init__()
+        self.k = k
+
+    def update(self, preds: ndarray, labels: ndarray) -> None:
+        """Add predictions and labels to be compared.
+
+        Args:
+            preds (ndarray): 
+                Array of predicted labels.
+            labels (ndarray): 
+                Array of true labels.
+        """
+        assert len(preds) == len(
+            labels
+        ), "The lists of predictions and labels must have same length"
+        top_indices = np.argsort(preds.detach().numpy())[:self.k]
+        self._cumsum += float(labels[top_indices].sum())
+        self._count += int(labels.sum())
+
+    @property
+    def value(self) -> float:
+        '''Get Recall@K score.
+            Returns:
+                Recall@K value (float).
+        '''
+        if self._count > 0:
+            return self.mean
+        else:
+            return None
 
 class BaseMetrics():
     def __init__(self):
@@ -404,12 +515,8 @@ class ClassificationMetrics(BaseMetrics):
         super().reset_metrics()
         self.accuracy = Accuracy()
         self.confusion_matrix = ConfusionMatrix(self.num_classes)
-        if self.num_classes > 2:
-            self.precision = MulticlassPrecision(self.num_classes)
-            self.recall = MulticlassRecall(self.num_classes)
-        else:
-            self.precision = BinaryPrecision()
-            self.recall = BinaryRecall()
+        self.precision = Precision(self.num_classes)
+        self.recall = Recall(self.num_classes)
 
     def update_metrics(self, loss, out, batch, target_type=None):
         super().update_metrics(loss, out, batch)
@@ -458,24 +565,26 @@ class RegressionMetrics(BaseMetrics):
 
 
 class LinkPredictionMetrics(BaseMetrics):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, k):
+        self.k = k
+        super(LinkPredictionMetrics, self).__init__()
         self.reset_metrics()
 
     def reset_metrics(self):
         super().reset_metrics()
-        self.precision_at_1 = BinaryPrecision()
-        self.recall_at_1 = BinaryRecall()
+        self.recall_at_k = RecallAtK(self.k)
+        self.hits_at_k = HitsAtK(self.k)
 
     def update_metrics(self, loss, out, batch, target_type=None):
         super().update_metrics(loss, out, batch)
-        self.precision_at_1.update(out, batch.y)
-        self.recall_at_1.update(out, batch.y)
+        self.recall_at_k.update(out, batch.y)
+        self.hits_at_k.update(out, batch.y)
 
     def get_metrics(self):
         super_met = super().get_metrics()
-        metrics = {"precision_at_1": self.precision_at_1.value,
-                   "recall_at_1": self.recall_at_1.value}
+        metrics = {"recall_at_k": self.recall_at_k.value,
+                   "hits_at_k": self.hits_at_k.value,
+                   "k": self.k}
         metrics.update(super_met)
         return metrics
 
