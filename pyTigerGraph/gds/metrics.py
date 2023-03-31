@@ -323,7 +323,7 @@ class MSE(Accumulator):
             labels
         ), "The lists of predictions and labels must have same length"
         self._cumsum += float(((preds - labels)**2).sum())
-        self._count += int(preds.sum())
+        self._count += int(len(preds))
 
     @property
     def value(self) -> float:
@@ -348,6 +348,8 @@ class RMSE(MSE):
     * Call the update function to add predictions and labels.
     * Get RMSE score at any point by accessing the value property.
     """
+    def __init__(self):
+        super().__init__()
 
     @property
     def value(self) -> float:
@@ -356,7 +358,7 @@ class RMSE(MSE):
                 RMSE value (float).
         '''
         if self._count > 0:
-            return self.mean**.5
+            return (self.mean)**.5
         else:
             return None
 
@@ -385,7 +387,7 @@ class MAE(Accumulator):
             labels
         ), "The lists of predictions and labels must have same length"
         self._cumsum += float(abs((preds - labels)).sum())
-        self._count += int(preds.sum())
+        self._count += int(len(preds))
 
     @property
     def value(self) -> float:
@@ -430,7 +432,7 @@ class HitsAtK(Accumulator):
         assert len(preds) == len(
             labels
         ), "The lists of predictions and labels must have same length"
-        top_indices = np.argsort(preds.detach().numpy())[:self.k]
+        top_indices = preds.argsort()[::-1][:self.k]
         self._cumsum += float(labels[top_indices].sum())
         self._count += int(self.k)
 
@@ -476,7 +478,7 @@ class RecallAtK(Accumulator):
         assert len(preds) == len(
             labels
         ), "The lists of predictions and labels must have same length"
-        top_indices = np.argsort(preds.detach().numpy())[:self.k]
+        top_indices = preds.argsort()[::-1][:self.k]
         self._cumsum += float(labels[top_indices].sum())
         self._count += int(labels.sum())
 
