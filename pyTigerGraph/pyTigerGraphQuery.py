@@ -160,6 +160,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
                 See xref:tigergraph-server:API:built-in-endpoints#_specify_thread_limit[Thread limit]
             memoryLimit:
                 Specify a limit to the amount of memory consumed by the query (in MB). If the limit is exceeded, the query will abort automatically.
+                Supported in database versions >= 3.8.
                 See xref:tigergraph-server:system-management:memory-management#_by_http_header[Memory limit]
 
         Returns:
