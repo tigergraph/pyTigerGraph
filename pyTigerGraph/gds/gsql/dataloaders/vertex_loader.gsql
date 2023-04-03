@@ -6,7 +6,7 @@ CREATE DISTRIBUTED QUERY vertex_loader_{QUERYSUFFIX}(
     STRING filter_by,
     SET<STRING> v_types,
     STRING delimiter,
-    STRING kafka_address,
+    STRING kafka_address="",
     STRING kafka_topic,
     INT kafka_topic_partitions=1,
     STRING kafka_max_size="104857600",
@@ -55,7 +55,7 @@ CREATE DISTRIBUTED QUERY vertex_loader_{QUERYSUFFIX}(
     OrAccum @prev_sampled;
 
     # Initialize Kafka producer
-    IF kafka_address IS NOT NULL THEN
+    IF kafka_address != "" THEN
         producer = init_kafka_producer(
             kafka_address, kafka_max_size, security_protocol, 
             sasl_mechanism, sasl_username, sasl_password, ssl_ca_location,
@@ -131,7 +131,7 @@ CREATE DISTRIBUTED QUERY vertex_loader_{QUERYSUFFIX}(
                         {VERTEXATTRS};
         END;
         
-        IF kafka_address IS NOT NULL THEN
+        IF kafka_address != "" THEN
             # Write to kafka
             kafka_errcode = write_to_kafka(producer, kafka_topic, batch_id%kafka_topic_partitions, "vertex_batch_" + stringify(batch_id), @@v_batch);
             IF kafka_errcode!=0 THEN 
@@ -142,7 +142,7 @@ CREATE DISTRIBUTED QUERY vertex_loader_{QUERYSUFFIX}(
             PRINT @@v_batch AS vertex_batch;  
         END;
     END;
-    IF kafka_address IS NOT NULL THEN
+    IF kafka_address != "" THEN
         kafka_errcode = close_kafka_producer(producer, kafka_timeout);
         IF kafka_errcode!=0 THEN 
             @@kafka_error += ("Error shutting down Kafka producer: " + stringify(kafka_errcode) + "\n");
