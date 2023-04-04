@@ -323,7 +323,7 @@ class MSE(Accumulator):
             labels
         ), "The lists of predictions and labels must have same length"
         self._cumsum += float(((preds - labels)**2).sum())
-        self._count += int(len(preds))
+        self._count += len(preds)
 
     @property
     def value(self) -> float:
@@ -387,7 +387,7 @@ class MAE(Accumulator):
             labels
         ), "The lists of predictions and labels must have same length"
         self._cumsum += float(abs((preds - labels)).sum())
-        self._count += int(len(preds))
+        self._count += len(preds)
 
     @property
     def value(self) -> float:
@@ -414,7 +414,7 @@ class HitsAtK(Accumulator):
 
     Args:
         k (int):
-            Number of classes in your classification task.
+            Top k number of entities to compare.
     """
     def __init__(self, k:int) -> None:
         super().__init__()
@@ -460,7 +460,7 @@ class RecallAtK(Accumulator):
 
     Args:
         k (int):
-            Number of classes in your classification task.
+            Top k number of entities to compare.
     """
     def __init__(self, k:int) -> None:
         super().__init__()

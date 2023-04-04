@@ -216,5 +216,16 @@ class TestGDSConfusionMatrix(unittest.TestCase):
         measure.update(preds, truth)
         self.assertEqual(measure.value.values[1,1], 2)
 
+    def test_update_multiclass(self):
+        measure = ConfusionMatrix(num_classes=4)
+        preds = np.array([1, 1, 3, 2])
+        truth = np.array([1, 0, 3, 0])
+        measure.update(preds, truth)
+        self.assertEqual(measure.value.values[3,3], 1)
+        preds = np.array([1, 1])
+        truth = np.array([1, 0])
+        measure.update(preds, truth)
+        self.assertEqual(measure.value.values[1,1], 2)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2, failfast=True)
