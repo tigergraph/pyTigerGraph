@@ -73,8 +73,20 @@ class test_pyTigerGraphVertex(unittest.TestCase):
 
         with self.assertRaises(TigerGraphException) as tge:
             self.conn.getVertexCount("non_existing_vertex_type")
-        self.assertEqual("REST-30000", tge.exception.code)
-        # self.assertEqual("GSQL-7004", tge.exception.code)  # TODO use with /builtins/
+        # self.assertEqual("REST-30000", tge.exception.code)
+        self.assertEqual("GSQL-7004", tge.exception.code)
+
+        res = self.conn.getVertexCount("*", realtime=True)
+        self.assertIsInstance(res, dict)
+        self.assertEqual(7, len(res))
+        self.assertIn("vertex4", res)
+        self.assertEqual(5, res["vertex4"])
+        self.assertIn("vertex1_all_types", res)
+        self.assertEqual(0, res["vertex1_all_types"])
+
+        res = self.conn.getVertexCount("vertex4", realtime=True)
+        self.assertIsInstance(res, int)
+        self.assertEqual(5, res)
 
     def test_04_upsertVertex(self):
         res = self.conn.upsertVertex("vertex4", 100, {"a01": 100})
