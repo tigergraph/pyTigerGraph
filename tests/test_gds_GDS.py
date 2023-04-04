@@ -28,6 +28,24 @@ class TestGDSDataLoaders(unittest.TestCase):
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
         self.assertEqual(loader.num_batches, 9)
 
+    def test_neighborLoader_multiple_filters(self):
+        loaders = self.conn.gds.neighborLoader(
+            v_in_feats=["x"],
+            v_out_labels=["y"],
+            v_extra_feats=["train_mask", "val_mask", "test_mask"],
+            batch_size=16,
+            num_neighbors=10,
+            num_hops=2,
+            shuffle=True,
+            filter_by=["train_mask", "val_mask", "test_mask"],
+            output_format="PyG",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4,
+        )
+        self.assertTrue(is_query_installed(self.conn, loaders[0].query_name))
+        self.assertEqual(len(loaders), 3)
+
     def test_graphLoader(self):
         loader = self.conn.gds.graphLoader(
             v_in_feats=["x"],
@@ -169,6 +187,7 @@ class TestGDSDataLoaders(unittest.TestCase):
 if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(TestGDSDataLoaders("test_neighborLoader"))
+    suite.addTest(TestGDSDataLoaders("test_neighborLoader_multiple_filters"))
     suite.addTest(TestGDSDataLoaders("test_graphLoader"))
     suite.addTest(TestGDSDataLoaders("test_vertexLoader"))
     suite.addTest(TestGDSDataLoaders("test_edgeLoader"))
