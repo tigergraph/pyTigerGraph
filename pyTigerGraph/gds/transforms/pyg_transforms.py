@@ -62,7 +62,12 @@ class TemporalPyGTransform(BasePyGTransform):
         except:
             raise Exception("PyTorch Geometric required to use PyG models. Please install PyTorch Geometric")
 
-    def __call__(self, data):
+    def __call__(self, data) -> list:
+        """ Perform the transform. Returns a list of PyTorch Geometric data objects, a sequence of snapshots in time of the graph.
+            Args:
+                data (pyg.data.HeteroData or pyg.data.Data):
+                    Takes in a PyTorch Geometric data object, such as ones produced by the dataloaders.   
+        """
         import torch_geometric as pyg
         import torch
         if isinstance(data, pyg.data.HeteroData):
