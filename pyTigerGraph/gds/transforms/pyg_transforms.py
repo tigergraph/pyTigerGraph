@@ -6,15 +6,46 @@ class BasePyGTransform():
         return f'{self.__class__.__name__}()'
 
 class TemporalPyGTransform(BasePyGTransform):
+    """ The TemporalPyGTransform creates a sequence of subgraph batches out of a single batch of data produced by a NeighborLoader or HGTLoader.
+        It assumes that there are datetime attributes on vertices and edges. If vertex attributes change over time, children vertex attributes
+        are moved to the appropriate parent, and then the children are removed from the graph.
+
+        Args:
+            vertex_start_attrs (dict):
+                Dictionary that describes the attribute storing the timestamp of when a vertex becomes a valid vertex to include in the graph.
+                In the format of {"VERTEX_TYPE": "attribute_name"}.
+            vertex_end_attrs (dict):
+                Dictionary that describes the attribute storing the timestamp of when a vertex stops being a valid vertex to include in the graph.
+                In the format of {"VERTEX_TYPE": "attribute_name"}
+            edge_start_attrs (dict):
+                Dictionary that describes the attribute storing the timestamp of when a edge becomes a valid edge to include in the graph.
+                Uses the PyG edge format of ("SourceVertexType", "EdgeName", "DestinationVertexType").
+                In the format of {("SourceVertexType", "EdgeName", "DestinationVertexType"): "attribute_name"}.
+            edge_end_attrs (dict):
+                Dictionary that describes the attribute storing the timestamp of when a edge stops being a valid edge to include in the graph.
+                Uses the PyG edge format of ("SourceVertexType", "EdgeName", "DestinationVertexType").
+                In the format of {("SourceVertexType", "EdgeName", "DestinationVertexType"): "attribute_name"}
+            start_dt (int):
+                The UNIX epoch time to start generating the sequence of subgraphs.
+            end_dt (int):
+                The UNIX epoch time to stop generating the sequence of subgraphs.
+            feature_transforms (dict, optional):
+                Only available on heterogeneous graphs. Moves temporally dynamic features from "children" vertices to "parent" vertices when
+                modelling temporal attributes in TigerGraph. 
+                The key of the dictionary is the edge to move the attributes from the child type to the parent type, and the value is a list of attributes to move.
+                In the fromat of {("ItemInstance", "reverse_DESCRIBED_BY", "Item"): ["x"]}
+            timestep (int, optional):
+                The number of seconds to use in between timesteps. Defaults to 86400 seconds (1 day).
+    """
     def __init__(self,
                  vertex_start_attrs: dict,
                  vertex_end_attrs: dict,
                  edge_start_attrs: dict,
                  edge_end_attrs: dict,
-                 feature_transforms: dict,
                  start_dt: int,
                  end_dt: int,
-                 timestep=1):
+                 feature_transforms: dict = {},
+                 timestep: int = 86400):
         self.vertex_start = vertex_start_attrs
         self.vertex_end = vertex_end_attrs
         self.edge_start = edge_start_attrs
@@ -23,14 +54,17 @@ class TemporalPyGTransform(BasePyGTransform):
         self.start_dt = start_dt
         self.end_dt = end_dt,
         self.timestep = timestep
-
-    def __call__(self, data):
         try:
             import torch_geometric as pyg
             import torch
+            if (int(pyg.__version__.split(".")[1]) < 3 and int(pyg.__version__.split(".")[0]) == 2) or int(pyg.__version__.split(".")[0]) < 2:
+                raise Exception("PyTorch Geometric version must be 2.3.0 or greater")
         except:
             raise Exception("PyTorch Geometric required to use PyG models. Please install PyTorch Geometric")
 
+    def __call__(self, data):
+        import torch_geometric as pyg
+        import torch
         if isinstance(data, pyg.data.HeteroData):
             sequence = []
             for i in range(self.start_dt, self.end_dt, self.timestep):
