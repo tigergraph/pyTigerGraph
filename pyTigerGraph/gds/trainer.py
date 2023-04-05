@@ -43,23 +43,26 @@ class PrinterCallback(BaseCallback):
         pass
 
     def on_train_step_end(self, trainer):
-        print(trainer.train_step_metrics)
+        print(trainer.get_train_step_metrics())
 
     def on_eval_end(self, trainer):
-        print(trainer.eval_global_metrics)
+        print(trainer.get_eval_metrics())
         
 
 class DefaultCallback(BaseCallback):
-    def __init__(self, output_dir="./logs"):
-        try:
-            from tqdm import tqdm
-            self.tqdm = tqdm
-            self.epoch_bar = None
-            self.batch_bar = None
-            self.valid_bar = None
-        except:
-            self.tqdm = None
-            warnings.warn("tqdm not installed. Please install tqdm if progress bar support is desired.")
+    def __init__(self, output_dir="./logs", use_tqdm=True):
+        if use_tqdm:
+            try:
+                from tqdm import tqdm
+                self.tqdm = tqdm
+                self.epoch_bar = None
+                self.batch_bar = None
+                self.valid_bar = None
+            except:
+                self.tqdm = None
+                warnings.warn("tqdm not installed. Please install tqdm if progress bar support is desired.")
+        else:
+            self.tqdm = False
         self.output_dir = output_dir
         self.best_loss = float("inf")
         os.makedirs(self.output_dir, exist_ok=True)
@@ -90,8 +93,9 @@ class DefaultCallback(BaseCallback):
         trainer.update_train_step_metrics({"global_step": trainer.cur_step})
         trainer.update_train_step_metrics({"epoch": int(trainer.cur_step/trainer.train_loader.num_batches)})
         logger.info("train_step:"+str(trainer.get_train_step_metrics()))
-        if self.batch_bar:
-            self.batch_bar.update(1)
+        if self.tqdm:
+            if self.batch_bar:
+                self.batch_bar.update(1)
 
     def on_eval_start(self, trainer):
         trainer.reset_eval_metrics()
@@ -114,9 +118,10 @@ class DefaultCallback(BaseCallback):
         for metric in trainer.metrics:
             metric.reset_metrics()
         trainer.model.train()
-        if self.valid_bar:
-            self.valid_bar.close()
-            self.valid_bar = None
+        if self.tqdm:
+            if self.valid_bar:
+                self.valid_bar.close()
+                self.valid_bar = None
 
     def on_epoch_end(self, trainer):
         if self.tqdm:
@@ -158,6 +163,8 @@ class Trainer():
             self.metrics.append(self.model.metrics)
         else:
             self.metrics.append(BaseMetrics())
+        self.reset_eval_metrics()
+        self.reset_train_step_metrics()
         optimizer_kwargs["params"] = self.model.parameters()
         if optimizer:
             self.optimizer = optimizer(**optimizer_kwargs)

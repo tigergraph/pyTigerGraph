@@ -30,11 +30,11 @@ class TestingCallback(BaseCallback):
 
     def on_train_step_end(self, trainer):
         logger = logging.getLogger(__name__)
-        logger.info("train_step:"+str(trainer.train_step_metrics))
+        logger.info("train_step:"+str(trainer.get_train_step_metrics()))
 
     def on_eval_end(self, trainer):
         logger = logging.getLogger(__name__)
-        logger.info("evaluation:"+str(trainer.eval_global_metrics))
+        logger.info("evaluation:"+str(trainer.get_eval_metrics()))
 
     def on_epoch_end(self, trainer):
         trainer.eval()
