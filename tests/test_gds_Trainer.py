@@ -30,7 +30,7 @@ class TestingCallback(BaseCallback):
 
     def on_train_step_end(self, trainer):
         logger = logging.getLogger(__name__)
-        logger.info("train_step:"+str(trainer.train_step_metrics()))
+        logger.info("train_step:"+str(trainer.get_train_step_metrics()))
 
     def on_eval_end(self, trainer):
         logger = logging.getLogger(__name__)

@@ -43,10 +43,10 @@ class PrinterCallback(BaseCallback):
         pass
 
     def on_train_step_end(self, trainer):
-        print(trainer.train_step_metrics)
+        print(trainer.get_train_step_metrics())
 
     def on_eval_end(self, trainer):
-        print(trainer.eval_global_metrics)
+        print(trainer.get_eval_metrics())
         
 
 class DefaultCallback(BaseCallback):
