@@ -43,23 +43,26 @@ class PrinterCallback(BaseCallback):
         pass
 
     def on_train_step_end(self, trainer):
-        print(trainer.train_step_metrics)
+        print(trainer.get_train_step_metrics())
 
     def on_eval_end(self, trainer):
-        print(trainer.eval_global_metrics)
+        print(trainer.get_eval_metrics())
         
 
 class DefaultCallback(BaseCallback):
-    def __init__(self, output_dir="./logs"):
-        try:
-            from tqdm import tqdm
-            self.tqdm = tqdm
-            self.epoch_bar = None
-            self.batch_bar = None
-            self.valid_bar = None
-        except:
-            self.tqdm = None
-            warnings.warn("tqdm not installed. Please install tqdm if progress bar support is desired.")
+    def __init__(self, output_dir="./logs", use_tqdm=True):
+        if use_tqdm:
+            try:
+                from tqdm import tqdm
+                self.tqdm = tqdm
+                self.epoch_bar = None
+                self.batch_bar = None
+                self.valid_bar = None
+            except:
+                self.tqdm = None
+                warnings.warn("tqdm not installed. Please install tqdm if progress bar support is desired.")
+        else:
+            self.tqdm = False
         self.output_dir = output_dir
         self.best_loss = float("inf")
         os.makedirs(self.output_dir, exist_ok=True)
@@ -82,26 +85,43 @@ class DefaultCallback(BaseCallback):
 
     def on_train_step_end(self, trainer):
         logger = logging.getLogger(__name__)
-        logger.info("train_step:"+str(trainer.train_step_metrics))
-        if self.batch_bar:
-            self.batch_bar.update(1)
+        trainer.reset_train_step_metrics()
+        for metric in trainer.metrics:
+            metric.update_metrics(trainer.loss, trainer.out, trainer.batch, target_type=trainer.target_type)
+            trainer.update_train_step_metrics(metric.get_metrics())
+            metric.reset_metrics()
+        trainer.update_train_step_metrics({"global_step": trainer.cur_step})
+        trainer.update_train_step_metrics({"epoch": int(trainer.cur_step/trainer.train_loader.num_batches)})
+        logger.info("train_step:"+str(trainer.get_train_step_metrics()))
+        if self.tqdm:
+            if self.batch_bar:
+                self.batch_bar.update(1)
 
     def on_eval_start(self, trainer):
+        trainer.reset_eval_metrics()
         if self.tqdm:
             if not(self.valid_bar):
                 self.valid_bar = self.tqdm(desc="Eval Batches", total=trainer.eval_loader.num_batches)
 
     def on_eval_step_end(self, trainer):
+        for metric in trainer.metrics:
+            metric.update_metrics(trainer.loss, trainer.out, trainer.batch, target_type=trainer.target_type)
         if self.tqdm:
             if self.valid_bar:
                 self.valid_bar.update(1)
 
     def on_eval_end(self, trainer):
         logger = logging.getLogger(__name__)
-        logger.info("evaluation:"+str(trainer.eval_global_metrics))
-        if self.valid_bar:
-            self.valid_bar.close()
-            self.valid_bar = None
+        for metric in trainer.metrics:
+            trainer.update_eval_metrics(metric.get_metrics())
+        logger.info("evaluation:"+str(trainer.get_eval_metrics()))
+        for metric in trainer.metrics:
+            metric.reset_metrics()
+        trainer.model.train()
+        if self.tqdm:
+            if self.valid_bar:
+                self.valid_bar.close()
+                self.valid_bar = None
 
     def on_epoch_end(self, trainer):
         if self.tqdm:
@@ -143,6 +163,8 @@ class Trainer():
             self.metrics.append(self.model.metrics)
         else:
             self.metrics.append(BaseMetrics())
+        self.reset_eval_metrics()
+        self.reset_train_step_metrics()
         optimizer_kwargs["params"] = self.model.parameters()
         if optimizer:
             self.optimizer = optimizer(**optimizer_kwargs)
@@ -163,10 +185,32 @@ class Trainer():
                 self.callbacks.append(callback)
             else:
                 self.callbacks.append(callback)
-
         for callback in self.callbacks:
             callback.on_init_end(trainer=self)
 
+    def update_train_step_metrics(self, metrics):
+        self.train_step_metrics.update(metrics)
+
+    def get_train_step_metrics(self):
+        if self.train_step_metrics:
+            return self.train_step_metrics
+        else:
+            return {}
+
+    def reset_train_step_metrics(self):
+        self.train_step_metrics = {}
+
+    def update_eval_metrics(self, metrics):
+        self.eval_metrics = metrics
+
+    def get_eval_metrics(self):
+        if self.eval_metrics:
+            return self.eval_metrics
+        else:
+            return {}
+
+    def reset_eval_metrics(self):
+        self.eval_metrics = {}
 
     def train(self, num_epochs=None, max_num_steps=None):
         if num_epochs:
@@ -174,31 +218,25 @@ class Trainer():
         else:
             self.max_num_steps = max_num_steps
         self.num_epochs = num_epochs
-        cur_step = 0
-        while cur_step < self.max_num_steps:
+        self.cur_step = 0
+        while self.cur_step < self.max_num_steps:
             for callback in self.callbacks:
                 callback.on_epoch_start(trainer=self)
             for batch in self.train_loader:
-                if cur_step >= self.max_num_steps:
+                if self.cur_step >= self.max_num_steps:
                     break
                 for callback in self.callbacks:
                     callback.on_train_step_start(trainer=self)
-                out = self.model(batch, tgt_type=self.target_type)
-                loss = self.model.compute_loss(out,
+                self.out = self.model(batch, tgt_type=self.target_type)
+                self.batch = batch
+                self.loss = self.model.compute_loss(self.out,
                                                batch,
                                                target_type = self.target_type,
                                                loss_fn = self.loss_fn)
                 self.optimizer.zero_grad()
-                loss.backward()
+                self.loss.backward()
                 self.optimizer.step()
-                self.train_step_metrics = {}
-                for metric in self.metrics:
-                    metric.update_metrics(loss, out, batch, target_type=self.target_type)
-                    self.train_step_metrics.update(metric.get_metrics())
-                    self.train_step_metrics["global_step"] = cur_step
-                    self.train_step_metrics["epoch"] = int(cur_step/self.train_loader.num_batches)
-                    metric.reset_metrics()
-                cur_step += 1
+                self.cur_step += 1
                 for callback in self.callbacks:
                     callback.on_train_step_end(trainer=self)
 
@@ -212,21 +250,13 @@ class Trainer():
         for batch in self.eval_loader:
             for callback in self.callbacks:
                 callback.on_eval_step_start(trainer=self)
-            out = self.model(batch, tgt_type=self.target_type)
-            loss = self.model.compute_loss(out,
+            self.out = self.model(batch, tgt_type=self.target_type)
+            self.batch = batch
+            self.loss = self.model.compute_loss(self.out,
                                         batch,
                                         target_type = self.target_type,
                                         loss_fn = self.loss_fn)
-            for metric in self.metrics:
-                metric.update_metrics(loss, out, batch, target_type=self.target_type)
             for callback in self.callbacks:
                 callback.on_eval_step_end(trainer=self)
-        self.eval_global_metrics = {}
-        for metric in self.metrics:
-            self.eval_global_metrics.update(metric.get_metrics())
         for callback in self.callbacks:
             callback.on_eval_end(trainer=self)
-        if self.metrics:
-            for metric in self.metrics:
-                metric.reset_metrics()
-        self.model.train()

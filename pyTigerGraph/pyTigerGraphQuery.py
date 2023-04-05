@@ -126,7 +126,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
 
     def runInstalledQuery(self, queryName: str, params: Union[str, dict] = None,
             timeout: int = None, sizeLimit: int = None, usePost: bool = False, runAsync: bool = False,
-            replica: int = None, threadLimit: int = None) -> list:
+            replica: int = None, threadLimit: int = None, memoryLimit: int = None) -> list:
         """Runs an installed query.
 
         The query must be already created and installed in the graph.
@@ -158,6 +158,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
             threadLimit:
                 Specify a limit of the number of threads the query is allowed to use on each node of the TigerGraph cluster.
                 See xref:tigergraph-server:API:built-in-endpoints#_specify_thread_limit[Thread limit]
+            memoryLimit:
+                Specify a limit to the amount of memory consumed by the query (in MB). If the limit is exceeded, the query will abort automatically.
+                Supported in database versions >= 3.8.
+                See xref:tigergraph-server:system-management:memory-management#_by_http_header[Memory limit]
 
         Returns:
             The output of the query, a list of output elements (vertex sets, edge sets, variables,
@@ -202,6 +206,8 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
             headers["GSQL-REPLICA"] = str(replica)
         if threadLimit:
             headers["GSQL-THREAD-LIMIT"] = str(threadLimit) 
+        if memoryLimit:
+            headers["GSQL-QueryLocalMemLimitMB"] = str(memoryLimit)
 
         if usePost:
             ret = self._post(self.restppUrl + "/query/" + self.graphname + "/" + queryName,

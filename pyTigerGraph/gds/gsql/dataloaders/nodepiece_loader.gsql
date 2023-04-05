@@ -12,6 +12,7 @@ CREATE DISTRIBUTED QUERY nodepiece_loader_{QUERYSUFFIX}(
   INT max_distance,
   INT max_anchors,
   INT max_rel_context,
+  INT batch_size,
   INT num_batches=1,
   BOOL shuffle=FALSE,
   STRING delimiter,
@@ -21,17 +22,21 @@ CREATE DISTRIBUTED QUERY nodepiece_loader_{QUERYSUFFIX}(
   STRING sasl_mechanism,
   STRING sasl_username,
   STRING sasl_password,
-  STRING ssl_ca_location) SYNTAX v1{ 
+  STRING ssl_ca_location,
+  INT num_heap_inserts=10) SYNTAX v1{ 
     TYPEDEF TUPLE<INT v_id, INT distance> Distance_Tuple;
+    TYPEDEF TUPLE<INT tmp_id, VERTEX v> ID_Tuple;
     INT num_vertices;
     INT temp_v;
     INT temp_e;
+    INT batch_s;
     SumAccum<INT> @tmp_id;
     SumAccum<STRING> @@kafka_error;
     SetAccum<VERTEX> @next_pass, @to_pass, @received;
     HeapAccum<Distance_Tuple> (max_anchors, distance ASC) @token_heap;
     SumAccum<STRING> @rel_context_set;
     SumAccum<STRING> @ancs;
+    OrAccum @prev_sampled;
 
     MapAccum<VERTEX, SumAccum<INT>> @@token_count;
     MapAccum<INT, MinAccum<INT>> @conv_map;
@@ -68,6 +73,9 @@ CREATE DISTRIBUTED QUERY nodepiece_loader_{QUERYSUFFIX}(
            WHERE s.getAttr(anchor_attr, "BOOL")
            POST-ACCUM s.@token_heap += Distance_Tuple(getvid(s), 0);
         start = {seed_types};
+        IF filter_by IS NOT NULL THEN
+            start = SELECT s FROM start:s WHERE s.getAttr(filter_by, "BOOL");
+        END;
         IF shuffle THEN
             num_vertices = start.size();
             res = SELECT s 
@@ -87,22 +95,50 @@ CREATE DISTRIBUTED QUERY nodepiece_loader_{QUERYSUFFIX}(
                   END;
         END;
     END;
+    IF batch_size IS NULL THEN
+      batch_s = ceil(res.size()/num_batches);
+    ELSE  
+      batch_s = batch_size;
+    END;
     FOREACH batch_id IN RANGE[0, num_batches-1] DO
       SumAccum<STRING> @@v_batch;
       SetAccum<VERTEX> @@printed_vertices;
+      SetAccum<VERTEX> @@seeds;
       # Get batch seeds
       IF input_vertices.size()==0 THEN
         start = {seed_types};
+        HeapAccum<ID_Tuple> (1, tmp_id ASC) @@batch_heap;
+        @@batch_heap.resize(batch_s);
         IF filter_by IS NOT NULL THEN
-          seeds = SELECT s 
-                  FROM start:s 
-                  WHERE s.getAttr(filter_by, "BOOL") and s.@tmp_id % num_batches == batch_id
-                  ACCUM @@printed_vertices += s;
+            FOREACH iter IN RANGE[0,num_heap_inserts-1] DO 
+              _verts = SELECT s FROM start:s
+                      WHERE s.@tmp_id % num_heap_inserts == iter AND NOT s.@prev_sampled AND s.getAttr(filter_by, "BOOL")
+                      POST-ACCUM @@batch_heap += ID_Tuple(s.@tmp_id, s);
+            END;
+            FOREACH elem IN @@batch_heap DO
+              @@seeds += elem.v;
+            END;
+            seeds = {@@seeds};
+            seeds = SELECT s 
+                    FROM seeds:s 
+                    POST-ACCUM 
+                        s.@prev_sampled += TRUE,
+                        @@printed_vertices += s;
         ELSE
-          seeds = SELECT s 
-                  FROM start:s 
-                  WHERE s.@tmp_id % num_batches == batch_id
-                  ACCUM @@printed_vertices += s;
+            FOREACH iter IN RANGE[0,num_heap_inserts-1] DO 
+              _verts = SELECT s FROM start:s
+                        WHERE s.@tmp_id % num_heap_inserts == iter AND NOT s.@prev_sampled
+                        POST-ACCUM @@batch_heap += ID_Tuple(s.@tmp_id, s);
+            END;
+            FOREACH elem IN @@batch_heap DO
+              @@seeds += elem.v;
+            END;
+            seeds = {@@seeds};
+            seeds = SELECT s 
+                    FROM start:s
+                    POST-ACCUM
+                        s.@prev_sampled += TRUE,
+                        @@printed_vertices += s;
         END;
       ELSE
         start = input_vertices;
