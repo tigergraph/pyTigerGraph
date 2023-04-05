@@ -163,6 +163,8 @@ class Trainer():
             self.metrics.append(self.model.metrics)
         else:
             self.metrics.append(BaseMetrics())
+        self.reset_eval_metrics()
+        self.reset_train_step_metrics()
         optimizer_kwargs["params"] = self.model.parameters()
         if optimizer:
             self.optimizer = optimizer(**optimizer_kwargs)
