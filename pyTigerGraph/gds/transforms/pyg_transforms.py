@@ -11,18 +11,22 @@ class TemporalPyGTransform(BasePyGTransform):
         are moved to the appropriate parent, and then the children are removed from the graph.
 
         Args:
-            vertex_start_attrs (dict):
-                Dictionary that describes the attribute storing the timestamp of when a vertex becomes a valid vertex to include in the graph.
+            vertex_start_attrs (str, dict):
+                If using on a homogeneous graph, string of the attribute storing the timestamp of when a vertex becomes valid to include.
+                If using on a heterogenous graph, dictionary that describes the attribute storing the timestamp of when a vertex becomes a valid vertex to include in the graph.
                 In the format of {"VERTEX_TYPE": "attribute_name"}.
-            vertex_end_attrs (dict):
-                Dictionary that describes the attribute storing the timestamp of when a vertex stops being a valid vertex to include in the graph.
+            vertex_end_attrs (str, dict):
+                If using on a homogeneous graph, string of the attribute storing the timestamp of when a vertex stops being valid to include.
+                If using on a heterogenous graph, dictionary that describes the attribute storing the timestamp of when a vertex stops being a valid vertex to include in the graph.
                 In the format of {"VERTEX_TYPE": "attribute_name"}
-            edge_start_attrs (dict):
-                Dictionary that describes the attribute storing the timestamp of when a edge becomes a valid edge to include in the graph.
+            edge_start_attrs (str, dict):
+                If using on a homogeneous graph, string of the attribute storing the timestamp of when an edge becomes valid to include.
+                If using on a heterogenous graph, dictionary that describes the attribute storing the timestamp of when an edge becomes a valid edge to include in the graph.
                 Uses the PyG edge format of ("SourceVertexType", "EdgeName", "DestinationVertexType").
                 In the format of {("SourceVertexType", "EdgeName", "DestinationVertexType"): "attribute_name"}.
-            edge_end_attrs (dict):
-                Dictionary that describes the attribute storing the timestamp of when a edge stops being a valid edge to include in the graph.
+            edge_end_attrs (str, dict):
+                If using on a homogeneous graph, string of the attribute storing the timestamp of when an edge stops being valid to include.
+                If using on a heterogenous graph, dictionary that describes the attribute storing the timestamp of when an edge stops being a valid edge to include in the graph.
                 Uses the PyG edge format of ("SourceVertexType", "EdgeName", "DestinationVertexType").
                 In the format of {("SourceVertexType", "EdgeName", "DestinationVertexType"): "attribute_name"}
             start_dt (int):
@@ -50,9 +54,9 @@ class TemporalPyGTransform(BasePyGTransform):
         self.vertex_end = vertex_end_attrs
         self.edge_start = edge_start_attrs
         self.edge_end = edge_end_attrs
-        self.feat_tr = feature_transforms,
+        self.feat_tr = feature_transforms
         self.start_dt = start_dt
-        self.end_dt = end_dt,
+        self.end_dt = end_dt
         self.timestep = timestep
         try:
             import torch_geometric as pyg
@@ -64,6 +68,8 @@ class TemporalPyGTransform(BasePyGTransform):
 
     def __call__(self, data) -> list:
         """ Perform the transform. Returns a list of PyTorch Geometric data objects, a sequence of snapshots in time of the graph.
+            Edges are removed between vertices that do not have connections at the given time. All vertices are in each snapshot, but are marked
+            as present with the "vertex_present" attribute in the produced data objects.
             Args:
                 data (pyg.data.HeteroData or pyg.data.Data):
                     Takes in a PyTorch Geometric data object, such as ones produced by the dataloaders.   
@@ -125,12 +131,19 @@ class TemporalPyGTransform(BasePyGTransform):
                 raise Exception("No feature transformations are supported on homogeneous data")
             sequence = []
             for i in range(self.start_dt, self.end_dt, self.timestep):
-                copy = data.clone()
-                copy.edge_index = copy.edge_index.T[torch.logical_and(data[self.vertex_start] >= i, data[self.vertex_end] < i+self.timestep)].T
-                if self.edge_start and self.edge_end:
-                    copy.edge_index = copy.edge_index.T[torch.logical_and(data[self.edge_start] >= i, data[self.edge_end] < i+self.timestep)].T
-                copy.vertex_mask = torch.logical_and(data[self.vertex_start] <= i+self.timestep, data[self.vertex_end] > i)
-                sequence.append(copy)
+                v_to_keep = torch.logical_and(data[self.vertex_start] <= i, torch.logical_or(data[self.vertex_end] > i, data[self.vertex_end] == -1))
+                src_idx_to_keep = torch.argwhere(v_to_keep).flatten()
+                dest_idx_to_keep = torch.argwhere(v_to_keep).flatten()
+                edges = data.edge_index
+                filtered_edges = torch.logical_and(torch.tensor([True if i in src_idx_to_keep else False for i in edges[0]]), torch.tensor([True if i in dest_idx_to_keep else False for i in edges[1]]))
+                if self.edge_start:
+                    filtered_edges = torch.logical_and(filtered_edges, data[self.edge_start] <= i)
+                if self.edge_end:
+                    filtered_edges = torch.logical_and(filtered_edges, data[self.edge_end] >= i)
+                e_to_keep = filtered_edges
+                subgraph = data.edge_subgraph(e_to_keep)
+                subgraph.vertex_present = v_to_keep
+                sequence.append(subgraph)
             return sequence
         else:
             raise Exception("Passed batch of data must be of type torch_geometric.data.Data or torch_geometric.data.HeteroData")
