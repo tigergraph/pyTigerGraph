@@ -156,7 +156,6 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         Returns:
             Returns license details. For an evaluation/trial deployment, returns an information message and -1 remaining days.
 
-        TODO Check if this endpoint was still available.
         """
         logger.info("entry: getLicenseInfo")
 
@@ -178,3 +177,147 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         logger.info("exit: getLicenseInfo")
 
         return ret
+
+    def ping(self) -> dict:
+        """Public health check endpoint.
+
+        Returns:
+            Returns a JSON object with a key of "message" and a value of "pong"
+        """
+        if logger.level == logging.DEBUG:
+            logger.debug("entry: ping")
+        res = self._get(self.gsUrl+"/api/ping")
+        if not res["error"]:
+            if logger.level == logging.DEBUG:
+                logger.debug("exit: ping")
+            return res
+        else:
+            raise TigerGraphException(res["message"], res["code"])
+
+    def getSystemMetrics(self, from_ts:int = None, to_ts:int = None, latest:int = None, what:str = None, who:str = None, where:str = None):
+        """Monitor system usage metrics.
+        
+        Args:
+            from_ts (int, optional):
+                The epoch timestamp that indicates the start of the time filter.
+            to_ts (int, optional):
+                The epoch timestamp that indicates the end of the time filter.
+            latest (int, optional):
+                Number of datapoints to return. If provided, `from_ts` and `to_ts` will be ignored.
+            what (str, optional):
+                Name of the metric to filter for. Possible choices are:
+                * "cpu": Percentage of CPU usage by component
+                * "mem": Memory usage in megabytes by component
+                * "diskspace": Disk usage in megabytes by directory
+                * "network": Network traffic in bytes since the service started
+                * "qps": Number of requests per second by endpoint
+                * "servicestate": The state of the service, either online 1 or offline 0
+                * "connection": Number of open TCP connections
+            who (str, optional):
+                Name of the component that reported the datapoint.
+            where (str, optional):
+                Name of the node that reported the datapoint.
+
+        Returns:
+            JSON object of datapoints collected.
+        """
+        if logger.level == logging.DEBUG:
+            logger.debug("entry: getSystemMetrics")
+        params = {}
+        if from_ts:
+            params["from"] = from_ts
+        if to_ts:
+            params["to"] = to_ts
+        if latest:
+            params["latest"] = latest
+        if what:
+            params["what"] = what
+        if who:
+            params["who"] = who
+        if where:
+            params["where"] = where
+        res = self._get(self.gsUrl+"/ts3/api/datapoints", authMode="pwd", parmas=params)
+        if not res["error"]:
+            if logger.level == logging.DEBUG:
+                logger.debug("exit: getSystemMetrics")
+            return res
+        else:
+            raise TigerGraphException(res["message"], res["code"])
+
+    def getQueryPerformance(self, seconds:int = None):
+        """Returns real-time query performance statistics over the given time period, as specified by the seconds parameter. 
+        
+        Args:
+            seconds (int, optional):
+                Seconds are measured up to 60, so the seconds parameter must be a positive integer less than or equal to 60.
+        """
+        if logger.level == logging.DEBUG:
+            logger.debug("entry: getQueryPerformance")
+        params = {}
+        if seconds:
+            params["seconds"] = seconds
+        res = self._get(self.restppUrl+"/statistics/"+self.graphname, params=params)
+        if not res["error"]:
+            if logger.level == logging.DEBUG:
+                logger.debug("exit: getQueryPerformance")
+            return res
+        else:
+            raise TigerGraphException(res["message"], res["code"])
+
+    def getServiceStatus(self, request_body: dict):
+        """Returns the status of the TigerGraph services specified in the request.
+
+        Args:
+            request_body (dict):
+                Must be formatted as specified here: https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_show_service_status
+        """
+        if logger.level == logging.DEBUG:
+            logger.debug("entry: getServiceStatus")
+        res = self._post(self.gsUrl+"/informant/current-service-status", data=request_body)
+        if not res["error"]:
+            if logger.level == logging.DEBUG:
+                logger.debug("exit: getServiceStatus")
+            return res
+        else:
+            raise TigerGraphException(res["message"], res["code"])
+
+    def rebuildGraph(self, threadnum: int = None, vertextype: str = "", segid: str = "", path: str = "", force: bool = False):
+        """Rebuilds the graph engine immediately. See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_rebuild_graph_engine for more information.
+
+        Args:
+            threadnum (int, optional): 
+                Number of threads to execute the rebuild.
+            vertextype (str, optional):
+                Vertex type to perform the rebuild for. Will perform for all vertex types if not specified.
+            segid (str, optional):
+                Segment ID of the segments to rebuild. If not provided, all segments will be rebuilt. 
+                In general, it is recommneded not to provide this parameter and rebuild all segments.
+            path (str, optional):
+                Path to save the summary of the rebuild to. If not provided, the default path is "/tmp/rebuildnow".
+            force (bool, optional):
+                Boolean value that indicates whether to perform rebuilds for segments for which there are no records of new data.
+                Normally, a rebuild would skip such segments, but if force is set true, the segments will not be skipped.
+        Returns:
+            JSON response with message containing the path to the summary file.
+        """
+        if logger.level == logging.DEBUG:
+            logger.debug("entry: rebuildGraph")
+        params = {}
+        if threadnum:
+            params["threadnum"] = threadnum
+        if vertextype:
+            params["vertextype"] = vertextype
+        if segid:
+            params["segid"] = segid
+        if path:
+            params["path"] = path
+        if force:
+            params["force"] = force
+        res = self._get(self.restppUrl+"/rebuildnow/"+self.graphname, params=params)
+        if not res["error"]:
+            if logger.level == logging.DEBUG:
+                logger.debug("exit: rebuildGraph")
+            return res
+        else:
+            raise TigerGraphException(res["message"], res["code"])
+        
