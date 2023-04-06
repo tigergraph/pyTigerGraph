@@ -264,3 +264,7 @@ class Trainer():
                 callback.on_eval_step_end(trainer=self)
         for callback in self.callbacks:
             callback.on_eval_end(trainer=self)
+
+    def predict(self, batch):
+        self.eval(loader=[batch])
+        return self.out, self.get_eval_metrics()
