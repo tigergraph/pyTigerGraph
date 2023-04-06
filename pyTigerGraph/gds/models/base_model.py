@@ -29,6 +29,6 @@ class BaseModel(torch.nn.Module):
 
     def predict(self, batch):
         if self.trainer:
-            self.trainer.predict(batch)
+            return self.trainer.predict(batch)
         else:
             raise Exception("Model has not been fit yet. Call model.fit() before model.predict()")
