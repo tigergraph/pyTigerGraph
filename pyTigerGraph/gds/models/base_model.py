@@ -24,5 +24,11 @@ class BaseModel(torch.nn.Module):
                                "training_dataloader": training_dataloader,
                                "eval_dataloader": eval_dataloader, 
                                "target_type": target_type})
-        trainer = Trainer(**trainer_kwargs)
-        trainer.train(number_epochs)
+        self.trainer = Trainer(**trainer_kwargs)
+        self.trainer.train(number_epochs)
+
+    def predict(self, batch):
+        if self.trainer:
+            self.trainer.predict(batch)
+        else:
+            raise Exception("Model has not been fit yet. Call model.fit() before model.predict()")
