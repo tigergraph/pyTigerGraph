@@ -1424,9 +1424,25 @@ class GDS:
         self,
         repo: str = None, 
         algo_version: str = None) -> Featurizer:
-        """Get a featurizer.
-            Returns:
-                Featurizer
+        """Get a featurizer. The Featurizer enables installation and execution of algorithms in the Graph Data Science (GDS) libarary. 
+        The Featurizer pulls the most up-to-date version of the algorithm available in our public GitHub repository that is
+        compatible with your database version.
+        Note: In environments not connected to the public internet, you can download the repository manually and use the featurizer
+        like this:
+        ```
+        import pyTigerGraph as tg
+        from pyTigerGraph.gds.featurizer import Featurizer
+
+        conn = tg.TigerGraphConnection(host="HOSTNAME_HERE", username="USERNAME_HERE", password="PASSWORD_HERE", graphname="GRAPHNAME_HERE")
+        conn.getToken(conn.createSecret())
+        feat = Featurizer(conn, repo="PATH/TO/MANUALLY_DOWNLOADED_REPOSITORY")
+
+        res = feat.runAlgorithm("tg_pagerank", params={"v_type": "Paper", "e_type": "CITES"})
+
+        print(res)
+        ```
+        Returns:
+            Featurizer
         """
         return Featurizer(self.conn, repo, algo_version)
 
