@@ -186,7 +186,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         """
         if logger.level == logging.DEBUG:
             logger.debug("entry: ping")
-        res = self._get(self.gsUrl+"/api/ping")
+        res = self._get(self.gsUrl+"/api/ping", resKey="")
         if not res["error"]:
             if logger.level == logging.DEBUG:
                 logger.debug("exit: ping")
@@ -236,13 +236,11 @@ class pyTigerGraphUtils(pyTigerGraphBase):
             params["who"] = who
         if where:
             params["where"] = where
-        res = self._get(self.gsUrl+"/ts3/api/datapoints", authMode="pwd", parmas=params)
-        if not res["error"]:
-            if logger.level == logging.DEBUG:
-                logger.debug("exit: getSystemMetrics")
-            return res
-        else:
-            raise TigerGraphException(res["message"], res["code"])
+        res = self._get(self.gsUrl+"/ts3/api/datapoints", authMode="pwd", params=params, resKey="")
+        if logger.level == logging.DEBUG:
+            logger.debug("exit: getSystemMetrics")
+        return res
+
 
     def getQueryPerformance(self, seconds:int = None):
         """Returns real-time query performance statistics over the given time period, as specified by the seconds parameter. 
@@ -256,13 +254,10 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         params = {}
         if seconds:
             params["seconds"] = seconds
-        res = self._get(self.restppUrl+"/statistics/"+self.graphname, params=params)
-        if not res["error"]:
-            if logger.level == logging.DEBUG:
-                logger.debug("exit: getQueryPerformance")
-            return res
-        else:
-            raise TigerGraphException(res["message"], res["code"])
+        res = self._get(self.restppUrl+"/statistics/"+self.graphname, params=params, resKey="")
+        if logger.level == logging.DEBUG:
+            logger.debug("exit: getQueryPerformance")
+        return res
 
     def getServiceStatus(self, request_body: dict):
         """Returns the status of the TigerGraph services specified in the request.
@@ -273,13 +268,10 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         """
         if logger.level == logging.DEBUG:
             logger.debug("entry: getServiceStatus")
-        res = self._post(self.gsUrl+"/informant/current-service-status", data=request_body)
-        if not res["error"]:
-            if logger.level == logging.DEBUG:
-                logger.debug("exit: getServiceStatus")
-            return res
-        else:
-            raise TigerGraphException(res["message"], res["code"])
+        res = self._post(self.gsUrl+"/informant/current-service-status", data=json.dumps(request_body), resKey="")
+        if logger.level == logging.DEBUG:
+            logger.debug("exit: getServiceStatus")
+        return res
 
     def rebuildGraph(self, threadnum: int = None, vertextype: str = "", segid: str = "", path: str = "", force: bool = False):
         """Rebuilds the graph engine immediately. See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_rebuild_graph_engine for more information.
@@ -313,7 +305,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
             params["path"] = path
         if force:
             params["force"] = force
-        res = self._get(self.restppUrl+"/rebuildnow/"+self.graphname, params=params)
+        res = self._get(self.restppUrl+"/rebuildnow/"+self.graphname, params=params, resKey="")
         if not res["error"]:
             if logger.level == logging.DEBUG:
                 logger.debug("exit: rebuildGraph")
