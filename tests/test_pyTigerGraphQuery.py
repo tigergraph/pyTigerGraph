@@ -100,6 +100,33 @@ class test_pyTigerGraphQuery(unittest.TestCase):
         res = self.conn.checkQueryStatus(q_id)
         self.assertIn("requestid", res[0])
         self.assertEqual(q_id, res[0]["requestid"])
+
+    def test_07_showQuery(self):
+        query = self.conn.showQuery("query1").split("\n")[1]
+        q1 = """CREATE QUERY query1() {
+                SumAccum<INT> @@summa;
+                start = {vertex4.*};
+                res =
+                    SELECT src
+                    FROM   start:src
+                    ACCUM  @@summa += src.a01;
+                PRINT @@summa AS ret;
+                }"""
+        self.assertEqual(query, q1)
+    
+    def test_08_getQueryMetadata(self):
+        query_md = self.conn.getQueryMetadata("query1")
+        self.assertEqual(query_md["output"][0], {"ret": "SumAccum<int>"})
+
+    def test_09_getRunningQueries(self):
+        q_id = self.conn.runInstalledQuery("query1", runAsync=True)
+        rq_id = self.conn.getRunningQueries()["results"][0]["requestid"]
+        self.assertEqual(q_id, rq_id)
+
+    def test_10_abortQuery(self):
+        q_id = self.conn.runInstalledQuery("query1", runAsync=True)
+        abort_ret = self.conn.abortQuery(q_id)
+        self.assertEqual(abort_ret["results"][0]["aborted_queries"][0]["requestid"], q_id)
         
 if __name__ == '__main__':
     unittest.main()
