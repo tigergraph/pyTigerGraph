@@ -15,12 +15,46 @@ if TYPE_CHECKING:
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 from pyTigerGraph.pyTigerGraphSchema import pyTigerGraphSchema
 from pyTigerGraph.pyTigerGraphUtils import pyTigerGraphUtils
-
+from pyTigerGraph.pyTigerGraphGSQL import pyTigerGraphGSQL
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
+class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL):
     # TODO getQueries()  # List _all_ query names
+    def showQuery(self, queryName: str) -> str:
+        """Returns the string of the given GSQL query.
+        
+        Args:
+            queryName (str):
+                Name of the query to get metadata of.
+        """
+        if logger.level == logging.DEBUG:
+            logger.debug("entry: showQuery")
+        res = self.gsql("USE GRAPH "+self.graphname+" SHOW QUERY "+queryName)
+        if logger.level == logging.DEBUG:
+            logger.debug("exit: showQuery")
+        return res
+
+    def getQueryMetadata(self, queryName: str) -> dict:
+        """Returns metadata details about a query. 
+        Specifically, it lists the input parameters in the same order as they exist in the query
+        and outputs `PRINT` statement syntax.
+
+        Args:
+            queryName (str):
+                Name of the query to get metadata of.
+        """
+        if logger.level == logging.DEBUG:
+            logger.debug("entry: getQueryMetadata")
+        params = {"graph": self.graphname, "query": queryName}
+        res = self._get(self.gsUrl+"/gsqlserver/gsql/queryinfo", params=params, authMode="pwd", resKey="")
+        if not res["error"]: 
+            if logger.level == logging.DEBUG:
+                logger.debug("exit: getQueryMetadata")
+            return res
+        else:
+            TigerGraphException(res["message"], res["code"])
+    
     def getInstalledQueries(self, fmt: str = "py") -> Union[dict, str, 'pd.DataFrame']:
         """Returns a list of installed queries.
 
@@ -58,10 +92,6 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
         logger.info("exit: getInstalledQueries")
 
         return ret
-
-    # TODO getQueryMetadata()
-    #   GET /gsqlserver/gsql/queryinfo
-    #   xref:tigergraph-server:API:built-in-endpoints.adoc#get-query-metadata[Get query metadata]
 
     # TODO installQueries()
     #   POST /gsql/queries/install
@@ -324,13 +354,42 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema):
 
         return ret
 
-    # TODO getRunningQueries()
-    # GET /showprocesslist/{graph_name}
-    # xref:tigergraph-server:API:built-in-endpoints.adoc#_list_running_queries
+    def getRunningQueries(self) -> dict:
+        """Reports the statistics of currently running queries on the graph.
+        """
+        if logger.level == logging.DEBUG:
+            logger.debug("entry: getRunningQueries")
+        res = self._get(self.restppUrl+"/showprocesslist/"+self.graphname, resKey="")
+        if not res["error"]:
+            if logger.level == logging.DEBUG:
+                logger.debug("exit: getRunningQueries")
+            return res
+        else:
+            raise TigerGraphException(res["message"], res["code"])
 
-    # TODO abortQuery()
-    #   GET /abortquery/{graph_name}
-    #   xref:tigergraph-server:API:built-in-endpoints.adoc#_abort_a_query[Abort a query]
+    def abortQuery(self, request_id: Union[str, list] = None, url: str = None):
+        """This function safely abortsa a selected query by ID or all queries of an endpoint by endpoint URL of a graph.
+        If neither `request_id` or `url` are specified, all queries currently running on the graph are aborted.
+        
+        Args:
+            request_id (str, list, optional):
+                The ID(s) of the query(s) to abort. If set to "all", it will abort all running queries.
+            url
+        """
+        if logger.level == logging.DEBUG:
+            logger.debug("entry: abortQuery")
+        params = {}
+        if request_id:
+            params["requestid"] = request_id
+        if url:
+            params["url"] = url
+        res = self._get(self.restppUrl+"/abortquery/"+self.graphname, params=params, resKey="")
+        if not res["error"]:
+            if logger.level == logging.DEBUG: 
+                logger.debug("exit: abortQuery")
+            return res
+        else:
+            raise TigerGraphException(res["message"], res["code"])
 
     def parseQueryOutput(self, output: list, graphOnly: bool = True) -> dict:
         """Parses query output and separates vertex and edge data (and optionally other output) for
