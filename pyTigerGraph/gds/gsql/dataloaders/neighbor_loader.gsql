@@ -10,13 +10,23 @@ CREATE DISTRIBUTED QUERY neighbor_loader_{QUERYSUFFIX}(
     SET<STRING> e_types,
     SET<STRING> seed_types,
     STRING delimiter,
-    STRING kafka_address,
+    STRING kafka_address="",
     STRING kafka_topic,
-    STRING security_protocol,
-    STRING sasl_mechanism,
-    STRING sasl_username,
-    STRING sasl_password,
-    STRING ssl_ca_location,
+    INT kafka_topic_partitions=1,
+    STRING kafka_max_size="104857600",
+    INT kafka_timeout=300000,
+    STRING security_protocol="",
+    STRING sasl_mechanism="",
+    STRING sasl_username="",
+    STRING sasl_password="",
+    STRING ssl_ca_location="",
+    STRING ssl_certificate_location="",
+    STRING ssl_key_location="",
+    STRING ssl_key_password="",
+    STRING ssl_endpoint_identification_algorithm="",
+    STRING sasl_kerberos_service_name="",
+    STRING sasl_kerberos_keytab="",
+    STRING sasl_kerberos_principal="",
     INT num_heap_inserts = 10
 ) SYNTAX V1 { 
     /*
@@ -37,6 +47,8 @@ CREATE DISTRIBUTED QUERY neighbor_loader_{QUERYSUFFIX}(
       seed_types     : Vertex types to be included as seeds.
       kafka_address  : Address of the Kafka cluster to send data to.
       kafka_topic    : The Kafka topic to send data to.
+      kafka_topic_partitions: Number of partitions for the given Kafka topic.
+      kafka_max_size : Maximum Kafka message size.
       security_protocol : Security prototol for Kafka.
       sasl_mechanism : Authentication mechanism for Kafka.
       sasl_username  : SASL username for Kafka. 
@@ -45,12 +57,22 @@ CREATE DISTRIBUTED QUERY neighbor_loader_{QUERYSUFFIX}(
     */
     TYPEDEF TUPLE<INT tmp_id, VERTEX v> ID_Tuple;
     INT num_vertices;
-    INT temp_v;
-    INT temp_e;
-    INT batch_s;
+    INT kafka_errcode;
     SumAccum<INT> @tmp_id;
     SumAccum<STRING> @@kafka_error;
+    UINT producer;
+    INT batch_s;
     OrAccum @prev_sampled;
+
+    # Initialize Kafka producer
+    IF kafka_address != "" THEN
+        producer = init_kafka_producer(
+            kafka_address, kafka_max_size, security_protocol, 
+            sasl_mechanism, sasl_username, sasl_password, ssl_ca_location,
+            ssl_certificate_location, ssl_key_location, ssl_key_password,
+            ssl_endpoint_identification_algorithm, sasl_kerberos_service_name,
+            sasl_kerberos_keytab, sasl_kerberos_principal);
+    END;
 
     # Shuffle vertex ID if needed
     IF input_vertices.size()==0 THEN
@@ -145,43 +167,15 @@ CREATE DISTRIBUTED QUERY neighbor_loader_{QUERYSUFFIX}(
                         @@printed_vertices += s
                     END;
         END;
-        IF kafka_address IS NOT NULL THEN
+        IF kafka_address != "" THEN
             # Write to kafka
-            IF security_protocol IS NOT NULL THEN
-                temp_v = write_to_kafka(kafka_address, kafka_topic, "vertex_batch_" + stringify(batch_id), @@v_batch, security_protocol, sasl_mechanism, sasl_username, sasl_password, ssl_ca_location);
-                IF temp_v!=0 THEN
-                    # If user is using the free version of UDF then add an error to inform the user they need to upgrade to use Kafka streaming function
-                    IF temp_v==777 THEN
-                        @@kafka_error += ("Failed, you need to upgrade to use Kafka streaming function."+ "\n");
-                    ELSE
-                        @@kafka_error += ("Failed sending vertex batch " + stringify(batch_id) + "\n");
-                    END;
-                END;
-                temp_e = write_to_kafka(kafka_address, kafka_topic, "edge_batch_" + stringify(batch_id), @@e_batch, security_protocol, sasl_mechanism, sasl_username, sasl_password, ssl_ca_location);
-                IF temp_e!=0 THEN 
-                    IF temp_e==777 THEN 
-                        @@kafka_error += ("Failed, you need to upgrade to use Kafka streaming function."+ "\n");
-                    ELSE
-                        @@kafka_error += ("Failed sending edge batch " + stringify(batch_id) + "\n");
-                    END;
-                END;
-            ELSE 
-                temp_v = write_to_kafka(kafka_address, kafka_topic, "vertex_batch_" + stringify(batch_id), @@v_batch, "", "", "", "", "");
-                IF temp_v!=0 THEN
-                    IF temp_v==777 THEN
-                        @@kafka_error += ("Failed, you need to upgrade to use Kafka streaming function."+ "\n");
-                    ELSE
-                        @@kafka_error += ("Failed sending vertex batch " + stringify(batch_id) + "\n");
-                    END;
-                END;
-                temp_e = write_to_kafka(kafka_address, kafka_topic, "edge_batch_" + stringify(batch_id), @@e_batch, "", "", "", "", "");
-                IF temp_e!=0 THEN 
-                    IF temp_e==777 THEN
-                        @@kafka_error += ("Failed, you need to upgrade to use Kafka streaming function."+ "\n");
-                    ELSE
-                        @@kafka_error += ("Failed sending edge batch " + stringify(batch_id) + "\n");
-                    END;
-                END;
+            kafka_errcode = write_to_kafka(producer, kafka_topic, batch_id%kafka_topic_partitions, "vertex_batch_" + stringify(batch_id), @@v_batch);
+            IF kafka_errcode!=0 THEN 
+                @@kafka_error += ("Error sending vertex batch " + stringify(batch_id) + ": "+ stringify(kafka_errcode) + "\n");
+            END;
+            kafka_errcode = write_to_kafka(producer, kafka_topic, batch_id%kafka_topic_partitions, "edge_batch_" + stringify(batch_id), @@e_batch);
+            IF kafka_errcode!=0 THEN 
+                @@kafka_error += ("Error sending edge batch " + stringify(batch_id) + ": "+ stringify(kafka_errcode) + "\n");
             END;
         ELSE
             # Add to response
@@ -198,7 +192,11 @@ CREATE DISTRIBUTED QUERY neighbor_loader_{QUERYSUFFIX}(
             END;
         END;                          
     END;
-    IF kafka_address IS NOT NULL THEN
+    IF kafka_address != "" THEN
+        kafka_errcode = close_kafka_producer(producer, kafka_timeout);
+        IF kafka_errcode!=0 THEN 
+            @@kafka_error += ("Error shutting down Kafka producer: " + stringify(kafka_errcode) + "\n");
+        END;
         PRINT @@kafka_error as kafkaError;
     END;
 }
