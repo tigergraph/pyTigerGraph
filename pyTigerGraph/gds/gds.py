@@ -66,8 +66,19 @@ class GDS:
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_sasl_kerberos_service_name: str = None,
+        kafka_sasl_kerberos_keytab: str = None,
+        kafka_sasl_kerberos_principal: str = None,
+        kafka_sasl_kerberos_domain_name: str = None,
+        kafka_ssl_check_hostname: bool = None,
         kafka_producer_ca_location: str = None,
+        kafka_producer_certificate_location: str = None,
+        kafka_producer_key_location: str = None,
+        kafka_producer_key_password: str = None,
         kafka_consumer_ca_location: str = None,
+        kafka_consumer_certificate_location: str = None,
+        kafka_consumer_key_location: str = None,
+        kafka_consumer_key_password: str = None,
         kafka_skip_produce: bool = False,
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
@@ -106,10 +117,33 @@ class GDS:
                 SASL username for Kafka. Defaults to None.
             kafka_sasl_plain_password (str, optional):
                 SASL password for Kafka. Defaults to None.
+            kafka_sasl_kerberos_service_name (str, optional):
+                Kerberos principal name that Kafka runs as. Defaults to None.
+            kafka_sasl_kerberos_keytab (str, optional):
+                Path to Kerberos keytab file. Defaults to None.
+            kafka_sasl_kerberos_principal (str, optional):
+                This client's Kerberos principal name. Defaults to None.
+            kafka_sasl_kerberos_domain_name (str, optional):
+                Kerberos domain name to use in GSSAPI mechanism handshake. Defaults to None.
+            kafka_ssl_check_hostname (bool, optional): 
+                Whether SSL handshake should verify that the certificate matches 
+                the brokers hostname. Defaults to None,
             kafka_producer_ca_location (str, optional):
-                Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
+                Path to CA certificate on TigerGraph DB server for verifying the broker. 
+            kafka_producer_certificate_location (str, optional):
+                Path to client's certificate (PEM) on TigerGraph DB server used for authentication.
+            kafka_producer_key_location (str, optional):
+                Path to client's private key (PEM) on TigerGraph DB server used for authentication.
+            kafka_producer_key_password (str, optional):
+                Private key passphrase for use with `kafka_producer_key_location`.
             kafka_consumer_ca_location (str, optional):
-                Path to CA certificate on client machine for verifying the broker's key. 
+                Path to CA certificate on client machine for verifying the broker. 
+            kafka_consumer_certificate_location (str, optional):
+                Path to client's certificate (PEM) used for authentication.
+            kafka_consumer_key_location (str, optional):
+                Path to client's private key (PEM) used for authentication.
+            kafka_consumer_key_password (str, optional):
+                Private key passphrase for use with `kafka_consumer_key_password`.
             kafka_skip_produce (bool, optional):
                 Whether or not to skip calling the producer. Defaults to False.
             kafka_auto_offset_reset (str, optional):
@@ -135,8 +169,19 @@ class GDS:
             "kafka_sasl_mechanism": kafka_sasl_mechanism,
             "kafka_sasl_plain_username": kafka_sasl_plain_username,
             "kafka_sasl_plain_password": kafka_sasl_plain_password,
+            "kafka_sasl_kerberos_service_name": kafka_sasl_kerberos_service_name,
+            "kafka_sasl_kerberos_keytab": kafka_sasl_kerberos_keytab,
+            "kafka_sasl_kerberos_principal": kafka_sasl_kerberos_principal,
+            "kafka_sasl_kerberos_domain_name": kafka_sasl_kerberos_domain_name,
+            "kafka_ssl_check_hostname": kafka_ssl_check_hostname,
             "kafka_producer_ca_location": kafka_producer_ca_location,
+            "kafka_producer_certificate_location": kafka_producer_certificate_location,
+            "kafka_producer_key_location": kafka_producer_key_location,
+            "kafka_producer_key_password": kafka_producer_key_password,
             "kafka_consumer_ca_location": kafka_consumer_ca_location,
+            "kafka_consumer_certificate_location": kafka_consumer_certificate_location,
+            "kafka_consumer_key_location": kafka_consumer_key_location,
+            "kafka_consumer_key_password": kafka_consumer_key_password,
             "kafka_skip_produce": kafka_skip_produce,
             "kafka_auto_offset_reset": kafka_auto_offset_reset,
             "kafka_del_topic_per_epoch": kafka_del_topic_per_epoch,
