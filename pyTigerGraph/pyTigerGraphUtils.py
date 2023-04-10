@@ -261,6 +261,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
 
     def getServiceStatus(self, request_body: dict):
         """Returns the status of the TigerGraph services specified in the request.
+        Supported on databases versions 3.4 and above.
 
         Args:
             request_body (dict):
