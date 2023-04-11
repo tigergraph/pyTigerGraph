@@ -39,12 +39,12 @@ class TestingCallback(BaseCallback):
     def on_epoch_end(self, trainer):
         trainer.eval()
 
-class TestGDSBaseLoader(unittest.TestCase):
+class TestGDSTrainer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.conn = make_connection(graphname="Cora")
 
-    def testHomogeneousVertexClass(self):
+    def testHomogeneousVertexClassTraining(self):
         train = NeighborLoader(
             graph=self.conn,
             v_in_feats=["x"],
@@ -87,6 +87,34 @@ class TestGDSBaseLoader(unittest.TestCase):
         trainer.train(num_epochs=1)
         ifLogged = os.path.isfile("./logs/train_results_cora_class.log")
         self.assertEqual(ifLogged, True)
+
+    def testHomogeneousVertexClassPredict(self):
+        train, valid, infer = self.conn.gds.neighborLoader(
+            v_in_feats=["x"],
+            v_out_labels=["y"],
+            v_extra_feats=["train_mask", "val_mask", "test_mask"],
+            batch_size=16,
+            num_neighbors=10,
+            num_hops=2,
+            shuffle=True,
+            filter_by=["train_mask", "val_mask", ""],
+            output_format="PyG",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4,
+        )
+
+        gs = GraphSAGEForVertexClassification(num_layers=2, 
+                                              out_dim=7, 
+                                              dropout=.2,
+                                              hidden_dim=128)
+
+        trainer = Trainer(gs, train, valid, callbacks=[TestingCallback("cora_class")])
+
+        trainer.train(num_epochs=1)
+        out, _ = trainer.predict(infer.fetch([{"primary_id": 1, "type": "Paper"}]))
+        self.assertEqual(out.shape[1], 7)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2, failfast=True)

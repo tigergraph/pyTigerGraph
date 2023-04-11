@@ -243,11 +243,15 @@ class Trainer():
             for callback in self.callbacks:
                 callback.on_epoch_end(trainer=self)             
 
-    def eval(self):
+    def eval(self, loader=None):
+        if loader:
+            eval_loader = loader
+        else:
+            eval_loader = self.eval_loader
         self.model.eval()
         for callback in self.callbacks:
             callback.on_eval_start(trainer=self)
-        for batch in self.eval_loader:
+        for batch in eval_loader:
             for callback in self.callbacks:
                 callback.on_eval_step_start(trainer=self)
             self.out = self.model(batch, tgt_type=self.target_type)
@@ -260,3 +264,7 @@ class Trainer():
                 callback.on_eval_step_end(trainer=self)
         for callback in self.callbacks:
             callback.on_eval_end(trainer=self)
+
+    def predict(self, batch):
+        self.eval(loader=[batch])
+        return self.out, self.get_eval_metrics()
