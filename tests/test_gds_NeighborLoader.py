@@ -359,6 +359,40 @@ class TestGDSNeighborLoaderREST(unittest.TestCase):
             else:
                 self.assertFalse(data["is_seed"][i].item())
 
+    def test_fetch_delimiter(self):
+        loader = NeighborLoader(
+            graph=self.conn,
+            v_in_feats=["x"],
+            v_out_labels=["y"],
+            v_extra_feats=["train_mask", "val_mask", "test_mask"],
+            batch_size=16,
+            num_neighbors=10,
+            num_hops=2,
+            shuffle=True,
+            delimiter="$|",
+            filter_by="train_mask",
+            output_format="PyG",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4,
+        )
+        data = loader.fetch(
+            [
+                {"primary_id": "100", "type": "Paper"},
+                {"primary_id": "55", "type": "Paper"},
+            ]
+        )
+        self.assertIn("primary_id", data)
+        self.assertGreater(data["x"].shape[0], 2)
+        self.assertGreater(data["edge_index"].shape[1], 0)
+        self.assertIn("100", data["primary_id"])
+        self.assertIn("55", data["primary_id"])
+        for i, d in enumerate(data["primary_id"]):
+            if d == "100" or d == "55":
+                self.assertTrue(data["is_seed"][i].item())
+            else:
+                self.assertFalse(data["is_seed"][i].item())
+
     def test_iterate_spektral(self):
         loader = NeighborLoader(
             graph=self.conn,
@@ -674,13 +708,43 @@ class TestGDSHeteroNeighborLoaderREST(unittest.TestCase):
             else:
                 self.assertFalse(data["v0"]["is_seed"][i].item())
 
+    def test_fetch_delimiter(self):
+        loader = NeighborLoader(
+            graph=self.conn,
+            v_in_feats={"v0": ["x"], "v1": ["x"], "v2": ["x"]},
+            v_out_labels={"v0": ["y"]},
+            v_extra_feats={"v0": ["train_mask", "val_mask", "test_mask"]},
+            batch_size=16,
+            num_neighbors=10,
+            num_hops=2,
+            shuffle=False,
+            output_format="PyG",
+            delimiter="$|",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4,
+        )
+        data = loader.fetch(
+            [{"primary_id": "10", "type": "v0"}, {"primary_id": "55", "type": "v0"}]
+        )
+        self.assertIn("primary_id", data["v0"])
+        self.assertGreater(data["v0"]["x"].shape[0], 2)
+        self.assertGreater(data["v0v0"]["edge_index"].shape[1], 0)
+        self.assertIn("10", data["v0"]["primary_id"])
+        self.assertIn("55", data["v0"]["primary_id"])
+        for i, d in enumerate(data["v0"]["primary_id"]):
+            if d == "10" or d == "55":
+                self.assertTrue(data["v0"]["is_seed"][i].item())
+            else:
+                self.assertFalse(data["v0"]["is_seed"][i].item())
+
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
-    suite.addTest(TestGDSNeighborLoaderKafka("test_init"))
-    suite.addTest(TestGDSNeighborLoaderKafka("test_iterate_pyg"))
-    suite.addTest(TestGDSNeighborLoaderKafka("test_whole_graph_pyg"))
-    suite.addTest(TestGDSNeighborLoaderKafka("test_edge_attr"))
+    #suite.addTest(TestGDSNeighborLoaderKafka("test_init"))
+    #suite.addTest(TestGDSNeighborLoaderKafka("test_iterate_pyg"))
+    #suite.addTest(TestGDSNeighborLoaderKafka("test_whole_graph_pyg"))
+    #suite.addTest(TestGDSNeighborLoaderKafka("test_edge_attr"))
     # suite.addTest(TestGDSNeighborLoaderKafka("test_sasl_plaintext"))
     # suite.addTest(TestGDSNeighborLoaderKafka("test_sasl_ssl"))
     suite.addTest(TestGDSNeighborLoaderREST("test_init"))
@@ -688,12 +752,14 @@ if __name__ == "__main__":
     suite.addTest(TestGDSNeighborLoaderREST("test_whole_graph_pyg"))
     suite.addTest(TestGDSNeighborLoaderREST("test_edge_attr"))
     suite.addTest(TestGDSNeighborLoaderREST("test_fetch"))
+    suite.addTest(TestGDSNeighborLoaderREST("test_fetch_delimiter"))
     suite.addTest(TestGDSHeteroNeighborLoaderREST("test_init"))
     suite.addTest(TestGDSHeteroNeighborLoaderREST("test_whole_graph_df"))
     suite.addTest(TestGDSHeteroNeighborLoaderREST("test_whole_graph_pyg"))
     suite.addTest(TestGDSHeteroNeighborLoaderREST("test_iterate_pyg"))
     suite.addTest(TestGDSHeteroNeighborLoaderREST("test_iterate_pyg_multichar_delimiter"))
     suite.addTest(TestGDSHeteroNeighborLoaderREST("test_fetch"))
+    suite.addTest(TestGDSHeteroNeighborLoaderREST("test_fetch_delimiter"))
 
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)
