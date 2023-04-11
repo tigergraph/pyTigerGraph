@@ -8,7 +8,7 @@ from pyTigerGraphUnitTest import make_connection
 class test_pyTigerGraphUtils(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = make_connection()
+        cls.conn = make_connection(graphname="Cora")
 
     def test_01_safeChar(self):
         res = self.conn._safeChar(" _space")
@@ -47,6 +47,27 @@ class test_pyTigerGraphUtils(unittest.TestCase):
         m = re.match(r"[0-9]+\.[0-9]+\.[0-9]", res)
         self.assertIsNotNone(m)
 
+    def test_05_ping(self):
+        res = self.conn.ping()
+        self.assertIsInstance(res, dict)
+        self.assertEqual(res["message"], "pong")
+
+    def test_06_getSystemMetrics(self):
+        res = self.conn.getSystemMetrics(what="mem", latest=10)
+        self.assertEqual(len(res), 10)
+
+    def test_07_getQueryPerformance(self):
+        res = self.conn.getQueryPerformance()
+        self.assertIn("CompletedRequests", str(res))
+
+    def test_08_getServiceStatus(self):
+        req = {"ServiceDescriptors":[{"ServiceName": "GSQL"}]}
+        res = self.conn.getServiceStatus(req)
+        self.assertEqual(res["ServiceStatusEvents"][0]["ServiceStatus"], "Online")
+
+    def test_09_rebuildGraph(self):
+        res = self.conn.rebuildGraph()
+        self.assertEqual(res["message"], "RebuildNow finished, please check details in the folder: /tmp/rebuildnow")
 
 if __name__ == '__main__':
     unittest.main()
