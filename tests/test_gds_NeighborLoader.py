@@ -741,10 +741,10 @@ class TestGDSHeteroNeighborLoaderREST(unittest.TestCase):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
-    #suite.addTest(TestGDSNeighborLoaderKafka("test_init"))
-    #suite.addTest(TestGDSNeighborLoaderKafka("test_iterate_pyg"))
-    #suite.addTest(TestGDSNeighborLoaderKafka("test_whole_graph_pyg"))
-    #suite.addTest(TestGDSNeighborLoaderKafka("test_edge_attr"))
+    suite.addTest(TestGDSNeighborLoaderKafka("test_init"))
+    suite.addTest(TestGDSNeighborLoaderKafka("test_iterate_pyg"))
+    suite.addTest(TestGDSNeighborLoaderKafka("test_whole_graph_pyg"))
+    suite.addTest(TestGDSNeighborLoaderKafka("test_edge_attr"))
     # suite.addTest(TestGDSNeighborLoaderKafka("test_sasl_plaintext"))
     # suite.addTest(TestGDSNeighborLoaderKafka("test_sasl_ssl"))
     suite.addTest(TestGDSNeighborLoaderREST("test_init"))
