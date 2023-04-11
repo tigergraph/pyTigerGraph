@@ -89,8 +89,7 @@ class TestGDSTrainer(unittest.TestCase):
         self.assertEqual(ifLogged, True)
 
     def testHomogeneousVertexClassPredict(self):
-        train, valid, infer = NeighborLoader(
-            graph=self.conn,
+        train, valid, infer = self.conn.gds.neighborLoader(
             v_in_feats=["x"],
             v_out_labels=["y"],
             v_extra_feats=["train_mask", "val_mask", "test_mask"],
