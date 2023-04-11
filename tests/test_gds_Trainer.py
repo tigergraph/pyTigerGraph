@@ -113,7 +113,7 @@ class TestGDSTrainer(unittest.TestCase):
 
         trainer.train(num_epochs=1)
         out, _ = trainer.predict(infer.fetch([{"primary_id": 1, "type": "Paper"}]))
-        self.assertEqual(out.shape[0], 7)
+        self.assertEqual(out.shape[1], 7)
 
 
 if __name__ == "__main__":
