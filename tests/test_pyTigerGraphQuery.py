@@ -116,7 +116,7 @@ class test_pyTigerGraphQuery(unittest.TestCase):
     
     def test_08_getQueryMetadata(self):
         query_md = self.conn.getQueryMetadata("query1")
-        self.assertEqual(query_md["output"][0], {"ret": "SumAccum<int>"})
+        self.assertEqual(query_md["output"][0], {"ret": "int"})
 
     def test_09_getRunningQueries(self):
         q_id = self.conn.runInstalledQuery("query1", runAsync=True)
