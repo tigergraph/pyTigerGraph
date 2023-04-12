@@ -37,6 +37,7 @@ CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
     SumAccum<STRING> @rel_context_set;
     SumAccum<STRING> @ancs;
     OrAccum @prev_sampled;
+    OrAccum @heapFull;
 
     MapAccum<VERTEX, SumAccum<INT>> @@token_count;
     MapAccum<INT, MinAccum<INT>> @conv_map;
