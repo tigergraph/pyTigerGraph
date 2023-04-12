@@ -1480,7 +1480,7 @@ class GDS:
 
         conn = tg.TigerGraphConnection(host="HOSTNAME_HERE", username="USERNAME_HERE", password="PASSWORD_HERE", graphname="GRAPHNAME_HERE")
         conn.getToken(conn.createSecret())
-        feat = Featurizer(conn, repo="PATH/TO/MANUALLY_DOWNLOADED_REPOSITORY")
+        feat = conn.gds.featurizer(repo="PATH/TO/MANUALLY_DOWNLOADED_REPOSITORY")
 
         res = feat.runAlgorithm("tg_pagerank", params={"v_type": "Paper", "e_type": "CITES"})
 
