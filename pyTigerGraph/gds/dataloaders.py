@@ -3225,7 +3225,7 @@ class NodePieceLoader(BaseLoader):
             )
             params = {"anchor_attr": anchor_attribute, "v_types": self._vtypes}
             install_query_file(self._graph, query_path)
-            ancs = self._graph.runInstalledQuery("get_anchors", params=params)[0]["@@vids"]
+            ancs = self._graph.runInstalledQuery("get_anchors", params=params, timeout=self.timeout)[0]["@@vids"]
             print("Number of Anchors:", len(ancs))
             for tok in self.baseTokens + ancs:
                 self.idToIdx[str(tok)] = self.curIdx
