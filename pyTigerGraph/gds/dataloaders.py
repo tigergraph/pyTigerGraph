@@ -458,7 +458,7 @@ class BaseLoader:
         self._payload["kafka_topic"] = kafka_topic
         self._all_kafka_topics.add(kafka_topic)
         # Create topic if not exist
-        if kafka_topic not in self._kafka_admin.list_topics():
+        if (kafka_topic not in self._kafka_admin.list_topics()) and (self.kafka_skip_produce is False):
             try:
                 from kafka.admin import NewTopic
             except ImportError:
