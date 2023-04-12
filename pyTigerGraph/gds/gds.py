@@ -59,7 +59,7 @@ class GDS:
         kafka_num_partitions: int = 1,
         kafka_replica_factor: int = 1,
         kafka_retention_ms: int = 60000,
-        kafka_auto_del_topic: bool = True,
+        kafka_auto_del_topic: bool = None,
         kafka_address_consumer: str = None,
         kafka_address_producer: str = None,
         kafka_security_protocol: str = "PLAINTEXT",

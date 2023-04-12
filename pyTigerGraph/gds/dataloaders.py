@@ -195,7 +195,13 @@ class BaseLoader:
         self.kafka_partitions = kafka_num_partitions
         self.kafka_replica = kafka_replica_factor
         self.kafka_retention_ms = kafka_retention_ms
-        self.delete_all_topics = kafka_auto_del_topic
+        if kafka_auto_del_topic is None:
+            if kafka_topic:
+                self.delete_all_topics = False
+            else:
+                self.delete_all_topics = True
+        else:
+            self.delete_all_topics = kafka_auto_del_topic
         self.kafka_skip_produce = kafka_skip_produce
         self.add_epoch_topic = kafka_add_topic_per_epoch
         if self.add_epoch_topic:
