@@ -1,4 +1,5 @@
 import unittest
+from multiprocessing import Pool
 
 from pyTigerGraphUnitTest import make_connection
 from torch_geometric.data import Data as pygData
@@ -209,6 +210,44 @@ class TestGDSNeighborLoaderKafka(unittest.TestCase):
                     num_batches += 1
                 self.assertEqual(num_batches, 9)
 
+    @staticmethod
+    def run_loader(params: dict) -> int:
+        neighbor_loader = NeighborLoader(
+            graph=params["conn"],
+            batch_size=8,
+            num_neighbors = 10,
+            num_hops =2,
+            v_in_feats = ["x"],
+            v_out_labels = ["y"],
+            v_extra_feats = ["train_mask", "val_mask", "test_mask"],
+            output_format = "PyG",
+            shuffle=False,
+            filter_by = "train_mask",
+            timeout=300000,
+            kafka_address="kafka:9092",
+            kafka_num_partitions=2,
+            kafka_auto_offset_reset="earliest",
+            kafka_group_id="test_group",
+            kafka_auto_del_topic = False,
+            kafka_skip_produce = params["kafka_skip_produce"]
+        )
+        num_batches = 0
+        num_seeds = 0
+        for data in neighbor_loader:
+            # print(num_batches, data, data["is_seed"].sum().item(), flush=True)
+            num_batches += 1
+            num_seeds += data["is_seed"].sum().item()
+        return num_batches, num_seeds
+    
+    def test_distributed_loaders(self):
+        params = [
+            {"conn": self.conn, "kafka_skip_produce": False},
+            {"conn": self.conn, "kafka_skip_produce": True}
+        ]
+        with Pool(processes=2) as pool:
+            res = pool.map(self.run_loader, params)
+        self.assertEqual(res[0][0]+res[1][0], 18)
+        self.assertEqual(res[0][1]+res[1][1], 140)
 
 class TestGDSNeighborLoaderREST(unittest.TestCase):
     @classmethod
@@ -707,6 +746,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSNeighborLoaderKafka("test_iterate_pyg"))
     suite.addTest(TestGDSNeighborLoaderKafka("test_whole_graph_pyg"))
     suite.addTest(TestGDSNeighborLoaderKafka("test_edge_attr"))
+    suite.addTest(TestGDSNeighborLoaderKafka("test_distributed_loaders"))
     # suite.addTest(TestGDSNeighborLoaderKafka("test_sasl_plaintext"))
     # suite.addTest(TestGDSNeighborLoaderKafka("test_sasl_ssl"))
     suite.addTest(TestGDSNeighborLoaderREST("test_init"))
