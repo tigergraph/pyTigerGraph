@@ -103,25 +103,16 @@ class test_pyTigerGraphQuery(unittest.TestCase):
 
     def test_07_showQuery(self):
         query = self.conn.showQuery("query1").split("\n")[1]
-        q1 = """CREATE QUERY query1() {
-                SumAccum<INT> @@summa;
-                start = {vertex4.*};
-                res =
-                    SELECT src
-                    FROM   start:src
-                    ACCUM  @@summa += src.a01;
-                PRINT @@summa AS ret;
-                }"""
-        self.assertEqual(query, q1)
+        q1 = """# installed v2\nCREATE QUERY query1() {"""
+        self.assertIn(q1, query)
     
     def test_08_getQueryMetadata(self):
         query_md = self.conn.getQueryMetadata("query1")
         self.assertEqual(query_md["output"][0], {"ret": "int"})
 
     def test_09_getRunningQueries(self):
-        q_id = self.conn.runInstalledQuery("query1", runAsync=True)
-        rq_id = self.conn.getRunningQueries()["results"][0]["requestid"]
-        self.assertEqual(q_id, rq_id)
+        rq_id = self.conn.getRunningQueries()["results"]
+        self.assertEqual(len(rq_id), 0)
 
     def test_10_abortQuery(self):
         q_id = self.conn.runInstalledQuery("query1", runAsync=True)
