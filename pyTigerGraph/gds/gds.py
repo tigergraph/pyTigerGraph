@@ -66,8 +66,19 @@ class GDS:
         kafka_sasl_mechanism: str = None,
         kafka_sasl_plain_username: str = None,
         kafka_sasl_plain_password: str = None,
+        kafka_sasl_kerberos_service_name: str = None,
+        kafka_sasl_kerberos_keytab: str = None,
+        kafka_sasl_kerberos_principal: str = None,
+        kafka_sasl_kerberos_domain_name: str = None,
+        kafka_ssl_check_hostname: bool = None,
         kafka_producer_ca_location: str = None,
+        kafka_producer_certificate_location: str = None,
+        kafka_producer_key_location: str = None,
+        kafka_producer_key_password: str = None,
         kafka_consumer_ca_location: str = None,
+        kafka_consumer_certificate_location: str = None,
+        kafka_consumer_key_location: str = None,
+        kafka_consumer_key_password: str = None,
         kafka_skip_produce: bool = False,
         kafka_auto_offset_reset: str = "earliest",
         kafka_del_topic_per_epoch: bool = False,
@@ -106,10 +117,33 @@ class GDS:
                 SASL username for Kafka. Defaults to None.
             kafka_sasl_plain_password (str, optional):
                 SASL password for Kafka. Defaults to None.
+            kafka_sasl_kerberos_service_name (str, optional):
+                Kerberos principal name that Kafka runs as. Defaults to None.
+            kafka_sasl_kerberos_keytab (str, optional):
+                Path to Kerberos keytab file. Defaults to None.
+            kafka_sasl_kerberos_principal (str, optional):
+                This client's Kerberos principal name. Defaults to None.
+            kafka_sasl_kerberos_domain_name (str, optional):
+                Kerberos domain name to use in GSSAPI mechanism handshake. Defaults to None.
+            kafka_ssl_check_hostname (bool, optional): 
+                Whether SSL handshake should verify that the certificate matches 
+                the brokers hostname. Defaults to None,
             kafka_producer_ca_location (str, optional):
-                Path to CA certificate on TigerGraph DB server for verifying the broker's key. 
+                Path to CA certificate on TigerGraph DB server for verifying the broker. 
+            kafka_producer_certificate_location (str, optional):
+                Path to client's certificate (PEM) on TigerGraph DB server used for authentication.
+            kafka_producer_key_location (str, optional):
+                Path to client's private key (PEM) on TigerGraph DB server used for authentication.
+            kafka_producer_key_password (str, optional):
+                Private key passphrase for use with `kafka_producer_key_location`.
             kafka_consumer_ca_location (str, optional):
-                Path to CA certificate on client machine for verifying the broker's key. 
+                Path to CA certificate on client machine for verifying the broker. 
+            kafka_consumer_certificate_location (str, optional):
+                Path to client's certificate (PEM) used for authentication.
+            kafka_consumer_key_location (str, optional):
+                Path to client's private key (PEM) used for authentication.
+            kafka_consumer_key_password (str, optional):
+                Private key passphrase for use with `kafka_consumer_key_password`.
             kafka_skip_produce (bool, optional):
                 Whether or not to skip calling the producer. Defaults to False.
             kafka_auto_offset_reset (str, optional):
@@ -135,8 +169,19 @@ class GDS:
             "kafka_sasl_mechanism": kafka_sasl_mechanism,
             "kafka_sasl_plain_username": kafka_sasl_plain_username,
             "kafka_sasl_plain_password": kafka_sasl_plain_password,
+            "kafka_sasl_kerberos_service_name": kafka_sasl_kerberos_service_name,
+            "kafka_sasl_kerberos_keytab": kafka_sasl_kerberos_keytab,
+            "kafka_sasl_kerberos_principal": kafka_sasl_kerberos_principal,
+            "kafka_sasl_kerberos_domain_name": kafka_sasl_kerberos_domain_name,
+            "kafka_ssl_check_hostname": kafka_ssl_check_hostname,
             "kafka_producer_ca_location": kafka_producer_ca_location,
+            "kafka_producer_certificate_location": kafka_producer_certificate_location,
+            "kafka_producer_key_location": kafka_producer_key_location,
+            "kafka_producer_key_password": kafka_producer_key_password,
             "kafka_consumer_ca_location": kafka_consumer_ca_location,
+            "kafka_consumer_certificate_location": kafka_consumer_certificate_location,
+            "kafka_consumer_key_location": kafka_consumer_key_location,
+            "kafka_consumer_key_password": kafka_consumer_key_password,
             "kafka_skip_produce": kafka_skip_produce,
             "kafka_auto_offset_reset": kafka_auto_offset_reset,
             "kafka_del_topic_per_epoch": kafka_del_topic_per_epoch,
@@ -264,9 +309,11 @@ class GDS:
             shuffle (bool, optional):
                 Whether to shuffle the vertices before loading data.
                 Defaults to False.
-            filter_by (str, optional):
-                A boolean attribute used to indicate which vertices
-                can be included as seeds. Defaults to None.
+            filter_by (str, dict, list, optional):
+                Denotes the name of a boolean attribute used to indicate which vertices
+                can be included as seeds. If a dictionary is provided, must be in the form of: 
+                {"vertex_type": "attribute"}. If a list, must contain multiple filters and an 
+                unique loader will be returned for each list element. Defaults to None.
             output_format (str, optional):
                 Format of the output data of the loader. Only
                 "PyG", "DGL", "spektral", and "dataframe" are supported. Defaults to "PyG".
@@ -288,35 +335,71 @@ class GDS:
             callback_fn (callable, optional):
                 A callable function to apply to each batch in the dataloader. Defaults to None.
         """
-        params = {
-            "graph": self.conn,
-            "v_in_feats": v_in_feats,
-            "v_out_labels": v_out_labels,
-            "v_extra_feats": v_extra_feats,
-            "e_in_feats": e_in_feats,
-            "e_out_labels": e_out_labels,
-            "e_extra_feats": e_extra_feats,
-            "batch_size": batch_size,
-            "num_batches": num_batches,
-            "num_neighbors": num_neighbors,
-            "num_hops": num_hops,
-            "shuffle": shuffle,
-            "filter_by": filter_by,
-            "output_format": output_format,
-            "add_self_loop": add_self_loop,
-            "loader_id": loader_id,
-            "buffer_size": buffer_size,
-            "reverse_edge": reverse_edge,
-            "delimiter": delimiter,
-            "timeout": timeout,
-            "callback_fn": callback_fn
-        }
+        
 
-        if self.kafkaConfig:
-            params.update(self.kafkaConfig)
-            return NeighborLoader(**params)
+        if isinstance(filter_by, list):
+            loaders = []
+            for filter_item in filter_by:
+                params = {
+                    "graph": self.conn,
+                    "v_in_feats": v_in_feats,
+                    "v_out_labels": v_out_labels,
+                    "v_extra_feats": v_extra_feats,
+                    "e_in_feats": e_in_feats,
+                    "e_out_labels": e_out_labels,
+                    "e_extra_feats": e_extra_feats,
+                    "batch_size": batch_size,
+                    "num_batches": num_batches,
+                    "num_neighbors": num_neighbors,
+                    "num_hops": num_hops,
+                    "shuffle": shuffle,
+                    "filter_by": filter_item,
+                    "output_format": output_format,
+                    "add_self_loop": add_self_loop,
+                    "loader_id": loader_id,
+                    "buffer_size": buffer_size,
+                    "reverse_edge": reverse_edge,
+                    "delimiter": delimiter,
+                    "timeout": timeout,
+                    "callback_fn": callback_fn
+                }
+
+                if self.kafkaConfig:
+                    params.update(self.kafkaConfig)
+                    loaders.append(NeighborLoader(**params))
+                else:
+                    loaders.append(NeighborLoader(**params))
+            return loaders
         else:
-            return NeighborLoader(**params)
+            params = {
+                    "graph": self.conn,
+                    "v_in_feats": v_in_feats,
+                    "v_out_labels": v_out_labels,
+                    "v_extra_feats": v_extra_feats,
+                    "e_in_feats": e_in_feats,
+                    "e_out_labels": e_out_labels,
+                    "e_extra_feats": e_extra_feats,
+                    "batch_size": batch_size,
+                    "num_batches": num_batches,
+                    "num_neighbors": num_neighbors,
+                    "num_hops": num_hops,
+                    "shuffle": shuffle,
+                    "filter_by": filter_by,
+                    "output_format": output_format,
+                    "add_self_loop": add_self_loop,
+                    "loader_id": loader_id,
+                    "buffer_size": buffer_size,
+                    "reverse_edge": reverse_edge,
+                    "delimiter": delimiter,
+                    "timeout": timeout,
+                    "callback_fn": callback_fn
+                }
+
+            if self.kafkaConfig:
+                params.update(self.kafkaConfig)
+                return NeighborLoader(**params)
+            else:
+                return NeighborLoader(**params)
 
     def edgeLoader(
         self,
@@ -378,8 +461,11 @@ class GDS:
             shuffle (bool, optional):
                 Whether to shuffle the edges before loading data.
                 Defaults to False.
-            filter_by (str, optional):
-                A boolean attribute used to indicate which edges are included. Defaults to None.
+            filter_by (str, dict, list, optional):
+                Denotes the name of a boolean attribute used to indicate which vertices
+                can be included as seeds. If a dictionary is provided, must be in the form of: 
+                {"vertex_type": "attribute"}. If a list, must contain multiple filters and an 
+                unique loader will be returned for each list element. Defaults to None.
             output_format (str, optional):
                 Format of the output data of the loader. Only
                 "dataframe" is supported. Defaults to "dataframe".
@@ -402,26 +488,51 @@ class GDS:
         See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_edgeloader.ipynb[the ML Workbench edge loader tutorial notebook]
         for examples.
         """
-        params = {
-            "graph": self.conn,
-            "attributes": attributes,
-            "batch_size": batch_size,
-            "num_batches": num_batches,
-            "shuffle": shuffle,
-            "filter_by": filter_by,
-            "output_format": output_format,
-            "loader_id": loader_id,
-            "buffer_size": buffer_size,
-            "reverse_edge": reverse_edge,
-            "delimiter": delimiter,
-            "timeout": timeout,
-            "callback_fn": callback_fn
-        }
-        if self.kafkaConfig:
-            params.update(self.kafkaConfig)
-            return EdgeLoader(**params)
+        if isinstance(filter_by, list):
+            loaders = []
+            for filter_item in filter_by:
+                params = {
+                    "graph": self.conn,
+                    "attributes": attributes,
+                    "batch_size": batch_size,
+                    "num_batches": num_batches,
+                    "shuffle": shuffle,
+                    "filter_by": filter_item,
+                    "output_format": output_format,
+                    "loader_id": loader_id,
+                    "buffer_size": buffer_size,
+                    "reverse_edge": reverse_edge,
+                    "delimiter": delimiter,
+                    "timeout": timeout,
+                    "callback_fn": callback_fn
+                }
+                if self.kafkaConfig:
+                    params.update(self.kafkaConfig)
+                    loaders.append(EdgeLoader(**params))
+                else:
+                    loaders.append(EdgeLoader(**params))
+            return loaders
         else:
-            return EdgeLoader(**params)
+            params = {
+                "graph": self.conn,
+                "attributes": attributes,
+                "batch_size": batch_size,
+                "num_batches": num_batches,
+                "shuffle": shuffle,
+                "filter_by": filter_by,
+                "output_format": output_format,
+                "loader_id": loader_id,
+                "buffer_size": buffer_size,
+                "reverse_edge": reverse_edge,
+                "delimiter": delimiter,
+                "timeout": timeout,
+                "callback_fn": callback_fn
+            }
+            if self.kafkaConfig:
+                params.update(self.kafkaConfig)
+                return EdgeLoader(**params)
+            else:
+                return EdgeLoader(**params)
 
     def vertexLoader(
             self,
@@ -482,9 +593,11 @@ class GDS:
             shuffle (bool, optional):
                 Whether to shuffle the vertices before loading data.
                 Defaults to False.
-            filter_by (str, optional):
-                A boolean attribute used to indicate which vertices
-                can be included. Defaults to None.
+            filter_by (str, dict, list, optional):
+                Denotes the name of a boolean attribute used to indicate which vertices
+                can be included as seeds. If a dictionary is provided, must be in the form of: 
+                {"vertex_type": "attribute"}. If a list, must contain multiple filters and an 
+                unique loader will be returned for each list element. Defaults to None.
             output_format (str, optional):
                 Format of the output data of the loader. Only
                 "dataframe" is supported. Defaults to "dataframe".
@@ -507,27 +620,52 @@ class GDS:
         See https://github.com/tigergraph/graph-ml-notebooks/blob/main/applications/fraud_detection/fraud_detection.ipynb[the ML Workbench tutorial notebook]
         for examples.
         """
-        params = {
-            "graph": self.conn,
-            "attributes": attributes,
-            "batch_size": batch_size,
-            "num_batches": num_batches,
-            "shuffle": shuffle,
-            "filter_by": filter_by,
-            "output_format": output_format,
-            "loader_id": loader_id,
-            "buffer_size": buffer_size,
-            "reverse_edge": reverse_edge,
-            "delimiter": delimiter,
-            "timeout": timeout,
-            "callback_fn": callback_fn
-        }
-
-        if self.kafkaConfig:
-            params.update(self.kafkaConfig)
-            return VertexLoader(**params)
+        if isinstance(filter_by, list):
+            loaders = []
+            for filter_item in filter_by:
+                params = {
+                    "graph": self.conn,
+                    "attributes": attributes,
+                    "batch_size": batch_size,
+                    "num_batches": num_batches,
+                    "shuffle": shuffle,
+                    "filter_by": filter_item,
+                    "output_format": output_format,
+                    "loader_id": loader_id,
+                    "buffer_size": buffer_size,
+                    "reverse_edge": reverse_edge,
+                    "delimiter": delimiter,
+                    "timeout": timeout,
+                    "callback_fn": callback_fn
+                } 
+                if self.kafkaConfig:
+                    params.update(self.kafkaConfig)
+                    loaders.append(VertexLoader(**params))
+                else:
+                    loaders.append(VertexLoader(**params))
+            return loaders
         else:
-            return VertexLoader(**params)
+            params = {
+                "graph": self.conn,
+                "attributes": attributes,
+                "batch_size": batch_size,
+                "num_batches": num_batches,
+                "shuffle": shuffle,
+                "filter_by": filter_by,
+                "output_format": output_format,
+                "loader_id": loader_id,
+                "buffer_size": buffer_size,
+                "reverse_edge": reverse_edge,
+                "delimiter": delimiter,
+                "timeout": timeout,
+                "callback_fn": callback_fn
+            }
+
+            if self.kafkaConfig:
+                params.update(self.kafkaConfig)
+                return VertexLoader(**params)
+            else:
+                return VertexLoader(**params)
 
     def graphLoader(
         self,
@@ -636,9 +774,11 @@ class GDS:
             shuffle (bool, optional):
                 Whether to shuffle the data before loading.
                 Defaults to False.
-            filter_by (str, optional):
-                A boolean attribute used to indicate which edges can be included.
-                Defaults to None.
+            filter_by (str, dict, list, optional):
+                Denotes the name of a boolean attribute used to indicate which vertices
+                can be included as seeds. If a dictionary is provided, must be in the form of: 
+                {"vertex_type": "attribute"}. If a list, must contain multiple filters and an 
+                unique loader will be returned for each list element. Defaults to None.
             output_format (str, optional):
                 Format of the output data of the loader.
                 Only "PyG", "DGL", "spektral", and "dataframe" are supported. Defaults to "dataframe".
@@ -663,33 +803,65 @@ class GDS:
         See https://github.com/tigergraph/graph-ml-notebooks/blob/main/GNNs/PyG/gcn_node_classification.ipynb[the ML Workbench tutorial notebook for graph loaders]
          for examples.
         """
-        params = {
-            "graph": self.conn,
-            "v_in_feats": v_in_feats,
-            "v_out_labels": v_out_labels,
-            "v_extra_feats": v_extra_feats,
-            "e_in_feats": e_in_feats,
-            "e_out_labels": e_out_labels,
-            "e_extra_feats": e_extra_feats,
-            "batch_size": batch_size,
-            "num_batches": num_batches,
-            "shuffle": shuffle,
-            "filter_by": filter_by,
-            "output_format": output_format,
-            "add_self_loop": add_self_loop,
-            "loader_id": loader_id,
-            "buffer_size": buffer_size,
-            "reverse_edge": reverse_edge,
-            "delimiter": delimiter,
-            "timeout": timeout,
-            "callback_fn": callback_fn
-        }
+        if isinstance(filter_by, list):
+            loaders = []
+            for filter_item in filter_by:
+                params = {
+                    "graph": self.conn,
+                    "v_in_feats": v_in_feats,
+                    "v_out_labels": v_out_labels,
+                    "v_extra_feats": v_extra_feats,
+                    "e_in_feats": e_in_feats,
+                    "e_out_labels": e_out_labels,
+                    "e_extra_feats": e_extra_feats,
+                    "batch_size": batch_size,
+                    "num_batches": num_batches,
+                    "shuffle": shuffle,
+                    "filter_by": filter_item,
+                    "output_format": output_format,
+                    "add_self_loop": add_self_loop,
+                    "loader_id": loader_id,
+                    "buffer_size": buffer_size,
+                    "reverse_edge": reverse_edge,
+                    "delimiter": delimiter,
+                    "timeout": timeout,
+                    "callback_fn": callback_fn
+                }
 
-        if self.kafkaConfig:
-            params.update(self.kafkaConfig)
-            return GraphLoader(**params)
+                if self.kafkaConfig:
+                    params.update(self.kafkaConfig)
+                    loaders.append(GraphLoader(**params))
+                else:
+                    loaders.append(GraphLoader(**params))
+            return loaders
         else:
-            return GraphLoader(**params)
+            params = {
+                "graph": self.conn,
+                "v_in_feats": v_in_feats,
+                "v_out_labels": v_out_labels,
+                "v_extra_feats": v_extra_feats,
+                "e_in_feats": e_in_feats,
+                "e_out_labels": e_out_labels,
+                "e_extra_feats": e_extra_feats,
+                "batch_size": batch_size,
+                "num_batches": num_batches,
+                "shuffle": shuffle,
+                "filter_by": filter_by,
+                "output_format": output_format,
+                "add_self_loop": add_self_loop,
+                "loader_id": loader_id,
+                "buffer_size": buffer_size,
+                "reverse_edge": reverse_edge,
+                "delimiter": delimiter,
+                "timeout": timeout,
+                "callback_fn": callback_fn
+            }
+
+            if self.kafkaConfig:
+                params.update(self.kafkaConfig)
+                return GraphLoader(**params)
+            else:
+                return GraphLoader(**params)
 
     def edgeNeighborLoader(
         self,
@@ -810,9 +982,11 @@ class GDS:
             shuffle (bool, optional):
                 Whether to shuffle the vertices before loading data.
                 Defaults to False.
-            filter_by (str, optional):
-                A boolean attribute used to indicate which edges
-                can be included as seeds. Defaults to None.
+            filter_by (str, dict, list, optional):
+                Denotes the name of a boolean attribute used to indicate which vertices
+                can be included as seeds. If a dictionary is provided, must be in the form of: 
+                {"vertex_type": "attribute"}. If a list, must contain multiple filters and an 
+                unique loader will be returned for each list element. Defaults to None.
             output_format (str, optional):
                 Format of the output data of the loader. Only
                 "PyG", "DGL", "Spektral", and "dataframe" are supported. Defaults to "PyG".
@@ -834,36 +1008,69 @@ class GDS:
             callback_fn (callable, optional):
                 A callable function to apply to each batch in the dataloader. Defaults to None.
         """
+        if isinstance(filter_by, list):
+            loaders = []
+            for filter_item in filter_by:
+                params = {
+                    "graph": self.conn,
+                    "v_in_feats": v_in_feats,
+                    "v_out_labels": v_out_labels,
+                    "v_extra_feats": v_extra_feats,
+                    "e_in_feats": e_in_feats,
+                    "e_out_labels": e_out_labels,
+                    "e_extra_feats": e_extra_feats,
+                    "batch_size": batch_size,
+                    "num_batches": num_batches,
+                    "num_neighbors": num_neighbors,
+                    "num_hops": num_hops,
+                    "shuffle": shuffle,
+                    "filter_by": filter_item,
+                    "output_format": output_format,
+                    "add_self_loop": add_self_loop,
+                    "loader_id": loader_id,
+                    "buffer_size": buffer_size,
+                    "reverse_edge": reverse_edge,
+                    "delimiter": delimiter,
+                    "timeout": timeout,
+                    "callback_fn": callback_fn
+                }
 
-        params = {
-            "graph": self.conn,
-            "v_in_feats": v_in_feats,
-            "v_out_labels": v_out_labels,
-            "v_extra_feats": v_extra_feats,
-            "e_in_feats": e_in_feats,
-            "e_out_labels": e_out_labels,
-            "e_extra_feats": e_extra_feats,
-            "batch_size": batch_size,
-            "num_batches": num_batches,
-            "num_neighbors": num_neighbors,
-            "num_hops": num_hops,
-            "shuffle": shuffle,
-            "filter_by": filter_by,
-            "output_format": output_format,
-            "add_self_loop": add_self_loop,
-            "loader_id": loader_id,
-            "buffer_size": buffer_size,
-            "reverse_edge": reverse_edge,
-            "delimiter": delimiter,
-            "timeout": timeout,
-            "callback_fn": callback_fn
-        }
-
-        if self.kafkaConfig:
-            params.update(self.kafkaConfig)
-            return EdgeNeighborLoader(**params)
+                if self.kafkaConfig:
+                    params.update(self.kafkaConfig)
+                    loaders.append(EdgeNeighborLoader(**params))
+                else:
+                    loaders.append(EdgeNeighborLoader(**params))
+            return loaders
         else:
-            return EdgeNeighborLoader(**params)
+            params = {
+                "graph": self.conn,
+                "v_in_feats": v_in_feats,
+                "v_out_labels": v_out_labels,
+                "v_extra_feats": v_extra_feats,
+                "e_in_feats": e_in_feats,
+                "e_out_labels": e_out_labels,
+                "e_extra_feats": e_extra_feats,
+                "batch_size": batch_size,
+                "num_batches": num_batches,
+                "num_neighbors": num_neighbors,
+                "num_hops": num_hops,
+                "shuffle": shuffle,
+                "filter_by": filter_by,
+                "output_format": output_format,
+                "add_self_loop": add_self_loop,
+                "loader_id": loader_id,
+                "buffer_size": buffer_size,
+                "reverse_edge": reverse_edge,
+                "delimiter": delimiter,
+                "timeout": timeout,
+                "callback_fn": callback_fn
+            }
+
+            if self.kafkaConfig:
+                params.update(self.kafkaConfig)
+                return EdgeNeighborLoader(**params)
+            else:
+                return EdgeNeighborLoader(**params)
 
     def nodepieceLoader(self, 
                         v_feats: Union[list, dict] = None,
@@ -958,9 +1165,11 @@ class GDS:
             shuffle (bool, optional):
                 Whether to shuffle the vertices before loading data.
                 Defaults to False.
-            filter_by (str, optional):
-                A boolean attribute used to indicate which vertices
-                can be included as seeds. Defaults to None.
+            filter_by (str, dict, list, optional):
+                Denotes the name of a boolean attribute used to indicate which vertices
+                can be included as seeds. If a dictionary is provided, must be in the form of: 
+                {"vertex_type": "attribute"}. If a list, must contain multiple filters and an 
+                unique loader will be returned for each list element. Defaults to None.
             loader_id (str, optional):
                 An identifier of the loader which can be any string. It is
                 also used as the Kafka topic name. If `None`, a random string will be generated
@@ -980,39 +1189,77 @@ class GDS:
         See https://github.com/tigergraph/graph-ml-notebooks/tree/main/applications/nodepiece/nodepiece.ipynb[the ML Workbench tutorial notebook for nodepiece loaders]
          for examples.
         """
-        params = {
-            "graph": self.conn,
-            "v_feats": v_feats,
-            "use_cache": use_cache,
-            "clear_cache": clear_cache,
-            "target_vertex_types": target_vertex_types,
-            "compute_anchors": compute_anchors,
-            "anchor_method": anchor_method,
-            "anchor_cache_attr": anchor_cache_attr,
-            "max_distance": max_distance,
-            "max_anchors": max_anchors,
-            "max_relational_context": max_relational_context, 
-            "anchor_percentage": anchor_percentage,
-            "anchor_attribute": anchor_attribute,
-            "e_types": e_types,
-            "tokenMap": tokenMap,
-            "global_schema_change": global_schema_change,
-            "batch_size": batch_size,
-            "num_batches": num_batches,
-            "shuffle": shuffle,
-            "filter_by": filter_by,
-            "loader_id": loader_id,
-            "buffer_size": buffer_size,
-            "reverse_edge": reverse_edge,
-            "delimiter": delimiter,
-            "timeout": timeout,
-            "callback_fn": callback_fn
-        }
-        if self.kafkaConfig:
-            params.update(self.kafkaConfig)
-            return NodePieceLoader(**params)
+        if isinstance(filter_by, list):
+            loaders = []
+            for filter_item in filter_by:
+                params = {
+                    "graph": self.conn,
+                    "v_feats": v_feats,
+                    "use_cache": use_cache,
+                    "clear_cache": clear_cache,
+                    "target_vertex_types": target_vertex_types,
+                    "compute_anchors": compute_anchors,
+                    "anchor_method": anchor_method,
+                    "anchor_cache_attr": anchor_cache_attr,
+                    "max_distance": max_distance,
+                    "max_anchors": max_anchors,
+                    "max_relational_context": max_relational_context, 
+                    "anchor_percentage": anchor_percentage,
+                    "anchor_attribute": anchor_attribute,
+                    "e_types": e_types,
+                    "tokenMap": tokenMap,
+                    "global_schema_change": global_schema_change,
+                    "batch_size": batch_size,
+                    "num_batches": num_batches,
+                    "shuffle": shuffle,
+                    "filter_by": filter_item,
+                    "loader_id": loader_id,
+                    "buffer_size": buffer_size,
+                    "reverse_edge": reverse_edge,
+                    "delimiter": delimiter,
+                    "timeout": timeout,
+                    "callback_fn": callback_fn
+                }
+                if self.kafkaConfig:
+                    params.update(self.kafkaConfig)
+                    loaders.append(NodePieceLoader(**params))
+                else:
+                    loaders.append(NodePieceLoader(**params))
+            return loaders
         else:
-            return NodePieceLoader(**params)
+            params = {
+                "graph": self.conn,
+                "v_feats": v_feats,
+                "use_cache": use_cache,
+                "clear_cache": clear_cache,
+                "target_vertex_types": target_vertex_types,
+                "compute_anchors": compute_anchors,
+                "anchor_method": anchor_method,
+                "anchor_cache_attr": anchor_cache_attr,
+                "max_distance": max_distance,
+                "max_anchors": max_anchors,
+                "max_relational_context": max_relational_context, 
+                "anchor_percentage": anchor_percentage,
+                "anchor_attribute": anchor_attribute,
+                "e_types": e_types,
+                "tokenMap": tokenMap,
+                "global_schema_change": global_schema_change,
+                "batch_size": batch_size,
+                "num_batches": num_batches,
+                "shuffle": shuffle,
+                "filter_by": filter_by,
+                "loader_id": loader_id,
+                "buffer_size": buffer_size,
+                "reverse_edge": reverse_edge,
+                "delimiter": delimiter,
+                "timeout": timeout,
+                "callback_fn": callback_fn
+            }
+            if self.kafkaConfig:
+                params.update(self.kafkaConfig)
+                return NodePieceLoader(**params)
+            else:
+                return NodePieceLoader(**params)
 
     def hgtLoader(
         self,
@@ -1130,9 +1377,11 @@ class GDS:
             shuffle (bool, optional):
                 Whether to shuffle the vertices before loading data.
                 Defaults to False.
-            filter_by (str, optional):
-                A boolean attribute used to indicate which vertices
-                can be included as seeds. Defaults to None.
+            filter_by (str, dict, list, optional):
+                Denotes the name of a boolean attribute used to indicate which vertices
+                can be included as seeds. If a dictionary is provided, must be in the form of: 
+                {"vertex_type": "attribute"}. If a list, must contain multiple filters and an 
+                unique loader will be returned for each list element. Defaults to None.
             output_format (str, optional):
                 Format of the output data of the loader. Only
                 "PyG", "DGL", "spektral", and "dataframe" are supported. Defaults to "PyG".
@@ -1152,35 +1401,69 @@ class GDS:
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
         """
-        params = {
-            "graph": self.conn,
-            "v_in_feats": v_in_feats,
-            "v_out_labels": v_out_labels,
-            "v_extra_feats": v_extra_feats,
-            "e_in_feats": e_in_feats,
-            "e_out_labels": e_out_labels,
-            "e_extra_feats": e_extra_feats,
-            "batch_size": batch_size,
-            "num_batches": num_batches,
-            "num_neighbors": num_neighbors,
-            "num_hops": num_hops,
-            "shuffle": shuffle,
-            "filter_by": filter_by,
-            "output_format": output_format,
-            "add_self_loop": add_self_loop,
-            "loader_id": loader_id,
-            "buffer_size": buffer_size,
-            "reverse_edge": reverse_edge,
-            "delimiter": delimiter,
-            "timeout": timeout,
-            "callback_fn": callback_fn
-        }
+        if isinstance(filter_by, list):
+            loaders = []
+            for filter_item in filter_by:
+                params = {
+                    "graph": self.conn,
+                    "v_in_feats": v_in_feats,
+                    "v_out_labels": v_out_labels,
+                    "v_extra_feats": v_extra_feats,
+                    "e_in_feats": e_in_feats,
+                    "e_out_labels": e_out_labels,
+                    "e_extra_feats": e_extra_feats,
+                    "batch_size": batch_size,
+                    "num_batches": num_batches,
+                    "num_neighbors": num_neighbors,
+                    "num_hops": num_hops,
+                    "shuffle": shuffle,
+                    "filter_by": filter_item,
+                    "output_format": output_format,
+                    "add_self_loop": add_self_loop,
+                    "loader_id": loader_id,
+                    "buffer_size": buffer_size,
+                    "reverse_edge": reverse_edge,
+                    "delimiter": delimiter,
+                    "timeout": timeout,
+                    "callback_fn": callback_fn
+                }
 
-        if self.kafkaConfig:
-            params.update(self.kafkaConfig)
-            return HGTLoader(**params)
+                if self.kafkaConfig:
+                    params.update(self.kafkaConfig)
+                    loaders.append(HGTLoader(**params))
+                else:
+                    loaders.append(HGTLoader(**params))
+            return loaders
         else:
-            return HGTLoader(**params)
+            params = {
+                "graph": self.conn,
+                "v_in_feats": v_in_feats,
+                "v_out_labels": v_out_labels,
+                "v_extra_feats": v_extra_feats,
+                "e_in_feats": e_in_feats,
+                "e_out_labels": e_out_labels,
+                "e_extra_feats": e_extra_feats,
+                "batch_size": batch_size,
+                "num_batches": num_batches,
+                "num_neighbors": num_neighbors,
+                "num_hops": num_hops,
+                "shuffle": shuffle,
+                "filter_by": filter_by,
+                "output_format": output_format,
+                "add_self_loop": add_self_loop,
+                "loader_id": loader_id,
+                "buffer_size": buffer_size,
+                "reverse_edge": reverse_edge,
+                "delimiter": delimiter,
+                "timeout": timeout,
+                "callback_fn": callback_fn
+            }
+
+            if self.kafkaConfig:
+                params.update(self.kafkaConfig)
+                return HGTLoader(**params)
+            else:
+                return HGTLoader(**params)
     
     def featurizer(
         self,
