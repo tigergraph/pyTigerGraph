@@ -487,14 +487,14 @@ class BaseLoader:
                         kafka_topic, self._kafka_consumer.config["bootstrap_servers"]
                     )
                 )
-            # Double check the topic is fully created
-            while not self._kafka_admin.describe_topics([kafka_topic])[0]["partitions"]:
-                sleep(1)
         else:
             # Topic exists. This means there might be data in kafka already. Skip 
             # calling producer as default unless explicitely set otherwise.
             if self.kafka_skip_produce is None:
                 self.kafka_skip_produce = True
+        # Double check the topic is fully created
+        while not self._kafka_admin.describe_topics([kafka_topic])[0]["partitions"]:
+            sleep(1)
         # Subscribe to the topic
         if (not self._kafka_consumer.subscription()) or kafka_topic not in self._kafka_consumer.subscription():
             self._kafka_consumer.subscribe([kafka_topic])
