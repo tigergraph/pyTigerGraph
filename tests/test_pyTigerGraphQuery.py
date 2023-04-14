@@ -103,8 +103,8 @@ class test_pyTigerGraphQuery(unittest.TestCase):
 
     def test_07_showQuery(self):
         query = self.conn.showQuery("query1").split("\n")[1]
-        q1 = """# installed v2\nCREATE QUERY query1() {"""
-        self.assertIn(q1, query)
+        q1 = """# installed v2"""
+        self.assertEqual(q1, query)
     
     def test_08_getQueryMetadata(self):
         query_md = self.conn.getQueryMetadata("query1")
