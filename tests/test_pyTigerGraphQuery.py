@@ -116,7 +116,7 @@ class test_pyTigerGraphQuery(unittest.TestCase):
 
     def test_10_abortQuery(self):
         abort_ret = self.conn.abortQuery("all")
-        self.assertEqual(abort_ret["results"], [])
+        self.assertEqual(abort_ret["results"], [{'aborted_queries': []}])
         
 if __name__ == '__main__':
     unittest.main()
