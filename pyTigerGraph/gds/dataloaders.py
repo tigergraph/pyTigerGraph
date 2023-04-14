@@ -1832,6 +1832,7 @@ class NeighborLoader(BaseLoader):
             e_extra_feats = self.e_extra_feats,
             e_attr_types = e_attr_types,
             add_self_loop = self.add_self_loop,
+            delimiter = self.delimiter,
             reindex = True,
             primary_id = i["pids"],
             is_hetero = self.is_hetero,
@@ -3443,7 +3444,7 @@ class NodePieceLoader(BaseLoader):
             )
             params = {"anchor_attr": anchor_attribute, "v_types": self._vtypes}
             install_query_file(self._graph, query_path)
-            ancs = self._graph.runInstalledQuery("get_anchors", params=params)[0]["@@vids"]
+            ancs = self._graph.runInstalledQuery("get_anchors", params=params, timeout=self.timeout)[0]["@@vids"]
             print("Number of Anchors:", len(ancs))
             for tok in self.baseTokens + ancs:
                 self.idToIdx[str(tok)] = self.curIdx
@@ -3674,7 +3675,8 @@ class NodePieceLoader(BaseLoader):
                                     v_out_labels = {},
                                     v_extra_feats = {},
                                     v_attr_types=v_attr_types,
-                                    reindex=False, 
+                                    reindex=False,
+                                    delimiter = self.delimiter, 
                                     is_hetero=self.is_hetero, 
                                     primary_id=resp[0]["pids"],
                                     callback_fn=self.nodepiece_process)
@@ -3684,7 +3686,8 @@ class NodePieceLoader(BaseLoader):
                                     v_out_labels = [],
                                     v_extra_feats = [],
                                     v_attr_types=v_attr_types,
-                                    reindex=False, 
+                                    reindex=False,
+                                    delimiter = self.delimiter, 
                                     is_hetero=self.is_hetero, 
                                     primary_id=resp[0]["pids"],
                                     callback_fn=self.nodepiece_process)
@@ -4125,6 +4128,7 @@ class HGTLoader(BaseLoader):
             e_extra_feats = self.e_extra_feats,
             e_attr_types = e_attr_types,
             add_self_loop = self.add_self_loop,
+            delimiter = self.delimiter,
             reindex = True,
             primary_id = i["pids"],
             is_hetero = self.is_hetero,

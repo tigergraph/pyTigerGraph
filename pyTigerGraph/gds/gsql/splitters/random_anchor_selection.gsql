@@ -5,10 +5,10 @@ CREATE DISTRIBUTED QUERY random_anchor_selection(
   SET<STRING> tgt_v_type,
   STRING anchor_attr,
   INT random_seed) SYNTAX v2{
-
+  TYPEDEF TUPLE<FLOAT score, VERTEX v> Anchor_Tuple;
   SumAccum<FLOAT> @score;
   SetAccum<STRING> @@not_tgt_type;
-
+  HeapAccum<Anchor_Tuple> (1, score DESC) @@anchor_heap;
   INT anchor_sample_size, digit_mod;
 
   INT _mod, _mult, _inc;
@@ -18,32 +18,33 @@ CREATE DISTRIBUTED QUERY random_anchor_selection(
   digit_mod =pow(10, 5);
 
   nodes = {v_type};
-  PRINT nodes.size();
   anchor_sample_size = nodes.size() * percentage;
+  @@anchor_heap.resize(anchor_sample_size);
   @@not_tgt_type = v_type MINUS tgt_v_type;
-
   IF filter_by IS NOT NULL THEN
     anchors =
       SELECT s FROM nodes:s
       WHERE s.getAttr(filter_by, "BOOL") OR (s.type IN @@not_tgt_type)
       POST-ACCUM 
         s.@score = ((((getvid(s)*_mult)+_inc)+_mult*random_seed) % _mod) % digit_mod / (digit_mod * 1.0), 
-        s.setAttr(anchor_attr, FALSE)
-      ORDER BY s.@score
-      LIMIT anchor_sample_size;
+        s.setAttr(anchor_attr, FALSE);
   ELSE
     anchors =
       SELECT s FROM nodes:s
       POST-ACCUM 
         s.@score = ((((getvid(s)*_mult)+_inc)+_mult*random_seed) % _mod) % digit_mod / (digit_mod * 1.0), 
-        s.setAttr(anchor_attr, FALSE)
-      ORDER BY s.@score
-      LIMIT anchor_sample_size;
+        s.setAttr(anchor_attr, FALSE);
   END;
    
   anchors =
     SELECT s FROM anchors:s
-    POST-ACCUM s.setAttr(anchor_attr, TRUE);
+    POST-ACCUM @@anchor_heap += Anchor_Tuple(s.@score, s);
+  SetAccum<VERTEX> @@seeds;
+  FOREACH elem IN @@anchor_heap DO
+    @@seeds += elem.v;
+  END;
     
+  anchors = {@@seeds};
+  anchors = SELECT s FROM anchors:s POST-ACCUM s.setAttr(anchor_attr, TRUE);
   PRINT anchor_sample_size, anchors.size();
 }
