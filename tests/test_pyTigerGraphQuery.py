@@ -100,6 +100,23 @@ class test_pyTigerGraphQuery(unittest.TestCase):
         res = self.conn.checkQueryStatus(q_id)
         self.assertIn("requestid", res[0])
         self.assertEqual(q_id, res[0]["requestid"])
+
+    def test_07_showQuery(self):
+        query = self.conn.showQuery("query1").split("\n")[1]
+        q1 = """# installed v2"""
+        self.assertEqual(q1, query)
+    
+    def test_08_getQueryMetadata(self):
+        query_md = self.conn.getQueryMetadata("query1")
+        self.assertEqual(query_md["output"][0], {"ret": "int"})
+
+    def test_09_getRunningQueries(self):
+        rq_id = self.conn.getRunningQueries()["results"]
+        self.assertEqual(len(rq_id), 0)
+
+    def test_10_abortQuery(self):
+        abort_ret = self.conn.abortQuery("all")
+        self.assertEqual(abort_ret["results"], [{'aborted_queries': []}])
         
 if __name__ == '__main__':
     unittest.main()
