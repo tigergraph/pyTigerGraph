@@ -34,12 +34,12 @@ class TestGDSUtilsQuery(unittest.TestCase):
     def test_install_query_by_force(self):
         resp = utils.install_query_file(
             self.conn,
-            os.path.join(os.path.dirname(__file__), "fixtures/create_query_simple2.gsql")
+            os.path.join(os.path.dirname(__file__), "fixtures/create_query_simple2.gsql"),
             force=True
         )
         self.assertEqual(resp, "simple_query")
         resp = self.conn.runInstalledQuery("simple_query")
-        self.assertEqual(resp["message"], "Hello World Again!")
+        self.assertEqual(resp[0]["message"], "Hello World Again!")
 
     def test_install_query_template(self):
         replace = {
