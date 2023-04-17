@@ -1358,7 +1358,7 @@ class BaseLoader:
                 self._kafka_topic = None
         logging.debug("Successfully reset the loader")
 
-    def _generate_attribute_string(schema_type, attr_names, attr_types) -> str:
+    def _generate_attribute_string(self, schema_type, attr_names, attr_types) -> str:
         if schema_type.lower() == "vertex":
             print_attr = '+delimiter+'.join(
                             "stringify(s.{})".format(attr) if (attr_types[attr] != "MAP" and attr_types[attr] != "DATETIME") else 
