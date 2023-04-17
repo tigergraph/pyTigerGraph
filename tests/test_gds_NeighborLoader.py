@@ -487,6 +487,26 @@ class TestGDSNeighborLoaderREST(unittest.TestCase):
         self.assertIn("test_mask", data)
         self.assertIn("is_seed", data)
 
+    def test_reinstall_query(self):
+        loader = NeighborLoader(
+            graph=self.conn,
+            v_in_feats=["x"],
+            v_out_labels=["y"],
+            v_extra_feats=["train_mask", "val_mask", "test_mask"],
+            batch_size=16,
+            num_neighbors=10,
+            num_hops=2,
+            shuffle=True,
+            filter_by="train_mask",
+            output_format="PyG",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4,
+        )
+        self.assertTrue(is_query_installed(self.conn, loader.query_name))
+        query_name = loader.query_name
+        self.assertEqual(loader.reinstall_query(), query_name)
+
 
 class TestGDSHeteroNeighborLoaderREST(unittest.TestCase):
     @classmethod
@@ -819,6 +839,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSNeighborLoaderREST("test_edge_attr"))
     suite.addTest(TestGDSNeighborLoaderREST("test_fetch"))
     suite.addTest(TestGDSNeighborLoaderREST("test_fetch_delimiter"))
+    suite.addTest(TestGDSNeighborLoaderREST("test_reinstall_query"))
     suite.addTest(TestGDSHeteroNeighborLoaderREST("test_init"))
     suite.addTest(TestGDSHeteroNeighborLoaderREST("test_whole_graph_df"))
     suite.addTest(TestGDSHeteroNeighborLoaderREST("test_whole_graph_pyg"))
