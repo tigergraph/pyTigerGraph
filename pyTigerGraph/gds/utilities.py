@@ -158,7 +158,7 @@ def install_query_file(
         + "\nInstall Query {}\n".format(query_name)
     )
     print(
-        "Installing and optimizing queries. It might take a minute if this is the first time you use this loader."
+        "Installing and optimizing queries. It might take a minute or two."
     )
     resp = conn.gsql(query)
     status = resp.splitlines()[-1]

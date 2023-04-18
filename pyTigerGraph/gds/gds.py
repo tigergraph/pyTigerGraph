@@ -196,8 +196,6 @@ class GDS:
             "kafka_topic": kafka_topic
         }
 
-
-
     def neighborLoader(
         self,
         v_in_feats: Union[list, dict] = None,
@@ -219,7 +217,8 @@ class GDS:
         reverse_edge: bool = False,
         delimiter: str = "|",
         timeout: int = 300000,
-        callback_fn: Callable = None
+        callback_fn: Callable = None,
+        reinstall_query: bool = False
     ) -> NeighborLoader:
         """Returns a `NeighborLoader` instance.
         A `NeighborLoader` instance performs neighbor sampling from vertices in the graph in batches in the following manner:
@@ -342,9 +341,11 @@ class GDS:
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
             callback_fn (callable, optional):
                 A callable function to apply to each batch in the dataloader. Defaults to None.
+            reinstall_query (bool, optional):
+                Whether to reinstall the queries associated with this loader at instantiation. One can also call the member function
+                `reinstall_query()` on a loader instance to reinstall the queries at any time. 
+                Defaults to False.
         """
-        
-
         if isinstance(filter_by, list):
             loaders = []
             for filter_item in filter_by:
@@ -371,12 +372,11 @@ class GDS:
                     "timeout": timeout,
                     "callback_fn": callback_fn
                 }
-
                 if self.kafkaConfig:
                     params.update(self.kafkaConfig)
-                    loaders.append(NeighborLoader(**params))
-                else:
-                    loaders.append(NeighborLoader(**params))
+                loaders.append(NeighborLoader(**params))
+            if reinstall_query:
+                loaders[0].reinstall_query()
             return loaders
         else:
             params = {
@@ -402,12 +402,12 @@ class GDS:
                     "timeout": timeout,
                     "callback_fn": callback_fn
                 }
-
             if self.kafkaConfig:
                 params.update(self.kafkaConfig)
-                return NeighborLoader(**params)
-            else:
-                return NeighborLoader(**params)
+            loader = NeighborLoader(**params)
+            if reinstall_query:
+                loader.reinstall_query()
+            return loader
 
     def edgeLoader(
         self,
@@ -422,7 +422,8 @@ class GDS:
         reverse_edge: bool = False,
         delimiter: str = "|",
         timeout: int = 300000,
-        callback_fn: Callable = None
+        callback_fn: Callable = None,
+        reinstall_query: bool = False
     ) -> EdgeLoader:
         """Returns an `EdgeLoader` instance. 
         An `EdgeLoader` instance loads all edges in the graph in batches.
@@ -492,6 +493,10 @@ class GDS:
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
             callback_fn (callable, optional):
                 A callable function to apply to each batch in the dataloader. Defaults to None.
+            reinstall_query (bool, optional):
+                Whether to reinstall the queries associated with this loader at instantiation. One can also call the member function
+                `reinstall_query()` on a loader instance to reinstall the queries at any time. 
+                Defaults to False.
 
         See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_edgeloader.ipynb[the ML Workbench edge loader tutorial notebook]
         for examples.
@@ -516,9 +521,9 @@ class GDS:
                 }
                 if self.kafkaConfig:
                     params.update(self.kafkaConfig)
-                    loaders.append(EdgeLoader(**params))
-                else:
-                    loaders.append(EdgeLoader(**params))
+                loaders.append(EdgeLoader(**params))
+            if reinstall_query:
+                loaders[0].reinstall_query()
             return loaders
         else:
             params = {
@@ -538,24 +543,26 @@ class GDS:
             }
             if self.kafkaConfig:
                 params.update(self.kafkaConfig)
-                return EdgeLoader(**params)
-            else:
-                return EdgeLoader(**params)
+            loader = EdgeLoader(**params)
+            if reinstall_query:
+                loader.reinstall_query()
+            return loader
 
     def vertexLoader(
-            self,
-            attributes: Union[list, dict] = None,
-            batch_size: int = None,
-            num_batches: int = 1,
-            shuffle: bool = False,
-            filter_by: str = None,
-            output_format: str = "dataframe",
-            loader_id: str = None,
-            buffer_size: int = 4,
-            reverse_edge: bool = False,
-            delimiter: str = "|",
-            timeout: int = 300000,
-            callback_fn: Callable = None
+        self,
+        attributes: Union[list, dict] = None,
+        batch_size: int = None,
+        num_batches: int = 1,
+        shuffle: bool = False,
+        filter_by: str = None,
+        output_format: str = "dataframe",
+        loader_id: str = None,
+        buffer_size: int = 4,
+        reverse_edge: bool = False,
+        delimiter: str = "|",
+        timeout: int = 300000,
+        callback_fn: Callable = None,
+        reinstall_query: bool = False
     ) -> VertexLoader:
         """Returns a `VertexLoader` instance.
         A `VertexLoader` can load all vertices of a graph in batches.
@@ -624,6 +631,10 @@ class GDS:
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
             callback_fn (callable, optional):
                 A callable function to apply to each batch in the dataloader. Defaults to None.
+            reinstall_query (bool, optional):
+                Whether to reinstall the queries associated with this loader at instantiation. One can also call the member function
+                `reinstall_query()` on a loader instance to reinstall the queries at any time. 
+                Defaults to False.
 
         See https://github.com/tigergraph/graph-ml-notebooks/blob/main/applications/fraud_detection/fraud_detection.ipynb[the ML Workbench tutorial notebook]
         for examples.
@@ -648,9 +659,9 @@ class GDS:
                 } 
                 if self.kafkaConfig:
                     params.update(self.kafkaConfig)
-                    loaders.append(VertexLoader(**params))
-                else:
-                    loaders.append(VertexLoader(**params))
+                loaders.append(VertexLoader(**params))
+            if reinstall_query:
+                loaders[0].reinstall_query()
             return loaders
         else:
             params = {
@@ -668,12 +679,12 @@ class GDS:
                 "timeout": timeout,
                 "callback_fn": callback_fn
             }
-
             if self.kafkaConfig:
                 params.update(self.kafkaConfig)
-                return VertexLoader(**params)
-            else:
-                return VertexLoader(**params)
+            loader = VertexLoader(**params)
+            if reinstall_query:
+                loader.reinstall_query()
+            return loader
 
     def graphLoader(
         self,
@@ -694,7 +705,8 @@ class GDS:
         reverse_edge: bool = False,
         delimiter: str = "|",
         timeout: int = 300000,
-        callback_fn: Callable = None
+        callback_fn: Callable = None,
+        reinstall_query: bool = False
     ) -> GraphLoader:
         """Returns a `GraphLoader`instance.
         A `GraphLoader` instance loads all edges from the graph in batches, along with the vertices that are connected with each edge.
@@ -807,6 +819,10 @@ class GDS:
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
             callback_fn (callable, optional):
                 A callable function to apply to each batch in the dataloader. Defaults to None.
+            reinstall_query (bool, optional):
+                Whether to reinstall the queries associated with this loader at instantiation. One can also call the member function
+                `reinstall_query()` on a loader instance to reinstall the queries at any time. 
+                Defaults to False.
 
         See https://github.com/tigergraph/graph-ml-notebooks/blob/main/GNNs/PyG/gcn_node_classification.ipynb[the ML Workbench tutorial notebook for graph loaders]
          for examples.
@@ -835,12 +851,11 @@ class GDS:
                     "timeout": timeout,
                     "callback_fn": callback_fn
                 }
-
                 if self.kafkaConfig:
                     params.update(self.kafkaConfig)
-                    loaders.append(GraphLoader(**params))
-                else:
-                    loaders.append(GraphLoader(**params))
+                loaders.append(GraphLoader(**params))
+            if reinstall_query:
+                loaders[0].reinstall_query()
             return loaders
         else:
             params = {
@@ -867,9 +882,10 @@ class GDS:
 
             if self.kafkaConfig:
                 params.update(self.kafkaConfig)
-                return GraphLoader(**params)
-            else:
-                return GraphLoader(**params)
+            loader = GraphLoader(**params)
+            if reinstall_query:
+                loader.reinstall_query()
+            return loader
 
     def edgeNeighborLoader(
         self,
@@ -892,7 +908,8 @@ class GDS:
         reverse_edge: bool = False,
         delimiter: str = "|",
         timeout: int = 300000,
-        callback_fn: Callable = None
+        callback_fn: Callable = None,
+        reinstall_query: bool = False
     ) -> EdgeNeighborLoader:
         """Returns an `EdgeNeighborLoader` instance.
         An `EdgeNeighborLoader` instance performs neighbor sampling from all edges in the graph in batches in the following manner:
@@ -1015,6 +1032,10 @@ class GDS:
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
             callback_fn (callable, optional):
                 A callable function to apply to each batch in the dataloader. Defaults to None.
+            reinstall_query (bool, optional):
+                Whether to reinstall the queries associated with this loader at instantiation. One can also call the member function
+                `reinstall_query()` on a loader instance to reinstall the queries at any time. 
+                Defaults to False.
         """
         if isinstance(filter_by, list):
             loaders = []
@@ -1042,12 +1063,11 @@ class GDS:
                     "timeout": timeout,
                     "callback_fn": callback_fn
                 }
-
                 if self.kafkaConfig:
                     params.update(self.kafkaConfig)
-                    loaders.append(EdgeNeighborLoader(**params))
-                else:
-                    loaders.append(EdgeNeighborLoader(**params))
+                loaders.append(EdgeNeighborLoader(**params))
+            if reinstall_query:
+                loaders[0].reinstall_query()
             return loaders
         else:
             params = {
@@ -1073,39 +1093,42 @@ class GDS:
                 "timeout": timeout,
                 "callback_fn": callback_fn
             }
-
             if self.kafkaConfig:
                 params.update(self.kafkaConfig)
-                return EdgeNeighborLoader(**params)
-            else:
-                return EdgeNeighborLoader(**params)
+            loader = EdgeNeighborLoader(**params)
+            if reinstall_query:
+                loader.reinstall_query()
+            return loader
 
-    def nodepieceLoader(self, 
-                        v_feats: Union[list, dict] = None,
-                        target_vertex_types: Union[str, list] = None,
-                        compute_anchors: bool = False,
-                        use_cache: bool = False,
-                        clear_cache: bool = False,
-                        anchor_method: str = "random",
-                        anchor_cache_attr: str = "anchors",
-                        max_distance: int = 5,
-                        max_anchors: int = 10,
-                        max_relational_context: int = 10,
-                        anchor_percentage: float = 0.01,
-                        anchor_attribute: str = "is_anchor",
-                        e_types: list = None,
-                        global_schema_change: bool = False,
-                        tokenMap: Union[dict, str] = None,
-                        batch_size: int = None,
-                        num_batches: int = 1,
-                        shuffle: bool = False,
-                        filter_by: str = None,
-                        loader_id: str = None,
-                        buffer_size: int = 4,
-                        reverse_edge: bool = False,
-                        delimiter: str = "|",
-                        timeout: int = 300000,
-                        callback_fn: Callable = None) -> NodePieceLoader:
+    def nodepieceLoader(
+        self, 
+        v_feats: Union[list, dict] = None,
+        target_vertex_types: Union[str, list] = None,
+        compute_anchors: bool = False,
+        use_cache: bool = False,
+        clear_cache: bool = False,
+        anchor_method: str = "random",
+        anchor_cache_attr: str = "anchors",
+        max_distance: int = 5,
+        max_anchors: int = 10,
+        max_relational_context: int = 10,
+        anchor_percentage: float = 0.01,
+        anchor_attribute: str = "is_anchor",
+        e_types: list = None,
+        global_schema_change: bool = False,
+        tokenMap: Union[dict, str] = None,
+        batch_size: int = None,
+        num_batches: int = 1,
+        shuffle: bool = False,
+        filter_by: str = None,
+        loader_id: str = None,
+        buffer_size: int = 4,
+        reverse_edge: bool = False,
+        delimiter: str = "|",
+        timeout: int = 300000,
+        callback_fn: Callable = None,
+        reinstall_query: bool = False
+    ) -> NodePieceLoader:
         """Returns a `NodePieceLoader` instance.
         A `NodePieceLoader` instance loads all edges from the graph in batches, along with the vertices that are connected with each edge.
 
@@ -1193,6 +1216,10 @@ class GDS:
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
             callback_fn (callable, optional):
                 A callable function to apply to each batch in the dataloader. Defaults to None.
+            reinstall_query (bool, optional):
+                Whether to reinstall the queries associated with this loader at instantiation. One can also call the member function
+                `reinstall_query()` on a loader instance to reinstall the queries at any time. 
+                Defaults to False.
 
         See https://github.com/tigergraph/graph-ml-notebooks/tree/main/applications/nodepiece/nodepiece.ipynb[the ML Workbench tutorial notebook for nodepiece loaders]
          for examples.
@@ -1230,9 +1257,9 @@ class GDS:
                 }
                 if self.kafkaConfig:
                     params.update(self.kafkaConfig)
-                    loaders.append(NodePieceLoader(**params))
-                else:
-                    loaders.append(NodePieceLoader(**params))
+                loaders.append(NodePieceLoader(**params))
+            if reinstall_query:
+                loaders[0].reinstall_query()
             return loaders
         else:
             params = {
@@ -1265,9 +1292,10 @@ class GDS:
             }
             if self.kafkaConfig:
                 params.update(self.kafkaConfig)
-                return NodePieceLoader(**params)
-            else:
-                return NodePieceLoader(**params)
+            loader = NodePieceLoader(**params)
+            if reinstall_query:
+                loader.reinstall_query()
+            return loader
 
     def hgtLoader(
         self,
@@ -1290,7 +1318,8 @@ class GDS:
         reverse_edge: bool = False,
         delimiter: str = "|",
         timeout: int = 300000,
-        callback_fn: Callable = None
+        callback_fn: Callable = None,
+        reinstall_query: bool = False
     ) -> HGTLoader:
         """Returns a `HGTLoader` instance.
         A `HGTLoader` instance performs stratified neighbor sampling from vertices in the graph in batches in the following manner:
@@ -1408,6 +1437,12 @@ class GDS:
                 Defaults to "|".
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
+            callback_fn (callable, optional):
+                A callable function to apply to each batch in the dataloader. Defaults to None.
+            reinstall_query (bool, optional):
+                Whether to reinstall the queries associated with this loader at instantiation. One can also call the member function
+                `reinstall_query()` on a loader instance to reinstall the queries at any time. 
+                Defaults to False.
         """
         if isinstance(filter_by, list):
             loaders = []
@@ -1435,12 +1470,11 @@ class GDS:
                     "timeout": timeout,
                     "callback_fn": callback_fn
                 }
-
                 if self.kafkaConfig:
                     params.update(self.kafkaConfig)
-                    loaders.append(HGTLoader(**params))
-                else:
-                    loaders.append(HGTLoader(**params))
+                loaders.append(HGTLoader(**params))
+            if reinstall_query:
+                loaders[0].reinstall_query()
             return loaders
         else:
             params = {
@@ -1466,12 +1500,12 @@ class GDS:
                 "timeout": timeout,
                 "callback_fn": callback_fn
             }
-
             if self.kafkaConfig:
                 params.update(self.kafkaConfig)
-                return HGTLoader(**params)
-            else:
-                return HGTLoader(**params)
+            loader = HGTLoader(**params)
+            if reinstall_query:
+                loader.reinstall_query()
+            return loader
     
     def featurizer(
         self,

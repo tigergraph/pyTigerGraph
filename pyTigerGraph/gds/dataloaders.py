@@ -1407,6 +1407,10 @@ class BaseLoader:
     def __len__(self) -> int:
         return self.num_batches
 
+    def reinstall_query(self) -> str:
+        return self._install_query(force=True)
+
+
 class NeighborLoader(BaseLoader):
     """NeighborLoader
 
@@ -1622,7 +1626,7 @@ class NeighborLoader(BaseLoader):
         # Install query
         self.query_name = self._install_query()
 
-    def _install_query(self):
+    def _install_query(self, force: bool = False):
         # Install the right GSQL query for the loader.
         query_suffix = {
             "v_in_feats": self.v_in_feats,
@@ -1717,7 +1721,7 @@ class NeighborLoader(BaseLoader):
                 "dataloaders",
                 "neighbor_loader.gsql",
         )
-        return install_query_file(self._graph, query_path, query_replace)
+        return install_query_file(self._graph, query_path, query_replace, force=force)
 
     def _start(self) -> None:
         # Create task and result queues
@@ -2050,7 +2054,7 @@ class EdgeLoader(BaseLoader):
         # Install query
         self.query_name = self._install_query()
 
-    def _install_query(self):
+    def _install_query(self, force: bool = False):
         # Install the right GSQL query for the loader.
         query_suffix = {
             "attributes": self.attributes,
@@ -2093,7 +2097,7 @@ class EdgeLoader(BaseLoader):
             "dataloaders",
             "edge_loader.gsql",
         )
-        return install_query_file(self._graph, query_path, query_replace)
+        return install_query_file(self._graph, query_path, query_replace, force=force)
 
     def _start(self) -> None:
         # Create task and result queues
@@ -2351,7 +2355,7 @@ class VertexLoader(BaseLoader):
         # Install query
         self.query_name = self._install_query()
 
-    def _install_query(self) -> str:
+    def _install_query(self, force: bool = False) -> str:
         # Install the right GSQL query for the loader.
         query_suffix = {
             "attributes": self.attributes,
@@ -2394,7 +2398,7 @@ class VertexLoader(BaseLoader):
             "dataloaders",
             "vertex_loader.gsql",
         )
-        return install_query_file(self._graph, query_path, query_replace)
+        return install_query_file(self._graph, query_path, query_replace, force=force)
 
     def _start(self) -> None:
         # Create task and result queues
@@ -2675,7 +2679,7 @@ class GraphLoader(BaseLoader):
         # Install query
         self.query_name = self._install_query()
 
-    def _install_query(self) -> str:
+    def _install_query(self, force: bool = False) -> str:
         # Install the right GSQL query for the loader.
         query_suffix = {
             "v_in_feats": self.v_in_feats,
@@ -2756,7 +2760,7 @@ class GraphLoader(BaseLoader):
             "dataloaders",
             "graph_loader.gsql",
         )
-        return install_query_file(self._graph, query_path, query_replace)
+        return install_query_file(self._graph, query_path, query_replace, force=force)
 
     def _start(self) -> None:
         # Create task and result queues
@@ -3005,7 +3009,7 @@ class EdgeNeighborLoader(BaseLoader):
         # Install query
         self.query_name = self._install_query()
 
-    def _install_query(self):
+    def _install_query(self, force: bool = False):
         # Install the right GSQL query for the loader.
         query_suffix = {
             "v_in_feats": self.v_in_feats,
@@ -3101,7 +3105,7 @@ class EdgeNeighborLoader(BaseLoader):
                 "dataloaders",
                 "edge_nei_loader.gsql",
         )
-        return install_query_file(self._graph, query_path, query_replace)
+        return install_query_file(self._graph, query_path, query_replace, force=force)
 
     def _start(self) -> None:
         # Create task and result queues
@@ -3457,7 +3461,7 @@ class NodePieceLoader(BaseLoader):
         else:
             raise NotImplementedError("{} anchor selection method is not supported. Please try 'random' anchor selection method".format(method))
 
-    def _install_query(self) -> str:
+    def _install_query(self, force: bool = False) -> str:
         # Install the right GSQL query for the loader.
         query_suffix = []
         query_replace = {}
@@ -3503,7 +3507,24 @@ class NodePieceLoader(BaseLoader):
             "dataloaders",
             "nodepiece_loader.gsql",
         )
-        return install_query_file(self._graph, query_path, query_replace)
+        return install_query_file(self._graph, query_path, query_replace, force=force)
+
+    def reinstall_query(self) -> str:
+        query_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "gsql",
+            "dataloaders",
+            "get_anchors.gsql",
+        )
+        install_query_file(self._graph, query_path, force=True)
+        query_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "gsql",
+            "splitters",
+            "random_anchor_selection.gsql",
+        )
+        install_query_file(self._graph, query_path, force=True)
+        return self._install_query(force=True)
 
     def nodepiece_process(self, data):
         """NO DOC"""
@@ -3878,7 +3899,7 @@ class HGTLoader(BaseLoader):
         # Install query
         self.query_name = self._install_query()
 
-    def _install_query(self):
+    def _install_query(self, force: bool = False):
         # Install the right GSQL query for the loader.
         query_suffix = {
             "num_neighbors": self.num_neighbors,
@@ -3966,7 +3987,7 @@ class HGTLoader(BaseLoader):
                 "dataloaders",
                 "hgt_loader.gsql",
         )
-        return install_query_file(self._graph, query_path, query_replace)
+        return install_query_file(self._graph, query_path, query_replace, force=force)
 
     def _start(self) -> None:
         # Create task and result queues

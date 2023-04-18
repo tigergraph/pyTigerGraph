@@ -31,6 +31,16 @@ class TestGDSUtilsQuery(unittest.TestCase):
         )
         self.assertEqual(resp, "simple_query")
 
+    def test_install_query_by_force(self):
+        resp = utils.install_query_file(
+            self.conn,
+            os.path.join(os.path.dirname(__file__), "fixtures/create_query_simple2.gsql"),
+            force=True
+        )
+        self.assertEqual(resp, "simple_query")
+        resp = self.conn.runInstalledQuery("simple_query")
+        self.assertEqual(resp[0]["message"], "Hello World Again!")
+
     def test_install_query_template(self):
         replace = {
             "{QUERYSUFFIX}": "something_special",
@@ -52,6 +62,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSUtilsQuery("test_is_query_installed"))
     suite.addTest(TestGDSUtilsQuery("test_install_query_file"))
     suite.addTest(TestGDSUtilsQuery("test_install_exist_query"))
+    suite.addTest(TestGDSUtilsQuery("test_install_query_by_force"))
     suite.addTest(TestGDSUtilsQuery("test_install_query_template"))
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)
