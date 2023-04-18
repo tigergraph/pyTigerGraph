@@ -1358,6 +1358,24 @@ class BaseLoader:
                 self._kafka_topic = None
         logging.debug("Successfully reset the loader")
 
+    def _generate_attribute_string(self, schema_type, attr_names, attr_types) -> str:
+        if schema_type.lower() == "vertex":
+            print_attr = '+delimiter+'.join(
+                            "stringify(s.{})".format(attr) if (attr_types[attr] != "MAP" and attr_types[attr] != "DATETIME") else 
+                            '"["+stringify(s.{})+"]"'.format(attr) if attr_types[attr] == "MAP" 
+                            else "stringify(datetime_to_epoch(s.{}))".format(attr)
+                            for attr in attr_names
+                        )
+        if schema_type.lower() == "edge":
+            print_attr = '+delimiter+'.join(
+                        "stringify(e.{})".format(attr) 
+                        if (attr_types[attr] != "MAP" and attr_types[attr] != "DATETIME") else 
+                        '"["+stringify(e.{})+"]"'.format(attr) if attr_types[attr] == "MAP" 
+                        else "stringify(datetime_to_epoch(e.{}))".format(attr)
+                        for attr in attr_names
+                    )
+        return print_attr
+    
     def metadata(self, additional_v_types=None, additional_e_types=None) -> Tuple[list, list]:
         v_types = self._vtypes
         if additional_v_types:
@@ -1630,10 +1648,7 @@ class NeighborLoader(BaseLoader):
                 )
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
-                    print_attr = '+delimiter+'.join(
-                        "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
-                        for attr in v_attr_names
-                    )
+                    print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
                     print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + delimiter + "1\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
                     print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + delimiter + "0\\n")\n'.format(
@@ -1657,10 +1672,7 @@ class NeighborLoader(BaseLoader):
                 )
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
-                    print_attr = '+delimiter+'.join(
-                        "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'
-                        for attr in e_attr_names
-                    )
+                    print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
                     print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype, print_attr)
                 else:
@@ -1673,10 +1685,7 @@ class NeighborLoader(BaseLoader):
             v_attr_names = self.v_in_feats + self.v_out_labels + self.v_extra_feats
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
-                print_attr = '+delimiter+'.join(
-                    "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
-                    for attr in v_attr_names
-                )
+                print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
                 print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + {} + delimiter + "1\\n")'.format(
                     print_attr
                 )
@@ -1694,10 +1703,7 @@ class NeighborLoader(BaseLoader):
             e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
-                print_attr = '+delimiter+'.join(
-                    "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
-                    for attr in e_attr_names
-                )
+                print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
                 print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n")'.format(
                     print_attr
                 )
@@ -2060,10 +2066,7 @@ class EdgeLoader(BaseLoader):
                 e_attr_names = self.attributes.get(etype, [])
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
-                    print_attr = '+delimiter+'.join(
-                        "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
-                        for attr in e_attr_names
-                    )
+                    print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
                     print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype, print_attr)
                 else:
@@ -2076,10 +2079,7 @@ class EdgeLoader(BaseLoader):
             e_attr_names = self.attributes
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
-                print_attr = '+delimiter+'.join(
-                    "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
-                    for attr in e_attr_names
-                )
+                print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
                 print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n")'.format(
                     print_attr
                 )
@@ -2367,10 +2367,7 @@ class VertexLoader(BaseLoader):
                 v_attr_names = self.attributes.get(vtype, [])
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
-                    print_attr = '+delimiter+'.join(
-                        "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
-                        for attr in v_attr_names
-                    )
+                    print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
                     print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
                 else:
@@ -2383,10 +2380,7 @@ class VertexLoader(BaseLoader):
             v_attr_names = self.attributes
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
-                print_attr = '+delimiter+'.join(
-                    "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
-                    for attr in v_attr_names
-                )
+                print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
                 print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + {} + "\\n")'.format(
                     print_attr
                 )
@@ -2706,10 +2700,7 @@ class GraphLoader(BaseLoader):
                 )
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
-                    print_attr = '+delimiter+'.join(
-                        "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
-                        for attr in v_attr_names
-                    )
+                    print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
                     print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
                 else:
@@ -2727,10 +2718,7 @@ class GraphLoader(BaseLoader):
                 )
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
-                    print_attr = '+delimiter+'.join(
-                        "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
-                        for attr in e_attr_names
-                    )
+                    print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
                     print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype, print_attr)
                 else:
@@ -2743,10 +2731,7 @@ class GraphLoader(BaseLoader):
             v_attr_names = self.v_in_feats + self.v_out_labels + self.v_extra_feats
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
-                print_attr = '+delimiter+'.join(
-                    "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
-                    for attr in v_attr_names
-                )
+                print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
                 print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + {} + "\\n")'.format(
                     print_attr
                 )
@@ -2757,10 +2742,7 @@ class GraphLoader(BaseLoader):
             e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
-                print_attr = '+delimiter+'.join(
-                    "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
-                    for attr in e_attr_names
-                )
+                print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
                 print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n")'.format(
                     print_attr
                 )
@@ -3048,10 +3030,7 @@ class EdgeNeighborLoader(BaseLoader):
                 )
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
-                    print_attr = '+delimiter+'.join(
-                        "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
-                        for attr in v_attr_names
-                    )
+                    print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
                     print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
                 else:
@@ -3070,10 +3049,7 @@ class EdgeNeighborLoader(BaseLoader):
                 )
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
-                    print_attr = '+delimiter+'.join(
-                        "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
-                        for attr in e_attr_names
-                    )
+                    print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
                     print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + delimiter + "1\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", etype, print_attr)
                     print_query_other += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + delimiter + "0\\n")\n'.format(
@@ -3092,10 +3068,7 @@ class EdgeNeighborLoader(BaseLoader):
             v_attr_names = self.v_in_feats + self.v_out_labels + self.v_extra_feats
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
-                print_attr = '+delimiter+'.join(
-                    "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
-                    for attr in v_attr_names
-                )
+                print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
                 print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + {} + "\\n")'.format(
                     print_attr
                 )
@@ -3107,10 +3080,7 @@ class EdgeNeighborLoader(BaseLoader):
             e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
-                print_attr = '+delimiter+'.join(
-                   "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'.format(attr)
-                    for attr in e_attr_names
-                )
+                print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
                 print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + delimiter + "1\\n")'.format(
                     print_attr
                 )
@@ -3500,10 +3470,7 @@ class NodePieceLoader(BaseLoader):
                 query_suffix.extend(v_attr_names)
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
-                    print_attr = '+delimiter+'.join(
-                        "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
-                        for attr in v_attr_names
-                    )
+                    print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
                     print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + s.@rel_context_set + delimiter + s.@ancs + delimiter + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
                 else:
@@ -3518,10 +3485,7 @@ class NodePieceLoader(BaseLoader):
             query_suffix.extend(v_attr_names)
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
-                print_attr = '+delimiter+'.join(
-                   "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
-                    for attr in v_attr_names
-                )
+                print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
                 print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + s.@rel_context_set + delimiter + s.@ancs + delimiter + {} + "\\n")'.format(
                     print_attr
                 )
@@ -3941,10 +3905,7 @@ class HGTLoader(BaseLoader):
                 )
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
-                    print_attr = '+delimiter+'.join(
-                        "stringify(s.{})".format(attr) if v_attr_types[attr] != "MAP" else '"["+stringify(s.{})+"]"'.format(attr)
-                        for attr in v_attr_names
-                    )
+                    print_attr = print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
                     print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + delimiter + "1\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
                     print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + delimiter + "0\\n")\n'.format(
@@ -3976,10 +3937,7 @@ class HGTLoader(BaseLoader):
                     if vtype!=e_attr_types["FromVertexTypeName"] and vtype!=e_attr_types["ToVertexTypeName"]:
                         continue
                     if e_attr_names:
-                        print_attr = '+delimiter+'.join(
-                            "stringify(e.{})".format(attr) if e_attr_types[attr] != "MAP" else '"["+stringify(e.{})+"]"'
-                            for attr in e_attr_names
-                        )
+                        print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
                         print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n")\n'.format(
                                 "IF" if eidx==0 else "ELSE IF", etype, print_attr)
                     else:
