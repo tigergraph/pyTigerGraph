@@ -68,6 +68,47 @@ class TestGDSNeighborLoaderKafka(unittest.TestCase):
                     num_batches += 1
                 self.assertEqual(num_batches, 9)
 
+    def test_iterate_stop_pyg(self):
+        loader = NeighborLoader(
+            graph=self.conn,
+            v_in_feats=["x"],
+            v_out_labels=["y"],
+            v_extra_feats=["train_mask", "val_mask", "test_mask"],
+            batch_size=16,
+            num_neighbors=10,
+            num_hops=2,
+            shuffle=True,
+            filter_by="train_mask",
+            output_format="PyG",
+            add_self_loop=False,
+            loader_id=None,
+            buffer_size=4,
+            kafka_address="kafka:9092",
+        )
+        for epoch in range(2):
+            num_batches = 0
+            broken = False
+            for data in loader:
+                # print(num_batches, data)
+                self.assertIsInstance(data, pygData)
+                self.assertIn("x", data)
+                self.assertIn("y", data)
+                self.assertIn("train_mask", data)
+                self.assertIn("val_mask", data)
+                self.assertIn("test_mask", data)
+                self.assertIn("is_seed", data)
+                self.assertGreater(data["x"].shape[0], 0)
+                self.assertGreater(data["edge_index"].shape[1], 0)
+                num_batches += 1
+                if num_batches == 5:
+                    loader.stop(remove_topics=True)
+                    broken = True
+                    break
+            if broken:
+                break
+        rq_id = self.conn.getRunningQueries()["results"]
+        self.assertEqual(len(rq_id), 0)
+        
     def test_whole_graph_pyg(self):
         loader = NeighborLoader(
             graph=self.conn,
@@ -808,6 +849,7 @@ if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(TestGDSNeighborLoaderKafka("test_init"))
     suite.addTest(TestGDSNeighborLoaderKafka("test_iterate_pyg"))
+    suite.addTest(TestGDSNeighborLoaderKafka("test_iterate_stop_pyg"))
     suite.addTest(TestGDSNeighborLoaderKafka("test_whole_graph_pyg"))
     suite.addTest(TestGDSNeighborLoaderKafka("test_edge_attr"))
     suite.addTest(TestGDSNeighborLoaderKafka("test_distributed_loaders"))
