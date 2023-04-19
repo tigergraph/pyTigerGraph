@@ -112,7 +112,7 @@ CREATE DISTRIBUTED QUERY nodepiece_loader_{QUERYSUFFIX}(
         END;
         FOREACH i IN RANGE [1, max_distance] DO
           LOG(TRUE, "ANCHOR MESSAGE DISTANCE", i);
-          FOREACH j IN RANGE [0, num_edge_batches] DO
+          FOREACH j IN RANGE [0, num_edge_batches-1] DO
             LOG(TRUE, "ANCHOR BATCH", j);
             ancs = SELECT t
                  FROM ancs:s -(e_types:e)-v_types:t WHERE t.@heapFull == False AND ((s.@tmp_id+t.@tmp_id)*(s.@tmp_id+t.@tmp_id+1)/2+t.@tmp_id)%num_edge_batches == j
