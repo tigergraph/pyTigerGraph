@@ -1,4 +1,5 @@
 from .trainer import Trainer
+from .transforms.pyg_transforms import *
 import warnings
 
 try:
