@@ -1408,6 +1408,11 @@ class BaseLoader:
         return self.num_batches
 
     def reinstall_query(self) -> str:
+        """Reinstall the dataloader query.
+
+        Returns:
+            The name of the query installed (str)
+        """
         return self._install_query(force=True)
 
 
@@ -3510,6 +3515,11 @@ class NodePieceLoader(BaseLoader):
         return install_query_file(self._graph, query_path, query_replace, force=force)
 
     def reinstall_query(self) -> str:
+        """Reinstall the dataloader query.
+
+        Returns:
+            The name of the query installed (str)
+        """
         query_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             "gsql",

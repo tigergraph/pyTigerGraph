@@ -112,6 +112,7 @@ class BinaryRecall(Accumulator):
     * Get recall score at any point by accessing the value property.
     """
     def __init__(self) -> None:
+        """NO DOC"""
         super().__init__()
         warnings.warn(
                 "The `BinaryRecall` metric is deprecated; use `Recall` metric instead.",
@@ -152,6 +153,11 @@ class ConfusionMatrix(Accumulator):
             Number of classes in your classification task.
     """
     def __init__(self, num_classes: int) -> None:
+        """Instantiate the Confusion Matrix metric.
+        Args:
+            num_classes (int):
+                Number of classes in the classification task.
+        """
         super().__init__()
         self.num_classes = num_classes
 
@@ -234,6 +240,7 @@ class BinaryPrecision(Accumulator):
     """
 
     def __init__(self) -> None:
+        """NO DOC"""
         super().__init__()
         warnings.warn(
                 "The `BinaryPrecision` metric is deprecated; use `Precision` metric instead.",
@@ -349,6 +356,7 @@ class RMSE(MSE):
     * Get RMSE score at any point by accessing the value property.
     """
     def __init__(self):
+        """NO DOC"""
         super().__init__()
 
     @property
@@ -417,6 +425,11 @@ class HitsAtK(Accumulator):
             Top k number of entities to compare.
     """
     def __init__(self, k:int) -> None:
+        """Instantiate the Hits@K Metric
+        Args:
+            k (int):
+                Top k number of entities to compare.
+        """
         super().__init__()
         self.k = k
 
@@ -463,6 +476,11 @@ class RecallAtK(Accumulator):
             Top k number of entities to compare.
     """
     def __init__(self, k:int) -> None:
+        """Instantiate the Recall@K Metric
+        Args:
+            k (int):
+                Top k number of entities to compare.
+        """
         super().__init__()
         self.k = k
 
@@ -494,7 +512,9 @@ class RecallAtK(Accumulator):
             return None
 
 class BaseMetrics():
+    """NO DOC"""
     def __init__(self):
+        """NO DOC"""
         self.reset_metrics()
     
     def reset_metrics(self):
@@ -509,11 +529,18 @@ class BaseMetrics():
 
 class ClassificationMetrics(BaseMetrics):
     def __init__(self, num_classes: int=2):
+        """Instantiate the Classification Metrics collection.
+        Collects Loss, Accuracy, Precision, Recall, and Confusion Matrix Metrics.
+        Args:
+            num_classes (int):
+                Number of classes in the classification task.
+        """
         self.num_classes = num_classes
         super(ClassificationMetrics, self).__init__()
         self.reset_metrics()
 
     def reset_metrics(self):
+        """Reset the collection of metrics."""
         super().reset_metrics()
         self.accuracy = Accuracy()
         self.confusion_matrix = ConfusionMatrix(self.num_classes)
@@ -521,6 +548,13 @@ class ClassificationMetrics(BaseMetrics):
         self.recall = Recall(self.num_classes)
 
     def update_metrics(self, loss, out, batch, target_type=None):
+        """Update the metrics collected.
+        Args:
+            loss (float): loss value to update
+            out (ndarray): the predictions of the model
+            batch (dict): the batch to calculate metrics on
+            target_type (str, optional): the type of schema element to calculate the metrics for
+        """
         super().update_metrics(loss, out, batch)
         pred = out.argmax(dim=1)
         if target_type:
@@ -535,6 +569,10 @@ class ClassificationMetrics(BaseMetrics):
             self.recall.update(pred[batch.is_seed], batch.y[batch.is_seed])
 
     def get_metrics(self):
+        """Get the metrics collected.
+        Returns:
+            Dictionary of Accuracy, Precision, Recall, and Confusion Matrix
+        """
         super_met = super().get_metrics()
         metrics = {"accuracy": self.accuracy.value, "precision": self.precision.value, "recall": self.recall.value, "confusion_matrix": self.confusion_matrix.value}
         metrics.update(super_met)
@@ -542,22 +580,37 @@ class ClassificationMetrics(BaseMetrics):
 
 class RegressionMetrics(BaseMetrics):
     def __init__(self):
+        """Instantiate the Regression Metrics collection.
+        Collects Loss, MSE, RMSE, and MAE metrics.
+        """
         super().__init__()
         self.reset_metrics()
 
     def reset_metrics(self):
+        """Reset the collection of metrics."""
         super().reset_metrics()
         self.mse = MSE()
         self.rmse = RMSE()
         self.mae = MAE()
 
     def update_metrics(self, loss, out, batch, target_type=None):
+        """Update the metrics collected.
+        Args:
+            loss (float): loss value to update
+            out (ndarray): the predictions of the model
+            batch (dict): the batch to calculate metrics on
+            target_type (str, optional): the type of schema element to calculate the metrics for
+        """
         super().update_metrics(loss, out, batch)
         self.mse.update(out[batch.is_seed], batch.y[batch.is_seed])
         self.rmse.update(out[batch.is_seed], batch.y[batch.is_seed])
         self.mae.update(out[batch.is_seed], batch.y[batch.is_seed])
 
     def get_metrics(self):
+        """Get the metrics collected.
+        Returns:
+            Dictionary of MSE, RMSE, and MAE.
+        """
         super_met = super().get_metrics()
         metrics = {"mse": self.mse.value,
                    "rmse": self.rmse.value,
@@ -568,21 +621,39 @@ class RegressionMetrics(BaseMetrics):
 
 class LinkPredictionMetrics(BaseMetrics):
     def __init__(self, k):
+        """Instantiate the Classification Metrics collection.
+        Collects Loss, Recall@K, and Hits@K metrics.
+        Args:
+            k (int):
+                The number of results to look at when calculating metrics.
+        """
         self.k = k
         super(LinkPredictionMetrics, self).__init__()
         self.reset_metrics()
 
     def reset_metrics(self):
+        """Reset the collection of metrics."""
         super().reset_metrics()
         self.recall_at_k = RecallAtK(self.k)
         self.hits_at_k = HitsAtK(self.k)
 
     def update_metrics(self, loss, out, batch, target_type=None):
+        """Update the metrics collected.
+        Args:
+            loss (float): loss value to update
+            out (ndarray): the predictions of the model
+            batch (dict): the batch to calculate metrics on
+            target_type (str, optional): the type of schema element to calculate the metrics for
+        """
         super().update_metrics(loss, out, batch)
         self.recall_at_k.update(out, batch.y)
         self.hits_at_k.update(out, batch.y)
 
     def get_metrics(self):
+        """Get the metrics collected.
+        Returns:
+            Dictionary of Recall@K, Hits@K, and K.
+        """
         super_met = super().get_metrics()
         metrics = {"recall_at_k": self.recall_at_k.value,
                    "hits_at_k": self.hits_at_k.value,

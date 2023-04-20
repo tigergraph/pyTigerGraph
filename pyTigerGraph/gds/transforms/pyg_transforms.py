@@ -1,4 +1,5 @@
 class BasePyGTransform():
+    """NO DOC"""
     def __call__(self, data):
         return data
 
@@ -6,7 +7,16 @@ class BasePyGTransform():
         return f'{self.__class__.__name__}()'
 
 class TemporalPyGTransform(BasePyGTransform):
-    """ The TemporalPyGTransform creates a sequence of subgraph batches out of a single batch of data produced by a NeighborLoader or HGTLoader.
+    def __init__(self,
+                 vertex_start_attrs: dict,
+                 vertex_end_attrs: dict,
+                 edge_start_attrs: dict,
+                 edge_end_attrs: dict,
+                 start_dt: int,
+                 end_dt: int,
+                 feature_transforms: dict = {},
+                 timestep: int = 86400):
+        """The TemporalPyGTransform creates a sequence of subgraph batches out of a single batch of data produced by a NeighborLoader or HGTLoader.
         It assumes that there are datetime attributes on vertices and edges. If vertex attributes change over time, children vertex attributes
         are moved to the appropriate parent, and then the children are removed from the graph.
 
@@ -40,16 +50,7 @@ class TemporalPyGTransform(BasePyGTransform):
                 In the fromat of {("ItemInstance", "reverse_DESCRIBED_BY", "Item"): ["x"]}
             timestep (int, optional):
                 The number of seconds to use in between timesteps. Defaults to 86400 seconds (1 day).
-    """
-    def __init__(self,
-                 vertex_start_attrs: dict,
-                 vertex_end_attrs: dict,
-                 edge_start_attrs: dict,
-                 edge_end_attrs: dict,
-                 start_dt: int,
-                 end_dt: int,
-                 feature_transforms: dict = {},
-                 timestep: int = 86400):
+        """
         self.vertex_start = vertex_start_attrs
         self.vertex_end = vertex_end_attrs
         self.edge_start = edge_start_attrs
@@ -67,7 +68,7 @@ class TemporalPyGTransform(BasePyGTransform):
             raise Exception("PyTorch Geometric required to use PyG models. Please install PyTorch Geometric")
 
     def __call__(self, data) -> list:
-        """ Perform the transform. Returns a list of PyTorch Geometric data objects, a sequence of snapshots in time of the graph.
+        """Perform the transform. Returns a list of PyTorch Geometric data objects, a sequence of snapshots in time of the graph.
             Edges are removed between vertices that do not have connections at the given time. All vertices are in each snapshot, but are marked
             as present with the "vertex_present" attribute in the produced data objects.
             Args:
