@@ -533,6 +533,8 @@ class BaseLoader:
                         status["results"][0]["status"]
                     )
                 )
+        # exiting
+        tgraph.abortQuery(resp)
 
     @staticmethod
     def _request_rest(
@@ -1260,6 +1262,15 @@ class BaseLoader:
         self._reader.start()
 
         raise NotImplementedError
+
+    def stop(self, remove_topics=False) -> None:
+        """Stop the dataloading.
+        Stop loading data from the database. Will kill the asynchronous query producing batches for kafka.
+        Args:
+            remove_topics (bool, optional):
+                If set to True, the Kafka topics created by the dataloader will be deleted, thus removing the data residing in the topic.
+        """
+        self._reset(theend=remove_topics)
 
     def __iter__(self) -> Iterator:
         if self.num_batches == 1:
