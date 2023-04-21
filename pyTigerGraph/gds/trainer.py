@@ -47,7 +47,28 @@ class PrinterCallback(BaseCallback):
 
     def on_eval_end(self, trainer):
         print(trainer.get_eval_metrics())
-        
+
+class MetricsCallback(BaseCallback):
+    def on_train_step_end(self, trainer):
+        trainer.reset_train_step_metrics()
+        for metric in trainer.metrics:
+            metric.update_metrics(trainer.loss, trainer.out, trainer.batch, target_type=trainer.target_type)
+            trainer.update_train_step_metrics(metric.get_metrics())
+            metric.reset_metrics()
+        trainer.update_train_step_metrics({"global_step": trainer.cur_step})
+        trainer.update_train_step_metrics({"epoch": int(trainer.cur_step/trainer.train_loader.num_batches)})
+    
+    def on_eval_start(self, trainer):
+        for metric in trainer.metrics:
+            metric.reset_metrics()
+    
+    def on_eval_step_end(self, trainer):
+        for metric in trainer.metrics:
+            metric.update_metrics(trainer.loss, trainer.out, trainer.batch, target_type=trainer.target_type)
+    
+    def on_eval_end(self, trainer):
+        for metric in trainer.metrics:
+            trainer.update_eval_metrics(metric.get_metrics())
 
 class DefaultCallback(BaseCallback):
     def __init__(self, output_dir="./logs", use_tqdm=True):
@@ -85,13 +106,6 @@ class DefaultCallback(BaseCallback):
 
     def on_train_step_end(self, trainer):
         logger = logging.getLogger(__name__)
-        trainer.reset_train_step_metrics()
-        for metric in trainer.metrics:
-            metric.update_metrics(trainer.loss, trainer.out, trainer.batch, target_type=trainer.target_type)
-            trainer.update_train_step_metrics(metric.get_metrics())
-            metric.reset_metrics()
-        trainer.update_train_step_metrics({"global_step": trainer.cur_step})
-        trainer.update_train_step_metrics({"epoch": int(trainer.cur_step/trainer.train_loader.num_batches)})
         logger.info("train_step:"+str(trainer.get_train_step_metrics()))
         if self.tqdm:
             if self.batch_bar:
@@ -104,19 +118,13 @@ class DefaultCallback(BaseCallback):
                 self.valid_bar = self.tqdm(desc="Eval Batches", total=trainer.eval_loader.num_batches)
 
     def on_eval_step_end(self, trainer):
-        for metric in trainer.metrics:
-            metric.update_metrics(trainer.loss, trainer.out, trainer.batch, target_type=trainer.target_type)
         if self.tqdm:
             if self.valid_bar:
                 self.valid_bar.update(1)
 
     def on_eval_end(self, trainer):
         logger = logging.getLogger(__name__)
-        for metric in trainer.metrics:
-            trainer.update_eval_metrics(metric.get_metrics())
         logger.info("evaluation:"+str(trainer.get_eval_metrics()))
-        for metric in trainer.metrics:
-            metric.reset_metrics()
         trainer.model.train()
         if self.tqdm:
             if self.valid_bar:
@@ -179,6 +187,7 @@ class Trainer():
         else:
             self.target_type = target_type
 
+        callbacks = [MetricsCallback] + callbacks
         for callback in callbacks: # instantiate callbacks if not already done so
             if isinstance(callback, type):
                 callback = callback()
