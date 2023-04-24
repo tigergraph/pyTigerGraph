@@ -3313,6 +3313,7 @@ class NodePieceLoader(BaseLoader):
         self.anchor_cache_attr = anchor_cache_attr
         self.attributes = self._validate_vertex_attributes(v_feats, is_hetero)
         self._anchor_perc = anchor_percentage
+        self.num_edge_batches = 10
         if is_hetero:
             self._vtypes = list(self.attributes.keys())
             if not self._vtypes:
@@ -3373,6 +3374,7 @@ class NodePieceLoader(BaseLoader):
         self._payload["delimiter"] = delimiter
         self._payload["input_vertices"] = []
         self._payload["num_heap_inserts"] = self.num_heap_inserts
+        self._payload["num_edge_batches"] = self.num_edge_batches
         if e_types:
             self._payload["e_types"] = e_types
         elif e_types == []:
