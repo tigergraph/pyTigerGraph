@@ -20,7 +20,7 @@ class BaseGraphSAGEModel(bm.BaseModel):
         else:
             self.model = tmp_model
 
-    def forward(self, batch, tgt_type=None):
+    def forward(self, batch, target_type=None):
         if self.heterogeneous:
             x = batch.x_dict
             for k in x.keys():
@@ -40,14 +40,14 @@ class GraphSAGEForVertexClassification(BaseGraphSAGEModel):
         self.class_weight = class_weights
         self.metrics = ClassificationMetrics(num_classes=out_dim)
 
-    def forward(self, batch, get_probs=False, tgt_type=None):
+    def forward(self, batch, get_probs=False, target_type=None):
         logits = super().forward(batch)
         if self.heterogeneous:
             if get_probs:
                 for k in logits.keys():
                     logits[k] = F.softmax(logits[k], dim=-1)
-            if tgt_type:
-                return logits[tgt_type]
+            if target_type:
+                return logits[target_type]
             else:
                 return logits
         else:
@@ -73,8 +73,11 @@ class GraphSAGEForVertexRegression(BaseGraphSAGEModel):
         self.class_weight = class_weights
         self.metrics = RegressionMetrics()
 
-    def forward(self, batch, tgt_type=None):
+    def forward(self, batch, target_type=None):
         logits = super().forward(batch)
+        if self.heterogeneous:
+            if target_type:
+                return logits[target_type]
         return logits
 
     def compute_loss(self, logits, batch, target_vertex_type=None, loss_fn=None):
@@ -93,13 +96,13 @@ class GraphSAGEForLinkPrediction(BaseGraphSAGEModel):
         super().__init__(num_layers, embedding_dim, dropout, hidden_dim, heterogeneous)
         self.metrics = LinkPredictionMetrics(k=10)
 
-    def forward(self, batch, tgt_type=None):
-        logits = super().forward(batch, tgt_type=tgt_type)
+    def forward(self, batch, target_type=None):
+        logits = super().forward(batch, target_type=target_type)
         if self.heterogeneous:
-            if tgt_type:
-                pos_edges, neg_edges = self.generate_edges(batch, tgt_type)
-                src_h = logits[tgt_type[0]]
-                dest_h = logits[tgt_type[-1]]
+            if target_type:
+                pos_edges, neg_edges = self.generate_edges(batch, target_type)
+                src_h = logits[target_type[0]]
+                dest_h = logits[target_type[-1]]
                 h = self.decode(src_h, dest_h, pos_edges, neg_edges)
         else:
             pos_edges, neg_edges = self.generate_edges(batch)
