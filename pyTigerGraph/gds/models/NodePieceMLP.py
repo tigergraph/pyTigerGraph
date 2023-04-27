@@ -63,6 +63,7 @@ class NodePieceMLPForVertexClassification(bm.BaseModel):
         super().__init__()
         self.model = BaseNodePieceMLPModel(num_layers, out_dim, hidden_dim, vocab_size, sequence_length, embedding_dim, dropout)
         self.metrics = ClassificationMetrics(out_dim)
+        self.class_weight = class_weights
 
     def forward(self, batch, get_probs=False, **kwargs):
         logits = self.model.forward(batch)
@@ -74,5 +75,7 @@ class NodePieceMLPForVertexClassification(bm.BaseModel):
     def compute_loss(self, logits, batch, loss_fn = None, **kwargs):
         if not(loss_fn):
             loss_fn = F.cross_entropy
-        loss = loss_fn(logits, batch["y"].long())
+            loss = loss_fn(logits, batch["y"].long(), self.class_weight)
+        else:
+            loss = loss_fn(logits, batch["y"].long())
         return loss
