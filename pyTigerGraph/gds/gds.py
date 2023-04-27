@@ -1258,6 +1258,7 @@ class GDS:
                 if self.kafkaConfig:
                     params.update(self.kafkaConfig)
                 if len(loaders) > 0:
+                    params.update({"compute_anchors": False})
                     params.update({"tokenMap": loaders[0].idToIdx})
                 loaders.append(NodePieceLoader(**params))
             if reinstall_query:
