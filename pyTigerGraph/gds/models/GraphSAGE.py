@@ -59,12 +59,18 @@ class GraphSAGEForVertexClassification(BaseGraphSAGEModel):
     def compute_loss(self, logits, batch, target_type=None, loss_fn = None):
         if not(loss_fn):
             loss_fn = F.cross_entropy
-        if self.heterogeneous:
-            loss = loss_fn(logits[batch[target_type].is_seed], 
-                                   batch[target_type].y[batch[target_type].is_seed].long(),
-                                   self.class_weight)
-        else:
-            loss = loss_fn(logits[batch.is_seed], batch.y[batch.is_seed].long(), self.class_weight)
+            if self.heterogeneous:
+                loss = loss_fn(logits[batch[target_type].is_seed], 
+                                    batch[target_type].y[batch[target_type].is_seed].long(),
+                                    self.class_weight)
+            else:
+                loss = loss_fn(logits[batch.is_seed], batch.y[batch.is_seed].long(), self.class_weight)
+        else: # can't assume custom loss supports class weights
+            if self.heterogeneous:
+                loss = loss_fn(logits[batch[target_type].is_seed], 
+                                    batch[target_type].y[batch[target_type].is_seed].long())
+            else:
+                loss = loss_fn(logits[batch.is_seed], batch.y[batch.is_seed].long())
         return loss
 
 class GraphSAGEForVertexRegression(BaseGraphSAGEModel):

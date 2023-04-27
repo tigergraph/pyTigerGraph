@@ -59,7 +59,7 @@ class BaseNodePieceMLPModel(nn.Module):
         return x
 
 class NodePieceMLPForVertexClassification(bm.BaseModel):
-    def __init__(self, num_layers, out_dim, hidden_dim, vocab_size, sequence_length, embedding_dim = 768, dropout = 0.0):
+    def __init__(self, num_layers, out_dim, hidden_dim, vocab_size, sequence_length, embedding_dim = 768, dropout = 0.0, class_weights = None):
         super().__init__()
         self.model = BaseNodePieceMLPModel(num_layers, out_dim, hidden_dim, vocab_size, sequence_length, embedding_dim, dropout)
         self.metrics = ClassificationMetrics(out_dim)
