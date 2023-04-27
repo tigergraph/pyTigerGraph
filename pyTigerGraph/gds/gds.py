@@ -218,7 +218,8 @@ class GDS:
         delimiter: str = "|",
         timeout: int = 300000,
         callback_fn: Callable = None,
-        reinstall_query: bool = False
+        reinstall_query: bool = False,
+        distributed_query: bool = False,
     ) -> NeighborLoader:
         """Returns a `NeighborLoader` instance.
         A `NeighborLoader` instance performs neighbor sampling from vertices in the graph in batches in the following manner:
@@ -345,6 +346,8 @@ class GDS:
                 Whether to reinstall the queries associated with this loader at instantiation. One can also call the member function
                 `reinstall_query()` on a loader instance to reinstall the queries at any time. 
                 Defaults to False.
+            distributed_query (bool, optional):
+                Whether to install the query in distributed mode. Defaults to False.
         """
         if isinstance(filter_by, list):
             loaders = []
@@ -370,7 +373,8 @@ class GDS:
                     "reverse_edge": reverse_edge,
                     "delimiter": delimiter,
                     "timeout": timeout,
-                    "callback_fn": callback_fn
+                    "callback_fn": callback_fn,
+                    "distributed_query": distributed_query
                 }
                 if self.kafkaConfig:
                     params.update(self.kafkaConfig)
@@ -400,7 +404,8 @@ class GDS:
                     "reverse_edge": reverse_edge,
                     "delimiter": delimiter,
                     "timeout": timeout,
-                    "callback_fn": callback_fn
+                    "callback_fn": callback_fn,
+                    "distributed_query": distributed_query
                 }
             if self.kafkaConfig:
                 params.update(self.kafkaConfig)
@@ -423,7 +428,8 @@ class GDS:
         delimiter: str = "|",
         timeout: int = 300000,
         callback_fn: Callable = None,
-        reinstall_query: bool = False
+        reinstall_query: bool = False,
+        distributed_query: bool = False
     ) -> EdgeLoader:
         """Returns an `EdgeLoader` instance. 
         An `EdgeLoader` instance loads all edges in the graph in batches.
@@ -497,6 +503,8 @@ class GDS:
                 Whether to reinstall the queries associated with this loader at instantiation. One can also call the member function
                 `reinstall_query()` on a loader instance to reinstall the queries at any time. 
                 Defaults to False.
+            distributed_query (bool, optional):
+                Whether to install the query in distributed mode. Defaults to False.
 
         See https://github.com/TigerGraph-DevLabs/mlworkbench-docs/blob/1.0/tutorials/basics/3_edgeloader.ipynb[the ML Workbench edge loader tutorial notebook]
         for examples.
@@ -517,7 +525,8 @@ class GDS:
                     "reverse_edge": reverse_edge,
                     "delimiter": delimiter,
                     "timeout": timeout,
-                    "callback_fn": callback_fn
+                    "callback_fn": callback_fn,
+                    "distributed_query": distributed_query
                 }
                 if self.kafkaConfig:
                     params.update(self.kafkaConfig)
@@ -539,7 +548,8 @@ class GDS:
                 "reverse_edge": reverse_edge,
                 "delimiter": delimiter,
                 "timeout": timeout,
-                "callback_fn": callback_fn
+                "callback_fn": callback_fn,
+                "distributed_query": distributed_query
             }
             if self.kafkaConfig:
                 params.update(self.kafkaConfig)
@@ -562,7 +572,8 @@ class GDS:
         delimiter: str = "|",
         timeout: int = 300000,
         callback_fn: Callable = None,
-        reinstall_query: bool = False
+        reinstall_query: bool = False,
+        distributed_query: bool = False
     ) -> VertexLoader:
         """Returns a `VertexLoader` instance.
         A `VertexLoader` can load all vertices of a graph in batches.
@@ -635,6 +646,8 @@ class GDS:
                 Whether to reinstall the queries associated with this loader at instantiation. One can also call the member function
                 `reinstall_query()` on a loader instance to reinstall the queries at any time. 
                 Defaults to False.
+            distributed_query (bool, optional):
+                Whether to install the query in distributed mode. Defaults to False.
 
         See https://github.com/tigergraph/graph-ml-notebooks/blob/main/applications/fraud_detection/fraud_detection.ipynb[the ML Workbench tutorial notebook]
         for examples.
@@ -655,7 +668,8 @@ class GDS:
                     "reverse_edge": reverse_edge,
                     "delimiter": delimiter,
                     "timeout": timeout,
-                    "callback_fn": callback_fn
+                    "callback_fn": callback_fn,
+                    "distributed_query": distributed_query
                 } 
                 if self.kafkaConfig:
                     params.update(self.kafkaConfig)
@@ -677,7 +691,8 @@ class GDS:
                 "reverse_edge": reverse_edge,
                 "delimiter": delimiter,
                 "timeout": timeout,
-                "callback_fn": callback_fn
+                "callback_fn": callback_fn,
+                "distributed_query": distributed_query
             }
             if self.kafkaConfig:
                 params.update(self.kafkaConfig)
@@ -706,7 +721,8 @@ class GDS:
         delimiter: str = "|",
         timeout: int = 300000,
         callback_fn: Callable = None,
-        reinstall_query: bool = False
+        reinstall_query: bool = False,
+        distributed_query: bool = False
     ) -> GraphLoader:
         """Returns a `GraphLoader`instance.
         A `GraphLoader` instance loads all edges from the graph in batches, along with the vertices that are connected with each edge.
@@ -823,6 +839,8 @@ class GDS:
                 Whether to reinstall the queries associated with this loader at instantiation. One can also call the member function
                 `reinstall_query()` on a loader instance to reinstall the queries at any time. 
                 Defaults to False.
+            distributed_query (bool, optional):
+                Whether to install the query in distributed mode. Defaults to False.
 
         See https://github.com/tigergraph/graph-ml-notebooks/blob/main/GNNs/PyG/gcn_node_classification.ipynb[the ML Workbench tutorial notebook for graph loaders]
          for examples.
@@ -849,7 +867,8 @@ class GDS:
                     "reverse_edge": reverse_edge,
                     "delimiter": delimiter,
                     "timeout": timeout,
-                    "callback_fn": callback_fn
+                    "callback_fn": callback_fn,
+                    "distributed_query": distributed_query
                 }
                 if self.kafkaConfig:
                     params.update(self.kafkaConfig)
@@ -877,7 +896,8 @@ class GDS:
                 "reverse_edge": reverse_edge,
                 "delimiter": delimiter,
                 "timeout": timeout,
-                "callback_fn": callback_fn
+                "callback_fn": callback_fn,
+                "distributed_query": distributed_query
             }
 
             if self.kafkaConfig:
@@ -909,7 +929,8 @@ class GDS:
         delimiter: str = "|",
         timeout: int = 300000,
         callback_fn: Callable = None,
-        reinstall_query: bool = False
+        reinstall_query: bool = False,
+        distributed_query: bool = False
     ) -> EdgeNeighborLoader:
         """Returns an `EdgeNeighborLoader` instance.
         An `EdgeNeighborLoader` instance performs neighbor sampling from all edges in the graph in batches in the following manner:
@@ -1036,6 +1057,8 @@ class GDS:
                 Whether to reinstall the queries associated with this loader at instantiation. One can also call the member function
                 `reinstall_query()` on a loader instance to reinstall the queries at any time. 
                 Defaults to False.
+            distributed_query (bool, optional):
+                Whether to install the query in distributed mode. Defaults to False.
         """
         if isinstance(filter_by, list):
             loaders = []
@@ -1061,7 +1084,8 @@ class GDS:
                     "reverse_edge": reverse_edge,
                     "delimiter": delimiter,
                     "timeout": timeout,
-                    "callback_fn": callback_fn
+                    "callback_fn": callback_fn,
+                    "distributed_query": distributed_query
                 }
                 if self.kafkaConfig:
                     params.update(self.kafkaConfig)
@@ -1091,7 +1115,8 @@ class GDS:
                 "reverse_edge": reverse_edge,
                 "delimiter": delimiter,
                 "timeout": timeout,
-                "callback_fn": callback_fn
+                "callback_fn": callback_fn,
+                "distributed_query": distributed_query
             }
             if self.kafkaConfig:
                 params.update(self.kafkaConfig)
@@ -1127,7 +1152,8 @@ class GDS:
         delimiter: str = "|",
         timeout: int = 300000,
         callback_fn: Callable = None,
-        reinstall_query: bool = False
+        reinstall_query: bool = False,
+        distributed_query: bool = False
     ) -> NodePieceLoader:
         """Returns a `NodePieceLoader` instance.
         A `NodePieceLoader` instance loads all edges from the graph in batches, along with the vertices that are connected with each edge.
@@ -1220,6 +1246,8 @@ class GDS:
                 Whether to reinstall the queries associated with this loader at instantiation. One can also call the member function
                 `reinstall_query()` on a loader instance to reinstall the queries at any time. 
                 Defaults to False.
+            distributed_query (bool, optional):
+                Whether to install the query in distributed mode. Defaults to False.
 
         See https://github.com/tigergraph/graph-ml-notebooks/tree/main/applications/nodepiece/nodepiece.ipynb[the ML Workbench tutorial notebook for nodepiece loaders]
          for examples.
@@ -1253,7 +1281,8 @@ class GDS:
                     "reverse_edge": reverse_edge,
                     "delimiter": delimiter,
                     "timeout": timeout,
-                    "callback_fn": callback_fn
+                    "callback_fn": callback_fn,
+                    "distributed_query": distributed_query
                 }
                 if self.kafkaConfig:
                     params.update(self.kafkaConfig)
@@ -1288,7 +1317,8 @@ class GDS:
                 "reverse_edge": reverse_edge,
                 "delimiter": delimiter,
                 "timeout": timeout,
-                "callback_fn": callback_fn
+                "callback_fn": callback_fn,
+                "distributed_query": distributed_query
             }
             if self.kafkaConfig:
                 params.update(self.kafkaConfig)
@@ -1319,7 +1349,8 @@ class GDS:
         delimiter: str = "|",
         timeout: int = 300000,
         callback_fn: Callable = None,
-        reinstall_query: bool = False
+        reinstall_query: bool = False,
+        distributed_query: bool = False
     ) -> HGTLoader:
         """Returns a `HGTLoader` instance.
         A `HGTLoader` instance performs stratified neighbor sampling from vertices in the graph in batches in the following manner:
@@ -1443,6 +1474,8 @@ class GDS:
                 Whether to reinstall the queries associated with this loader at instantiation. One can also call the member function
                 `reinstall_query()` on a loader instance to reinstall the queries at any time. 
                 Defaults to False.
+            distributed_query (bool, optional):
+                Whether to install the query in distributed mode. Defaults to False.
         """
         if isinstance(filter_by, list):
             loaders = []
@@ -1468,7 +1501,8 @@ class GDS:
                     "reverse_edge": reverse_edge,
                     "delimiter": delimiter,
                     "timeout": timeout,
-                    "callback_fn": callback_fn
+                    "callback_fn": callback_fn,
+                    "distributed_query": distributed_query
                 }
                 if self.kafkaConfig:
                     params.update(self.kafkaConfig)
@@ -1498,7 +1532,8 @@ class GDS:
                 "reverse_edge": reverse_edge,
                 "delimiter": delimiter,
                 "timeout": timeout,
-                "callback_fn": callback_fn
+                "callback_fn": callback_fn,
+                "distributed_query": distributed_query
             }
             if self.kafkaConfig:
                 params.update(self.kafkaConfig)
