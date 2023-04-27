@@ -19,7 +19,9 @@ class TestHomogeneousVertexClassificationGraphSAGE(unittest.TestCase):
                      dropout=0.5,
                      vocab_size=10,
                      sequence_length=20)
-        self.assertEqual(len(list(model.parameters())), 6)
+        self.assertEqual(len(list(model.parameters())), 7)
+        self.assertEqual(model.model.base_embedding.embedding.weight.shape[0], 10)
+        self.assertEqual(model.model.base_embedding.embedding.weight.shape[1], 768)
 
 
 if __name__ == "__main__":
