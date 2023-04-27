@@ -7,7 +7,7 @@ class BaseNodePieceTransform():
 
 class NodePieceMLPTransform(BaseNodePieceTransform):
     # Assumes numerical types for features and labels. No support for complex datatypes as features.
-    def __init__(self, features: list, label: str, target_type: str = None):
+    def __init__(self, label: str, features: list = [], target_type: str = None):
         try:
             import torch
         except:
@@ -25,7 +25,8 @@ class NodePieceMLPTransform(BaseNodePieceTransform):
         batch["relational_context"] = torch.tensor(data["relational_context"], dtype=torch.long)
         batch["anchors"] = torch.tensor(data["anchors"], dtype=torch.long)
         batch["distance"] = torch.tensor(data["anchor_distances"], dtype=torch.long)
-        batch["features"] = torch.stack([torch.tensor(data[feat]) for feat in self.features]).T
+        if len(self.features) > 0:
+            batch["features"] = torch.stack([torch.tensor(data[feat]) for feat in self.features]).T
         return batch
 
         
