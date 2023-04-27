@@ -10,7 +10,7 @@ except:
     raise Exception("PyTorch Geometric required to use GraphSAGE. Please install PyTorch Geometric")
 
 class BaseGraphSAGEModel(bm.BaseModel):
-    def __init__(self, num_layers, out_dim, dropout, hidden_dim, heterogeneous=None):
+    def __init__(self, num_layers, out_dim, hidden_dim, dropout=0.0, heterogeneous=None):
         super().__init__()
         self.dropout = dropout
         self.heterogeneous = heterogeneous
