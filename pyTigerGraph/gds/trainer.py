@@ -179,13 +179,16 @@ class Trainer():
         else:
             self.optimizer = torch.optim.Adam(**optimizer_kwargs)
         self.is_hetero = training_dataloader.is_hetero
-        if self.train_loader.v_out_labels:
-            if self.is_hetero:
-                self.target_type = list(self.train_loader.v_out_labels.keys())[0]
+        try:
+            if self.train_loader.v_out_labels:
+                if self.is_hetero:
+                    self.target_type = list(self.train_loader.v_out_labels.keys())[0]
+                else:
+                    self.target_type = None #self.train_loader.v_out_labels
             else:
-                self.target_type = None #self.train_loader.v_out_labels
-        else:
-            self.target_type = target_type
+                self.target_type = target_type
+        except:
+            self.target_type = None
 
         callbacks = [MetricsCallback] + callbacks
         for callback in callbacks: # instantiate callbacks if not already done so
@@ -236,7 +239,7 @@ class Trainer():
                     break
                 for callback in self.callbacks:
                     callback.on_train_step_start(trainer=self)
-                self.out = self.model(batch, tgt_type=self.target_type)
+                self.out = self.model(batch, target_type=self.target_type)
                 self.batch = batch
                 self.loss = self.model.compute_loss(self.out,
                                                batch,
