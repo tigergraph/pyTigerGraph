@@ -106,7 +106,7 @@ class BaseLoader:
         Args:
             graph (TigerGraphConnection):
                 Connection to the TigerGraph database.
-            loader_iD (str):
+            loader_id (str):
                 An identifier of the loader which can be any string. It is
                 also used as the Kafka topic name. If `None`, a random string
                 will be generated for it. Defaults to None.
