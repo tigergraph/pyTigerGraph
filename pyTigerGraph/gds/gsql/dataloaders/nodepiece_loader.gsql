@@ -33,7 +33,8 @@ CREATE DISTRIBUTED QUERY nodepiece_loader_{QUERYSUFFIX}(
   STRING sasl_kerberos_service_name="",
   STRING sasl_kerberos_keytab="",
   STRING sasl_kerberos_principal="",
-  INT num_heap_inserts=10
+  INT num_heap_inserts=10,
+  INT num_edge_batches=10
 ) SYNTAX v1{ 
     TYPEDEF TUPLE<INT v_id, INT distance> Distance_Tuple;
     TYPEDEF TUPLE<INT tmp_id, VERTEX v> ID_Tuple;
@@ -111,10 +112,10 @@ CREATE DISTRIBUTED QUERY nodepiece_loader_{QUERYSUFFIX}(
         END;
         FOREACH i IN RANGE [1, max_distance] DO
           LOG(TRUE, "ANCHOR MESSAGE DISTANCE", i);
-          FOREACH j IN RANGE [0, 9] DO
+          FOREACH j IN RANGE [0, num_edge_batches-1] DO
             LOG(TRUE, "ANCHOR BATCH", j);
             ancs = SELECT t
-                 FROM ancs:s -(e_types:e)-v_types:t WHERE t.@heapFull == False AND getvid(s) % 10 == j
+                 FROM ancs:s -(e_types:e)-v_types:t WHERE t.@heapFull == False AND ((s.@tmp_id+t.@tmp_id)*(s.@tmp_id+t.@tmp_id+1)/2+t.@tmp_id)%num_edge_batches == j
                  ACCUM 
                   FOREACH tup IN s.@token_heap DO 
                     t.@token_heap += Distance_Tuple(tup.v_id, i)
