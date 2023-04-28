@@ -7,45 +7,120 @@ import os
 import warnings
 
 class BaseCallback():
+    """Base class for training callbacks.
+
+    The `BaseCallback` class is an abstract class that all other trainer
+    callbacks inherit from. It contains a series of functions that are executed
+    during that point in time of the trainer's execution, such as the beginning
+    or end of an epoch. Inherit from this class if a custom callback implementation is desired.
+    """
     def __init__(self):
+        """NO DOC"""
         pass
 
     def on_init_end(self, trainer):
+        """Run operations after the initialization of the trainer.
+        
+        Args:
+            trainer (pyTigerGraph Trainer):
+                Takes in the trainer in order to perform operations on it.
+        """
         pass
 
     def on_epoch_start(self, trainer):
+        """Run operations at the start of a training epoch.
+        
+        Args:
+            trainer (pyTigerGraph Trainer):
+                Takes in the trainer in order to perform operations on it.
+        """
         pass
 
     def on_train_step_start(self, trainer):
+        """Run operations at the start of a training step.
+
+        Args:
+            trainer (pyTigerGraph Trainer):
+                Takes in the trainer in order to perform operations on it.
+        """
         pass
 
     def on_train_step_end(self, trainer):
+        """Run operations at the end of a training step.
+
+        Args:
+            trainer (pyTigerGraph Trainer):
+                Takes in the trainer in order to perform operations on it.
+        """
         pass
 
     def on_epoch_end(self, trainer):
+        """Run operations at the end of an epoch.
+        
+        Args:
+            trainer (pyTigerGraph Trainer):
+                Takes in the trainer in order to perform operations on it.
+        """
         pass
 
     def on_eval_start(self, trainer):
+        """Run operations at the start of the evaulation process.
+        
+        Args:
+            trainer (pyTigerGraph Trainer):
+                Takes in the trainer in order to perform operations on it.
+        """
         pass
 
     def on_eval_step_start(self, trainer):
+        """Run operations at the start of an evaluation batch.
+
+        Args:
+            trainer (pyTigerGraph Trainer):
+                Takes in the trainer in order to perform operations on it.
+        """
         pass
 
     def on_eval_step_end(self, trainer):
+        """Run operations at the end of an evaluation batch.
+
+        Args:
+            trainer (pyTigerGraph Trainer):
+                Takes in the trainer in order to perform operations on it.
+        """
         pass
 
     def on_eval_end(self, trainer):
+        """Run operations at the end of the evaluation process.
+        
+        Args:
+            trainer (pyTigerGraph Trainer):
+                Takes in the trainer in order to perform operations on it.
+        """
         pass
 
 
 class PrinterCallback(BaseCallback):
+    """Callback for printing metrics during training.
+    
+    To use, import the class and pass it to the Trainer's callback argument.
+
+    [.wrap,python]
+    ----
+    from pyTigerGraph.gds.trainer import Trainer, PrinterCallback
+
+    trainer = Trainer(model, training_dataloader, eval_dataloader, callbacks=[PrinterCallback])
+    """
     def __init__(self):
+        """NO DOC"""
         pass
 
     def on_train_step_end(self, trainer):
+        """NO DOC"""
         print(trainer.get_train_step_metrics())
 
     def on_eval_end(self, trainer):
+        """NO DOC"""
         print(trainer.get_eval_metrics())
         
 
