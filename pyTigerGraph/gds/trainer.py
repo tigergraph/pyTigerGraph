@@ -258,6 +258,8 @@ class Trainer():
     
     Train graph machine learning models that comply with the `BaseModel` object in pyTigerGraph.
     Performs training and evaluation loops and automatically collects metrics for the given task.
+    
+    PyTorch is required to use the Trainer.
     """
     def __init__(self, 
                  model,
@@ -271,7 +273,7 @@ class Trainer():
                  optimizer_kwargs = {}):
         """Instantiate a Trainer.
 
-        Create a Trainer object to train graph machine learning models.
+        Create a Trainer object to train graph machine learning models. 
 
         Args:
             model (pyTigerGraph.gds.models.base_model.BaseModel):
@@ -341,30 +343,65 @@ class Trainer():
             callback.on_init_end(trainer=self)
 
     def update_train_step_metrics(self, metrics):
+        """Update the metrics for a training step.
+        
+        Args:
+            metrics (dict):
+                Dictionary of calculated metrics.
+        """
         self.train_step_metrics.update(metrics)
 
     def get_train_step_metrics(self):
+        """Get the metrics for a training step.
+        
+        Returns:
+            Dictionary of training metrics results.
+        """
         if self.train_step_metrics:
             return self.train_step_metrics
         else:
             return {}
 
     def reset_train_step_metrics(self):
+        """Reset training step metrics.
+        """
         self.train_step_metrics = {}
 
     def update_eval_metrics(self, metrics):
+        """Update the metrics of an evaluation loop.
+        
+        Args:
+            metrics (dict):
+                Dictionary of calculated metrics.
+        """
         self.eval_metrics = metrics
 
     def get_eval_metrics(self):
+        """Get the metrics for an evaluation loop.
+        
+        Returns:
+            Dictionary of evaluation loop metrics results.
+        """
         if self.eval_metrics:
             return self.eval_metrics
         else:
             return {}
 
     def reset_eval_metrics(self):
+        """Reset evaluation loop metrics.
+        """
         self.eval_metrics = {}
 
     def train(self, num_epochs=None, max_num_steps=None):
+        """Train a model.
+        
+        Args:
+            num_epochs (int, optional):
+                Number of epochs to train for. Defaults to 1 full iteration through the `training_dataloader`.
+            max_num_steps (int, optional):
+                Number of training steps to perform. `num_epochs` takes priority over this parameter.
+                Defaults to the length of the `training_dataloader`
+        """
         if num_epochs:
             self.max_num_steps = self.train_loader.num_batches * num_epochs
         else:
@@ -396,6 +433,13 @@ class Trainer():
                 callback.on_epoch_end(trainer=self)             
 
     def eval(self, loader=None):
+        """Evaluate a model.
+
+        Args:
+            loader (pyTigerGraph.gds.dataloaders.BaseLoader, optional):
+                A dataloader to iterate through. 
+                If not defined, defaults to the `eval_dataloader` specified in the Trainer instantiation.
+        """
         if loader:
             eval_loader = loader
         else:
@@ -418,5 +462,15 @@ class Trainer():
             callback.on_eval_end(trainer=self)
 
     def predict(self, batch):
+        """Predict a batch.
+
+        Args:
+            batch (any):
+                Data object that is compatible with the model being trained.
+                Make predictions on the batch passed in.
+        
+        Returns:
+            Returns a tuple of `(model output, evaluation metrics)`
+        """
         self.eval(loader=[batch])
         return self.out, self.get_eval_metrics()
