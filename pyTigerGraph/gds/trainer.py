@@ -266,7 +266,7 @@ class Trainer():
         for batch in eval_loader:
             for callback in self.callbacks:
                 callback.on_eval_step_start(trainer=self)
-            self.out = self.model(batch, tgt_type=self.target_type)
+            self.out = self.model(batch, target_type=self.target_type)
             self.batch = batch
             self.loss = self.model.compute_loss(self.out,
                                         batch,
