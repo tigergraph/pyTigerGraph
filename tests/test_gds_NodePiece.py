@@ -51,6 +51,7 @@ class TestHomogeneousVertexClassificationGraphSAGE(unittest.TestCase):
     def test_fit(self):
         t = NodePieceMLPTransform(label = "y")
         train_loader, valid_loader = self.conn.gds.nodepieceLoader(
+                                     v_feats=["y"],
                                      target_vertex_types="Paper",
                                      clear_cache=True,
                                      compute_anchors=True,
