@@ -121,6 +121,7 @@ class PrinterCallback(BaseCallback):
     from pyTigerGraph.gds.trainer import Trainer, PrinterCallback
 
     trainer = Trainer(model, training_dataloader, eval_dataloader, callbacks=[PrinterCallback])
+    ----
     """
     def __init__(self):
         """NO DOC"""
