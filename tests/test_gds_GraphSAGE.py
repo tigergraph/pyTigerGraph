@@ -35,7 +35,7 @@ class TestHomogeneousVertexClassificationGraphSAGE(unittest.TestCase):
         cls.conn = make_connection(graphname="Cora")
 
     def test_init(self):
-        model = GraphSAGEForVertexClassification(2, 2, 0.5, 128)
+        model = GraphSAGEForVertexClassification(2, 2, 128, 0.5)
         self.assertEqual(len(list(model.parameters())), 6)
 
     def test_fit(self):
@@ -82,12 +82,12 @@ class TestHeterogeneousVertexClassificationGraphSAGE(unittest.TestCase):
                 ('Movie', 'movie_director', 'Director'), 
                 ('Director', 'director_movie', 'Movie')]) 
 
-        model = GraphSAGEForVertexClassification(2, 3, .2, 256, metadata)
+        model = GraphSAGEForVertexClassification(2, 3, 256, .2, metadata)
         self.assertEqual(len(list(model.parameters())), 24)
 
 class TestHomogeneousVertexRegression(unittest.TestCase):
     def test_init(self):
-        model = GraphSAGEForVertexRegression(2, 1, 0.5, 128)
+        model = GraphSAGEForVertexRegression(2, 1, 128, 0.5)
         self.assertEqual(len(list(model.parameters())), 6)
 
 class TestHeterogeneousVertexRegression(unittest.TestCase):
@@ -102,7 +102,7 @@ class TestHeterogeneousVertexRegression(unittest.TestCase):
 
 class TestHomogeneousLinkPrediction(unittest.TestCase):
     def test_init(self):
-        model = GraphSAGEForLinkPrediction(2, 128, 0.5, 128)
+        model = GraphSAGEForLinkPrediction(2, 128, 128, 0.5)
         self.assertEqual(len(list(model.parameters())), 6)
 
 class TestHeterogeneousLinkPrediction(unittest.TestCase):
@@ -112,7 +112,7 @@ class TestHeterogeneousLinkPrediction(unittest.TestCase):
                 ('Movie', 'movie_actor', 'Actor'), 
                 ('Movie', 'movie_director', 'Director'), 
                 ('Director', 'director_movie', 'Movie')]) 
-        model = GraphSAGEForLinkPrediction(2, 128, 0.5, 128, metadata)
+        model = GraphSAGEForLinkPrediction(2, 128, 128, 0.5, metadata)
         self.assertEqual(len(list(model.parameters())), 24)
 
 

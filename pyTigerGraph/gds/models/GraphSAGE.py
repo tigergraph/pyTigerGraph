@@ -35,8 +35,8 @@ class BaseGraphSAGEModel(bm.BaseModel):
         raise NotImplementedError("Loss computation not implemented for BaseGraphSAGEModel")
 
 class GraphSAGEForVertexClassification(BaseGraphSAGEModel):
-    def __init__(self, num_layers, out_dim, dropout, hidden_dim, heterogeneous=None, class_weights=None):
-        super().__init__(num_layers, out_dim, dropout, hidden_dim, heterogeneous)
+    def __init__(self, num_layers, out_dim, hidden_dim, dropout=0.0, heterogeneous=None, class_weights=None):
+        super().__init__(num_layers, out_dim, hidden_dim, dropout, heterogeneous)
         self.class_weight = class_weights
         self.metrics = ClassificationMetrics(num_classes=out_dim)
 
@@ -74,8 +74,8 @@ class GraphSAGEForVertexClassification(BaseGraphSAGEModel):
         return loss
 
 class GraphSAGEForVertexRegression(BaseGraphSAGEModel):
-    def __init__(self, num_layers, out_dim, dropout, hidden_dim, heterogeneous=None, class_weights=None):
-        super().__init__(num_layers, out_dim, dropout, hidden_dim, heterogeneous)
+    def __init__(self, num_layers, out_dim, hidden_dim, dropout=0.0, heterogeneous=None, class_weights=None):
+        super().__init__(num_layers, out_dim, hidden_dim, dropout, heterogeneous)
         self.class_weight = class_weights
         self.metrics = RegressionMetrics()
 
@@ -98,8 +98,8 @@ class GraphSAGEForVertexRegression(BaseGraphSAGEModel):
 
 
 class GraphSAGEForLinkPrediction(BaseGraphSAGEModel):
-    def __init__(self, num_layers, embedding_dim, dropout, hidden_dim, heterogeneous=None):
-        super().__init__(num_layers, embedding_dim, dropout, hidden_dim, heterogeneous)
+    def __init__(self, num_layers, embedding_dim, hidden_dim, dropout = 0.0, heterogeneous=None):
+        super().__init__(num_layers, embedding_dim, hidden_dim, dropout, heterogeneous)
         self.metrics = LinkPredictionMetrics(k=10)
 
     def forward(self, batch, target_type=None):
