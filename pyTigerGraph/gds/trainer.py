@@ -1,3 +1,14 @@
+"""Model Trainer and Callbacks
+:description: Train Graph ML models with pyTigerGraph
+
+Train Graph Machine Learning models (such as GraphSAGE and NodePiece) in a concise way.
+pyTigerGraph offers built-in models that can be used with the Trainer, consuming
+pyTigerGraph dataloaders.
+
+Callbacks are classes that perform arbitrary operations at various stages of the
+training process. Inherit from the `BaseCallback` class to create compatible operations.
+"""
+
 from .dataloaders import BaseLoader
 from .metrics import BaseMetrics
 from typing import Union, List, Callable
@@ -124,7 +135,9 @@ class PrinterCallback(BaseCallback):
         print(trainer.get_eval_metrics())
 
 class MetricsCallback(BaseCallback):
+    """NO DOC"""
     def on_train_step_end(self, trainer):
+        """NO DOC"""
         trainer.reset_train_step_metrics()
         for metric in trainer.metrics:
             metric.update_metrics(trainer.loss, trainer.out, trainer.batch, target_type=trainer.target_type)
@@ -134,19 +147,37 @@ class MetricsCallback(BaseCallback):
         trainer.update_train_step_metrics({"epoch": int(trainer.cur_step/trainer.train_loader.num_batches)})
     
     def on_eval_start(self, trainer):
+        """NO DOC"""
         for metric in trainer.metrics:
             metric.reset_metrics()
     
     def on_eval_step_end(self, trainer):
+        """NO DOC"""
         for metric in trainer.metrics:
             metric.update_metrics(trainer.loss, trainer.out, trainer.batch, target_type=trainer.target_type)
     
     def on_eval_end(self, trainer):
+        """NO DOC"""
         for metric in trainer.metrics:
             trainer.update_eval_metrics(metric.get_metrics())
 
 class DefaultCallback(BaseCallback):
+    """Default Callback
+    
+    The `DefaultCallback` class logs metrics and updates progress bars during the training process.
+    The Trainer `callbacks` parameter is populated with this callback.
+    If you define other callbacks with that parameter, you will have to pass `DefaultCallback` again in your list of callbacks.
+    """
     def __init__(self, output_dir="./logs", use_tqdm=True):
+        """Instantiate the Default Callback.
+
+        Args:
+            output_dir (str, optional):
+                Path to output directory to log metrics to. Defaults to `./logs`
+            use_tqdm (bool, optional):
+                Whether to use tqdm for progress bars. Defaults to True. 
+                Install the `tqdm` package if the progress bar is desired.
+        """
         if use_tqdm:
             try:
                 from tqdm import tqdm
@@ -170,6 +201,7 @@ class DefaultCallback(BaseCallback):
                             level=logging.INFO)
 
     def on_epoch_start(self, trainer):
+        """NO DOC"""
         if self.tqdm:
             if not(self.epoch_bar):
                 if trainer.num_epochs:
@@ -180,6 +212,7 @@ class DefaultCallback(BaseCallback):
                 self.batch_bar = self.tqdm(desc="Training Batches", total=trainer.train_loader.num_batches)
 
     def on_train_step_end(self, trainer):
+        """NO DOC"""
         logger = logging.getLogger(__name__)
         logger.info("train_step:"+str(trainer.get_train_step_metrics()))
         if self.tqdm:
@@ -187,17 +220,20 @@ class DefaultCallback(BaseCallback):
                 self.batch_bar.update(1)
 
     def on_eval_start(self, trainer):
+        """NO DOC"""
         trainer.reset_eval_metrics()
         if self.tqdm:
             if not(self.valid_bar):
                 self.valid_bar = self.tqdm(desc="Eval Batches", total=trainer.eval_loader.num_batches)
 
     def on_eval_step_end(self, trainer):
+        """NO DOC"""
         if self.tqdm:
             if self.valid_bar:
                 self.valid_bar.update(1)
 
     def on_eval_end(self, trainer):
+        """NO DOC"""
         logger = logging.getLogger(__name__)
         logger.info("evaluation:"+str(trainer.get_eval_metrics()))
         trainer.model.train()
@@ -207,6 +243,7 @@ class DefaultCallback(BaseCallback):
                 self.valid_bar = None
 
     def on_epoch_end(self, trainer):
+        """NO DOC"""
         if self.tqdm:
             if self.epoch_bar:
                 self.epoch_bar.update(1)
@@ -217,6 +254,11 @@ class DefaultCallback(BaseCallback):
 
 
 class Trainer():
+    """Trainer
+    
+    Train graph machine learning models that comply with the `BaseModel` object in pyTigerGraph.
+    Performs training and evaluation loops and automatically collects metrics for the given task.
+    """
     def __init__(self, 
                  model,
                  training_dataloader: BaseLoader,
@@ -227,6 +269,32 @@ class Trainer():
                  loss_fn = None, 
                  optimizer = None,
                  optimizer_kwargs = {}):
+        """Instantiate a Trainer.
+
+        Create a Trainer object to train graph machine learning models.
+
+        Args:
+            model (pyTigerGraph.gds.models.base_model.BaseModel):
+                A graph machine learning model that inherits from the BaseModel class.
+            training_dataloader (pyTigerGraph.gds.dataloaders.BaseLoader):
+                A pyTigerGraph dataloader to iterate through training batches.
+            eval_dataloader (pyTigerGraph.gds.dataloaders.BaseLoader):
+                A pyTigerGraph dataloader to iterate through evaluation batches.
+            callbacks (List[pyTigerGraph.gds.trainer.BaseCallback], optional):
+                A list of `BaseCallback` objects. Defaults to `[DefaultCallback]`
+            metrics (List[pyTigerGraph.gds.metrics.BaseMetrics] or pyTigerGraph.gds.metrics.BaseMetrics, optional):
+                A list or object of type `BaseMetrics`. If not specified, will use the metrics corresponding to the built-in model.
+            target_type (string or tuple, optional):
+                If using heterogenous graphs, specify the schema element to compute loss and metrics on.
+                If using vertices, specify it with a string. 
+                If using an edge type, use the form `("src_vertex_type", "edge_type", "dest_vertex_type")`
+            loss_fn (torch.nn._Loss, optional):
+                A function that computes the loss of the model. If not specified, the default loss function of the model type will be used.
+            optimizer (torch.optim.Optimizer, optional):
+                Specify the optimizer to be used during the training process. Defaults to Adam.
+            optimizer_kwargs (dict, optional):
+                Dictionary of optimizer arguments, such as learning rate. Defaults to optimizer's default values.
+        """
         try:
             import torch
         except:
