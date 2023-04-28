@@ -97,7 +97,7 @@ class TestHeterogeneousVertexRegression(unittest.TestCase):
                 ('Movie', 'movie_actor', 'Actor'), 
                 ('Movie', 'movie_director', 'Director'), 
                 ('Director', 'director_movie', 'Movie')]) 
-        model = GraphSAGEForVertexRegression(2, 1, 0.5, 128, metadata)
+        model = GraphSAGEForVertexRegression(2, 1, 128, 0.5, metadata)
         self.assertEqual(len(list(model.parameters())), 24)
 
 class TestHomogeneousLinkPrediction(unittest.TestCase):
