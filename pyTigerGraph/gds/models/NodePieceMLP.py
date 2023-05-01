@@ -51,7 +51,8 @@ class BaseNodePieceMLPModel(nn.Module):
                 self.in_layer = nn.Linear(self.num_embedding_dim, self.hidden_dim)
         x = self.base_embedding(batch)
         x = torch.flatten(x, start_dim=1)
-        x = torch.cat((x, batch["features"].float()), dim=1)
+        if "features" in list(batch.keys()):
+            x = torch.cat((x, batch["features"].float()), dim=1)
         x = F.dropout(F.relu(self.in_layer(x)), p=self.dropout)
         for layer in self.hidden_layers:
             x = F.dropout(F.relu(layer(x)), p=self.dropout)
