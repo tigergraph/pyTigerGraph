@@ -39,7 +39,7 @@ class TestHomogeneousVertexClassificationGraphSAGE(unittest.TestCase):
     def test_init(self):
         model = NodePieceMLPForVertexClassification(num_layers=4,
                      hidden_dim=128,
-                     out_dim=2,
+                     out_dim=7,
                      dropout=0.5,
                      vocab_size=10,
                      sequence_length=20)
@@ -68,7 +68,7 @@ class TestHomogeneousVertexClassificationGraphSAGE(unittest.TestCase):
 
         model = NodePieceMLPForVertexClassification(num_layers=4,
                      hidden_dim=128,
-                     out_dim=2,
+                     out_dim=7,
                      dropout=0.5,
                      vocab_size=train_loader.num_tokens,
                      sequence_length=20)
