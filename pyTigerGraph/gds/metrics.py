@@ -557,16 +557,28 @@ class ClassificationMetrics(BaseMetrics):
         """
         super().update_metrics(loss, out, batch)
         pred = out.argmax(dim=1)
-        if target_type:
-            self.accuracy.update(pred[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
-            self.confusion_matrix.update(pred[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
-            self.precision.update(pred[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
-            self.recall.update(pred[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
-        else:
-            self.accuracy.update(pred[batch.is_seed], batch.y[batch.is_seed])
-            self.confusion_matrix.update(pred[batch.is_seed], batch.y[batch.is_seed])
-            self.precision.update(pred[batch.is_seed], batch.y[batch.is_seed])
-            self.recall.update(pred[batch.is_seed], batch.y[batch.is_seed])
+        if isinstance(batch, dict):
+            if target_type:
+                self.accuracy.update(pred[target_type], batch[target_type]["y"])
+                self.confusion_matrix.update(pred[target_type], batch[target_type]["y"])
+                self.precision.update(pred[target_type], batch[target_type]["y"])
+                self.recall.update(pred[target_type], batch[target_type]["y"])
+            else:
+                self.accuracy.update(pred, batch["y"])
+                self.confusion_matrix.update(pred, batch["y"])
+                self.precision.update(pred, batch["y"])
+                self.recall.update(pred, batch["y"])
+        else: # batch is a PyG Object (has is_seed attribute)
+            if target_type:
+                self.accuracy.update(pred[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
+                self.confusion_matrix.update(pred[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
+                self.precision.update(pred[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
+                self.recall.update(pred[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
+            else:
+                self.accuracy.update(pred[batch.is_seed], batch.y[batch.is_seed])
+                self.confusion_matrix.update(pred[batch.is_seed], batch.y[batch.is_seed])
+                self.precision.update(pred[batch.is_seed], batch.y[batch.is_seed])
+                self.recall.update(pred[batch.is_seed], batch.y[batch.is_seed])
 
     def get_metrics(self):
         """Get the metrics collected.
@@ -602,9 +614,24 @@ class RegressionMetrics(BaseMetrics):
             target_type (str, optional): the type of schema element to calculate the metrics for
         """
         super().update_metrics(loss, out, batch)
-        self.mse.update(out[batch.is_seed], batch.y[batch.is_seed])
-        self.rmse.update(out[batch.is_seed], batch.y[batch.is_seed])
-        self.mae.update(out[batch.is_seed], batch.y[batch.is_seed])
+        if isinstance(dict):
+            if target_type:
+                self.mse.update(out, batch[target_type]["y"])
+                self.rmse.update(out, batch[target_type]["y"])
+                self.mae.update(out, batch[target_type]["y"])
+            else:
+                self.mse.update(out, batch["y"])
+                self.rmse.update(out, batch["y"])
+                self.mae.update(out, batch["y"])
+        else:
+            if target_type:
+                self.mse.update(out[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
+                self.rmse.update(out[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
+                self.mae.update(out[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
+            else:
+                self.mse.update(out[batch.is_seed], batch.y[batch.is_seed])
+                self.rmse.update(out[batch.is_seed], batch.y[batch.is_seed])
+                self.mae.update(out[batch.is_seed], batch.y[batch.is_seed])
 
     def get_metrics(self):
         """Get the metrics collected.

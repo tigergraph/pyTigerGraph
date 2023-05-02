@@ -149,8 +149,7 @@ def install_query_file(
         for placeholder in replace:
             query = query.replace(placeholder, replace[placeholder])
     if distributed:
-        #TODO: Add Distributed keyword.
-        raise NotImplementedError
+        query = query.replace("CREATE QUERY", "CREATE DISTRIBUTED QUERY")
     logger.debug(query)
     query = (
         "USE GRAPH {}\n".format(conn.graphname)

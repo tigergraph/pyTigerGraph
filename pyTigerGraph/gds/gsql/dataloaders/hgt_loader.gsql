@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY hgt_loader_{QUERYSUFFIX}(
+CREATE QUERY hgt_loader_{QUERYSUFFIX}(
     SET<VERTEX> input_vertices,
     INT batch_size,
     INT num_batches=1, 
