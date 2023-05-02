@@ -57,6 +57,7 @@ class BaseLoader:
         reverse_edge: bool = False,
         delimiter: str = "|",
         timeout: int = 300000,
+        distributed_query: bool = False,
         kafka_address: str = "",
         Kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -123,6 +124,8 @@ class BaseLoader:
                 Defaults to ",".
             timeout (int, optional):
                 Timeout value for GSQL queries, in ms. Defaults to 300000.
+            distributed_query (bool, optional):
+                Whether to install the query in distributed mode. Defaults to False.
             kafka_address (str):
                 Address of the Kafka broker. Defaults to localhost:9092.
             kafka_max_msg_size (int, optional):
@@ -232,6 +235,7 @@ class BaseLoader:
         self._iterations = 0
         self._iterator = False
         self.callback_fn = callback_fn
+        self.distributed_query = distributed_query
         self.num_heap_inserts = 10
         # Kafka consumer and admin
         self.max_kafka_msg_size = Kafka_max_msg_size
@@ -1478,6 +1482,7 @@ class NeighborLoader(BaseLoader):
         reverse_edge: bool = False,
         delimiter: str = "|",
         timeout: int = 300000,
+        distributed_query: bool = False,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -1522,6 +1527,7 @@ class NeighborLoader(BaseLoader):
             reverse_edge,
             delimiter,
             timeout,
+            distributed_query,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
@@ -1646,6 +1652,7 @@ class NeighborLoader(BaseLoader):
             "e_in_feats": self.e_in_feats,
             "e_out_labels": self.e_out_labels,
             "e_extra_feats": self.e_extra_feats,
+            "distributed_query": self.distributed_query
         }
         md5 = hashlib.md5()
         md5.update(json.dumps(query_suffix).encode())
@@ -1732,7 +1739,7 @@ class NeighborLoader(BaseLoader):
                 "dataloaders",
                 "neighbor_loader.gsql",
         )
-        return install_query_file(self._graph, query_path, query_replace, force=force)
+        return install_query_file(self._graph, query_path, query_replace, force=force, distributed=self.distributed_query)
 
     def _start(self) -> None:
         # Create task and result queues
@@ -1953,6 +1960,7 @@ class EdgeLoader(BaseLoader):
         reverse_edge: bool = False,
         delimiter: str = "|",
         timeout: int = 300000,
+        distributed_query: bool = False,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -1998,6 +2006,7 @@ class EdgeLoader(BaseLoader):
             reverse_edge,
             delimiter,
             timeout,
+            distributed_query,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
@@ -2069,6 +2078,7 @@ class EdgeLoader(BaseLoader):
         # Install the right GSQL query for the loader.
         query_suffix = {
             "attributes": self.attributes,
+            "distributed_query": self.distributed_query
         }
         md5 = hashlib.md5()
         md5.update(json.dumps(query_suffix).encode())
@@ -2108,7 +2118,7 @@ class EdgeLoader(BaseLoader):
             "dataloaders",
             "edge_loader.gsql",
         )
-        return install_query_file(self._graph, query_path, query_replace, force=force)
+        return install_query_file(self._graph, query_path, query_replace, force=force, distributed=self.distributed_query)
 
     def _start(self) -> None:
         # Create task and result queues
@@ -2249,6 +2259,7 @@ class VertexLoader(BaseLoader):
         reverse_edge: bool = False,
         delimiter: str = "|",
         timeout: int = 300000,
+        distributed_query: bool = False,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -2294,6 +2305,7 @@ class VertexLoader(BaseLoader):
             reverse_edge,
             delimiter,
             timeout,
+            distributed_query,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
@@ -2370,6 +2382,7 @@ class VertexLoader(BaseLoader):
         # Install the right GSQL query for the loader.
         query_suffix = {
             "attributes": self.attributes,
+            "distributed_query": self.distributed_query
         }
         md5 = hashlib.md5()
         md5.update(json.dumps(query_suffix).encode())
@@ -2409,7 +2422,7 @@ class VertexLoader(BaseLoader):
             "dataloaders",
             "vertex_loader.gsql",
         )
-        return install_query_file(self._graph, query_path, query_replace, force=force)
+        return install_query_file(self._graph, query_path, query_replace, force=force, distributed=self.distributed_query)
 
     def _start(self) -> None:
         # Create task and result queues
@@ -2556,6 +2569,7 @@ class GraphLoader(BaseLoader):
         reverse_edge: bool = False,
         delimiter: str = "|",
         timeout: int = 300000,
+        distributed_query: bool = False,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -2601,6 +2615,7 @@ class GraphLoader(BaseLoader):
             reverse_edge,
             delimiter,
             timeout,
+            distributed_query,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
@@ -2699,6 +2714,7 @@ class GraphLoader(BaseLoader):
             "e_in_feats": self.e_in_feats,
             "e_out_labels": self.e_out_labels,
             "e_extra_feats": self.e_extra_feats,
+            "distributed_query": self.distributed_query
         }
         md5 = hashlib.md5()
         md5.update(json.dumps(query_suffix).encode())
@@ -2771,7 +2787,7 @@ class GraphLoader(BaseLoader):
             "dataloaders",
             "graph_loader.gsql",
         )
-        return install_query_file(self._graph, query_path, query_replace, force=force)
+        return install_query_file(self._graph, query_path, query_replace, force=force, distributed=self.distributed_query)
 
     def _start(self) -> None:
         # Create task and result queues
@@ -2876,6 +2892,7 @@ class EdgeNeighborLoader(BaseLoader):
         reverse_edge: bool = False,
         delimiter: str = "|",
         timeout: int = 300000,
+        distributed_query: bool = False,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -2920,6 +2937,7 @@ class EdgeNeighborLoader(BaseLoader):
             reverse_edge,
             delimiter,
             timeout,
+            distributed_query,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
@@ -3029,6 +3047,7 @@ class EdgeNeighborLoader(BaseLoader):
             "e_in_feats": self.e_in_feats,
             "e_out_labels": self.e_out_labels,
             "e_extra_feats": self.e_extra_feats,
+            "distributed_query": self.distributed_query
         }
         md5 = hashlib.md5()
         md5.update(json.dumps(query_suffix).encode())
@@ -3116,7 +3135,7 @@ class EdgeNeighborLoader(BaseLoader):
                 "dataloaders",
                 "edge_nei_loader.gsql",
         )
-        return install_query_file(self._graph, query_path, query_replace, force=force)
+        return install_query_file(self._graph, query_path, query_replace, force=force, distributed=self.distributed_query)
 
     def _start(self) -> None:
         # Create task and result queues
@@ -3229,6 +3248,7 @@ class NodePieceLoader(BaseLoader):
         reverse_edge: bool = False,
         delimiter: str = "|",
         timeout: int = 300000,
+        distributed_query: bool = False,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -3274,6 +3294,7 @@ class NodePieceLoader(BaseLoader):
             reverse_edge,
             delimiter,
             timeout,
+            distributed_query,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
@@ -3510,6 +3531,7 @@ class NodePieceLoader(BaseLoader):
                 print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + s.@rel_context_set + delimiter + s.@ancs + "\\n")'
             query_replace["{VERTEXATTRS}"] = print_query
         md5 = hashlib.md5()
+        query_suffix.extend([self.distributed_query])
         md5.update(json.dumps(query_suffix).encode())
         query_replace["{QUERYSUFFIX}"] = md5.hexdigest()
         query_replace["{ANCHOR_CACHE_ATTRIBUTE}"] = self.anchor_cache_attr
@@ -3520,7 +3542,7 @@ class NodePieceLoader(BaseLoader):
             "dataloaders",
             "nodepiece_loader.gsql",
         )
-        return install_query_file(self._graph, query_path, query_replace, force=force)
+        return install_query_file(self._graph, query_path, query_replace, force=force, distributed=self.distributed_query)
 
     def reinstall_query(self) -> str:
         query_path = os.path.join(
@@ -3754,6 +3776,7 @@ class HGTLoader(BaseLoader):
         reverse_edge: bool = False,
         delimiter: str = "|",
         timeout: int = 300000,
+        distributed_query: bool = False,
         kafka_address: str = None,
         kafka_max_msg_size: int = 104857600,
         kafka_num_partitions: int = 1,
@@ -3798,6 +3821,7 @@ class HGTLoader(BaseLoader):
             reverse_edge,
             delimiter,
             timeout,
+            distributed_query,
             kafka_address,
             kafka_max_msg_size,
             kafka_num_partitions,
@@ -3922,6 +3946,7 @@ class HGTLoader(BaseLoader):
             "e_in_feats": self.e_in_feats,
             "e_out_labels": self.e_out_labels,
             "e_extra_feats": self.e_extra_feats,
+            "distributed_query": self.distributed_query
         }
         md5 = hashlib.md5()
         md5.update(json.dumps(query_suffix).encode())
@@ -4000,7 +4025,7 @@ class HGTLoader(BaseLoader):
                 "dataloaders",
                 "hgt_loader.gsql",
         )
-        return install_query_file(self._graph, query_path, query_replace, force=force)
+        return install_query_file(self._graph, query_path, query_replace, force=force, distributed=self.distributed_query)
 
     def _start(self) -> None:
         # Create task and result queues

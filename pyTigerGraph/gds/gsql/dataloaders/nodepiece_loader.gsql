@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY nodepiece_loader_{QUERYSUFFIX}(
+CREATE QUERY nodepiece_loader_{QUERYSUFFIX}(
   SET<VERTEX> input_vertices,
   SET<STRING> v_types,
   SET<STRING> e_types,
