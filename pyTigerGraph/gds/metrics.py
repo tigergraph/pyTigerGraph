@@ -528,9 +528,11 @@ class BaseMetrics():
 
 
 class ClassificationMetrics(BaseMetrics):
+    """Classification Metrics collection.
+    Collects Loss, Accuracy, Precision, Recall, and Confusion Matrix Metrics.
+    """
     def __init__(self, num_classes: int=2):
         """Instantiate the Classification Metrics collection.
-        Collects Loss, Accuracy, Precision, Recall, and Confusion Matrix Metrics.
         Args:
             num_classes (int):
                 Number of classes in the classification task.
@@ -591,9 +593,11 @@ class ClassificationMetrics(BaseMetrics):
         return metrics
 
 class RegressionMetrics(BaseMetrics):
+    """Regression Metrics Collection.
+    Collects Loss, MSE, RMSE, and MAE metrics.
+    """
     def __init__(self):
         """Instantiate the Regression Metrics collection.
-        Collects Loss, MSE, RMSE, and MAE metrics.
         """
         super().__init__()
         self.reset_metrics()
@@ -647,9 +651,12 @@ class RegressionMetrics(BaseMetrics):
 
 
 class LinkPredictionMetrics(BaseMetrics):
+    """Link Prediction Metrics Collection.
+
+    Collects Loss, Recall@K, and Hits@K metrics.
+    """
     def __init__(self, k):
         """Instantiate the Classification Metrics collection.
-        Collects Loss, Recall@K, and Hits@K metrics.
         Args:
             k (int):
                 The number of results to look at when calculating metrics.
