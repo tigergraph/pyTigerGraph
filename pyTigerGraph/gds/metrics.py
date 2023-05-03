@@ -64,7 +64,7 @@ class Accumulator:
 class Accuracy(Accumulator):
     """Accuracy Metric.
 
-    Accuracy = sum(predictions == labels) / len(labels)
+    Accuracy = stem:[\sum_{i=1}^n (predictions_i == labels_i)/n]
 
     Usage:
 
@@ -101,8 +101,9 @@ class Accuracy(Accumulator):
 
 class BinaryRecall(Accumulator):
     """DEPRECATED: Binary Recall Metric.
+    This metric is deprecated. Use Recall instead.
 
-    Recall = stem:[\frac{\sum(predictions * labels)}{\sum(labels)}]
+    Recall = stem:[\sum(predictions * labels)/\sum(labels)]
 
     This metric is for binary classifications, i.e., both predictions and labels are arrays of 0's and 1's.
 
@@ -196,7 +197,8 @@ class ConfusionMatrix(Accumulator):
 class Recall(ConfusionMatrix):
     """Recall Metric.
 
-    Recall = stem:[\frac{true positives}{\sum(true positives + false negatives)}
+    Recall = stem:[true positives/\sum(true positives + false negatives)}
+
     This metric is for classification, i.e., both predictions and labels are arrays of multiple whole numbers.
 
     Usage:
@@ -228,8 +230,8 @@ class Recall(ConfusionMatrix):
 
 class BinaryPrecision(Accumulator):
     """DEPRECATED: Binary Precision Metric.
-
-    Precision = stem:[\frac{\sum(predictions * labels)}{\sum(predictions)}]
+    This metric is deprecated. Use the Precision metric instead. 
+    Precision = stem:[\sum(predictions * labels)/\sum(predictions)]
 
     This metric is for binary classifications, i.e., both predictions and labels are arrays of 0's and 1's.
 
@@ -275,7 +277,8 @@ class BinaryPrecision(Accumulator):
 class Precision(ConfusionMatrix):
     """Precision Metric.
 
-    Recall = stem:[\frac{true positives}{\sum(true positives + false positives)}
+    Recall = stem:[true positives/\sum(true positives + false positives)
+
     This metric is for classification, i.e., both predictions and labels are arrays of multiple whole numbers.
 
     Usage:
@@ -308,7 +311,7 @@ class Precision(ConfusionMatrix):
 class MSE(Accumulator):
     """MSE Metrc.
     
-    MSE = #TODO FILL IN FORMLA
+    MSE = stem:[\sum(predicted-actual)^2/n]
 
     This metric is for regression tasks, i.e. predicting a n-dimensional vector of float values.
 
@@ -346,7 +349,7 @@ class MSE(Accumulator):
 class RMSE(MSE):
     """RMSE Metric.
 
-    RMSE = #TODO FILL IN FORMULA
+    RMSE = stem:[\sqrt(\sum(predicted-actual)^2/n)]
 
     This metric is for regression tasks, i.e. predicting a n-dimensional vector of float values.
 
@@ -373,7 +376,7 @@ class RMSE(MSE):
 class MAE(Accumulator):
     """MAE Metrc.
 
-    MAE = #TODO FILL IN FORMLA
+    MAE = \sum(predicted-actual)/n
 
     This metric is for regression tasks, i.e. predicting a n-dimensional vector of float values.
 
@@ -410,8 +413,6 @@ class MAE(Accumulator):
 
 class HitsAtK(Accumulator):
     """Hits@K Metric.
-    Hits@K = #TODO Fill in Formula
-
     This metric is used in link prediction tasks, i.e. determining if two vertices have an edge between them.
     Also known as Precsion@K.
 
@@ -462,8 +463,6 @@ class HitsAtK(Accumulator):
 
 class RecallAtK(Accumulator):
     """Recall@K Metric.
-    Recall@K = #TODO Fill in Formula
-
     This metric is used in link prediction tasks, i.e. determining if two vertices have an edge between them
 
     Usage:
