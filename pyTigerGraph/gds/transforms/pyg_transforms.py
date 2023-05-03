@@ -1,3 +1,5 @@
+"""PyTorch Geometric Transforms"""
+
 class BasePyGTransform():
     """NO DOC"""
     def __call__(self, data):
@@ -8,9 +10,7 @@ class BasePyGTransform():
 
 class TemporalPyGTransform(BasePyGTransform):
     """TemporalPyGTransform.
-    The TemporalPyGTransform creates a sequence of subgraph batches out of a single batch of data produced by a NeighborLoader or HGTLoader.
-    It assumes that there are datetime attributes on vertices and edges. If vertex attributes change over time, children vertex attributes
-    are moved to the appropriate parent, and then the children are removed from the graph.
+    The TemporalPyGTransform creates a sequence of subgraph batches out of a single batch of data produced by a NeighborLoader or HGTLoader. It assumes that there are datetime attributes on vertices and edges. If vertex attributes change over time, children vertex attributes are moved to the appropriate parent, and then the children are removed from the graph.
     """
     def __init__(self,
                  vertex_start_attrs: dict,

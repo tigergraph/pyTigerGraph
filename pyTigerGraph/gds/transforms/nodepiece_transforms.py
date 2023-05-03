@@ -1,3 +1,5 @@
+"""NodePiece Transforms"""
+
 class BaseNodePieceTransform():
     """NO DOC."""
     def __call__(self, data):
