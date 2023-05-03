@@ -376,7 +376,7 @@ class RMSE(MSE):
 class MAE(Accumulator):
     """MAE Metrc.
 
-    MAE = \sum(predicted-actual)/n
+    MAE = stem:[\sum(predicted-actual)/n]
 
     This metric is for regression tasks, i.e. predicting a n-dimensional vector of float values.
 
