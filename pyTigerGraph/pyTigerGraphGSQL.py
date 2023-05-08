@@ -6,7 +6,7 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 import logging
 import os
 import sys
-from typing import Union
+from typing import Union, Tuple
 from urllib.parse import urlparse
 import re
 
@@ -221,3 +221,53 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
         logger.info("exit: installUDF")
+
+    def getUDF(self, ExprFunctions: bool = True, ExprUtil: bool = True) -> Union[str, Tuple[str, str]]:       
+        """Get user defined functions (UDF) installed in the database.
+        See https://docs.tigergraph.com/gsql-ref/current/querying/func/query-user-defined-functions for details on UDFs.
+
+        Args:
+            ExprFunctions (bool, optional):
+                Whether to get ExprFunctions. Defaults to True.
+            ExprUtil (bool, optional):
+                Whether to get ExprUtil. Defaults to True.
+
+        Returns:
+            str: If only one of `ExprFunctions` or `ExprUtil` is True, return of the content of that file.
+            Tuple[str, str]: content of ExprFunctions and content of ExprUtil.
+        """
+        logger.info("entry: getUDF")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        functions_ret = None
+        if ExprFunctions:
+            resp = self._get(
+                "{}/gsqlserver/gsql/userdefinedfunction".format(self.gsUrl),
+                params={"filename": "ExprFunctions"})
+            functions_ret = resp
+            if not resp["error"]:
+                logger.info("ExprFunctions get successfully")
+            else:
+                logger.error("Failed to get ExprFunctions")
+        
+        util_ret = None
+        if ExprUtil:
+            resp = self._get(
+                "{}/gsqlserver/gsql/userdefinedfunction".format(self.gsUrl),
+                params={"filename": "ExprUtil"})
+            util_ret = resp
+            if not resp["error"]:
+                logger.info("ExprUtil get successfully")
+            else:
+                logger.error("Failed to get ExprUtil")
+
+        if (functions_ret is not None) and (util_ret is not None):
+            return (functions_ret, util_ret)
+        elif functions_ret is not None:
+            return functions_ret
+        elif util_ret is not None:
+            return util_ret
+        else:
+            return ""
+
