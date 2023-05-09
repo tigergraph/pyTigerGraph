@@ -455,7 +455,7 @@ class BaseLoader:
         return attributes
 
     def _validate_mlwb_version(self) -> None:
-        mlwb = self.graph.getUDF()
+        mlwb = self._graph.getUDF()
         if ("init_kafka_producer" not in mlwb[0]) or ("class KafkaProducer" not in mlwb[1]):
             raise TigerGraphException("ML Workbench version incompatible. Please reactivate database with the activator whose version matches pyTigerGraph's")
 
