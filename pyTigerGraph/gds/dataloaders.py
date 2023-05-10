@@ -457,7 +457,7 @@ class BaseLoader:
     def _validate_mlwb_version(self) -> None:
         mlwb = self._graph.getUDF()
         if ("init_kafka_producer" not in mlwb[0]) or ("class KafkaProducer" not in mlwb[1]):
-            raise TigerGraphException("ML Workbench version incompatible. Please reactivate database with the activator whose version matches pyTigerGraph's")
+            raise TigerGraphException("ML Workbench version incompatible. Please reactivate database with the activator whose version matches your pyTigerGraph's. See https://act.tigergraphlabs.com for details.")
 
     def _install_query(self) -> NoReturn:
         # Install the right GSQL query for the loader.
