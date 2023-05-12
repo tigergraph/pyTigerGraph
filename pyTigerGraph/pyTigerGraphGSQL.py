@@ -129,6 +129,15 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
+        def check_error(query: str, resp: str) -> None:
+            if "CREATE DATA_SOURCE" in query.upper() and "bigquery" in query.upper():
+                #check error msg for missing parameters
+                pass
+            if "RUN LOADING JOB" in query.upper():
+                if "Failed to create connector" in resp:
+                    raise TigerGraphException(resp)
+                # check error due to wrong parameter values 
+
         if graphname is None:
             graphname = self.graphname
         if str(graphname).upper() == "GLOBAL" or str(graphname).upper() == "":
@@ -151,6 +160,8 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                     ret = "\n".join(res)
                 else:
                     ret = res
+
+            check_error(query, ret)
 
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(ret))
