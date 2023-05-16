@@ -336,6 +336,8 @@ class BaseLoader:
                 if kafka_ssl_check_hostname:
                     self._payload["ssl_endpoint_identification_algorithm"] = "https"
             # kafka_topic will be filled in later.
+        # Check ml workbench compatibility
+        self._validate_mlwb_version()
         # Implement `_install_query()` that installs your query
         # self._install_query()
 
@@ -451,6 +453,11 @@ class BaseLoader:
         else:
             raise ValueError("Input to attributes should be None, list, or dict.")
         return attributes
+
+    def _validate_mlwb_version(self) -> None:
+        mlwb = self._graph.getUDF()
+        if ("init_kafka_producer" not in mlwb[0]) or ("class KafkaProducer" not in mlwb[1]):
+            raise TigerGraphException("ML Workbench version incompatible. Please reactivate database with the activator whose version matches your pyTigerGraph's. See https://act.tigergraphlabs.com for details.")
 
     def _install_query(self) -> NoReturn:
         # Install the right GSQL query for the loader.
