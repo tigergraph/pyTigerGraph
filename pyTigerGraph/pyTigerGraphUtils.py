@@ -206,13 +206,13 @@ class pyTigerGraphUtils(pyTigerGraphBase):
                 Number of datapoints to return. If provided, `from_ts` and `to_ts` will be ignored.
             what (str, optional):
                 Name of the metric to filter for. Possible choices are:
-                * "cpu": Percentage of CPU usage by component
-                * "mem": Memory usage in megabytes by component
-                * "diskspace": Disk usage in megabytes by directory
-                * "network": Network traffic in bytes since the service started
-                * "qps": Number of requests per second by endpoint
-                * "servicestate": The state of the service, either online 1 or offline 0
-                * "connection": Number of open TCP connections
+                - "cpu": Percentage of CPU usage by component
+                - "mem": Memory usage in megabytes by component
+                - "diskspace": Disk usage in megabytes by directory
+                - "network": Network traffic in bytes since the service started
+                - "qps": Number of requests per second by endpoint
+                - "servicestate": The state of the service, either online 1 or offline 0
+                - "connection": Number of open TCP connections
             who (str, optional):
                 Name of the component that reported the datapoint.
             where (str, optional):

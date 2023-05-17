@@ -1,3 +1,5 @@
+"""NodePiece Models"""
+
 from . import base_model as bm
 from ..metrics import ClassificationMetrics
 
@@ -9,6 +11,7 @@ except:
     raise Exception("PyTorch is required to use NodePiece MLPs. Please install PyTorch")
 
 class BaseNodePieceEmbeddingTable(nn.Module):
+    """NO DOC."""
     def __init__(self,
                  vocab_size: int,
                  sequence_length: int,
@@ -28,6 +31,7 @@ class BaseNodePieceEmbeddingTable(nn.Module):
 
 
 class BaseNodePieceMLPModel(nn.Module):
+    """NO DOC."""
     def __init__(self, num_layers, out_dim, hidden_dim, vocab_size, sequence_length, embedding_dim = 768, dropout = 0.0):
         super().__init__()
         self.embedding_dim = embedding_dim
@@ -60,13 +64,45 @@ class BaseNodePieceMLPModel(nn.Module):
         return x
 
 class NodePieceMLPForVertexClassification(bm.BaseModel):
-    def __init__(self, num_layers, out_dim, hidden_dim, vocab_size, sequence_length, embedding_dim = 768, dropout = 0.0, class_weights = None):
+    """NodePieceMLPForVertexClassification.
+    This model is for training an multi-layer perceptron (MLP) on batches produced by NodePiece dataloaders, and transformed by the `NodePieceMLPTransform`.
+    The architecture is for a vertex classification task, and assumes the label of each vertex is in a batch attribute called `"y"`, such as what is produced by the `NodePieceMLPTransform`.
+    By default, this model collects `ClassficiationMetrics`, and uses cross entropy as its loss function.
+    """
+    def __init__(self, num_layers: int, out_dim: int, hidden_dim: int, vocab_size: int, sequence_length: int, embedding_dim = 768, dropout = 0.0, class_weights = None):
+        """Initialize a NodePieceMLPForVertexClassification.
+        Initializes the model.
+        Args:
+            num_layers (int):
+                The total number of layers in your model.
+            out_dim (int):
+                The output dimension of the model, a.k.a. the number of classes in the classification task.
+            hidden_dim (int):
+                The hidden dimension of your model.
+            vocab_size (int):
+                The number of tokens produced by NodePiece. Can be accessed via the dataloader using `loader.num_tokens`.
+            sequence_length (int):
+                The number of tokens used to represent a single data instance. Is the sum of `max_anchors` and `max_relational_context` defined in the dataloader.
+            embedding_dim (int):
+                The dimension to embed the tokens in.
+            dropout (float):
+                The percentage of dropout to be applied after every layer of the model (excluding the output layer).
+            class_weights (torch.Tensor):
+                Weight the importance of each class in the classification task when computing loss. Helpful in imbalanced classification tasks.
+        """
         super().__init__()
         self.model = BaseNodePieceMLPModel(num_layers, out_dim, hidden_dim, vocab_size, sequence_length, embedding_dim, dropout)
         self.metrics = ClassificationMetrics(out_dim)
         self.class_weight = class_weights
 
     def forward(self, batch, get_probs=False, **kwargs):
+        """Make a forward pass.
+        Args:
+            batch:
+                The batch of data, in the same format as the data produced by `NodePieceMLPTransform`
+            get_probs (bool, optional):
+                Return the softmax scores of the raw logits, which can be interpreted as probabilities. Defaults to false.
+        """
         logits = self.model.forward(batch)
         if get_probs:
             return F.softmax(logits, dim=1)
@@ -74,6 +110,16 @@ class NodePieceMLPForVertexClassification(bm.BaseModel):
             return logits
 
     def compute_loss(self, logits, batch, loss_fn = None, **kwargs):
+        """Compute loss.
+        Args:
+            logits (torch.Tensor):
+                The output of the model.
+            batch:
+                The batch of data, in the same format as the data produced by `NodePieceMLPTransform`
+            loss_fn:
+                A PyTorch-compatible function to produce the loss of the model, which takes in logits, the labels, and optionally the class_weights.
+                Defaults to Cross Entropy.
+        """
         if not(loss_fn):
             loss_fn = F.cross_entropy
             loss = loss_fn(logits, batch["y"].long(), self.class_weight)

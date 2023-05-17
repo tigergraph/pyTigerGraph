@@ -64,7 +64,7 @@ class Accumulator:
 class Accuracy(Accumulator):
     """Accuracy Metric.
 
-    Accuracy = sum(predictions == labels) / len(labels)
+    Accuracy = stem:[\sum_{i=1}^n (predictions_i == labels_i)/n]
 
     Usage:
 
@@ -101,8 +101,9 @@ class Accuracy(Accumulator):
 
 class BinaryRecall(Accumulator):
     """DEPRECATED: Binary Recall Metric.
+    This metric is deprecated. Use Recall instead.
 
-    Recall = stem:[\frac{\sum(predictions * labels)}{\sum(labels)}]
+    Recall = stem:[\sum(predictions * labels)/\sum(labels)]
 
     This metric is for binary classifications, i.e., both predictions and labels are arrays of 0's and 1's.
 
@@ -112,6 +113,7 @@ class BinaryRecall(Accumulator):
     * Get recall score at any point by accessing the value property.
     """
     def __init__(self) -> None:
+        """NO DOC"""
         super().__init__()
         warnings.warn(
                 "The `BinaryRecall` metric is deprecated; use `Recall` metric instead.",
@@ -152,6 +154,11 @@ class ConfusionMatrix(Accumulator):
             Number of classes in your classification task.
     """
     def __init__(self, num_classes: int) -> None:
+        """Instantiate the Confusion Matrix metric.
+        Args:
+            num_classes (int):
+                Number of classes in the classification task.
+        """
         super().__init__()
         self.num_classes = num_classes
 
@@ -190,7 +197,8 @@ class ConfusionMatrix(Accumulator):
 class Recall(ConfusionMatrix):
     """Recall Metric.
 
-    Recall = stem:[\frac{true positives}{\sum(true positives + false negatives)}
+    Recall = stem:[true positives/\sum(true positives + false negatives)}
+
     This metric is for classification, i.e., both predictions and labels are arrays of multiple whole numbers.
 
     Usage:
@@ -222,8 +230,8 @@ class Recall(ConfusionMatrix):
 
 class BinaryPrecision(Accumulator):
     """DEPRECATED: Binary Precision Metric.
-
-    Precision = stem:[\frac{\sum(predictions * labels)}{\sum(predictions)}]
+    This metric is deprecated. Use the Precision metric instead. 
+    Precision = stem:[\sum(predictions * labels)/\sum(predictions)]
 
     This metric is for binary classifications, i.e., both predictions and labels are arrays of 0's and 1's.
 
@@ -234,6 +242,7 @@ class BinaryPrecision(Accumulator):
     """
 
     def __init__(self) -> None:
+        """NO DOC"""
         super().__init__()
         warnings.warn(
                 "The `BinaryPrecision` metric is deprecated; use `Precision` metric instead.",
@@ -268,7 +277,8 @@ class BinaryPrecision(Accumulator):
 class Precision(ConfusionMatrix):
     """Precision Metric.
 
-    Recall = stem:[\frac{true positives}{\sum(true positives + false positives)}
+    Recall = stem:[true positives/\sum(true positives + false positives)
+
     This metric is for classification, i.e., both predictions and labels are arrays of multiple whole numbers.
 
     Usage:
@@ -301,7 +311,7 @@ class Precision(ConfusionMatrix):
 class MSE(Accumulator):
     """MSE Metrc.
     
-    MSE = #TODO FILL IN FORMLA
+    MSE = stem:[\sum(predicted-actual)^2/n]
 
     This metric is for regression tasks, i.e. predicting a n-dimensional vector of float values.
 
@@ -339,7 +349,7 @@ class MSE(Accumulator):
 class RMSE(MSE):
     """RMSE Metric.
 
-    RMSE = #TODO FILL IN FORMULA
+    RMSE = stem:[\sqrt(\sum(predicted-actual)^2/n)]
 
     This metric is for regression tasks, i.e. predicting a n-dimensional vector of float values.
 
@@ -349,6 +359,7 @@ class RMSE(MSE):
     * Get RMSE score at any point by accessing the value property.
     """
     def __init__(self):
+        """NO DOC"""
         super().__init__()
 
     @property
@@ -365,7 +376,7 @@ class RMSE(MSE):
 class MAE(Accumulator):
     """MAE Metrc.
 
-    MAE = #TODO FILL IN FORMLA
+    MAE = stem:[\sum(predicted-actual)/n]
 
     This metric is for regression tasks, i.e. predicting a n-dimensional vector of float values.
 
@@ -402,8 +413,6 @@ class MAE(Accumulator):
 
 class HitsAtK(Accumulator):
     """Hits@K Metric.
-    Hits@K = #TODO Fill in Formula
-
     This metric is used in link prediction tasks, i.e. determining if two vertices have an edge between them.
     Also known as Precsion@K.
 
@@ -417,6 +426,11 @@ class HitsAtK(Accumulator):
             Top k number of entities to compare.
     """
     def __init__(self, k:int) -> None:
+        """Instantiate the Hits@K Metric
+        Args:
+            k (int):
+                Top k number of entities to compare.
+        """
         super().__init__()
         self.k = k
 
@@ -449,8 +463,6 @@ class HitsAtK(Accumulator):
 
 class RecallAtK(Accumulator):
     """Recall@K Metric.
-    Recall@K = #TODO Fill in Formula
-
     This metric is used in link prediction tasks, i.e. determining if two vertices have an edge between them
 
     Usage:
@@ -463,6 +475,11 @@ class RecallAtK(Accumulator):
             Top k number of entities to compare.
     """
     def __init__(self, k:int) -> None:
+        """Instantiate the Recall@K Metric
+        Args:
+            k (int):
+                Top k number of entities to compare.
+        """
         super().__init__()
         self.k = k
 
@@ -494,7 +511,9 @@ class RecallAtK(Accumulator):
             return None
 
 class BaseMetrics():
+    """NO DOC"""
     def __init__(self):
+        """NO DOC"""
         self.reset_metrics()
     
     def reset_metrics(self):
@@ -508,12 +527,21 @@ class BaseMetrics():
 
 
 class ClassificationMetrics(BaseMetrics):
+    """Classification Metrics collection.
+    Collects Loss, Accuracy, Precision, Recall, and Confusion Matrix Metrics.
+    """
     def __init__(self, num_classes: int=2):
+        """Instantiate the Classification Metrics collection.
+        Args:
+            num_classes (int):
+                Number of classes in the classification task.
+        """
         self.num_classes = num_classes
         super(ClassificationMetrics, self).__init__()
         self.reset_metrics()
 
     def reset_metrics(self):
+        """Reset the collection of metrics."""
         super().reset_metrics()
         self.accuracy = Accuracy()
         self.confusion_matrix = ConfusionMatrix(self.num_classes)
@@ -521,6 +549,13 @@ class ClassificationMetrics(BaseMetrics):
         self.recall = Recall(self.num_classes)
 
     def update_metrics(self, loss, out, batch, target_type=None):
+        """Update the metrics collected.
+        Args:
+            loss (float): loss value to update
+            out (ndarray): the predictions of the model
+            batch (dict): the batch to calculate metrics on
+            target_type (str, optional): the type of schema element to calculate the metrics for
+        """
         super().update_metrics(loss, out, batch)
         pred = out.argmax(dim=1)
         if isinstance(batch, dict):
@@ -547,23 +582,40 @@ class ClassificationMetrics(BaseMetrics):
                 self.recall.update(pred[batch.is_seed], batch.y[batch.is_seed])
 
     def get_metrics(self):
+        """Get the metrics collected.
+        Returns:
+            Dictionary of Accuracy, Precision, Recall, and Confusion Matrix
+        """
         super_met = super().get_metrics()
         metrics = {"accuracy": self.accuracy.value, "precision": self.precision.value, "recall": self.recall.value, "confusion_matrix": self.confusion_matrix.value}
         metrics.update(super_met)
         return metrics
 
 class RegressionMetrics(BaseMetrics):
+    """Regression Metrics Collection.
+    Collects Loss, MSE, RMSE, and MAE metrics.
+    """
     def __init__(self):
+        """Instantiate the Regression Metrics collection.
+        """
         super().__init__()
         self.reset_metrics()
 
     def reset_metrics(self):
+        """Reset the collection of metrics."""
         super().reset_metrics()
         self.mse = MSE()
         self.rmse = RMSE()
         self.mae = MAE()
 
     def update_metrics(self, loss, out, batch, target_type=None):
+        """Update the metrics collected.
+        Args:
+            loss (float): loss value to update
+            out (ndarray): the predictions of the model
+            batch (dict): the batch to calculate metrics on
+            target_type (str, optional): the type of schema element to calculate the metrics for
+        """
         super().update_metrics(loss, out, batch)
         if isinstance(dict):
             if target_type:
@@ -585,6 +637,10 @@ class RegressionMetrics(BaseMetrics):
                 self.mae.update(out[batch.is_seed], batch.y[batch.is_seed])
 
     def get_metrics(self):
+        """Get the metrics collected.
+        Returns:
+            Dictionary of MSE, RMSE, and MAE.
+        """
         super_met = super().get_metrics()
         metrics = {"mse": self.mse.value,
                    "rmse": self.rmse.value,
@@ -594,22 +650,43 @@ class RegressionMetrics(BaseMetrics):
 
 
 class LinkPredictionMetrics(BaseMetrics):
+    """Link Prediction Metrics Collection.
+
+    Collects Loss, Recall@K, and Hits@K metrics.
+    """
     def __init__(self, k):
+        """Instantiate the Classification Metrics collection.
+        Args:
+            k (int):
+                The number of results to look at when calculating metrics.
+        """
         self.k = k
         super(LinkPredictionMetrics, self).__init__()
         self.reset_metrics()
 
     def reset_metrics(self):
+        """Reset the collection of metrics."""
         super().reset_metrics()
         self.recall_at_k = RecallAtK(self.k)
         self.hits_at_k = HitsAtK(self.k)
 
     def update_metrics(self, loss, out, batch, target_type=None):
+        """Update the metrics collected.
+        Args:
+            loss (float): loss value to update
+            out (ndarray): the predictions of the model
+            batch (dict): the batch to calculate metrics on
+            target_type (str, optional): the type of schema element to calculate the metrics for
+        """
         super().update_metrics(loss, out, batch)
         self.recall_at_k.update(out, batch.y)
         self.hits_at_k.update(out, batch.y)
 
     def get_metrics(self):
+        """Get the metrics collected.
+        Returns:
+            Dictionary of Recall@K, Hits@K, and K.
+        """
         super_met = super().get_metrics()
         metrics = {"recall_at_k": self.recall_at_k.value,
                    "hits_at_k": self.hits_at_k.value,

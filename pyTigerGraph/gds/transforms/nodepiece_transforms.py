@@ -1,4 +1,7 @@
+"""NodePiece Transforms"""
+
 class BaseNodePieceTransform():
+    """NO DOC."""
     def __call__(self, data):
         return data
 
@@ -6,8 +9,20 @@ class BaseNodePieceTransform():
         return f'{self.__class__.__name__}()'
 
 class NodePieceMLPTransform(BaseNodePieceTransform):
+    """NodePieceMLPTransform.
+    The NodePieceMLPTransform converts a batch of data from the NodePieceLoader into a format that can be used in a MLP implemented in PyTorch.
+    """
     # Assumes numerical types for features and labels. No support for complex datatypes as features.
     def __init__(self, label: str, features: list = [], target_type: str = None):
+        """Instantiate a NodePieceMLPTransform.
+        Args:
+            label (str): 
+                The attribute name that corresponds with the label being predicted. Supports numerical datatypes (INT, FLOAT, DOUBLE).
+            features (list of str, optional):
+                List of attributes to use as features into the model. Supports numerical datatypes (INT, FLOAT, DOUBLE).
+            target_type (str, optional):
+                The type of vertex to perform predictions on.
+        """
         try:
             import torch
         except:
@@ -17,6 +32,11 @@ class NodePieceMLPTransform(BaseNodePieceTransform):
         self.label = label
 
     def __call__(self, data):
+        """Perform the transform.
+        Args:
+            data (pd.DataFrame):
+                Batch of data produced by the NodePiece Loader.
+        """
         import torch
         batch = {}
         if self.target_type:
