@@ -13,10 +13,10 @@ class BaseModel(torch.nn.Module):
     def reset_parameters(self):
         self.model.reset_parameters()
 
-    def forward(self, batch):
+    def forward(self, batch, target_type=None, **kwargs):
         raise NotImplementedError("Forward pass not implemented for BaseModel")
 
-    def compute_loss(self):
+    def compute_loss(self, logits, batch, loss_fn=None, **kwargs):
         raise NotImplementedError("Loss computation not implemented in BaseModel")
 
     def fit(self, training_dataloader, eval_dataloader, number_epochs, target_type=None, trainer_kwargs={}):
