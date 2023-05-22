@@ -131,7 +131,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
 
         def check_error(query: str, resp: str) -> None:
             if "CREATE DATA_SOURCE" in query.upper():
-                if ("Successfully created local data sources" not in resp) or ("Successfully created data sources" not in resp):
+                if ("Successfully created local data sources" not in resp) and ("Successfully created data sources" not in resp):
                     raise TigerGraphException(resp)
             if "CREATE LOADING JOB" in query.upper():
                 if "Successfully created loading jobs" not in resp:
