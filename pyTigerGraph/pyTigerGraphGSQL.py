@@ -130,13 +130,14 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             logger.debug("params: " + self._locals(locals()))
 
         def check_error(query: str, resp: str) -> None:
-            if "CREATE DATA_SOURCE" in query.upper() and "bigquery" in query.lower():
-                #TODO: check error msg for missing parameters
-                pass
-            if "RUN LOADING JOB" in query.upper():
-                if "Failed to create connector" in resp:
+            if "CREATE DATA_SOURCE" in query.upper():
+                if ("Successfully created local data sources" not in resp) or ("Successfully created data sources" not in resp):
                     raise TigerGraphException(resp)
-                elif "Failed to get connector status with error" in resp:
+            if "CREATE LOADING JOB" in query.upper():
+                if "Successfully created loading jobs" not in resp:
+                    raise TigerGraphException(resp)
+            if "RUN LOADING JOB" in query.upper():
+                if "LOAD SUCCESSFUL to TigerGraph" not in resp:
                     raise TigerGraphException(resp)
 
         if graphname is None:
