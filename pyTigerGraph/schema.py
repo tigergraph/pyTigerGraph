@@ -80,6 +80,7 @@ class Vertex(object):
     incoming_edge_types = []
     outgoing_edge_types = []
 
+    # TODO: I shouldn't have to run this, only use default value specified in dataclass
     @classmethod
     def define_primary_id(self, primary_id, primary_id_as_attribute):
         self.primary_id = primary_id
@@ -130,8 +131,8 @@ class Edge:
     attribute_edits = {"ADD": [], "DELETE": []}
     is_directed = None
     reverse_edge = None
-    from_vertex_types = []
-    to_vertex_types = []
+    from_vertex_types = None
+    to_vertex_types = None
 
     def add_attribute(self, attribute):
         for attr in self.attributes.values():
@@ -176,30 +177,22 @@ class Graph():
             self.graphname = db_rep["GraphName"]
             for v_type in db_rep["VertexTypes"]:
                 vert = make_dataclass(v_type["Name"],
-                                    [(attr["AttributeName"], _get_type(attr), None) for attr in v_type["Attributes"]] + [(v_type["PrimaryId"]["AttributeName"], _get_type(v_type["PrimaryId"]), None)],
+                                    [(attr["AttributeName"], _get_type(attr), None) for attr in v_type["Attributes"]] + 
+                                    [(v_type["PrimaryId"]["AttributeName"], _get_type(v_type["PrimaryId"]), None),
+                                     ("primary_id", str, v_type["PrimaryId"]["AttributeName"]),
+                                     ("primary_id_as_attribute", bool, v_type["PrimaryId"]["PrimaryIdAsAttribute"])],
                                     bases=(Vertex,), repr=False)
-                vert.define_primary_id(v_type["PrimaryId"]["AttributeName"], v_type["PrimaryId"]["PrimaryIdAsAttribute"])
                 self._vertex_types[v_type["Name"]] = vert
 
             for e_type in db_rep["EdgeTypes"]:
                 e = make_dataclass(e_type["Name"],
-                                    [(attr["AttributeName"], _get_type(attr), None) for attr in v_type["Attributes"]],
+                                    [(attr["AttributeName"], _get_type(attr), None) for attr in v_type["Attributes"]] + 
+                                    [("from_vertex", self._vertex_types[e_type["FromVertexTypeName"]], None),
+                                     ("to_vertex", self._vertex_types[e_type["FromVertexTypeName"]], None),
+                                     ("is_directed", bool, e_type["IsDirected"]),
+                                     ("reverse_edge", str, e_type["Config"].get("REVERSE_EDGE"))],
                                     bases=(Edge,), repr=False)
-
-                self._edge_types[(e_type["FromVertexTypeName"],
-                                 e_type["Name"], 
-                                 e_type["ToVertexTypeName"])] = e
-                
-                e.is_directed = e_type["IsDirected"]
-                e.reverse_edge = e_type["Config"].get("REVERSE_EDGE")
-                e.from_vertex_types.append(self._vertex_types[e_type["FromVertexTypeName"]])
-                e.to_vertex_types.append(self._vertex_types[e_type["ToVertexTypeName"]])
-
-            for e in list(self._edge_types.keys()):
-                src_vt = e[0]
-                dest_vt = e[2]
-                self._vertex_types[src_vt].outgoing_edge_types.append(self._edge_types[e])
-                self._vertex_types[dest_vt].incoming_edge_types.append(self._edge_types[e])
+                self._edge_types[e_type["Name"]] = e
 
     def create_vertex_type(self, vertex: Vertex, outdegree_stats=True):
         if vertex.__name__ in self._vertex_types.keys():
@@ -241,20 +234,20 @@ class Graph():
             gsql_def += "ADD DIRECTED EDGE "+edge.__name__+"("
         else:
             gsql_def += "ADD UNDIRECTED EDGE "+edge.__name__+"("
-        from_vert = edge.from_vertex_types
-        to_vert = edge.to_vertex_types
 
-        if len(from_vert) < 1:
-            raise TigerGraphException(edge.__name__+ " has no from vertex types defined.")
-        if len(to_vert) < 1:
-            raise TigerGraphException(edge.__name__+ " has no to vertex types defined.")
-        if len(from_vert) != len(to_vert):
-            raise TigerGraphException(edge.__name__+ " has an uneven pairing of to and from vertices.")
+        # TODO: Handle Unions for multiple vertex types given an edge type
+        from_vert = edge.attributes["from_vertex"].__name__
+        to_vert = edge.attributes["to_vertex"].__name__
+        gsql_def += "FROM "+from_vert+", "+"TO "+to_vert
+        attrs = edge.attributes
+        for attr in attrs.keys():
+            if attr == "from_vertex" or attr == "to_vertex" or attr == "is_directed" or attr == "reverse_edge":
+                continue
+            else:
+                gsql_def += ", "
+                gsql_def += attr + " "+_py_to_tg_type(attrs[attr])
+        gsql_def += ")"
 
-        for pair in zip(from_vert, to_vert):
-            gsql_def += "FROM "+pair[0].__name__+", "+"TO "+pair[1].__name__ + " | "
-        
-        gsql_def = gsql_def[:-3]
         print(gsql_def)
 
 
