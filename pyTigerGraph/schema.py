@@ -10,7 +10,7 @@ COLLECTION_TYPES = ["list", "set", "map"]
 COLLECTION_VALUE_TYPES = ["int", "double", "float", "string", "datetime", "udt"]
 MAP_KEY_TYPES = ["int", "string", "datetime"]
 
-def _get_type(attr):
+def _parse_type(attr):
     collection_types = ""
     if attr["AttributeType"].get("ValueTypeName"):
         if attr["AttributeType"].get("KeyTypeName"):
@@ -18,6 +18,9 @@ def _get_type(attr):
         else:
             collection_types += "<"+attr["AttributeType"].get("ValueTypeName") + ">"
     attr_type = (attr["AttributeType"]["Name"] + collection_types).upper()
+    return attr_type
+
+def _get_type(attr_type):
     if attr_type == "STRING":
         return str
     elif attr_type == "INT":
@@ -25,9 +28,13 @@ def _get_type(attr):
     elif attr_type == "FLOAT":
         return float
     elif "LIST" in attr_type:
-        return list
+        val_type = attr_type.split("<")[1].strip(">")
+        return List[_get_type(val_type)]
     elif "MAP" in attr_type:
-        return dict
+        key_val = attr_type.split("<")[1].strip(">")
+        key_type = key_val.split(",")[0]
+        val_type = key_val.split(",")[1]
+        return Dict[_get_type(key_type), _get_type(val_type)]
     elif attr_type == "BOOL":
         return bool
     elif attr_type == "datetime":
@@ -177,8 +184,8 @@ class Graph():
             self.graphname = db_rep["GraphName"]
             for v_type in db_rep["VertexTypes"]:
                 vert = make_dataclass(v_type["Name"],
-                                    [(attr["AttributeName"], _get_type(attr), None) for attr in v_type["Attributes"]] + 
-                                    [(v_type["PrimaryId"]["AttributeName"], _get_type(v_type["PrimaryId"]), None),
+                                    [(attr["AttributeName"], _get_type(_parse_type(attr)), None) for attr in v_type["Attributes"]] + 
+                                    [(v_type["PrimaryId"]["AttributeName"], _get_type(_parse_type(v_type["PrimaryId"])), None),
                                      ("primary_id", str, v_type["PrimaryId"]["AttributeName"]),
                                      ("primary_id_as_attribute", bool, v_type["PrimaryId"]["PrimaryIdAsAttribute"])],
                                     bases=(Vertex,), repr=False)
@@ -186,7 +193,7 @@ class Graph():
 
             for e_type in db_rep["EdgeTypes"]:
                 e = make_dataclass(e_type["Name"],
-                                    [(attr["AttributeName"], _get_type(attr), None) for attr in v_type["Attributes"]] + 
+                                    [(attr["AttributeName"], _get_type(_parse_type(attr)), None) for attr in v_type["Attributes"]] + 
                                     [("from_vertex", self._vertex_types[e_type["FromVertexTypeName"]], None),
                                      ("to_vertex", self._vertex_types[e_type["FromVertexTypeName"]], None),
                                      ("is_directed", bool, e_type["IsDirected"]),
