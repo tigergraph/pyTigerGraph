@@ -129,6 +129,26 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
+        def check_error(query: str, resp: str) -> None:
+            if "CREATE VERTEX" in query.upper():
+                if "Failed to create vertex types" in resp:
+                    raise TigerGraphException(resp)
+            if ("CREATE DIRECTED EDGE" in query.upper()) or ("CREATE UNDIRECTED EDGE" in query.upper()):
+                if "Failed to create edge types" in resp:
+                    raise TigerGraphException(resp)
+            if "CREATE GRAPH" in query.upper():
+                if ("The graph" in resp) and ("could not be created!" in resp):
+                    raise TigerGraphException(resp)
+            if "CREATE DATA_SOURCE" in query.upper():
+                if ("Successfully created local data sources" not in resp) and ("Successfully created data sources" not in resp):
+                    raise TigerGraphException(resp)
+            if "CREATE LOADING JOB" in query.upper():
+                if "Successfully created loading jobs" not in resp:
+                    raise TigerGraphException(resp)
+            if "RUN LOADING JOB" in query.upper():
+                if "LOAD SUCCESSFUL to TigerGraph" not in resp:
+                    raise TigerGraphException(resp)
+
         if graphname is None:
             graphname = self.graphname
         if str(graphname).upper() == "GLOBAL" or str(graphname).upper() == "":
@@ -151,6 +171,8 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                     ret = "\n".join(res)
                 else:
                     ret = res
+
+            check_error(query, ret)
 
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(ret))
