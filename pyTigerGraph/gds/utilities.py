@@ -136,8 +136,7 @@ def install_query_file(
         if force or (not is_enabled):
             query = "USE GRAPH {}\nDROP QUERY {}\n".format(conn.graphname, query_name)
             resp = conn.gsql(query)
-            status = resp.splitlines()[-1]
-            if "Failed" in status:
+            if "Successfully dropped queries" not in resp:
                 raise ConnectionError(resp)
         else:
             return query_name
@@ -160,11 +159,10 @@ def install_query_file(
         "Installing and optimizing queries. It might take a minute or two."
     )
     resp = conn.gsql(query)
-    status = resp.splitlines()[-1]
-    if "Failed" in status:
+    if "Query installation finished" not in resp:
         raise ConnectionError(resp)
     else:
-        print(status)
+        print("Query installation finished.")
     return query_name
 
 
