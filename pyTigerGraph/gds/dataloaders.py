@@ -1729,9 +1729,9 @@ class NeighborLoader(BaseLoader):
                 )
                 query_replace["{OTHERVERTEXATTRS}"] = print_query
             else:
-                print_query = '@@v_batch += (stringify(getvid(s)) + ",1\\n")'
+                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + "1\\n")'
                 query_replace["{SEEDVERTEXATTRS}"] = print_query
-                print_query = '@@v_batch += (stringify(getvid(s)) + ",0\\n")'
+                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + "0\\n")'
                 query_replace["{OTHERVERTEXATTRS}"] = print_query
             # Ignore edge types
             e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
