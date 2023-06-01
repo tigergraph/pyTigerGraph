@@ -22,8 +22,6 @@ class TestGDSBaseLoader(unittest.TestCase):
         cls.loader = BaseLoader(cls.conn, delimiter="|")
 
     def test_get_schema(self):
-        self.conn.graphname = "Cora"
-        self.loader = BaseLoader(self.conn, delimiter = "|")
         self.assertDictEqual(
             self.loader._v_schema,
             {
@@ -52,10 +50,10 @@ class TestGDSBaseLoader(unittest.TestCase):
         )
 
     def test_get_schema_no_primary_id_attr(self):
-        self.conn.graphname = "Social"
-        self.loader = BaseLoader(self.conn, delimiter="|")
+        conn = make_connection(graphname="Social")
+        loader = BaseLoader(conn, delimiter="|")
         self.assertDictEqual(
-            self.loader._v_schema,
+            loader._v_schema,
             {
                 "Person": {
                     "name": "STRING",
@@ -66,7 +64,7 @@ class TestGDSBaseLoader(unittest.TestCase):
             },
         )
         self.assertDictEqual(
-            self.loader._e_schema,
+            loader._e_schema,
             {
                 "Friendship": {
                     "FromVertexTypeName": "Person",
@@ -596,6 +594,72 @@ class TestGDSBaseLoader(unittest.TestCase):
         data = data_q.get()
         self.assertIsNone(data)
 
+    def test_read_hetero_graph_no_attr(self):
+        read_task_q = Queue()
+        data_q = Queue(4)
+        exit_event = Event()
+        raw = (
+            "People|99|1\nPeople|8|0\nCompany|2|0\n",
+            "Colleague|99|8\nColleague|8|99\nWork|99|2\nWork|2|8\n",
+        )
+        read_task_q.put(raw)
+        read_task_q.put(None)
+        self.loader._read_data(
+            exit_event,
+            read_task_q,
+            data_q,
+            "graph",
+            "pyg",
+            {"People": [], "Company": []},
+            {"People": [], "Company": []},
+            {"People": ["is_seed"], "Company": ["is_seed"]},
+            {
+                "People": {
+                    "x": "LIST:INT",
+                    "y": "INT",
+                    "train_mask": "BOOL",
+                    "name": "STRING",
+                    "is_seed": "BOOL",
+                },
+                "Company": {"x": "FLOAT", "is_seed": "BOOL"},
+            },
+            {"Colleague": [], "Work": []},
+            {"Colleague": [], "Work": []},
+            {"Colleague": [], "Work": []},
+            {
+                "Colleague": {
+                    "FromVertexTypeName": "People",
+                    "ToVertexTypeName": "People",
+                    "IsDirected": False,
+                    "x": "DOUBLE",
+                    "time": "INT",
+                    "y": "INT",
+                    "is_train": "BOOL",
+                },
+                "Work": {
+                    "FromVertexTypeName": "People",
+                    "ToVertexTypeName": "Company",
+                    "IsDirected": False,
+                }
+            },
+            False,
+            "|",
+            True,
+            True,
+        )
+        data = data_q.get()
+        self.assertIsInstance(data, pygHeteroData)
+        assert_close_torch(
+            data["Colleague"]["edge_index"], torch.tensor([[0, 1], [1, 0]])
+        )
+        assert_close_torch(
+            data["Work"]["edge_index"], torch.tensor([[0, 1], [0, 0]])
+        )
+        assert_close_torch(data["People"]["is_seed"], torch.tensor([True, False]))
+        assert_close_torch(data["Company"]["is_seed"], torch.tensor([False]))
+        data = data_q.get()
+        self.assertIsNone(data)
+
     def test_read_hetero_graph_no_edge(self):
         read_task_q = Queue()
         data_q = Queue(4)
@@ -802,8 +866,8 @@ class TestGDSBaseLoader(unittest.TestCase):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
-    #suite.addTest(TestGDSBaseLoader("test_get_schema"))
-    #suite.addTest(TestGDSBaseLoader("test_get_schema_no_primary_id_attr"))
+    suite.addTest(TestGDSBaseLoader("test_get_schema"))
+    suite.addTest(TestGDSBaseLoader("test_get_schema_no_primary_id_attr"))
     suite.addTest(TestGDSBaseLoader("test_validate_vertex_attributes"))
     suite.addTest(TestGDSBaseLoader("test_validate_edge_attributes"))
     suite.addTest(TestGDSBaseLoader("test_read_vertex"))
@@ -817,6 +881,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSBaseLoader("test_read_graph_no_attr"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_no_edge"))
     suite.addTest(TestGDSBaseLoader("test_read_hetero_graph_out_pyg"))
+    suite.addTest(TestGDSBaseLoader("test_read_hetero_graph_no_attr"))
     suite.addTest(TestGDSBaseLoader("test_read_hetero_graph_no_edge"))
     suite.addTest(TestGDSBaseLoader("test_read_hetero_graph_out_dgl"))
     suite.addTest(TestGDSBaseLoader("test_read_bool_label"))
