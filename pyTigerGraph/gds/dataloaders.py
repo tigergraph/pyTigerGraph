@@ -1167,19 +1167,22 @@ class BaseLoader:
                 for etype in edges:
                     if etype not in e_in_feats:
                         continue
-                    add_attributes(e_in_feats[etype], e_attr_types[etype], edges[etype], 
+                    if e_in_feats[etype]:
+                        add_attributes(e_in_feats[etype], e_attr_types[etype], edges[etype], 
                                     data, is_hetero, mode, "edge_feat", "edge", etype)
             if e_out_labels:
                 for etype in edges:
                     if etype not in e_out_labels:
                         continue
-                    add_attributes(e_out_labels[etype], e_attr_types[etype], edges[etype], 
+                    if e_out_labels[etype]:
+                        add_attributes(e_out_labels[etype], e_attr_types[etype], edges[etype], 
                                     data, is_hetero, mode, "edge_label", "edge", etype)
             if e_extra_feats:
                 for etype in edges:
                     if etype not in e_extra_feats:
                         continue
-                    add_sep_attr(e_extra_feats[etype], e_attr_types[etype], edges[etype],
+                    if e_extra_feats[etype]:
+                        add_sep_attr(e_extra_feats[etype], e_attr_types[etype], edges[etype],
                                 data, is_hetero, mode, "edge", etype)   
             del edges
             # Deal with vertex attributes next
@@ -1187,19 +1190,22 @@ class BaseLoader:
                 for vtype in vertices:
                     if vtype not in v_in_feats:
                         continue
-                    add_attributes(v_in_feats[vtype], v_attr_types[vtype], vertices[vtype], 
+                    if v_in_feats[vtype]:
+                        add_attributes(v_in_feats[vtype], v_attr_types[vtype], vertices[vtype], 
                                     data, is_hetero, mode, "x", "vertex", vtype)
             if v_out_labels:
                 for vtype in vertices:
                     if vtype not in v_out_labels:
                         continue
-                    add_attributes(v_out_labels[vtype], v_attr_types[vtype], vertices[vtype], 
+                    if v_out_labels[vtype]:
+                        add_attributes(v_out_labels[vtype], v_attr_types[vtype], vertices[vtype], 
                                     data, is_hetero, mode, "y", "vertex", vtype)
             if v_extra_feats:
                 for vtype in vertices:
                     if vtype not in v_extra_feats:
                         continue
-                    add_sep_attr(v_extra_feats[vtype], v_attr_types[vtype], vertices[vtype],
+                    if v_extra_feats[vtype]:
+                        add_sep_attr(v_extra_feats[vtype], v_attr_types[vtype], vertices[vtype],
                                 data, is_hetero, mode, "vertex", vtype)   
             del vertices
         if callback_fn:
@@ -1729,9 +1735,9 @@ class NeighborLoader(BaseLoader):
                 )
                 query_replace["{OTHERVERTEXATTRS}"] = print_query
             else:
-                print_query = '@@v_batch += (stringify(getvid(s)) + ",1\\n")'
+                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + "1\\n")'
                 query_replace["{SEEDVERTEXATTRS}"] = print_query
-                print_query = '@@v_batch += (stringify(getvid(s)) + ",0\\n")'
+                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + "0\\n")'
                 query_replace["{OTHERVERTEXATTRS}"] = print_query
             # Ignore edge types
             e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
