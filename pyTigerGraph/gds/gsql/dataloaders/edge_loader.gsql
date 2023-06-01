@@ -1,4 +1,5 @@
 CREATE QUERY edge_loader_{QUERYSUFFIX}(
+    INT batch_size,
     INT num_batches=1, 
     BOOL shuffle=FALSE,
     STRING filter_by,
@@ -40,11 +41,15 @@ CREATE QUERY edge_loader_{QUERYSUFFIX}(
       sasl_password  : SASL password for Kafka. 
       ssl_ca_location: Path to CA certificate for verifying the Kafka broker key
     */
+    TYPEDEF TUPLE<INT tmp_id, VERTEX src, VERTEX tgt> ID_Tuple;
     INT num_vertices;
     INT kafka_errcode;
     SumAccum<INT> @tmp_id;
     SumAccum<STRING> @@kafka_error;
     UINT producer;
+    MapAccum<INT, BOOL> @@edges_sampled;
+    SetAccum<VERTEX> @valid_v_out;
+    SetAccum<VERTEX> @valid_v_in;
 
     # Initialize Kafka producer
     IF kafka_address != "" THEN
@@ -69,24 +74,116 @@ CREATE QUERY edge_loader_{QUERYSUFFIX}(
               POST-ACCUM s.@tmp_id = getvid(s);
     END;
 
+    SumAccum<INT> @@num_edges;
+    IF filter_by IS NOT NULL THEN
+      res = SELECT s
+            FROM start:s -(e_types:e)- :t WHERE e.getAttr(filter_by, "BOOL")
+            ACCUM 
+              IF e.isDirected() THEN # we divide by two later to correct for undirected edges being counted twice, need to count directed edges twice to get correct count
+                @@num_edges += 2
+              ELSE
+                @@num_edges += 1
+              END;
+    ELSE
+      res = SELECT s 
+            FROM start:s -(e_types:e)- :t 
+            ACCUM
+              IF e.isDirected() THEN # we divide by two later to correct for undirected edges being counted twice, need to count directed edges twice to get correct count
+                @@num_edges += 2
+              ELSE
+                @@num_edges += 1
+              END;
+    END;
+    INT batch_s;     
+    IF batch_size IS NULL THEN
+      batch_s = ceil((@@num_edges/2)/num_batches);
+    ELSE  
+      batch_s = batch_size;
+    END;
+
     # Generate batches
     FOREACH batch_id IN RANGE[0, num_batches-1] DO
         SumAccum<STRING> @@e_batch;
+        SetAccum<VERTEX> @@seeds;
+        SetAccum<VERTEX> @@targets;
+        HeapAccum<ID_Tuple> (1, tmp_id ASC) @@batch_heap;
+        @@batch_heap.resize(batch_s);
         start = {ANY};
         IF filter_by IS NOT NULL THEN
             res = 
                 SELECT s
-                FROM start:s -(e_types:e)- :t
-                WHERE e.getAttr(filter_by, "BOOL") and ((s.@tmp_id+t.@tmp_id)*(s.@tmp_id+t.@tmp_id+1)/2+t.@tmp_id)%num_batches==batch_id
+                FROM start:s -(e_types:e)- v_types:t
+                WHERE e.getAttr(filter_by, "BOOL") 
+                      AND ((t.@tmp_id >= s.@tmp_id AND NOT @@edges_sampled.containsKey((t.@tmp_id*t.@tmp_id)+s.@tmp_id+t.@tmp_id)) OR
+                            (t.@tmp_id < s.@tmp_id AND NOT @@edges_sampled.containsKey((s.@tmp_id*s.@tmp_id)+t.@tmp_id)))
                 ACCUM 
-                    {EDGEATTRS}; 
+                    IF t.@tmp_id >= s.@tmp_id THEN
+                        @@batch_heap += ID_Tuple(((t.@tmp_id*t.@tmp_id)+s.@tmp_id+t.@tmp_id), s, t)
+                    ELSE
+                        @@batch_heap += ID_Tuple(((s.@tmp_id*s.@tmp_id)+t.@tmp_id), s, t)
+                    END;
+            
+            FOREACH elem IN @@batch_heap DO
+              SetAccum<VERTEX> @@src;
+              @@seeds += elem.src;
+              @@targets += elem.tgt;
+              @@src += elem.src;
+              src = {@@src};
+              res = SELECT s FROM src:s -(e_types:e)- :t
+                    WHERE t == elem.tgt
+                    ACCUM
+                      s.@valid_v_out += elem.tgt,
+                      t.@valid_v_in += elem.src;
+            END;
+            start = {@@seeds};
+            res =
+                SELECT s 
+                FROM start:s -(e_types:e)- :t 
+                WHERE t in @@targets AND s IN t.@valid_v_in AND t IN s.@valid_v_out
+                ACCUM 
+                    {EDGEATTRS},
+                    IF t.@tmp_id >= s.@tmp_id THEN
+                      @@edges_sampled += (((t.@tmp_id*t.@tmp_id)+s.@tmp_id+t.@tmp_id) -> TRUE)
+                    ELSE
+                      @@edges_sampled += (((s.@tmp_id*s.@tmp_id)+t.@tmp_id) -> TRUE)
+                    END;
         ELSE
             res = 
                 SELECT s
                 FROM start:s -(e_types:e)- :t
-                WHERE ((s.@tmp_id+t.@tmp_id)*(s.@tmp_id+t.@tmp_id+1)/2+t.@tmp_id)%num_batches==batch_id
+                WHERE ((t.@tmp_id >= s.@tmp_id AND NOT @@edges_sampled.containsKey((t.@tmp_id*t.@tmp_id)+s.@tmp_id+t.@tmp_id)) OR
+                        (t.@tmp_id < s.@tmp_id AND NOT @@edges_sampled.containsKey((s.@tmp_id*s.@tmp_id)+t.@tmp_id)))
                 ACCUM 
-                    {EDGEATTRS};
+                    IF t.@tmp_id >= s.@tmp_id THEN
+                        @@batch_heap += ID_Tuple(((t.@tmp_id*t.@tmp_id)+s.@tmp_id+t.@tmp_id), s, t)
+                    ELSE
+                        @@batch_heap += ID_Tuple(((s.@tmp_id*s.@tmp_id)+t.@tmp_id), s, t)
+                    END;
+            
+            FOREACH elem IN @@batch_heap DO
+              SetAccum<VERTEX> @@src;
+              @@seeds += elem.src;
+              @@targets += elem.tgt;
+              @@src += elem.src;
+              src = {@@src};
+              res = SELECT s FROM src:s -(e_types:e)- :t
+                    WHERE t == elem.tgt
+                    ACCUM
+                      s.@valid_v_out += elem.tgt,
+                      t.@valid_v_in += elem.src;
+            END;
+            start = {@@seeds};
+            res =
+                SELECT s 
+                FROM start:s -(e_types:e)- :t 
+                WHERE t in @@targets AND s IN t.@valid_v_in AND t IN s.@valid_v_out
+                ACCUM 
+                    {EDGEATTRS},
+                    IF t.@tmp_id >= s.@tmp_id THEN
+                      @@edges_sampled += (((t.@tmp_id*t.@tmp_id)+s.@tmp_id+t.@tmp_id) -> TRUE)
+                    ELSE
+                      @@edges_sampled += (((s.@tmp_id*s.@tmp_id)+t.@tmp_id) -> TRUE)
+                    END;
         END;
         # Export batch
         IF kafka_address != "" THEN
