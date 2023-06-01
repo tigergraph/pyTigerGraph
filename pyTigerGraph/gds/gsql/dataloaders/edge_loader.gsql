@@ -112,7 +112,7 @@ CREATE QUERY edge_loader_{QUERYSUFFIX}(
         IF filter_by IS NOT NULL THEN
             res = 
                 SELECT s
-                FROM start:s -(e_types:e)- v_types:t
+                FROM start:s -(e_types:e)- :t
                 WHERE e.getAttr(filter_by, "BOOL") 
                       AND ((t.@tmp_id >= s.@tmp_id AND NOT @@edges_sampled.containsKey((t.@tmp_id*t.@tmp_id)+s.@tmp_id+t.@tmp_id)) OR
                             (t.@tmp_id < s.@tmp_id AND NOT @@edges_sampled.containsKey((s.@tmp_id*s.@tmp_id)+t.@tmp_id)))
