@@ -73,7 +73,6 @@ def _py_to_tg_type(attr_type):
         else:
             raise TigerGraphException(key_type + " not a valid type for the key type in MAPs.")
     else:
-        print(attr_type)
         if str(attr_type).lower() in BASE_TYPES:
             return str(attr_type).upper()
         else:
@@ -97,7 +96,7 @@ class Vertex(object):
             raise TigerGraphException(self.primary_id_type, "is not a supported type for primary IDs.")
 
     @classmethod
-    def add_attribute(self, attribute, attribute_type):
+    def add_attribute(self, attribute):
         for attr in self.attributes.values():
             if attr == attribute:
                 raise TigerGraphException(attribute + " already exists as an attribute on "+self.vertex_type + " vertices")
@@ -180,7 +179,7 @@ class Graph():
         self._vertex_edits = {"ADD": {}, "DELETE": {}}
         self._edge_edits = {"ADD": [], "DELETE": []}
         if conn:
-            db_rep = conn.getSchema()
+            db_rep = conn.getSchema(force=True)
             self.graphname = db_rep["GraphName"]
             for v_type in db_rep["VertexTypes"]:
                 vert = make_dataclass(v_type["Name"],
@@ -255,7 +254,7 @@ class Graph():
                 gsql_def += attr + " "+_py_to_tg_type(attrs[attr])
         gsql_def += ")"
 
-        print(gsql_def)
+        #print(gsql_def)
 
 
 

@@ -14,7 +14,7 @@ class TestHomogeneousOGM(unittest.TestCase):
     def test_init(self):
         g = Graph(self.conn)
         attrs = g.vertex_types["Paper"].attributes
-        self.assertIn(attrs.keys(), "x")
+        self.assertIn("x", attrs.keys())
 
     def test_type(self):
         g = Graph(self.conn)
