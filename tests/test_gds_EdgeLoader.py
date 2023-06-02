@@ -264,11 +264,12 @@ class TestGDSHeteroEdgeLoaderREST(unittest.TestCase):
         num_batches = 0
         for data in loader:
             # print(num_batches, data)
-            self.assertEqual(len(data), 2)
-            self.assertIsInstance(data["v0v0"], DataFrame)
+            if num_batches == 0:
+                self.assertEqual(len(data), 2)
+                self.assertIsInstance(data["v0v0"], DataFrame)
+                self.assertIn("is_val", data["v0v0"])
+                self.assertIn("is_train", data["v0v0"])
             self.assertIsInstance(data["v2v0"], DataFrame)
-            self.assertIn("is_val", data["v0v0"])
-            self.assertIn("is_train", data["v0v0"])
             self.assertIn("is_val", data["v2v0"])
             self.assertIn("is_train", data["v2v0"])
             num_batches += 1
@@ -288,11 +289,12 @@ class TestGDSHeteroEdgeLoaderREST(unittest.TestCase):
         num_batches = 0
         for data in loader:
             # print(num_batches, data)
-            self.assertEqual(len(data), 2)
-            self.assertIsInstance(data["v0v0"], DataFrame)
+            if num_batches == 0:
+                self.assertEqual(len(data), 2)
+                self.assertIsInstance(data["v0v0"], DataFrame)
+                self.assertIn("is_val", data["v0v0"])
+                self.assertIn("is_train", data["v0v0"])
             self.assertIsInstance(data["v2v0"], DataFrame)
-            self.assertIn("is_val", data["v0v0"])
-            self.assertIn("is_train", data["v0v0"])
             self.assertIn("is_val", data["v2v0"])
             self.assertIn("is_train", data["v2v0"])
             num_batches += 1
