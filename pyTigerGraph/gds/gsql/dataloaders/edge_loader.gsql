@@ -146,7 +146,11 @@ CREATE QUERY edge_loader_{QUERYSUFFIX}(
                       @@edges_sampled += (((t.@tmp_id*t.@tmp_id)+s.@tmp_id+t.@tmp_id) -> TRUE)
                     ELSE
                       @@edges_sampled += (((s.@tmp_id*s.@tmp_id)+t.@tmp_id) -> TRUE)
-                    END;
+                    END
+                POST-ACCUM
+                    s.@valid_v_in.clear(), s.@valid_v_out.clear()
+                POST-ACCUM
+                    t.@valid_v_in.clear(), t.@valid_v_out.clear();
         ELSE
             res = 
                 SELECT s
@@ -183,7 +187,11 @@ CREATE QUERY edge_loader_{QUERYSUFFIX}(
                       @@edges_sampled += (((t.@tmp_id*t.@tmp_id)+s.@tmp_id+t.@tmp_id) -> TRUE)
                     ELSE
                       @@edges_sampled += (((s.@tmp_id*s.@tmp_id)+t.@tmp_id) -> TRUE)
-                    END;
+                    END
+                POST-ACCUM
+                    s.@valid_v_in.clear(), s.@valid_v_out.clear()
+                POST-ACCUM
+                    t.@valid_v_in.clear(), t.@valid_v_out.clear();
         END;
         # Export batch
         IF kafka_address != "" THEN
