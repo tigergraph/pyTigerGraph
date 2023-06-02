@@ -256,7 +256,7 @@ class TestGDSHeteroEdgeLoaderREST(unittest.TestCase):
             graph=self.conn,
             attributes={"v0v0": ["is_train", "is_val"], "v2v0": ["is_train", "is_val"]},
             batch_size=200,
-            shuffle=False,
+            shuffle=True, # Needed to get around VID distribution issues
             filter_by=None,
             loader_id=None,
             buffer_size=4,
@@ -264,11 +264,10 @@ class TestGDSHeteroEdgeLoaderREST(unittest.TestCase):
         num_batches = 0
         for data in loader:
             # print(num_batches, data)
-            if num_batches == 0:
-                self.assertEqual(len(data), 2)
-                self.assertIsInstance(data["v0v0"], DataFrame)
-                self.assertIn("is_val", data["v0v0"])
-                self.assertIn("is_train", data["v0v0"])
+            self.assertEqual(len(data), 2)
+            self.assertIsInstance(data["v0v0"], DataFrame)
+            self.assertIn("is_val", data["v0v0"])
+            self.assertIn("is_train", data["v0v0"])
             self.assertIsInstance(data["v2v0"], DataFrame)
             self.assertIn("is_val", data["v2v0"])
             self.assertIn("is_train", data["v2v0"])
@@ -280,7 +279,7 @@ class TestGDSHeteroEdgeLoaderREST(unittest.TestCase):
             graph=self.conn,
             attributes={"v0v0": ["is_train", "is_val"], "v2v0": ["is_train", "is_val"]},
             batch_size=200,
-            shuffle=False,
+            shuffle=True,  # Needed to get around VID distribution issues
             filter_by=None,
             loader_id=None,
             buffer_size=4,
@@ -289,11 +288,10 @@ class TestGDSHeteroEdgeLoaderREST(unittest.TestCase):
         num_batches = 0
         for data in loader:
             # print(num_batches, data)
-            if num_batches == 0:
-                self.assertEqual(len(data), 2)
-                self.assertIsInstance(data["v0v0"], DataFrame)
-                self.assertIn("is_val", data["v0v0"])
-                self.assertIn("is_train", data["v0v0"])
+            self.assertEqual(len(data), 2)
+            self.assertIsInstance(data["v0v0"], DataFrame)
+            self.assertIn("is_val", data["v0v0"])
+            self.assertIn("is_train", data["v0v0"])
             self.assertIsInstance(data["v2v0"], DataFrame)
             self.assertIn("is_val", data["v2v0"])
             self.assertIn("is_train", data["v2v0"])
