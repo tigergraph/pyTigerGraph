@@ -2067,8 +2067,7 @@ class EdgeLoader(BaseLoader):
         if batch_size:
             # If batch_size is given, calculate the number of batches
             if filter_by:
-                # TODO: get edge count with filter
-                raise NotImplementedError
+                num_edges = sum(self._graph.getEdgeStats(e_type)[e_type][filter_by if isinstance(filter_by, str) else filter_by[e_type]]["TRUE"] for e_type in self._etypes)
             else:
                 num_edges = sum(self._graph.getEdgeCount(i) for i in self._etypes)
             self.num_batches = math.ceil(num_edges / batch_size)
@@ -2076,6 +2075,8 @@ class EdgeLoader(BaseLoader):
             # Otherwise, take the number of batches as is.
             self.num_batches = num_batches
         # Initialize the exporter
+        if batch_size:
+            self._payload["batch_size"] = batch_size
         self._payload["num_batches"] = self.num_batches
         if filter_by:
             self._payload["filter_by"] = filter_by
@@ -3020,15 +3021,16 @@ class EdgeNeighborLoader(BaseLoader):
         if batch_size:
             # If batch_size is given, calculate the number of batches
             if filter_by:
-                # TODO: get edge count with filter
-                raise NotImplementedError("Cannot specify batch_size and filter_by at the same time. Please use num_batches and filter_by.")
+                num_edges = sum(self._graph.getEdgeStats(e_type)[e_type][filter_by if isinstance(filter_by, str) else filter_by[e_type]]["TRUE"] for e_type in self._etypes)
             else:
-                num_edges = sum(self._graph.getEdgeCount(i) for i in self._etypes)
+                num_edges = sum(self._graph.getEdgeCount(i) for i in self._seed_types)
             self.num_batches = math.ceil(num_edges / batch_size)
         else:
             # Otherwise, take the number of batches as is.
             self.num_batches = num_batches
         # Initialize parameters for the query
+        if batch_size:
+            self._payload["batch_size"] = batch_size
         self._payload["num_batches"] = self.num_batches
         self._payload["num_neighbors"] = num_neighbors
         self._payload["num_hops"] = num_hops

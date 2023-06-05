@@ -256,7 +256,7 @@ class TestGDSHeteroEdgeLoaderREST(unittest.TestCase):
             graph=self.conn,
             attributes={"v0v0": ["is_train", "is_val"], "v2v0": ["is_train", "is_val"]},
             batch_size=200,
-            shuffle=False,
+            shuffle=True, # Needed to get around VID distribution issues
             filter_by=None,
             loader_id=None,
             buffer_size=4,
@@ -266,9 +266,9 @@ class TestGDSHeteroEdgeLoaderREST(unittest.TestCase):
             # print(num_batches, data)
             self.assertEqual(len(data), 2)
             self.assertIsInstance(data["v0v0"], DataFrame)
-            self.assertIsInstance(data["v2v0"], DataFrame)
             self.assertIn("is_val", data["v0v0"])
             self.assertIn("is_train", data["v0v0"])
+            self.assertIsInstance(data["v2v0"], DataFrame)
             self.assertIn("is_val", data["v2v0"])
             self.assertIn("is_train", data["v2v0"])
             num_batches += 1
@@ -279,7 +279,7 @@ class TestGDSHeteroEdgeLoaderREST(unittest.TestCase):
             graph=self.conn,
             attributes={"v0v0": ["is_train", "is_val"], "v2v0": ["is_train", "is_val"]},
             batch_size=200,
-            shuffle=False,
+            shuffle=True,  # Needed to get around VID distribution issues
             filter_by=None,
             loader_id=None,
             buffer_size=4,
@@ -290,9 +290,9 @@ class TestGDSHeteroEdgeLoaderREST(unittest.TestCase):
             # print(num_batches, data)
             self.assertEqual(len(data), 2)
             self.assertIsInstance(data["v0v0"], DataFrame)
-            self.assertIsInstance(data["v2v0"], DataFrame)
             self.assertIn("is_val", data["v0v0"])
             self.assertIn("is_train", data["v0v0"])
+            self.assertIsInstance(data["v2v0"], DataFrame)
             self.assertIn("is_val", data["v2v0"])
             self.assertIn("is_train", data["v2v0"])
             num_batches += 1
