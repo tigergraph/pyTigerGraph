@@ -1,7 +1,10 @@
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
+from pyTigerGraph.pyTigerGraph import TigerGraphConnection
 from dataclasses import dataclass, make_dataclass, fields, _MISSING_TYPE
 from typing import List, Dict, Union
 from datetime import datetime
+import json
+import hashlib
 import warnings
 
 BASE_TYPES  = ["string", "int", "uint", "float", "double", "bool", "datetime"]
@@ -173,7 +176,7 @@ class Edge:
         return self.edge_type
 
 class Graph():
-    def __init__(self, conn=None):
+    def __init__(self, conn:TigerGraphConnection = None):
         self._vertex_types = {}
         self._edge_types = {}
         self._vertex_edits = {"ADD": {}, "DELETE": {}}
@@ -199,8 +202,9 @@ class Graph():
                                      ("reverse_edge", str, e_type["Config"].get("REVERSE_EDGE"))],
                                     bases=(Edge,), repr=False)
                 self._edge_types[e_type["Name"]] = e
+            self.conn = conn
 
-    def create_vertex_type(self, vertex: Vertex, outdegree_stats=True):
+    def add_vertex_type(self, vertex: Vertex, outdegree_stats=True):
         if vertex.__name__ in self._vertex_types.keys():
             raise TigerGraphException(vertex.__name__+" already exists in the database")
         if vertex.__name__ in self._vertex_edits.keys():
@@ -222,15 +226,15 @@ class Graph():
                 gsql_def += attr + " "+_py_to_tg_type(attrs[attr])
         gsql_def += ")"
         if outdegree_stats:
-            gsql_def += " WITH STATS='OUTDEGREE_BY_EDGETYPE'"
+            gsql_def += ' WITH STATS="OUTDEGREE_BY_EDGETYPE"'
         if outdegree_stats and primary_id_as_attr:
             gsql_def += ", "
         if primary_id_as_attr:
-            gsql_def += "PRIMARY_ID_AS_ATTRIBUTE='true'"
+            gsql_def += 'PRIMARY_ID_AS_ATTRIBUTE="true"'
         gsql_def += ";"
         self._vertex_edits["ADD"][vertex.__name__] = gsql_def
 
-    def create_edge_type(self, edge: Edge, directed: bool=True, reverse_edge: Union[str, bool]=True):
+    def add_edge_type(self, edge: Edge, directed: bool=True, reverse_edge: Union[str, bool]=True):
         if edge in self._edge_types.values():
             raise TigerGraphException(edge.__name__+" already exists in the database")
         if edge in self._edge_edits.values():
@@ -253,10 +257,29 @@ class Graph():
                 gsql_def += ", "
                 gsql_def += attr + " "+_py_to_tg_type(attrs[attr])
         gsql_def += ")"
+        self._edge_edits["ADD"][edge.__name__] = gsql_def
 
-        #print(gsql_def)
+    def commit_changes(self, conn: TigerGraphConnection = None):
+        if not(conn):
+            if self.conn:
+                conn = self.conn
+            else:
+                raise TigerGraphException("No Connection Defined. Please instantiate a TigerGraphConnection to the database to commit the schema.")
+        md5 = hashlib.md5()
+        md5.update(json.dumps(self._vertex_edits).encode())
+        job_name = "pytg_change_"+md5.hexdigest()
+        start_gsql = "USE GRAPH "+conn.graphname+"\n"
+        start_gsql += "CREATE SCHEMA_CHANGE JOB " + job_name + " FOR GRAPH " + conn.graphname + " {\n"
+        for v_to_add in self._vertex_edits["ADD"]:
+            start_gsql += self._vertex_edits["ADD"][v_to_add] + "\n"
+        start_gsql += "}\n"
 
-
+        start_gsql += "RUN SCHEMA_CHANGE JOB "+job_name
+        res = conn.gsql(start_gsql)
+        if "updated to new version" in res:
+            self.__init__(conn)
+        else:
+            raise TigerGraphException("Schema change failed with message:\n"+res)
 
     @property
     def vertex_types(self):

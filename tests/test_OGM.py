@@ -3,6 +3,9 @@ from multiprocessing import Pool
 
 from pyTigerGraphUnitTest import make_connection
 from pyTigerGraph.schema import Graph, Vertex, Edge
+from typing import List, Dict
+from datetime import datetime
+from dataclasses import dataclass
 
 
 
@@ -20,6 +23,23 @@ class TestHomogeneousOGM(unittest.TestCase):
         g = Graph(self.conn)
         attrs = g.vertex_types["Paper"].attributes
         self.assertEqual(str(attrs["y"]), "<class 'int'>")
+
+    def test_add_vertex_type(self):
+        g = Graph(self.conn)
+        @dataclass
+        class AccountHolder(Vertex):
+            name: str
+            address: str
+            accounts: List[str]
+            dob: datetime
+            some_map: Dict[str, int]
+            some_double: "DOUBLE"
+
+        g.add_vertex_type(AccountHolder)
+
+        g.commit_changes()
+
+        self.assertIn("name", g.vertex_types["AccountHolder"].attributes.keys())
 
 
 class TestHeterogeneousOGM(unittest.TestCase):
