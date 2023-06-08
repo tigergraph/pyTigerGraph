@@ -408,4 +408,4 @@ class pyTigerGraphBase(object):
         Returns:
             Nothing. Sets `responseConfigHeader` class attribute.
         """
-        self.responseConfigHeader = {"GSQL-TIMEOUT": timeout, "RESPONSE-LIMIT": responseSize}
+        self.responseConfigHeader = {"GSQL-TIMEOUT": str(timeout), "RESPONSE-LIMIT": str(responseSize)}

@@ -378,7 +378,7 @@ class Trainer():
             metrics (dict):
                 Dictionary of calculated metrics.
         """
-        self.eval_metrics = metrics
+        self.eval_metrics.update(metrics)
 
     def get_eval_metrics(self):
         """Get the metrics for an evaluation loop.
