@@ -41,6 +41,32 @@ class TestHomogeneousOGM(unittest.TestCase):
 
         self.assertIn("name", g.vertex_types["AccountHolder"].attributes.keys())
 
+    def test_add_edge_type(self):
+        g = Graph(self.conn)
+
+        @dataclass
+        class AccountHolder(Vertex):
+            name: str
+            address: str
+            accounts: List[str]
+            dob: datetime
+            some_map: Dict[str, int]
+            some_double: "DOUBLE"
+
+        @dataclass
+        class HOLDS_ACCOUNT(Edge):
+            opened_on: datetime
+            from_vertex: AccountHolder
+            to_vertex: g.vertex_types["Account"]
+            is_directed: bool = True
+            reverse_edge: str = "ACCOUNT_HELD_BY"
+
+        g.add_edge_type(HOLDS_ACCOUNT)
+
+        g.commit_changes()
+
+        self.assertIn("opened_on", g.edge_types["HOLDS_ACCOUNT"].attributes.keys())
+
 
 class TestHeterogeneousOGM(unittest.TestCase):
     @classmethod

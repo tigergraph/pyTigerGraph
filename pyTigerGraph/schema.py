@@ -180,7 +180,7 @@ class Graph():
         self._vertex_types = {}
         self._edge_types = {}
         self._vertex_edits = {"ADD": {}, "DELETE": {}}
-        self._edge_edits = {"ADD": [], "DELETE": []}
+        self._edge_edits = {"ADD": {}, "DELETE": {}}
         if conn:
             db_rep = conn.getSchema(force=True)
             self.graphname = db_rep["GraphName"]
@@ -234,13 +234,23 @@ class Graph():
         gsql_def += ";"
         self._vertex_edits["ADD"][vertex.__name__] = gsql_def
 
-    def add_edge_type(self, edge: Edge, directed: bool=True, reverse_edge: Union[str, bool]=True):
+    def add_edge_type(self, edge: Edge):
         if edge in self._edge_types.values():
             raise TigerGraphException(edge.__name__+" already exists in the database")
         if edge in self._edge_edits.values():
             warnings.warn(edge.__name__ + " already in staged edits. Overwriting previous edits")
+        attrs = edge.attributes
+        is_directed = None
+        reverse_edge = None
+        for field in fields(edge):
+            if field.name == "is_directed":
+                is_directed = field.default
+            if field.name == "reverse_edge":
+                reverse_edge = field.default
+
+
         gsql_def = ""
-        if directed:
+        if is_directed:
             gsql_def += "ADD DIRECTED EDGE "+edge.__name__+"("
         else:
             gsql_def += "ADD UNDIRECTED EDGE "+edge.__name__+"("
@@ -249,7 +259,6 @@ class Graph():
         from_vert = edge.attributes["from_vertex"].__name__
         to_vert = edge.attributes["to_vertex"].__name__
         gsql_def += "FROM "+from_vert+", "+"TO "+to_vert
-        attrs = edge.attributes
         for attr in attrs.keys():
             if attr == "from_vertex" or attr == "to_vertex" or attr == "is_directed" or attr == "reverse_edge":
                 continue
@@ -257,6 +266,15 @@ class Graph():
                 gsql_def += ", "
                 gsql_def += attr + " "+_py_to_tg_type(attrs[attr])
         gsql_def += ")"
+
+        if reverse_edge:
+            if isinstance(reverse_edge, str):
+                gsql_def += ' WITH REVERSE_EDGE="'+reverse_edge+'"'
+            elif isinstance(reverse_edge, bool):
+                gsql_def += ' WITH REVERSE_EDGE="reverse_'+edge.__name__+'"'
+            else:
+                raise TigerGraphException("Reverse edge name of type: "+str(type(attrs["reverse_edge"])+" is not supported."))
+        gsql_def+=";"
         self._edge_edits["ADD"][edge.__name__] = gsql_def
 
     def commit_changes(self, conn: TigerGraphConnection = None):
@@ -266,12 +284,14 @@ class Graph():
             else:
                 raise TigerGraphException("No Connection Defined. Please instantiate a TigerGraphConnection to the database to commit the schema.")
         md5 = hashlib.md5()
-        md5.update(json.dumps(self._vertex_edits).encode())
+        md5.update(json.dumps({**self._vertex_edits, **self._edge_edits}).encode())
         job_name = "pytg_change_"+md5.hexdigest()
         start_gsql = "USE GRAPH "+conn.graphname+"\n"
         start_gsql += "CREATE SCHEMA_CHANGE JOB " + job_name + " FOR GRAPH " + conn.graphname + " {\n"
         for v_to_add in self._vertex_edits["ADD"]:
             start_gsql += self._vertex_edits["ADD"][v_to_add] + "\n"
+        for e_to_add in self._edge_edits["ADD"]:
+            start_gsql += self._edge_edits["ADD"][e_to_add] + "\n"
         start_gsql += "}\n"
 
         start_gsql += "RUN SCHEMA_CHANGE JOB "+job_name
