@@ -277,6 +277,14 @@ class Graph():
         gsql_def+=";"
         self._edge_edits["ADD"][edge.__name__] = gsql_def
 
+    def remove_vertex_type(self, vertex: Vertex):
+        gsql_def = "DROP VERTEX "+vertex.__name__+";"
+        self._vertex_edits["DELETE"][vertex.__name__] = gsql_def
+
+    def remove_edge_type(self, edge: Edge):
+        gsql_def = "DROP EDGE "+edge.__name__+";"
+        self._edge_edits["DELETE"][edge.__name__] = gsql_def
+
     def commit_changes(self, conn: TigerGraphConnection = None):
         if not(conn):
             if self.conn:
@@ -292,6 +300,10 @@ class Graph():
             start_gsql += self._vertex_edits["ADD"][v_to_add] + "\n"
         for e_to_add in self._edge_edits["ADD"]:
             start_gsql += self._edge_edits["ADD"][e_to_add] + "\n"
+        for v_to_drop in self._vertex_edits["DELETE"]:
+            start_gsql += self._vertex_edits["DELETE"][v_to_drop] + "\n"
+        for e_to_drop in self._edge_edits["DELETE"]:
+            start_gsql += self._edge_edits["DELETE"][e_to_drop] + "\n"
         start_gsql += "}\n"
 
         start_gsql += "RUN SCHEMA_CHANGE JOB "+job_name
