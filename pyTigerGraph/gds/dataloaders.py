@@ -714,6 +714,9 @@ class BaseLoader:
                         "{} type not supported for input and output features yet.".format(dtype))
                 elif dtype == "bool":
                     x.append(df[[col]].astype("int8").to_numpy().astype(dtype))
+                elif dtype == "uint":
+                    # PyTorch only supports uint8. Need to convert it to int.
+                    x.append(df[[col]].to_numpy().astype("int"))
                 else:
                     x.append(df[[col]].to_numpy().astype(dtype))
             if mode == "pyg" or mode == "dgl":
@@ -838,6 +841,14 @@ class BaseLoader:
                         )
                     elif mode == "spektral":
                         data[col] = attr_df[col].astype("int8").astype(dtype)
+                elif dtype == "uint":
+                    # PyTorch only supports uint8. Need to convert it to int.
+                    if mode == "pyg" or mode == "dgl":
+                        data[col] = torch.tensor(
+                            attr_df[col].astype("int")
+                        )
+                    elif mode == "spektral":
+                        data[col] = attr_df[col].astype(dtype)
                 else:
                     if mode == "pyg" or mode == "dgl":
                         data[col] = torch.tensor(
