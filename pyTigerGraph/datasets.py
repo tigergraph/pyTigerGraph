@@ -45,7 +45,10 @@ class Datasets(BaseDataset):
 
         Please see https://tigergraph-public-data.s3.us-west-1.amazonaws.com/inventory.json[this link]
         for datasets that are currently available. The files for the dataset with `name` will be
-        downloaded to local `tmp_dir` automatically when this class is instantiated.
+        downloaded to local `tmp_dir` automatically when this class is instantiated. 
+        For offline environments, download the desired tar manually from the invenetory page, and extract in the desired location.
+        Specify the `tmp_dir` parameter to point to where the unzipped directory resides.
+
 
         Args:
             name (str, optional):
@@ -62,12 +65,6 @@ class Datasets(BaseDataset):
             self.list()
             return
 
-        # Check if it is an in-stock dataset.
-        dataset_url = self.get_dataset_url()
-        if not dataset_url:
-            raise Exception("Cannot find this dataset in the inventory.")
-        self.dataset_url = dataset_url
-
         # Download the dataset and extract
         if isdir(pjoin(tmp_dir, name)):
             print(
@@ -76,6 +73,11 @@ class Datasets(BaseDataset):
                 )
             )
         else:
+            dataset_url = self.get_dataset_url()
+            # Check if it is an in-stock dataset.
+            if not dataset_url:
+                raise Exception("Cannot find this dataset in the inventory.")
+            self.dataset_url = dataset_url
             self.download_extract()
 
         self.ingest_ready = True
