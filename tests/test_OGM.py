@@ -66,6 +66,24 @@ class TestHomogeneousOGM(unittest.TestCase):
         g.commit_changes()
 
         self.assertIn("opened_on", g.edge_types["HOLDS_ACCOUNT"].attributes.keys())
+    
+    def test_drop_edge_type(self):
+        g = Graph(self.conn)
+
+        g.remove_edge_type(g.edge_types["HOLDS_ACCOUNT"])
+
+        g.commit_changes()
+        
+        self.assertNotIn("HOLDS_ACOUNT", g.edge_types)
+
+    def test_drop_vertex_type(self):
+        g = Graph(self.conn)
+
+        g.remove_vertex_type(g.vertex_types["AccountHolder"])
+
+        g.commit_changes()
+
+        self.assertNotIn("AccountHolder", g.vertex_types)
 
 
 class TestHeterogeneousOGM(unittest.TestCase):
