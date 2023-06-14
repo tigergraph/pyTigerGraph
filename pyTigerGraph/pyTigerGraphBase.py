@@ -283,7 +283,7 @@ class pyTigerGraphBase(object):
             try:
                 res = json.loads(res.text, strict=strictJson)
             except:
-                raise TigerGraphException(res.text)
+                raise TigerGraphException("Cannot parse json: " + res.text)
         else:
             res = res.text
 
