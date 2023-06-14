@@ -60,6 +60,13 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             if "RUN LOADING JOB" in query.upper():
                 if "LOAD SUCCESSFUL to TigerGraph" not in resp:
                     raise TigerGraphException(resp)
+                
+        def clean_res(resp: list) -> str:
+            ret = []
+            for line in resp:
+                if not line.startswith("__GSQL__"):
+                    ret.append(line)
+            return "\n".join(ret)
 
         if graphname is None:
             graphname = self.graphname
@@ -74,9 +81,9 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
 
 
         if isinstance(res, list):
-            ret = "\n".join(res)
+            ret = clean_res(res)
         else:
-            ret = res
+            ret = clean_res(res.splitlines())
 
         check_error(query, ret)
 
