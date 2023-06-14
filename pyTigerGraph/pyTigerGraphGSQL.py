@@ -7,15 +7,14 @@ import logging
 import os
 import sys
 from typing import Union, Tuple
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote_plus
 import re
 
 
 import requests
-from pyTigerDriver import GSQL_Client
 
-from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
-from pyTigerGraph.pyTigerGraphException import TigerGraphException
+from .pyTigerGraphBase import pyTigerGraphBase
+from .pyTigerGraphException import TigerGraphException
 
 logger = logging.getLogger(__name__)
 
@@ -153,39 +152,28 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             graphname = self.graphname
         if str(graphname).upper() == "GLOBAL" or str(graphname).upper() == "":
             graphname = ""
-        if not self.gsqlInitiated:
-            if self.certPath:
-                self.gsqlInitiated = self._initGsql(self.certPath)
-            else:
-                self.gsqlInitiated = self._initGsql()
-        if self.gsqlInitiated:
-            if "\n" not in query:
-                res = self.Client.query(query, graph=graphname)
-                if isinstance(res, list):
-                    ret = "\n".join(res)
-                else:
-                    ret = res
-            else:
-                res = self.Client.run_multiple(query.split("\n"))
-                if isinstance(res, list):
-                    ret = "\n".join(res)
-                else:
-                    ret = res
 
-            check_error(query, ret)
+        res = self._req("POST",
+                        self.gsUrl + "/gsqlserver/gsql/file",
+                        data=quote_plus(query.encode("utf-8")),
+                        authMode="pwd", resKey=None, skipCheck=True,
+                        jsonResponse=False)
 
-            if logger.level == logging.DEBUG:
-                logger.debug("return: " + str(ret))
-            logger.info("exit: gsql (success)")
 
-            string_without_ansi = ANSI_ESCAPE.sub('', ret)
-
-            return string_without_ansi
-
+        if isinstance(res, list):
+            ret = "\n".join(res)
         else:
-            logger.error("Couldn't initialize the client. See previous error.")
-            logger.info("exit: gsql (failure)")
-            sys.exit(1)
+            ret = res
+
+        check_error(query, ret)
+
+        string_without_ansi = ANSI_ESCAPE.sub('', ret)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: gsql (success)")
+
+        return string_without_ansi
 
     def installUDF(self, ExprFunctions: str = "", ExprUtil: str = "") -> None:
         """Install user defined functions (UDF) to the database.
