@@ -34,9 +34,6 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
         """
         logger.info("entry: getSecrets")
 
-        if not self.gsqlInitiated:
-            self._initGsql()
-
         res = self.gsql("""
             USE GRAPH {}
             SHOW SECRET""".format(self.graphname), )
@@ -100,8 +97,6 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        if not self.gsqlInitiated:
-            self._initGsql()
         res = self.gsql("""
             USE GRAPH {}
             CREATE SECRET {} """.format(self.graphname, alias))
