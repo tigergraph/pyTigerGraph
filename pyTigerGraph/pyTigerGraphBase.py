@@ -211,7 +211,8 @@ class pyTigerGraphBase(object):
 
     def _req(self, method: str, url: str, authMode: str = "token", headers: dict = None,
             data: Union[dict, list, str] = None, resKey: str = "results", skipCheck: bool = False,
-            params: Union[dict, list, str] = None, strictJson: bool = True, jsonData: bool = False) -> Union[dict, list]:
+            params: Union[dict, list, str] = None, strictJson: bool = True, jsonData: bool = False,
+            jsonResponse: bool = True) -> Union[dict, list]:
         """Generic REST++ API request.
 
         Args:
@@ -276,16 +277,16 @@ class pyTigerGraphBase(object):
             res = requests.request(method, url, headers=_headers, json=_data, params=params, verify=verify)
         else:
             res = requests.request(method, url, headers=_headers, data=_data, params=params, verify=verify)
+        res.raise_for_status()
 
-        if res.status_code != 200:
+        if jsonResponse:
             try:
-                res.raise_for_status()
+                res = json.loads(res.text, strict=strictJson)
             except:
-                self._errorCheck(res)
-        try:
-            res = json.loads(res.text, strict=strictJson)
-        except:
-            raise TigerGraphException(res.text)
+                raise TigerGraphException(res.text)
+        else:
+            res = res.text
+
         if not skipCheck:
             self._errorCheck(res)
         if not resKey:
