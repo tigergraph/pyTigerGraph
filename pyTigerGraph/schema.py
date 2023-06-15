@@ -85,7 +85,7 @@ def _py_to_tg_type(attr_type):
 
 @dataclass
 class Vertex(object):
-    attribute_edits = {"ADD": [], "DELETE": []}
+    attribute_edits = {"ADD": {}, "DELETE": {}}
     incoming_edge_types = []
     outgoing_edge_types = []
 
@@ -99,11 +99,18 @@ class Vertex(object):
             raise TigerGraphException(self.primary_id_type, "is not a supported type for primary IDs.")
 
     @classmethod
-    def add_attribute(self, attribute):
+    def add_attribute(self, attribute_name, attribute_type, default_value = None):
+        if attribute_name in self.attribute_edits["ADD"].keys():
+            warnings.warn(attribute_name + " already in staged edits. Overwriting previous edits.")
         for attr in self.attributes.values():
-            if attr == attribute:
-                raise TigerGraphException(attribute + " already exists as an attribute on "+self.vertex_type + " vertices")
-        self.attribute_edits["ADD"].append(attribute)
+            if attr == attribute_name:
+                raise TigerGraphException(attribute_name + " already exists as an attribute on "+self.__name__ + " vertices")
+        attr_type = _py_to_tg_type(attribute_type)
+        gsql_add = "ALTER VERTEX "+self.__name__+" ADD ATTRIBUTE ("+attribute_name+" "+attr_type
+        if default_value:
+            gsql_add += "DEFAULT "+default_value
+        gsql_add +=");"
+        self.attribute_edits["ADD"][attribute_name] = gsql_add
 
     @classmethod
     def remove_attribute(self, attribute_name):
@@ -116,7 +123,7 @@ class Vertex(object):
                 self.attribute_edits["DELETE"].append(attribute_name)
                 removed = True
         if not(removed):
-            raise TigerGraphException("An attribute of "+ attribute_name + " is not an attribute on "+ self.vertex_type + " vertices")
+            raise TigerGraphException("An attribute of "+ attribute_name + " is not an attribute on "+ self.__name__ + " vertices")
 
     @classmethod
     @property
@@ -137,17 +144,24 @@ class Vertex(object):
 
 @dataclass
 class Edge:
-    attribute_edits = {"ADD": [], "DELETE": []}
+    attribute_edits = {"ADD": {}, "DELETE": {}}
     is_directed = None
     reverse_edge = None
     from_vertex_types = None
     to_vertex_types = None
 
-    def add_attribute(self, attribute):
+    def add_attribute(self, attribute_name, attribute_type, default_value = None):
+        if attribute_name in self.attribute_edits["ADD"].keys():
+            warnings.warn(attribute_name + " already in staged edits. Overwriting previous edits.")
         for attr in self.attributes.values():
-            if attr == attribute:
-                raise TigerGraphException(attribute + " already exists as an attribute on "+self.edge_type + " edges")
-        self.attribute_edits["ADD"].append(attribute)
+            if attr == attribute_name:
+                raise TigerGraphException(attribute_name + " already exists as an attribute on "+self.__name__ + " edges")
+        attr_type = _py_to_tg_type(attribute_type)
+        gsql_add = "ALTER EDGE "+self.__name__+" ADD ATTRIBUTE ("+attribute_name+" "+attr_type
+        if default_value:
+            gsql_add += "DEFAULT "+default_value
+        gsql_add +=");"
+        self.attribute_edits["ADD"][attribute_name] = gsql_add
 
     def remove_attribute(self, attribute_name):
         removed = False
@@ -248,7 +262,6 @@ class Graph():
             if field.name == "reverse_edge":
                 reverse_edge = field.default
 
-
         gsql_def = ""
         if is_directed:
             gsql_def += "ADD DIRECTED EDGE "+edge.__name__+"("
@@ -291,8 +304,13 @@ class Graph():
                 conn = self.conn
             else:
                 raise TigerGraphException("No Connection Defined. Please instantiate a TigerGraphConnection to the database to commit the schema.")
+        all_attr = [x.attribute_edits for x in list(self._vertex_types.values()) + list(self._edge_types.values())]
+        all_attribute_edits = {"ADD": {}, "DELETE": {}}
+        for change in all_attr:
+            all_attribute_edits["ADD"].update(change["ADD"])
+            all_attribute_edits["DELETE"].update(change["DELETE"])
         md5 = hashlib.md5()
-        md5.update(json.dumps({**self._vertex_edits, **self._edge_edits}).encode())
+        md5.update(json.dumps({**self._vertex_edits, **self._edge_edits, **all_attribute_edits}).encode())
         job_name = "pytg_change_"+md5.hexdigest()
         start_gsql = "USE GRAPH "+conn.graphname+"\n"
         start_gsql += "CREATE SCHEMA_CHANGE JOB " + job_name + " FOR GRAPH " + conn.graphname + " {\n"
@@ -304,6 +322,8 @@ class Graph():
             start_gsql += self._vertex_edits["DELETE"][v_to_drop] + "\n"
         for e_to_drop in self._edge_edits["DELETE"]:
             start_gsql += self._edge_edits["DELETE"][e_to_drop] + "\n"
+        for attr_to_add in all_attribute_edits["ADD"]:
+            start_gsql += all_attribute_edits["ADD"][attr_to_add] + "\n"
         start_gsql += "}\n"
 
         start_gsql += "RUN SCHEMA_CHANGE JOB "+job_name
