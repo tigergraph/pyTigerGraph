@@ -272,6 +272,9 @@ class pyTigerGraphBase(object):
             _auth = None
         if headers:
             _headers.update(headers)
+        if url.startswith(self.gsUrl + "/gsqlserver/"):
+            if self.awsIamHeaders:
+                _headers.update(self.awsIamHeaders)
         if self.responseConfigHeader:
             _headers.update(self.responseConfigHeader)
         if method == "POST" or method == "PUT":
