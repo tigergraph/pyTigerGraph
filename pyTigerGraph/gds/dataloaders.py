@@ -578,7 +578,7 @@ class BaseLoader:
         num_batches: int,
         out_tuple: bool,
         kafka_consumer: "KafkaConsumer",
-        max_wait_time: int = 30
+        max_wait_time: int = 300
     ) -> NoReturn:
         delivered_batch = 0
         buffer = {}
