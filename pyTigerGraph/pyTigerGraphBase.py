@@ -97,25 +97,9 @@ class pyTigerGraphBase(object):
         else:
             self.username = username
             self.password = password
-        self.awsIamHeaders={}
-        if self.username.startswith("arn:aws:iam::"):
-            import boto3
-            from botocore.awsrequest import AWSRequest
-            from botocore.auth import SigV4Auth
-            # Prepare a GetCallerIdentity request.
-            request = AWSRequest(
-                method="POST",
-                url="https://sts.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15",
-                headers={
-                    'Host': 'sts.amazonaws.com'
-                })
-            # Get headers
-            SigV4Auth(boto3.Session().get_credentials(), "sts", "us-east-1").add_auth(request)
-            self.awsIamHeaders["X-Amz-Date"] = request.headers["X-Amz-Date"]
-            self.awsIamHeaders["X-Amz-Security-Token"] = request.headers["X-Amz-Security-Token"]
-            self.awsIamHeaders["Authorization"] = request.headers["Authorization"]
         self.graphname = graphname
         self.responseConfigHeader = {}
+        self.awsIamHeaders={}
         # TODO Remove apiToken parameter
         if apiToken:
             warnings.warn(
@@ -199,6 +183,23 @@ class pyTigerGraphBase(object):
             self.gsUrl = self.host + ":" + self.gsPort
         self.url = ""
 
+        if self.username.startswith("arn:aws:iam::"):
+            import boto3
+            from botocore.awsrequest import AWSRequest
+            from botocore.auth import SigV4Auth
+            # Prepare a GetCallerIdentity request.
+            request = AWSRequest(
+                method="POST",
+                url="https://sts.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15",
+                headers={
+                    'Host': 'sts.amazonaws.com'
+                })
+            # Get headers
+            SigV4Auth(boto3.Session().get_credentials(), "sts", "us-east-1").add_auth(request)
+            self.awsIamHeaders["X-Amz-Date"] = request.headers["X-Amz-Date"]
+            self.awsIamHeaders["X-Amz-Security-Token"] = request.headers["X-Amz-Security-Token"]
+            self.awsIamHeaders["Authorization"] = request.headers["Authorization"]
+
         logger.info("exit: __init__")
 
     def _locals(self, _locals: dict) -> str:
@@ -272,8 +273,8 @@ class pyTigerGraphBase(object):
             _auth = None
         if headers:
             _headers.update(headers)
-        if url.startswith(self.gsUrl + "/gsqlserver/"):
-            if self.awsIamHeaders:
+        if self.awsIamHeaders:
+            if url.startswith(self.gsUrl + "/gsqlserver/"):
                 _headers.update(self.awsIamHeaders)
         if self.responseConfigHeader:
             _headers.update(self.responseConfigHeader)
