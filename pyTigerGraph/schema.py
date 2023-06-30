@@ -85,10 +85,6 @@ def _py_to_tg_type(attr_type):
 
 @dataclass
 class Vertex(object):
-    attribute_edits = {"ADD": {}, "DELETE": {}}
-    incoming_edge_types = []
-    outgoing_edge_types = []
-
     # TODO: I shouldn't have to run this, only use default value specified in dataclass
     @classmethod
     def define_primary_id(self, primary_id, primary_id_as_attribute):
@@ -98,19 +94,48 @@ class Vertex(object):
         if not(_py_to_tg_type(self.primary_id_type).lower() in PRIMARY_ID_TYPES):
             raise TigerGraphException(self.primary_id_type, "is not a supported type for primary IDs.")
 
+    def __init_subclass__(cls):
+        # TODO: Fill edge type info
+        cls.incoming_edge_types = []
+        cls.outgoing_edge_types = []
+        cls._attribute_edits = {"ADD": {}, "DELETE": {}}
+
+    @classmethod
+    def _set_incoming_edge_types(self, e_types):
+        self.incoming_edge_types = e_types
+
+    @classmethod
+    def _set_outgoing_edge_types(self, e_types):
+        self.outgoing_edge_types = e_types
+
+    @classmethod
+    def _set_attr_edit(self, add:dict = None, delete:dict = None):
+        if add:
+            self._attribute_edits["ADD"].update(add)
+        if delete:
+            self._attribute_edits["DELETE"].update(delete)
+
+    @classmethod
+    def _get_attr_edit(self):
+        return self._attribute_edits
+
+
     @classmethod
     def add_attribute(self, attribute_name, attribute_type, default_value = None):
-        if attribute_name in self.attribute_edits["ADD"].keys():
+        if attribute_name in self._get_attr_edit()["ADD"].keys():
             warnings.warn(attribute_name + " already in staged edits. Overwriting previous edits.")
-        for attr in self.attributes.values():
+        for attr in self.attributes:
             if attr == attribute_name:
                 raise TigerGraphException(attribute_name + " already exists as an attribute on "+self.__name__ + " vertices")
         attr_type = _py_to_tg_type(attribute_type)
         gsql_add = "ALTER VERTEX "+self.__name__+" ADD ATTRIBUTE ("+attribute_name+" "+attr_type
         if default_value:
-            gsql_add += "DEFAULT "+default_value
+            if attribute_type == str:
+                gsql_add += " DEFAULT '"+default_value+"'"
+            else:
+                gsql_add += " DEFAULT "+str(default_value)
         gsql_add +=");"
-        self.attribute_edits["ADD"][attribute_name] = gsql_add
+        self._set_attr_edit(add ={attribute_name: gsql_add})
 
     @classmethod
     def remove_attribute(self, attribute_name):
@@ -118,9 +143,9 @@ class Vertex(object):
             if attribute_name == self.primary_id:
                 raise TigerGraphException("Cannot remove primary ID attribute: "+self.primary_id+".")
         removed = False
-        for attr in self.attributes.values():
-            if attr.attribute_name == attribute_name:
-                self.attribute_edits["DELETE"].append(attribute_name)
+        for attr in self.attributes:
+            if attr == attribute_name:
+                self._set_attr_edit(delete = {attribute_name: "ALTER VERTEX "+self.__name__+" DROP ATTRIBUTE ("+attribute_name+");"})
                 removed = True
         if not(removed):
             raise TigerGraphException("An attribute of "+ attribute_name + " is not an attribute on "+ self.__name__ + " vertices")
@@ -144,33 +169,52 @@ class Vertex(object):
 
 @dataclass
 class Edge:
-    attribute_edits = {"ADD": {}, "DELETE": {}}
-    is_directed = None
-    reverse_edge = None
-    from_vertex_types = None
-    to_vertex_types = None
+    # TODO: Handle discriminators
+    def __init_subclass__(cls):
+        # TODO: Make sure is_directed, reverse_edge, from, and to are defined.
+        cls._attribute_edits = {"ADD": {}, "DELETE": {}}
+        cls.is_directed:bool
+        cls.reverse_edge:Union[str, bool]
+        cls.from_vertex_types:Union[Vertex, List[Vertex]]
+        cls.to_vertex_types:Union[Vertex, List[Vertex]]
 
+    @classmethod
+    def _set_attr_edit(self, add:dict = None, delete:dict = None):
+        if add:
+            self._attribute_edits["ADD"].update(add)
+        if delete:
+            self._attribute_edits["DELETE"].update(delete)
+
+    @classmethod
+    def _get_attr_edit(self):
+        return self._attribute_edits
+
+    @classmethod
     def add_attribute(self, attribute_name, attribute_type, default_value = None):
-        if attribute_name in self.attribute_edits["ADD"].keys():
+        if attribute_name in self._get_attr_edit()["ADD"].keys():
             warnings.warn(attribute_name + " already in staged edits. Overwriting previous edits.")
-        for attr in self.attributes.values():
+        for attr in self.attributes:
             if attr == attribute_name:
                 raise TigerGraphException(attribute_name + " already exists as an attribute on "+self.__name__ + " edges")
         attr_type = _py_to_tg_type(attribute_type)
         gsql_add = "ALTER EDGE "+self.__name__+" ADD ATTRIBUTE ("+attribute_name+" "+attr_type
         if default_value:
-            gsql_add += "DEFAULT "+default_value
+            if attribute_type == str:
+                gsql_add += " DEFAULT '"+default_value+"'"
+            else:
+                gsql_add += " DEFAULT "+str(default_value)
         gsql_add +=");"
-        self.attribute_edits["ADD"][attribute_name] = gsql_add
+        self._set_attr_edit(add ={attribute_name: gsql_add})
 
+    @classmethod
     def remove_attribute(self, attribute_name):
         removed = False
-        for attr in self.attributes.values():
-            if attr.attribute_name == attribute_name:
-                self.attribute_edits["DELETE"].append(attribute_name)
+        for attr in self.attributes:
+            if attr == attribute_name:
+                self._set_attr_edit(delete = {attribute_name:"ALTER EDGE "+self.__name__+" DROP ATTRIBUTE ("+attribute_name+");"})
                 removed = True
         if not(removed):
-            raise TigerGraphException("An attribute of "+ attribute_name + " is not an attribute on "+ self.edge_type + " edges")
+            raise TigerGraphException("An attribute of "+ attribute_name + " is not an attribute on "+ self.__name__ + " edges")
 
     @classmethod
     @property
@@ -209,7 +253,7 @@ class Graph():
 
             for e_type in db_rep["EdgeTypes"]:
                 e = make_dataclass(e_type["Name"],
-                                    [(attr["AttributeName"], _get_type(_parse_type(attr)), None) for attr in v_type["Attributes"]] + 
+                                    [(attr["AttributeName"], _get_type(_parse_type(attr)), None) for attr in e_type["Attributes"]] + 
                                     [("from_vertex", self._vertex_types[e_type["FromVertexTypeName"]], None),
                                      ("to_vertex", self._vertex_types[e_type["FromVertexTypeName"]], None),
                                      ("is_directed", bool, e_type["IsDirected"]),
@@ -304,7 +348,9 @@ class Graph():
                 conn = self.conn
             else:
                 raise TigerGraphException("No Connection Defined. Please instantiate a TigerGraphConnection to the database to commit the schema.")
-        all_attr = [x.attribute_edits for x in list(self._vertex_types.values()) + list(self._edge_types.values())]
+        all_attr = [x._attribute_edits for x in list(self._vertex_types.values()) + list(self._edge_types.values())]
+        for elem in list(self._vertex_types.values()) + list(self._edge_types.values()): # need to remove the changes locally
+            elem._attribute_edits = {"ADD": {}, "DELETE": {}}
         all_attribute_edits = {"ADD": {}, "DELETE": {}}
         for change in all_attr:
             all_attribute_edits["ADD"].update(change["ADD"])
@@ -313,6 +359,7 @@ class Graph():
         md5.update(json.dumps({**self._vertex_edits, **self._edge_edits, **all_attribute_edits}).encode())
         job_name = "pytg_change_"+md5.hexdigest()
         start_gsql = "USE GRAPH "+conn.graphname+"\n"
+        start_gsql += "DROP JOB "+job_name+"\n"
         start_gsql += "CREATE SCHEMA_CHANGE JOB " + job_name + " FOR GRAPH " + conn.graphname + " {\n"
         for v_to_add in self._vertex_edits["ADD"]:
             start_gsql += self._vertex_edits["ADD"][v_to_add] + "\n"
@@ -324,8 +371,9 @@ class Graph():
             start_gsql += self._edge_edits["DELETE"][e_to_drop] + "\n"
         for attr_to_add in all_attribute_edits["ADD"]:
             start_gsql += all_attribute_edits["ADD"][attr_to_add] + "\n"
+        for attr_to_drop in all_attribute_edits["DELETE"]:
+            start_gsql += all_attribute_edits["DELETE"][attr_to_drop] +"\n"
         start_gsql += "}\n"
-
         start_gsql += "RUN SCHEMA_CHANGE JOB "+job_name
         res = conn.gsql(start_gsql)
         if "updated to new version" in res:
