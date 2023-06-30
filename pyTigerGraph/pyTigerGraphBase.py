@@ -48,8 +48,6 @@ class pyTigerGraphBase(object):
                 The default graph for running queries.
             gsqlSecret:
                 The secret key for GSQL. See https://docs.tigergraph.com/tigergraph-server/current/user-access/managing-credentials#_secrets.
-                Required for GSQL authentication on TigerGraph Cloud instances created after
-                July 5, 2022.
             username:
                 The username on the TigerGraph server.
             password:
@@ -60,7 +58,7 @@ class pyTigerGraphBase(object):
             restppPort:
                 The port for REST++ queries.
             gsPort:
-                The port of all other queries.
+                The port for gsql server.
             gsqlVersion:
                 The version of the GSQL client to be used. Effectively the version of the database
                 being connected to.
@@ -101,6 +99,7 @@ class pyTigerGraphBase(object):
             self.password = password
         self.graphname = graphname
         self.responseConfigHeader = {}
+        self.awsIamHeaders={}
         # TODO Remove apiToken parameter
         if apiToken:
             warnings.warn(
@@ -153,10 +152,6 @@ class pyTigerGraphBase(object):
             self.certPath = certPath
         self.sslPort = str(sslPort)
 
-        self.gsqlInitiated = False
-
-        self.Client = None
-
         # TODO Remove gcp parameter
         if gcp:
             warnings.warn("The `gcp` parameter is deprecated.", DeprecationWarning)
@@ -187,6 +182,23 @@ class pyTigerGraphBase(object):
             self.gsPort = gsPort
             self.gsUrl = self.host + ":" + self.gsPort
         self.url = ""
+
+        if self.username.startswith("arn:aws:iam::"):
+            import boto3
+            from botocore.awsrequest import AWSRequest
+            from botocore.auth import SigV4Auth
+            # Prepare a GetCallerIdentity request.
+            request = AWSRequest(
+                method="POST",
+                url="https://sts.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15",
+                headers={
+                    'Host': 'sts.amazonaws.com'
+                })
+            # Get headers
+            SigV4Auth(boto3.Session().get_credentials(), "sts", "us-east-1").add_auth(request)
+            self.awsIamHeaders["X-Amz-Date"] = request.headers["X-Amz-Date"]
+            self.awsIamHeaders["X-Amz-Security-Token"] = request.headers["X-Amz-Security-Token"]
+            self.awsIamHeaders["Authorization"] = request.headers["Authorization"]
 
         logger.info("exit: __init__")
 
@@ -261,6 +273,9 @@ class pyTigerGraphBase(object):
             _auth = None
         if headers:
             _headers.update(headers)
+        if self.awsIamHeaders:
+            if url.startswith(self.gsUrl + "/gsqlserver/"):
+                _headers.update(self.awsIamHeaders)
         if self.responseConfigHeader:
             _headers.update(self.responseConfigHeader)
         if method == "POST" or method == "PUT":
