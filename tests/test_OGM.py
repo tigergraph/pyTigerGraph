@@ -85,6 +85,27 @@ class TestHomogeneousOGM(unittest.TestCase):
 
         self.assertNotIn("AccountHolder", g.vertex_types)
 
+    def test_add_vertex_attribute_default_value(self):
+        g = Graph(self.conn)
+
+        g.vertex_types["Paper"].add_attribute("ThisIsATest", str, "test_default")
+
+        g.commit_changes()
+
+        self.assertIn("ThisIsATest", g.vertex_types["Paper"].attributes.keys())
+        sample = self.conn.getVertices("Paper", limit=1)[0]["ThisIsATest"]
+
+        self.assertEqual("'test_default'", sample)
+
+    def test_drop_vertex_attribute(self):
+        g = Graph(self.conn)
+
+        g.vertex_types["Paper"].remove_attribute("ThisIsATest")
+
+        g.commit_changes()
+
+        self.assertNotIn("ThisIsATest", g.vertex_types["Paper"].attributes.keys())
+
 
 class TestHeterogeneousOGM(unittest.TestCase):
     @classmethod
@@ -104,6 +125,14 @@ if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(TestHeterogeneousOGM("test_init"))
     suite.addTest(TestHomogeneousOGM("test_type"))
+    suite.addTest(TestHomogeneousOGM("test_add_vertex_type"))
+    suite.addTest(TestHomogeneousOGM("test_add_edge_type"))
+    suite.addTest(TestHomogeneousOGM("test_drop_edge_type"))
+    suite.addTest(TestHomogeneousOGM("test_drop_vertex_type"))
+    suite.addTest(TestHomogeneousOGM("test_add_vertex_attribute_default_value"))
+    suite.addTest(TestHomogeneousOGM("test_drop_vertex_attribute"))
+    suite.addTest(TestHomogeneousOGM("test_add_edge_attribute"))
+    suite.addTest(TestHomogeneousOGM("test_drop_edge_attribute"))
     suite.addTest(TestHeterogeneousOGM("test_init"))
     suite.addTest(TestHeterogeneousOGM("test_type"))
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
