@@ -210,6 +210,7 @@ CREATE QUERY edge_nei_loader_{QUERYSUFFIX}(
             SELECT s 
             FROM v_in_batch:s 
             POST-ACCUM
+                s.@valid_v_in.clear(), s.@valid_v_out.clear(),
                 {VERTEXATTRS};
         # Get neighbors of seeeds
         FOREACH i IN RANGE[1, num_hops] DO

@@ -3021,7 +3021,7 @@ class EdgeNeighborLoader(BaseLoader):
         if batch_size:
             # If batch_size is given, calculate the number of batches
             if filter_by:
-                num_edges = sum(self._graph.getEdgeStats(e_type)[e_type][filter_by if isinstance(filter_by, str) else filter_by[e_type]]["TRUE"] for e_type in self._etypes)
+                num_edges = sum(self._graph.getEdgeStats(e_type)[e_type][filter_by if isinstance(filter_by, str) else filter_by[e_type]]["TRUE"] for e_type in self._seed_types)
             else:
                 num_edges = sum(self._graph.getEdgeCount(i) for i in self._seed_types)
             self.num_batches = math.ceil(num_edges / batch_size)
