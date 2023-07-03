@@ -211,12 +211,12 @@ CREATE QUERY edge_nei_loader_{QUERYSUFFIX}(
                     @@vertices += s,
                     @@vertices += t,
                     IF t.@tmp_id >= s.@tmp_id THEN
-                      @@edges_sampled += (((t.@tmp_id*t.@tmp_id)+s.@tmp_id+t.@tmp_id) -> TRUE)
+                      @@edges_sampled += (((t.@tmp_id*t.@tmp_id)+s.@tmp_id+t.@tmp_id) -> TRUE),
                       IF NOT e.isDirected() THEN
                         @@edges_sampled += (((s.@tmp_id*s.@tmp_id)+t.@tmp_id+s.@tmp_id) -> TRUE)
                       END
                     ELSE
-                      @@edges_sampled += (((s.@tmp_id*s.@tmp_id)+t.@tmp_id) -> TRUE)
+                      @@edges_sampled += (((s.@tmp_id*s.@tmp_id)+t.@tmp_id) -> TRUE),
                       IF NOT e.isDirected() THEN
                         @@edges_sampled += (((t.@tmp_id*t.@tmp_id)+s.@tmp_id+t.@tmp_id) -> TRUE)
                       END
