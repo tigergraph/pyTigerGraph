@@ -126,8 +126,15 @@ CREATE QUERY edge_nei_loader_{QUERYSUFFIX}(
                 SELECT s
                 FROM start:s -(seed_types:e)- v_types:t
                 WHERE e.getAttr(filter_by, "BOOL") 
-                      AND ((t.@tmp_id >= s.@tmp_id AND NOT @@edges_sampled.containsKey((t.@tmp_id*t.@tmp_id)+s.@tmp_id+t.@tmp_id)) OR
-                            (t.@tmp_id < s.@tmp_id AND NOT @@edges_sampled.containsKey((s.@tmp_id*s.@tmp_id)+t.@tmp_id)))
+                      AND 
+                        ((e.isDirected() AND ((t.@tmp_id >= s.@tmp_id AND NOT @@edges_sampled.containsKey((t.@tmp_id*t.@tmp_id)+s.@tmp_id+t.@tmp_id)) OR
+                                             (t.@tmp_id < s.@tmp_id AND NOT @@edges_sampled.containsKey((s.@tmp_id*s.@tmp_id)+t.@tmp_id))))
+                          OR
+                          (NOT e.isDirected() AND ((t.@tmp_id >= s.@tmp_id AND NOT @@edges_sampled.containsKey((t.@tmp_id*t.@tmp_id)+s.@tmp_id+t.@tmp_id)) OR
+                                                    (t.@tmp_id < s.@tmp_id AND NOT @@edges_sampled.containsKey((s.@tmp_id*s.@tmp_id)+t.@tmp_id)))
+                                              AND ((s.@tmp_id >= t.@tmp_id AND NOT @@edges_sampled.containsKey((s.@tmp_id*s.@tmp_id)+t.@tmp_id+s.@tmp_id)) OR
+                                                   (t.@tmp_id < s.@tmp_id AND NOT @@edges_sampled.containsKey((t.@tmp_id*t.@tmp_id)+s.@tmp_id)))))
+                                        
                 ACCUM 
                     IF t.@tmp_id >= s.@tmp_id THEN
                         @@batch_heap += ID_Tuple(((t.@tmp_id*t.@tmp_id)+s.@tmp_id+t.@tmp_id), s, t)
@@ -166,8 +173,14 @@ CREATE QUERY edge_nei_loader_{QUERYSUFFIX}(
             res = 
                 SELECT s
                 FROM start:s -(seed_types:e)- v_types:t
-                WHERE ((t.@tmp_id >= s.@tmp_id AND NOT @@edges_sampled.containsKey((t.@tmp_id*t.@tmp_id)+s.@tmp_id+t.@tmp_id)) OR
-                        (t.@tmp_id < s.@tmp_id AND NOT @@edges_sampled.containsKey((s.@tmp_id*s.@tmp_id)+t.@tmp_id)))
+                WHERE ((e.isDirected() AND ((t.@tmp_id >= s.@tmp_id AND NOT @@edges_sampled.containsKey((t.@tmp_id*t.@tmp_id)+s.@tmp_id+t.@tmp_id)) OR
+                                             (t.@tmp_id < s.@tmp_id AND NOT @@edges_sampled.containsKey((s.@tmp_id*s.@tmp_id)+t.@tmp_id))))
+                      OR
+                      (NOT e.isDirected() AND ((t.@tmp_id >= s.@tmp_id AND NOT @@edges_sampled.containsKey((t.@tmp_id*t.@tmp_id)+s.@tmp_id+t.@tmp_id)) OR
+                                                (t.@tmp_id < s.@tmp_id AND NOT @@edges_sampled.containsKey((s.@tmp_id*s.@tmp_id)+t.@tmp_id)))
+                                          AND ((s.@tmp_id >= t.@tmp_id AND NOT @@edges_sampled.containsKey((s.@tmp_id*s.@tmp_id)+t.@tmp_id+s.@tmp_id)) OR
+                                                (t.@tmp_id < s.@tmp_id AND NOT @@edges_sampled.containsKey((t.@tmp_id*t.@tmp_id)+s.@tmp_id)))))
+                                        
                 ACCUM 
                     IF t.@tmp_id >= s.@tmp_id THEN
                         @@batch_heap += ID_Tuple(((t.@tmp_id*t.@tmp_id)+s.@tmp_id+t.@tmp_id), s, t)
@@ -199,8 +212,14 @@ CREATE QUERY edge_nei_loader_{QUERYSUFFIX}(
                     @@vertices += t,
                     IF t.@tmp_id >= s.@tmp_id THEN
                       @@edges_sampled += (((t.@tmp_id*t.@tmp_id)+s.@tmp_id+t.@tmp_id) -> TRUE)
+                      IF NOT e.isDirected() THEN
+                        @@edges_sampled += (((s.@tmp_id*s.@tmp_id)+t.@tmp_id+s.@tmp_id) -> TRUE)
+                      END
                     ELSE
                       @@edges_sampled += (((s.@tmp_id*s.@tmp_id)+t.@tmp_id) -> TRUE)
+                      IF NOT e.isDirected() THEN
+                        @@edges_sampled += (((t.@tmp_id*t.@tmp_id)+s.@tmp_id+t.@tmp_id) -> TRUE)
+                      END
                     END;
         END;
     
