@@ -74,7 +74,7 @@ CREATE QUERY edge_loader_{QUERYSUFFIX}(
               POST-ACCUM s.@tmp_id = getvid(s);
     END;
 
-    SumAccum<INT> @@num_edges;
+    SumAccum<FLOAT> @@num_edges;
     IF filter_by IS NOT NULL THEN
       res = SELECT s
             FROM start:s -(e_types:e)- :t WHERE e.getAttr(filter_by, "BOOL")
