@@ -288,6 +288,8 @@ class TestGDSHeteroEdgeLoaderREST(unittest.TestCase):
         num_batches = 0
         for data in loader:
             # print(num_batches, data)
+            if num_batches == 0:
+                self.assertEqual(data["v0v0"].shape[0]+data["v2v0"].shape[0], 200)
             self.assertEqual(len(data), 2)
             self.assertIsInstance(data["v0v0"], DataFrame)
             self.assertIn("is_val", data["v0v0"])

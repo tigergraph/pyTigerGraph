@@ -578,7 +578,7 @@ class BaseLoader:
         num_batches: int,
         out_tuple: bool,
         kafka_consumer: "KafkaConsumer",
-        max_wait_time: int = 30
+        max_wait_time: int = 300
     ) -> NoReturn:
         delivered_batch = 0
         buffer = {}
@@ -870,7 +870,7 @@ class BaseLoader:
                 for v_attr in v_attributes:
                     if v_attr_types.get(v_attr, "") == "MAP":
                         # I am sorry that this is this ugly...
-                        data[v_attr] = data[v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "" else {})
+                        data[v_attr] = data[v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
             else:
                 v_file = (line.split(delimiter) for line in raw.split('\n') if line)
                 v_file_dict = defaultdict(list)
@@ -886,7 +886,7 @@ class BaseLoader:
                     for v_attr in v_extra_feats.get(vtype, []):
                         if v_attr_types[vtype][v_attr] == "MAP":
                             # I am sorry that this is this ugly...
-                            vertices[vtype][v_attr] = vertices[vtype][v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "" else {})
+                            vertices[vtype][v_attr] = vertices[vtype][v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
                 data = vertices
         elif in_format == "edge":
             # String of edges in format source_vid,target_vid
@@ -901,7 +901,7 @@ class BaseLoader:
                 for e_attr in e_attributes:
                     if e_attr_types.get(e_attr, "") == "MAP":
                         # I am sorry that this is this ugly...
-                        data[e_attr] = data[e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "" else {})
+                        data[e_attr] = data[e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
             else:
                 e_file = (line.split(delimiter) for line in raw.split('\n') if line)
                 e_file_dict = defaultdict(list)
@@ -917,7 +917,7 @@ class BaseLoader:
                     for e_attr in e_extra_feats.get(etype, []):
                         if e_attr_types[etype][e_attr] == "MAP":
                             # I am sorry that this is this ugly...
-                            edges[etype][e_attr] = edges[etype][e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "" else {})
+                            edges[etype][e_attr] = edges[etype][e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
                 del e_file_dict, e_file
                 data = edges
         elif in_format == "graph":
@@ -934,7 +934,7 @@ class BaseLoader:
                 for v_attr in v_extra_feats:
                     if v_attr_types[v_attr] == "MAP":
                         # I am sorry that this is this ugly...
-                        vertices[v_attr] = vertices[v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "" else {})
+                        vertices[v_attr] = vertices[v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
                 if primary_id:
                     id_map = pd.DataFrame({"vid": primary_id.keys(), "primary_id": primary_id.values()})
                     vertices = vertices.merge(id_map.astype({"vid": vertices["vid"].dtype}), on="vid")
@@ -948,7 +948,7 @@ class BaseLoader:
                 for e_attr in e_attributes:
                     if e_attr_types.get(e_attr, "") == "MAP":
                         # I am sorry that this is this ugly...
-                        edges[e_attr] = edges[e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "" else {})
+                        edges[e_attr] = edges[e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
             else:
                 v_file = (line.split(delimiter) for line in v_file.split('\n') if line)
                 v_file_dict = defaultdict(list)
@@ -964,7 +964,7 @@ class BaseLoader:
                     for v_attr in v_extra_feats.get(vtype, []):
                         if v_attr_types[vtype][v_attr] == "MAP":
                             # I am sorry that this is this ugly...
-                            vertices[vtype][v_attr] = vertices[vtype][v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "" else {})
+                            vertices[vtype][v_attr] = vertices[vtype][v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
                 if primary_id:
                     id_map = pd.DataFrame({"vid": primary_id.keys(), "primary_id": primary_id.values()},
                                           dtype="object")
@@ -986,7 +986,7 @@ class BaseLoader:
                     for e_attr in e_extra_feats.get(etype, []):
                         if e_attr_types[etype][e_attr] == "MAP":
                             # I am sorry that this is this ugly...
-                            edges[etype][e_attr] = edges[etype][e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "" else {})
+                            edges[etype][e_attr] = edges[etype][e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
                 del e_file_dict, e_file
             data = (vertices, edges)
         else:
@@ -3038,7 +3038,7 @@ class EdgeNeighborLoader(BaseLoader):
         if batch_size:
             # If batch_size is given, calculate the number of batches
             if filter_by:
-                num_edges = sum(self._graph.getEdgeStats(e_type)[e_type][filter_by if isinstance(filter_by, str) else filter_by[e_type]]["TRUE"] for e_type in self._etypes)
+                num_edges = sum(self._graph.getEdgeStats(e_type)[e_type][filter_by if isinstance(filter_by, str) else filter_by[e_type]]["TRUE"] for e_type in self._seed_types)
             else:
                 num_edges = sum(self._graph.getEdgeCount(i) for i in self._seed_types)
             self.num_batches = math.ceil(num_edges / batch_size)
