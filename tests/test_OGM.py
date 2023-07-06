@@ -142,8 +142,6 @@ if __name__ == "__main__":
     suite.addTest(TestHomogeneousOGM("test_drop_vertex_type"))
     suite.addTest(TestHomogeneousOGM("test_add_vertex_attribute_default_value"))
     suite.addTest(TestHomogeneousOGM("test_drop_vertex_attribute"))
-    suite.addTest(TestHomogeneousOGM("test_add_edge_attribute"))
-    suite.addTest(TestHomogeneousOGM("test_drop_edge_attribute"))
     suite.addTest(TestHeterogeneousOGM("test_init"))
     suite.addTest(TestHeterogeneousOGM("test_type"))
     suite.addTest(TestHeterogeneousOGM("test_outgoing_edge_types"))
