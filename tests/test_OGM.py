@@ -121,6 +121,17 @@ class TestHeterogeneousOGM(unittest.TestCase):
         attrs = g.vertex_types["v0"].attributes
         self.assertEqual(str(attrs["train_mask"]), "<class 'bool'>")
 
+    def test_outgoing_edge_types(self):
+        g = Graph(self.conn)
+        outgoing_edge_types = g.vertex_types["v0"].outgoing_edge_types
+        self.assertEqual(outgoing_edge_types, {"v0v0": g.edge_types["v0v0"]})
+
+    def test_incoming_edge_types(self):
+        g = Graph(self.conn)
+        incoming_edge_types = g.vertex_types["v0"].incoming_edge_types
+        self.assertEqual(incoming_edge_types, {"v0v0": g.edge_types["v0v0"],
+                                               "v2v0": g.edge_types["v2v0"]})        
+
 if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(TestHeterogeneousOGM("test_init"))
@@ -135,5 +146,7 @@ if __name__ == "__main__":
     suite.addTest(TestHomogeneousOGM("test_drop_edge_attribute"))
     suite.addTest(TestHeterogeneousOGM("test_init"))
     suite.addTest(TestHeterogeneousOGM("test_type"))
+    suite.addTest(TestHeterogeneousOGM("test_outgoing_edge_types"))
+    suite.addTest(TestHeterogeneousOGM("test_incoming_edge_types"))
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)
