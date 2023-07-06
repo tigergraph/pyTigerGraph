@@ -96,17 +96,10 @@ class Vertex(object):
 
     def __init_subclass__(cls):
         # TODO: Fill edge type info
-        cls.incoming_edge_types = []
-        cls.outgoing_edge_types = []
+        cls.incoming_edge_types = {}
+        cls.outgoing_edge_types = {}
         cls._attribute_edits = {"ADD": {}, "DELETE": {}}
 
-    @classmethod
-    def _set_incoming_edge_types(self, e_types):
-        self.incoming_edge_types = e_types
-
-    @classmethod
-    def _set_outgoing_edge_types(self, e_types):
-        self.outgoing_edge_types = e_types
 
     @classmethod
     def _set_attr_edit(self, add:dict = None, delete:dict = None):
@@ -255,10 +248,12 @@ class Graph():
                 e = make_dataclass(e_type["Name"],
                                     [(attr["AttributeName"], _get_type(_parse_type(attr)), None) for attr in e_type["Attributes"]] + 
                                     [("from_vertex", self._vertex_types[e_type["FromVertexTypeName"]], None),
-                                     ("to_vertex", self._vertex_types[e_type["FromVertexTypeName"]], None),
+                                     ("to_vertex", self._vertex_types[e_type["ToVertexTypeName"]], None),
                                      ("is_directed", bool, e_type["IsDirected"]),
                                      ("reverse_edge", str, e_type["Config"].get("REVERSE_EDGE"))],
                                     bases=(Edge,), repr=False)
+                self._vertex_types[e_type["FromVertexTypeName"]].outgoing_edge_types[e_type["Name"]] = e
+                self._vertex_types[e_type["ToVertexTypeName"]].incoming_edge_types[e_type["Name"]] = e
                 self._edge_types[e_type["Name"]] = e
             self.conn = conn
 
