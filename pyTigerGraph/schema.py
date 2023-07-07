@@ -95,7 +95,6 @@ class Vertex(object):
             raise TigerGraphException(self.primary_id_type, "is not a supported type for primary IDs.")
 
     def __init_subclass__(cls):
-        # TODO: Fill edge type info
         cls.incoming_edge_types = {}
         cls.outgoing_edge_types = {}
         cls._attribute_edits = {"ADD": {}, "DELETE": {}}

@@ -35,6 +35,7 @@ class TestHomogeneousOGM(unittest.TestCase):
             some_map: Dict[str, int]
             some_double: "DOUBLE"
 
+        AccountHolder.define_primary_id(primary_id="name", primary_id_as_attribute=True)
         g.add_vertex_type(AccountHolder)
 
         g.commit_changes()
