@@ -94,7 +94,7 @@ class TestHomogeneousOGM(unittest.TestCase):
         g.commit_changes()
 
         self.assertIn("ThisIsATest", g.vertex_types["Paper"].attributes.keys())
-        sample = self.conn.getVertices("Paper", limit=1)[0]["ThisIsATest"]
+        sample = self.conn.getVertices("Paper", limit=1)[0]["attributes"]["ThisIsATest"]
 
         self.assertEqual("'test_default'", sample)
 
