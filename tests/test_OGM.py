@@ -58,7 +58,7 @@ class TestHomogeneousOGM(unittest.TestCase):
         class HOLDS_ACCOUNT(Edge):
             opened_on: datetime
             from_vertex: AccountHolder
-            to_vertex: g.vertex_types["Account"]
+            to_vertex: g.vertex_types["Paper"]
             is_directed: bool = True
             reverse_edge: str = "ACCOUNT_HELD_BY"
 
