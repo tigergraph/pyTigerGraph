@@ -35,6 +35,7 @@ class TestHomogeneousOGM(unittest.TestCase):
             some_map: Dict[str, int]
             some_double: "DOUBLE"
 
+        AccountHolder.define_primary_id(primary_id="name", primary_id_as_attribute=True)
         g.add_vertex_type(AccountHolder)
 
         g.commit_changes()
@@ -57,7 +58,7 @@ class TestHomogeneousOGM(unittest.TestCase):
         class HOLDS_ACCOUNT(Edge):
             opened_on: datetime
             from_vertex: AccountHolder
-            to_vertex: g.vertex_types["Account"]
+            to_vertex: g.vertex_types["Paper"]
             is_directed: bool = True
             reverse_edge: str = "ACCOUNT_HELD_BY"
 
@@ -93,7 +94,7 @@ class TestHomogeneousOGM(unittest.TestCase):
         g.commit_changes()
 
         self.assertIn("ThisIsATest", g.vertex_types["Paper"].attributes.keys())
-        sample = self.conn.getVertices("Paper", limit=1)[0]["ThisIsATest"]
+        sample = self.conn.getVertices("Paper", limit=1)[0]["attributes"]["ThisIsATest"]
 
         self.assertEqual("'test_default'", sample)
 
@@ -121,6 +122,17 @@ class TestHeterogeneousOGM(unittest.TestCase):
         attrs = g.vertex_types["v0"].attributes
         self.assertEqual(str(attrs["train_mask"]), "<class 'bool'>")
 
+    def test_outgoing_edge_types(self):
+        g = Graph(self.conn)
+        outgoing_edge_types = g.vertex_types["v0"].outgoing_edge_types
+        self.assertEqual(outgoing_edge_types, {"v0v0": g.edge_types["v0v0"]})
+
+    def test_incoming_edge_types(self):
+        g = Graph(self.conn)
+        incoming_edge_types = g.vertex_types["v0"].incoming_edge_types
+        self.assertEqual(incoming_edge_types, {"v0v0": g.edge_types["v0v0"],
+                                               "v2v0": g.edge_types["v2v0"]})        
+
 if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(TestHeterogeneousOGM("test_init"))
@@ -131,9 +143,9 @@ if __name__ == "__main__":
     suite.addTest(TestHomogeneousOGM("test_drop_vertex_type"))
     suite.addTest(TestHomogeneousOGM("test_add_vertex_attribute_default_value"))
     suite.addTest(TestHomogeneousOGM("test_drop_vertex_attribute"))
-    suite.addTest(TestHomogeneousOGM("test_add_edge_attribute"))
-    suite.addTest(TestHomogeneousOGM("test_drop_edge_attribute"))
     suite.addTest(TestHeterogeneousOGM("test_init"))
     suite.addTest(TestHeterogeneousOGM("test_type"))
+    suite.addTest(TestHeterogeneousOGM("test_outgoing_edge_types"))
+    suite.addTest(TestHeterogeneousOGM("test_incoming_edge_types"))
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)
