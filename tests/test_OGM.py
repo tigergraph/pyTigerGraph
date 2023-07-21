@@ -34,8 +34,9 @@ class TestHomogeneousOGM(unittest.TestCase):
             dob: datetime
             some_map: Dict[str, int]
             some_double: "DOUBLE"
+            primary_id: str = "name"
+            primary_id_as_attribute: bool = True
 
-        AccountHolder.define_primary_id(primary_id="name", primary_id_as_attribute=True)
         g.add_vertex_type(AccountHolder)
 
         g.commit_changes()
