@@ -85,20 +85,12 @@ def _py_to_tg_type(attr_type):
 
 @dataclass
 class Vertex(object):
-    # TODO: I shouldn't have to run this, only use default value specified in dataclass
-    @classmethod
-    def define_primary_id(self, primary_id, primary_id_as_attribute):
-        self.primary_id = primary_id
-        self.primary_id_as_attribute = primary_id_as_attribute
-        self.primary_id_type = self.__annotations__[primary_id]
-        if not(_py_to_tg_type(self.primary_id_type).lower() in PRIMARY_ID_TYPES):
-            raise TigerGraphException(self.primary_id_type, "is not a supported type for primary IDs.")
-
     def __init_subclass__(cls):
         cls.incoming_edge_types = {}
         cls.outgoing_edge_types = {}
         cls._attribute_edits = {"ADD": {}, "DELETE": {}}
-
+        cls.primary_id:Union[str, List[str]]
+        cls.primary_id_as_attribute:bool
 
     @classmethod
     def _set_attr_edit(self, add:dict = None, delete:dict = None):
@@ -263,13 +255,28 @@ class Graph():
             warnings.warn(vertex.__name__ + " already in staged edits. Overwriting previous edits.")
         gsql_def = "ADD VERTEX "+vertex.__name__+"("
         attrs = vertex.attributes
-        try:
-            primary_id = vertex.primary_id
-            primary_id_type = vertex.primary_id_type
-            primary_id_as_attr = vertex.primary_id_as_attribute
-        except:
-            raise TigerGraphException("Primary ID not defined. Run Vertex.define_primary_id() to define the Primary ID")
+        primary_id = None
+        primary_id_as_attribute = None
+        primary_id_type = None
+        for field in fields(vertex):
+            if field.name == "primary_id":
+                primary_id = field.default
+                primary_id_type = field.type
+            if field.name == "primary_id_as_attribute":
+                primary_id_as_attribute = field.default
+                
+        if not(primary_id):
+            raise TigerGraphException("primary_id of vertex type "+str(vertex.__name__)+" not defined")
+
+        if not(primary_id_as_attribute):
+            raise TigerGraphException("primary_id_as_attribute of vertex type "+str(vertex.__name__)+" not defined")
+
+        if not(_py_to_tg_type(primary_id_type).lower() in PRIMARY_ID_TYPES):
+            raise TigerGraphException(str(primary_id_type), "is not a supported type for primary IDs.")
+
         gsql_def += "PRIMARY_ID "+primary_id+" "+_py_to_tg_type(primary_id_type)
+        attrs.pop("primary_id")
+        attrs.pop("primary_id_as_attribute")
         for attr in attrs.keys():
             if attr == primary_id:
                 continue
@@ -279,9 +286,9 @@ class Graph():
         gsql_def += ")"
         if outdegree_stats:
             gsql_def += ' WITH STATS="OUTDEGREE_BY_EDGETYPE"'
-        if outdegree_stats and primary_id_as_attr:
+        if outdegree_stats and primary_id_as_attribute:
             gsql_def += ", "
-        if primary_id_as_attr:
+        if primary_id_as_attribute:
             gsql_def += 'PRIMARY_ID_AS_ATTRIBUTE="true"'
         gsql_def += ";"
         self._vertex_edits["ADD"][vertex.__name__] = gsql_def
