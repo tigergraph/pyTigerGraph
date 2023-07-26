@@ -153,14 +153,13 @@ class Vertex(object):
 
 @dataclass
 class Edge:
-    # TODO: Handle discriminators
     def __init_subclass__(cls):
-        # TODO: Make sure is_directed, reverse_edge, from, and to are defined.
         cls._attribute_edits = {"ADD": {}, "DELETE": {}}
         cls.is_directed:bool
         cls.reverse_edge:Union[str, bool]
         cls.from_vertex_types:Union[Vertex, List[Vertex]]
         cls.to_vertex_types:Union[Vertex, List[Vertex]]
+        cls.discriminator:Union[str, List[str]]
 
     @classmethod
     def _set_attr_edit(self, add:dict = None, delete:dict = None):
@@ -264,7 +263,7 @@ class Graph():
                 primary_id_type = field.type
             if field.name == "primary_id_as_attribute":
                 primary_id_as_attribute = field.default
-                
+
         if not(primary_id):
             raise TigerGraphException("primary_id of vertex type "+str(vertex.__name__)+" not defined")
 
@@ -275,10 +274,8 @@ class Graph():
             raise TigerGraphException(str(primary_id_type), "is not a supported type for primary IDs.")
 
         gsql_def += "PRIMARY_ID "+primary_id+" "+_py_to_tg_type(primary_id_type)
-        attrs.pop("primary_id")
-        attrs.pop("primary_id_as_attribute")
         for attr in attrs.keys():
-            if attr == primary_id:
+            if attr == primary_id or attr == "primary_id" or attr == "primary_id_as_attribute":
                 continue
             else:
                 gsql_def += ", "
@@ -301,30 +298,42 @@ class Graph():
         attrs = edge.attributes
         is_directed = None
         reverse_edge = None
+        discriminator = None
         for field in fields(edge):
             if field.name == "is_directed":
                 is_directed = field.default
             if field.name == "reverse_edge":
                 reverse_edge = field.default
+            if field.name == "discriminator":
+                discriminator = field.default
 
         gsql_def = ""
         if is_directed:
             gsql_def += "ADD DIRECTED EDGE "+edge.__name__+"("
         else:
             gsql_def += "ADD UNDIRECTED EDGE "+edge.__name__+"("
-
         # TODO: Handle Unions for multiple vertex types given an edge type
         from_vert = edge.attributes["from_vertex"].__name__
         to_vert = edge.attributes["to_vertex"].__name__
         gsql_def += "FROM "+from_vert+", "+"TO "+to_vert
+        if discriminator:
+            if isinstance(discriminator, list):
+                gsql_def += ", DISCRIMINATOR("
+                for attr in discriminator:
+                    attr + " "+_py_to_tg_type(attrs[attr]) + ", "
+                gsql_def = gsql_def[:-2]
+                gsql_def += ")"
+            elif isinstance(discriminator, str):
+                gsql_def += ", DISCRIMINATOR("+discriminator + " "+_py_to_tg_type(attrs[discriminator])+")"
+            else:
+                raise TigerGraphException("Discriminator definitions can only be of type string (one discriminator) or list (compound discriminator)")
         for attr in attrs.keys():
-            if attr == "from_vertex" or attr == "to_vertex" or attr == "is_directed" or attr == "reverse_edge":
+            if attr == "from_vertex" or attr == "to_vertex" or attr == "is_directed" or attr == "reverse_edge" or (discriminator and attr in discriminator) or attr == "discriminator":
                 continue
             else:
                 gsql_def += ", "
                 gsql_def += attr + " "+_py_to_tg_type(attrs[attr])
         gsql_def += ")"
-
         if reverse_edge:
             if isinstance(reverse_edge, str):
                 gsql_def += ' WITH REVERSE_EDGE="'+reverse_edge+'"'
