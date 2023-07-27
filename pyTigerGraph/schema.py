@@ -304,9 +304,21 @@ class Graph():
                 is_directed = field.default
             if field.name == "reverse_edge":
                 reverse_edge = field.default
+
             if field.name == "discriminator":
                 discriminator = field.default
+      
+        if not(reverse_edge) and is_directed:
+            raise TigerGraphException("Reverse edge definition not set. Set the reverse_edge variable to a boolean or string.")
+        if not(is_directed):
+            raise TigerGraphConnection("is_directed variable not defined. Define is_directed as a class variable to the desired setting.")
+        
+        if not(edge.attributes.get("from_vertex", None)):
+            raise TigerGraphException("from_vertex is not defined. Define from_vertex class variable.")
 
+        if not(edge.attributes.get("to_vertex", None)):
+            raise TigerGraphException("to_vertex is not defined. Define to_vertex class variable.")
+        
         gsql_def = ""
         if is_directed:
             gsql_def += "ADD DIRECTED EDGE "+edge.__name__+"("

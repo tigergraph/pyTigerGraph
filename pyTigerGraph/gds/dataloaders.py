@@ -540,8 +540,8 @@ class BaseLoader:
                     break
             else:
                 raise TigerGraphException(
-                    "Error generating data. Query {}.".format(
-                        status["results"][0]["status"]
+                    "Error generating data. {}".format(
+                        status
                     )
                 )
         # exiting
