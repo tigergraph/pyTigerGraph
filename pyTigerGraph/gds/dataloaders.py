@@ -1626,7 +1626,7 @@ class NeighborLoader(BaseLoader):
             if isinstance(v_seed_types, list):
                 self._seed_types = v_seed_types
             elif isinstance(v_seed_types, str):
-                self._seed_types = v_seed_types
+                self._seed_types = [v_seed_types]
             else:
                 raise TigerGraphException("v_seed_types must be either of type list or string.")
         elif isinstance(filter_by, dict):
@@ -3945,7 +3945,7 @@ class HGTLoader(BaseLoader):
             if isinstance(v_seed_types, list):
                 self._seed_types = v_seed_types
             elif isinstance(v_seed_types, str):
-                self._seed_types = v_seed_types
+                self._seed_types = [v_seed_types]
             else:
                 raise TigerGraphException("v_seed_types must be either of type list or string.")
         elif isinstance(filter_by, dict):
