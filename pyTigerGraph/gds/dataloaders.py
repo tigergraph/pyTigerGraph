@@ -1495,6 +1495,7 @@ class NeighborLoader(BaseLoader):
         v_in_feats: Union[list, dict] = None,
         v_out_labels: Union[list, dict] = None,
         v_extra_feats: Union[list, dict] = None,
+        v_seed_types: Union[str, list] = None,
         e_in_feats: Union[list, dict] = None,
         e_out_labels: Union[list, dict] = None,
         e_extra_feats: Union[list, dict] = None,
@@ -1621,20 +1622,29 @@ class NeighborLoader(BaseLoader):
             self._etypes = list(self._e_schema.keys())
         self._vtypes = sorted(self._vtypes)
         self._etypes = sorted(self._etypes)
+        if v_seed_types:
+            if isinstance(v_seed_types, list):
+                self._seed_types = v_seed_types
+            elif isinstance(v_seed_types, str):
+                self._seed_types = v_seed_types
+            else:
+                raise TigerGraphException("v_seed_types must be either of type list or string.")
+        elif isinstance(filter_by, dict):
+            self._seed_types = list(filter_by.keys())
+        else:
+            self._seed_types = self._vtypes
+
         # Resolve seeds
         if batch_size:
             # If batch_size is given, calculate the number of batches
             if not filter_by:
-                self._seed_types = self._vtypes
                 num_vertices = sum(self._graph.getVertexCount(self._seed_types).values())
             elif isinstance(filter_by, str):
-                self._seed_types = self._vtypes
                 num_vertices = sum(
                     self._graph.getVertexCount(k, where="{}!=0".format(filter_by))
                     for k in self._seed_types
                 )
             elif isinstance(filter_by, dict):
-                self._seed_types = list(filter_by.keys())
                 num_vertices = sum(
                     self._graph.getVertexCount(k, where="{}!=0".format(filter_by[k]))
                     for k in self._seed_types
@@ -1644,7 +1654,6 @@ class NeighborLoader(BaseLoader):
             self.num_batches = math.ceil(num_vertices / batch_size)
         else:
             # Otherwise, take the number of batches as is.
-            self._seed_types = self._vtypes if ((not filter_by) or isinstance(filter_by, str)) else list(filter_by.keys())
             self.num_batches = num_batches
         # Initialize parameters for the query
         if batch_size:
@@ -2909,6 +2918,7 @@ class EdgeNeighborLoader(BaseLoader):
         e_in_feats: Union[list, dict] = None,
         e_out_labels: Union[list, dict] = None,
         e_extra_feats: Union[list, dict] = None,
+        e_seed_types: Union[str, list] = None,
         batch_size: int = None,
         num_batches: int = 1,
         num_neighbors: int = 10,
@@ -3034,6 +3044,13 @@ class EdgeNeighborLoader(BaseLoader):
         self._etypes = sorted(self._etypes)
         # Resolve seeds
         self._seed_types = self._etypes if ((not filter_by) or isinstance(filter_by, str)) else list(filter_by.keys())
+        if not(filter_by) and e_seed_types:
+            if isinstance(e_seed_types, str):
+                self._seed_types = [e_seed_types]
+            elif isinstance(e_seed_types, list):
+                self._seed_types = e_seed_types
+            else:
+                raise TigerGraphException("e_seed_types must be type list or string.")
         # Resolve number of batches
         if batch_size:
             # If batch_size is given, calculate the number of batches
@@ -3797,6 +3814,7 @@ class HGTLoader(BaseLoader):
         v_in_feats: Union[list, dict] = None,
         v_out_labels: Union[list, dict] = None,
         v_extra_feats: Union[list, dict] = None,
+        v_seed_types: Union[str, list] = None,
         e_in_feats: Union[list, dict] = None,
         e_out_labels: Union[list, dict] = None,
         e_extra_feats: Union[list, dict] = None,
@@ -3923,19 +3941,28 @@ class HGTLoader(BaseLoader):
         self._vtypes = sorted(self._vtypes)
         self._etypes = sorted(self._etypes)
         # Resolve seeds
+        if v_seed_types:
+            if isinstance(v_seed_types, list):
+                self._seed_types = v_seed_types
+            elif isinstance(v_seed_types, str):
+                self._seed_types = v_seed_types
+            else:
+                raise TigerGraphException("v_seed_types must be either of type list or string.")
+        elif isinstance(filter_by, dict):
+            self._seed_types = list(filter_by.keys())
+        else:
+            self._seed_types = self._vtypes
+
         if batch_size:
             # If batch_size is given, calculate the number of batches
             if not filter_by:
-                self._seed_types = self._vtypes
                 num_vertices = sum(self._graph.getVertexCount(self._seed_types).values())
             elif isinstance(filter_by, str):
-                self._seed_types = self._vtypes
                 num_vertices = sum(
                     self._graph.getVertexCount(k, where="{}!=0".format(filter_by))
                     for k in self._seed_types
                 )
             elif isinstance(filter_by, dict):
-                self._seed_types = list(filter_by.keys())
                 num_vertices = sum(
                     self._graph.getVertexCount(k, where="{}!=0".format(filter_by[k]))
                     for k in self._seed_types
@@ -3945,7 +3972,6 @@ class HGTLoader(BaseLoader):
             self.num_batches = math.ceil(num_vertices / batch_size)
         else:
             # Otherwise, take the number of batches as is.
-            self._seed_types = self._vtypes if ((not filter_by) or isinstance(filter_by, str)) else list(filter_by.keys())
             self.num_batches = num_batches
         # Initialize parameters for the query
         self._payload["num_batches"] = self.num_batches
