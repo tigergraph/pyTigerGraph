@@ -817,7 +817,7 @@ class GDS:
                 unique loader will be returned for each list element. Defaults to None.
             output_format (str, optional):
                 Format of the output data of the loader.
-                Only "PyG", "DGL", "spektral", and "dataframe" are supported. Defaults to "dataframe".
+                Only "PyG", "DGL", "spektral", and "dataframe" are supported. Defaults to "PyG".
             add_self_loop (bool, optional):
                 Whether to add self-loops to the graph. Defaults to False.
             loader_id (str, optional):
