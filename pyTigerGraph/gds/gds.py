@@ -201,6 +201,7 @@ class GDS:
         v_in_feats: Union[list, dict] = None,
         v_out_labels: Union[list, dict] = None,
         v_extra_feats: Union[list, dict] = None,
+        v_seed_types: Union[str, list] = None,
         e_in_feats: Union[list, dict] = None,
         e_out_labels: Union[list, dict] = None,
         e_extra_feats: Union[list, dict] = None,
@@ -278,6 +279,10 @@ class GDS:
                 dict are vertex types to be selected, and values are lists of attributes to be 
                 selected for each vertex type. 
                 Numeric, boolean and string attributes are allowed. Defaults to None.
+            v_seed_types (str or list, optional):
+                Directly specify the vertex types to use as seeds. If not specified, defaults to
+                the vertex types used in filter_by. If not specified there, uses all vertex types.
+                Defaults to None.
             e_in_feats (list or dict, optional):
                 Edge attributes to be used as input features. 
                 If it is a list, then the attributes
@@ -357,6 +362,7 @@ class GDS:
                     "v_in_feats": v_in_feats,
                     "v_out_labels": v_out_labels,
                     "v_extra_feats": v_extra_feats,
+                    "v_seed_types": v_seed_types,
                     "e_in_feats": e_in_feats,
                     "e_out_labels": e_out_labels,
                     "e_extra_feats": e_extra_feats,
@@ -388,6 +394,7 @@ class GDS:
                     "v_in_feats": v_in_feats,
                     "v_out_labels": v_out_labels,
                     "v_extra_feats": v_extra_feats,
+                    "v_seed_types": v_seed_types,
                     "e_in_feats": e_in_feats,
                     "e_out_labels": e_out_labels,
                     "e_extra_feats": e_extra_feats,
@@ -915,6 +922,7 @@ class GDS:
         e_in_feats: Union[list, dict] = None,
         e_out_labels: Union[list, dict] = None,
         e_extra_feats: Union[list, dict] = None,
+        e_seed_types: Union[str, list] = None,
         batch_size: int = None,
         num_batches: int = 1,
         num_neighbors: int = 10,
@@ -1012,6 +1020,10 @@ class GDS:
                 edge types. If it is a dict, keys of the dict are edge types to be selected, 
                 and values are lists of attributes to be selected for each edge type.
                 Numeric, boolean and string attributes are allowed. Defaults to None.
+            e_seed_types (str or list, optional):
+                Directly specify the edge types to use as seeds. If not specified, defaults to
+                the edge types used in filter_by. If not specified there, uses all edge types.
+                Defaults to None.
             batch_size (int, optional):
                 Number of vertices as seeds in each batch.
                 Defaults to None.
@@ -1071,6 +1083,7 @@ class GDS:
                     "e_in_feats": e_in_feats,
                     "e_out_labels": e_out_labels,
                     "e_extra_feats": e_extra_feats,
+                    "e_seed_types": e_seed_types,
                     "batch_size": batch_size,
                     "num_batches": num_batches,
                     "num_neighbors": num_neighbors,
@@ -1102,6 +1115,7 @@ class GDS:
                 "e_in_feats": e_in_feats,
                 "e_out_labels": e_out_labels,
                 "e_extra_feats": e_extra_feats,
+                "e_seed_types": e_seed_types,
                 "batch_size": batch_size,
                 "num_batches": num_batches,
                 "num_neighbors": num_neighbors,
@@ -1336,6 +1350,7 @@ class GDS:
         v_in_feats: Union[list, dict] = None,
         v_out_labels: Union[list, dict] = None,
         v_extra_feats: Union[list, dict] = None,
+        v_seed_types: Union[str, list] = None,
         e_in_feats: Union[list, dict] = None,
         e_out_labels: Union[list, dict] = None,
         e_extra_feats: Union[list, dict] = None,
@@ -1412,6 +1427,10 @@ class GDS:
                 dict are vertex types to be selected, and values are lists of attributes to be 
                 selected for each vertex type. 
                 Numeric, boolean and string attributes are allowed. Defaults to None.
+            v_seed_types (str or list, optional):
+                Directly specify the vertex types to use as seeds. If not specified, defaults to
+                the vertex types used in filter_by. If not specified there, uses all vertex types.
+                Defaults to None.
             e_in_feats (list or dict, optional):
                 Edge attributes to be used as input features. 
                 If it is a list, then the attributes
@@ -1488,6 +1507,7 @@ class GDS:
                     "v_in_feats": v_in_feats,
                     "v_out_labels": v_out_labels,
                     "v_extra_feats": v_extra_feats,
+                    "v_seed_types": v_seed_types,
                     "e_in_feats": e_in_feats,
                     "e_out_labels": e_out_labels,
                     "e_extra_feats": e_extra_feats,
@@ -1519,6 +1539,7 @@ class GDS:
                 "v_in_feats": v_in_feats,
                 "v_out_labels": v_out_labels,
                 "v_extra_feats": v_extra_feats,
+                "v_seed_types": v_seed_types,
                 "e_in_feats": e_in_feats,
                 "e_out_labels": e_out_labels,
                 "e_extra_feats": e_extra_feats,
