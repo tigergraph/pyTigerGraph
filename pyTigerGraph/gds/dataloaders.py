@@ -8,9 +8,9 @@ Requires `querywriters` user permissions for full functionality.
 """
 
 import hashlib
-import io
 import json
 import logging
+import warnings
 import math
 import os
 from collections import defaultdict
@@ -43,7 +43,7 @@ from .utilities import install_query_file, random_string, add_attribute
 __all__ = ["VertexLoader", "EdgeLoader", "NeighborLoader", "GraphLoader", "EdgeNeighborLoader", "NodePieceLoader", "HGTLoader"]
 
 RANDOM_TOPIC_LEN = 8
-
+logger = logging.getLogger(__name__)
 
 class BaseLoader:
     """NO DOC: Base Dataloader Class."""
@@ -649,26 +649,34 @@ class BaseLoader:
                 in_q.task_done()
                 out_q.put(None)
                 break
-            data = BaseLoader._parse_data(
-                raw = raw,
-                in_format = in_format,
-                out_format = out_format,
-                v_in_feats = v_in_feats,
-                v_out_labels = v_out_labels,
-                v_extra_feats = v_extra_feats,
-                v_attr_types = v_attr_types,
-                e_in_feats = e_in_feats,
-                e_out_labels = e_out_labels,
-                e_extra_feats = e_extra_feats,
-                e_attr_types = e_attr_types,
-                add_self_loop = add_self_loop,
-                delimiter = delimiter,
-                reindex = reindex,
-                primary_id = {},
-                is_hetero = is_hetero,
-                callback_fn = callback_fn
-            )
-            out_q.put(data)
+            try:
+                data = BaseLoader._parse_data(
+                    raw = raw,
+                    in_format = in_format,
+                    out_format = out_format,
+                    v_in_feats = v_in_feats,
+                    v_out_labels = v_out_labels,
+                    v_extra_feats = v_extra_feats,
+                    v_attr_types = v_attr_types,
+                    e_in_feats = e_in_feats,
+                    e_out_labels = e_out_labels,
+                    e_extra_feats = e_extra_feats,
+                    e_attr_types = e_attr_types,
+                    add_self_loop = add_self_loop,
+                    delimiter = delimiter,
+                    reindex = reindex,
+                    primary_id = {},
+                    is_hetero = is_hetero,
+                    callback_fn = callback_fn
+                )
+                out_q.put(data)
+            except Exception as err:
+                warnings.warn("Error parsing a data batch. Set logging level to ERROR for details.")
+                logger.error(err, exc_info=True)
+                logger.error("Error parsing data: {}".format(raw))
+                logger.error("Parameters:\n  in_format={}\n  out_format={}\n  v_in_feats={}\n  v_out_labels={}\n  v_extra_feats={}\n  v_attr_types={}\n  e_in_feats={}\n  e_out_labels={}\n  e_extra_feats={}\n  e_attr_types={}\n  delimiter={}\n".format(
+                    in_format, out_format, v_in_feats, v_out_labels, v_extra_feats, v_attr_types, e_in_feats, e_out_labels, e_extra_feats, e_attr_types, delimiter))
+                
             in_q.task_done()
 
     @staticmethod
