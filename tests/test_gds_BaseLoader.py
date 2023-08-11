@@ -912,6 +912,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSBaseLoader("test_read_graph_out_df"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_out_df_callback"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_out_pyg"))
+    suite.addTest(TestGDSBaseLoader("test_read_graph_out_dgl"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_parse_error"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_no_attr"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_no_edge"))
