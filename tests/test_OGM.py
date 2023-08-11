@@ -3,7 +3,7 @@ from multiprocessing import Pool
 
 from pyTigerGraphUnitTest import make_connection
 from pyTigerGraph.schema import Graph, Vertex, Edge
-from typing import List, Dict
+from typing import List, Dict, Union
 from datetime import datetime
 from dataclasses import dataclass
 
@@ -68,6 +68,33 @@ class TestHomogeneousOGM(unittest.TestCase):
         g.commit_changes()
 
         self.assertIn("opened_on", g.edge_types["HOLDS_ACCOUNT"].attributes.keys())
+
+
+    def test_add_multi_target_edge_type(self):
+        g = Graph(self.conn)
+
+        @dataclass
+        class AccountHolder(Vertex):
+            name: str
+            address: str
+            accounts: List[str]
+            dob: datetime
+            some_map: Dict[str, int]
+            some_double: "DOUBLE"
+
+        @dataclass
+        class SOME_EDGE_NAME(Edge):
+            some_attr: str
+            from_vertex: Union[AccountHolder, g.vertex_types["Paper"]]
+            to_vertex: g.vertex_types["Paper"]
+            is_directed: bool = True
+            reverse_edge: bool = True
+
+        g.add_edge_type(SOME_EDGE_NAME)
+
+        g.commit_changes()
+
+        self.assertIn("some_attr", g.edge_types["SOME_EDGE_NAME"].attributes.keys())
     
     def test_drop_edge_type(self):
         g = Graph(self.conn)
@@ -77,6 +104,15 @@ class TestHomogeneousOGM(unittest.TestCase):
         g.commit_changes()
         
         self.assertNotIn("HOLDS_ACOUNT", g.edge_types)
+
+    def test_drop_multi_target_edge_type(self):
+        g = Graph(self.conn)
+
+        g.remove_edge_type(g.edge_types["SOME_EDGE_NAME"])
+
+        g.commit_changes()
+        
+        self.assertNotIn("SOME_EDGE_NAME", g.edge_types)
 
     def test_drop_vertex_type(self):
         g = Graph(self.conn)
