@@ -1,7 +1,7 @@
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 from pyTigerGraph.pyTigerGraph import TigerGraphConnection
 from dataclasses import dataclass, make_dataclass, fields, _MISSING_TYPE
-from typing import List, Dict, Union
+from typing import List, Dict, Union, get_origin, get_args
 from datetime import datetime
 import json
 import hashlib
@@ -235,15 +235,33 @@ class Graph():
                 self._vertex_types[v_type["Name"]] = vert
 
             for e_type in db_rep["EdgeTypes"]:
+                if e_type["FromVertexTypeName"] == "*":
+                    source_vertices = [self._vertex_types[x["From"]] for x in e_type["EdgePairs"]]
+                else:
+                    source_vertices = self._vertex_types[e_type["FromVertexTypeName"]]
+                if e_type["ToVertexTypeName"] == "*":
+                    target_vertices = [self._vertex_types[x["To"]] for x in e_type["EdgePairs"]]
+                else:
+                    target_vertices = self._vertex_types[e_type["ToVertexTypeName"]]
+                    
                 e = make_dataclass(e_type["Name"],
                                     [(attr["AttributeName"], _get_type(_parse_type(attr)), None) for attr in e_type["Attributes"]] + 
-                                    [("from_vertex", self._vertex_types[e_type["FromVertexTypeName"]], None),
-                                     ("to_vertex", self._vertex_types[e_type["ToVertexTypeName"]], None),
+                                    [("from_vertex", source_vertices, None),
+                                     ("to_vertex", target_vertices, None),
                                      ("is_directed", bool, e_type["IsDirected"]),
                                      ("reverse_edge", str, e_type["Config"].get("REVERSE_EDGE"))],
                                     bases=(Edge,), repr=False)
-                self._vertex_types[e_type["FromVertexTypeName"]].outgoing_edge_types[e_type["Name"]] = e
-                self._vertex_types[e_type["ToVertexTypeName"]].incoming_edge_types[e_type["Name"]] = e
+                if isinstance(target_vertices, list):
+                    for tgt_v in target_vertices:
+                        tgt_v.incoming_edge_types[e_type["Name"]] = e
+                else:
+                    target_vertices.incoming_edge_types[e_type["Name"]] = e
+                if isinstance(source_vertices, list):
+                    for src_v in source_vertices:
+                        src_v.outgoing_edge_types[e_type["Name"]] = e
+                else:
+                    source_vertices.outgoing_edge_types[e_type["Name"]] = e
+                
                 self._edge_types[e_type["Name"]] = e
             self.conn = conn
 
@@ -324,10 +342,36 @@ class Graph():
             gsql_def += "ADD DIRECTED EDGE "+edge.__name__+"("
         else:
             gsql_def += "ADD UNDIRECTED EDGE "+edge.__name__+"("
-        # TODO: Handle Unions for multiple vertex types given an edge type
-        from_vert = edge.attributes["from_vertex"].__name__
-        to_vert = edge.attributes["to_vertex"].__name__
-        gsql_def += "FROM "+from_vert+", "+"TO "+to_vert
+    
+        if not(get_origin(edge.attributes["from_vertex"]) is Union) and not(get_origin(edge.attributes["to_vertex"]) is Union):
+            from_vert = edge.attributes["from_vertex"].__name__
+            to_vert = edge.attributes["to_vertex"].__name__
+            gsql_def += "FROM "+from_vert+", "+"TO "+to_vert
+        elif get_origin(edge.attributes["from_vertex"]) is Union and not(get_origin(edge.attributes["to_vertex"]) is Union):
+            print(get_args(edge.attributes["from_vertex"]))
+            for v in get_args(edge.attributes["from_vertex"]):
+                from_vert = v.__name__
+                to_vert = edge.attributes["to_vertex"].__name__
+                gsql_def += "FROM "+from_vert+", "+"TO "+to_vert + "|"
+            gsql_def = gsql_def[:-1]
+        elif not(get_origin(edge.attributes["from_vertex"]) is Union) and get_origin(edge.attributes["to_vertex"]) is Union:
+            for v in get_args(edge.attributes["to_vertex"]):
+                from_vert = edge.attributes["from_vertex"].__name__
+                to_vert = v.__name__
+                gsql_def += "FROM "+from_vert+", "+"TO "+to_vert + "|"
+            gsql_def = gsql_def[:-1]
+        elif get_origin(edge.attributes["from_vertex"]) is Union and get_origin(edge.attributes["to_vertex"]) is Union:
+            if len(get_args(edge.attributes["from_vertex"])) != len(get_args(edge.attributes["to_vertex"])):
+                raise TigerGraphException("from_vertex and to_vertex list have different lengths.")
+            else:
+                for i in range(len(get_args(edge.attributes["from_vertex"]))):
+                    from_vert = get_args(edge.attributes["from_vertex"])[i].__name__
+                    to_vert = get_args(edge.attributes["to_vertex"])[i].__name__
+                    gsql_def += "FROM "+from_vert+", "+"TO "+to_vert + "|"
+                gsql_def = gsql_def[:-1]
+        else:
+            raise TigerGraphException("from_vertex and to_vertex parameters have to be of type Union[Vertex, Vertex, ...] or Vertex")
+
         if discriminator:
             if isinstance(discriminator, list):
                 gsql_def += ", DISCRIMINATOR("
