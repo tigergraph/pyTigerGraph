@@ -431,6 +431,41 @@ class TestGDSBaseLoader(unittest.TestCase):
         data = data_q.get()
         self.assertIsNone(data)
 
+    def test_read_graph_parse_error(self):
+        read_task_q = Queue()
+        data_q = Queue(4)
+        exit_event = Event()
+        raw = (
+            "99|1 0 0 1 |1|0|Alex\n8|1 0 0 1 |1|1|Bill|0\n",
+            "99|8|0.1|2021|1|0|a b \n8|99|1.5|2020|0|1|c d \n",
+        )
+        read_task_q.put(raw)
+        read_task_q.put(None)
+        self.loader._read_data(
+            exit_event,
+            read_task_q,
+            data_q,
+            "graph",
+            "dgl",
+            ["x"],
+            ["y"],
+            ["train_mask", "name", "is_seed"],
+            {
+                "x": "LIST:INT",
+                "y": "INT",
+                "train_mask": "BOOL",
+                "name": "STRING",
+                "is_seed": "BOOL",
+            },
+            ["x", "time"],
+            ["y"],
+            ["is_train", "category"],
+            {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL", "category": "LIST:STRING"},
+            delimiter="|"
+        )
+        data = data_q.get()
+        self.assertIsNone(data)
+
     def test_read_graph_no_attr(self):
         read_task_q = Queue()
         data_q = Queue(4)
@@ -878,6 +913,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSBaseLoader("test_read_graph_out_df_callback"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_out_pyg"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_out_dgl"))
+    suite.addTest(TestGDSBaseLoader("test_read_graph_parse_error"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_no_attr"))
     suite.addTest(TestGDSBaseLoader("test_read_graph_no_edge"))
     suite.addTest(TestGDSBaseLoader("test_read_hetero_graph_out_pyg"))
