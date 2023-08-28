@@ -1,3 +1,9 @@
+"""Object-Oriented Schema
+The Object-Oriented Schema functionality allows users to manipulate schema elements in the database in an object-oriented approach in Python.
+
+#TODO: EXAMPLES HERE
+"""
+
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 from pyTigerGraph.pyTigerGraph import TigerGraphConnection
 from dataclasses import dataclass, make_dataclass, fields, _MISSING_TYPE
@@ -14,6 +20,7 @@ COLLECTION_VALUE_TYPES = ["int", "double", "float", "string", "datetime", "udt"]
 MAP_KEY_TYPES = ["int", "string", "datetime"]
 
 def _parse_type(attr):
+    """NO DOC: function to parse gsql complex types"""
     collection_types = ""
     if attr["AttributeType"].get("ValueTypeName"):
         if attr["AttributeType"].get("KeyTypeName"):
@@ -24,6 +31,7 @@ def _parse_type(attr):
     return attr_type
 
 def _get_type(attr_type):
+    """NO DOC: function to convert GSQL type to Python type"""
     if attr_type == "STRING":
         return str
     elif attr_type == "INT":
@@ -47,6 +55,7 @@ def _get_type(attr_type):
 
 
 def _py_to_tg_type(attr_type):
+    """NO DOC: function to convert Python type to GSQL type"""
     if attr_type == str:
         return "STRING"
     elif attr_type == int:
@@ -85,6 +94,26 @@ def _py_to_tg_type(attr_type):
 
 @dataclass
 class Vertex(object):
+    """Vertex Object
+    
+    Abstract parent class for other types of vertices to be inherited from.
+    Contains class methods to edit the attributes associated with the vertex type.
+
+    For example, to define an AccountHolder vertex type, use:
+
+    ```py
+    @dataclass
+    class AccountHolder(Vertex):
+        name: str
+        address: str
+        accounts: List[str]
+        dob: datetime
+        some_map: Dict[str, int]
+        some_double: "DOUBLE"
+        primary_id: str = "name"
+        primary_id_as_attribute: bool = True
+    ```
+    """
     def __init_subclass__(cls):
         cls.incoming_edge_types = {}
         cls.outgoing_edge_types = {}
