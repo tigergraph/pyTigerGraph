@@ -1,8 +1,10 @@
 # pyTigerGraph
 
-pyTigerGraph is a Python package for connecting to TigerGraph databases. Check out the documentation [here](https://docs.tigergraph.com/pytigergraph/current/intro/)
+pyTigerGraph is a Python package for connecting to TigerGraph databases. Check out the documentation [here](https://docs.tigergraph.com/pytigergraph/current/intro/).
 
-[![Downloads](https://pepy.tech/badge/pytigergraph)](https://pepy.tech/project/pytigergraph) [![Downloads](https://pepy.tech/badge/pytigergraph/month)](https://pepy.tech/project/pytigergraph) [![Downloads](https://pepy.tech/badge/pytigergraph/week)](https://pepy.tech/project/pytigergraph)
+[![Downloads](https://static.pepy.tech/badge/pyTigergraph)](https://pepy.tech/project/pyTigergraph)
+[![Downloads](https://static.pepy.tech/badge/pyTigergraph/month)](https://pepy.tech/project/pyTigergraph)
+[![Downloads](https://static.pepy.tech/badge/pyTigergraph/week)](https://pepy.tech/project/pyTigergraph)
 
 ## Quickstart
 
