@@ -115,6 +115,7 @@ class Vertex(object):
     ```
     """
     def __init_subclass__(cls):
+        """NO DOC: placeholder for class variables"""
         cls.incoming_edge_types = {}
         cls.outgoing_edge_types = {}
         cls._attribute_edits = {"ADD": {}, "DELETE": {}}
@@ -123,6 +124,7 @@ class Vertex(object):
 
     @classmethod
     def _set_attr_edit(self, add:dict = None, delete:dict = None):
+        """NO DOC: internal updating function for attributes"""
         if add:
             self._attribute_edits["ADD"].update(add)
         if delete:
@@ -130,11 +132,23 @@ class Vertex(object):
 
     @classmethod
     def _get_attr_edit(self):
+        """NO DOC: get attribute edits internal function"""
         return self._attribute_edits
 
 
     @classmethod
-    def add_attribute(self, attribute_name, attribute_type, default_value = None):
+    def add_attribute(self, attribute_name:str, attribute_type, default_value = None):
+        """Function to add an attribute to the given vertex type.
+        
+        Args:
+            attribute_name (str):
+                The name of the attribute to add
+            attribute_type (Python type):
+                The Python type of the attribute to add. 
+                For types that are not supported in Python but are in GSQL, wrap them in quotes; e.g. "DOUBLE"
+            default_value (type of attribute, default None):
+                The desired default value of the attribute. Defaults to None.
+        """
         if attribute_name in self._get_attr_edit()["ADD"].keys():
             warnings.warn(attribute_name + " already in staged edits. Overwriting previous edits.")
         for attr in self.attributes:
@@ -152,6 +166,12 @@ class Vertex(object):
 
     @classmethod
     def remove_attribute(self, attribute_name):
+        """Function to remove an attribute from the given vertex type.
+
+        Args:
+            attribute_name (str):
+                The name of the attribute to remove from the vertex.
+        """
         if self.primary_id_as_attribute:
             if attribute_name == self.primary_id:
                 raise TigerGraphException("Cannot remove primary ID attribute: "+self.primary_id+".")
@@ -166,6 +186,7 @@ class Vertex(object):
     @classmethod
     @property
     def attributes(self):
+        """Class attribute to view the attributes and types of the vertex."""
         return self.__annotations__
 
     def __getattr__(self, attr):
@@ -182,7 +203,27 @@ class Vertex(object):
 
 @dataclass
 class Edge:
+    """Edge Object
+    
+    Abstract parent class for other types of edges to be inherited from.
+    Contains class methods to edit the attributes associated with the edge type.
+
+    For example, to define an HOLDS_ACCOUNT edge type, use:
+
+    ```py
+    @dataclass
+    class HOLDS_ACCOUNT(Edge):
+        opened_on: datetime
+        from_vertex: Union[AccountHolder, g.vertex_types["Account"]]
+        to_vertex: g.vertex_types["Account"]
+        is_directed: bool = True
+        reverse_edge: str = "ACCOUNT_HELD_BY"
+        discriminator: str = "opened_on"
+    ```
+    """
+
     def __init_subclass__(cls):
+        """NO DOC: placeholder for class variables"""
         cls._attribute_edits = {"ADD": {}, "DELETE": {}}
         cls.is_directed:bool
         cls.reverse_edge:Union[str, bool]
@@ -192,6 +233,7 @@ class Edge:
 
     @classmethod
     def _set_attr_edit(self, add:dict = None, delete:dict = None):
+        """NO DOC: function to edit attributes"""
         if add:
             self._attribute_edits["ADD"].update(add)
         if delete:
@@ -199,10 +241,22 @@ class Edge:
 
     @classmethod
     def _get_attr_edit(self):
+        """NO DOC: getter for attribute edits"""
         return self._attribute_edits
 
     @classmethod
     def add_attribute(self, attribute_name, attribute_type, default_value = None):
+        """Function to add an attribute to the given edge type.
+    
+        Args:
+            attribute_name (str):
+                The name of the attribute to add.
+            attribute_type (Python type):
+                The Python type of the attribute to add. 
+                For types that are not supported in Python but are in GSQL, wrap them in quotes; e.g. "DOUBLE"
+            default_value (type of attribute, default None):
+                The desired default value of the attribute. Defaults to None.
+        """
         if attribute_name in self._get_attr_edit()["ADD"].keys():
             warnings.warn(attribute_name + " already in staged edits. Overwriting previous edits.")
         for attr in self.attributes:
@@ -220,6 +274,12 @@ class Edge:
 
     @classmethod
     def remove_attribute(self, attribute_name):
+        """Function to remove an attribute from the given edge type.
+
+        Args:
+            attribute_name (str):
+                The name of the attribute to remove from the edge.
+        """
         removed = False
         for attr in self.attributes:
             if attr == attribute_name:
@@ -231,6 +291,7 @@ class Edge:
     @classmethod
     @property
     def attributes(self):
+        """Class attribute to view the attributes and types of the vertex."""
         return self.__annotations__
 
     def __getattr__(self, attr):
@@ -246,7 +307,25 @@ class Edge:
         return self.edge_type
 
 class Graph():
+    """Graph Object
+
+    The graph object can be used in conjunction with a TigerGraphConnection to retrieve the schema of the connected graph.
+    Serves as the way to collect the definitions of Vertex and Edge types.
+
+    To instantiate the graph object with a connection to an existing graph, use:
+    ```py
+    from pyTigerGraph.schema import Graph
+
+    g = Graph(conn)
+    ```
+    """
     def __init__(self, conn:TigerGraphConnection = None):
+        """Graph class for schema representation.
+
+        Args:
+            conn (TigerGraphConnection, optional):
+                Connection to a TigerGraph database. Defaults to None.
+        """
         self._vertex_types = {}
         self._edge_types = {}
         self._vertex_edits = {"ADD": {}, "DELETE": {}}
@@ -295,6 +374,15 @@ class Graph():
             self.conn = conn
 
     def add_vertex_type(self, vertex: Vertex, outdegree_stats=True):
+        """Add a vertex type to the list of changes to commit to the graph.
+
+        Args:
+            vertex (Vertex):
+                The vertex type definition to add to the addition cache.
+            outdegree_stats (bool, optional):
+                Whether or not to include "WITH OUTEGREE_STATS=TRUE" in the schema definition.
+                Used for caching outdegree, defaults to True.
+        """
         if vertex.__name__ in self._vertex_types.keys():
             raise TigerGraphException(vertex.__name__+" already exists in the database")
         if vertex.__name__ in self._vertex_edits.keys():
@@ -338,6 +426,12 @@ class Graph():
         self._vertex_edits["ADD"][vertex.__name__] = gsql_def
 
     def add_edge_type(self, edge: Edge):
+        """Add an edge type to the list of changes to commit to the graph.
+
+        Args:
+            edge (Edge):
+                The edge type definition to add to the addition cache.
+        """
         if edge in self._edge_types.values():
             raise TigerGraphException(edge.__name__+" already exists in the database")
         if edge in self._edge_edits.values():
@@ -430,14 +524,32 @@ class Graph():
         self._edge_edits["ADD"][edge.__name__] = gsql_def
 
     def remove_vertex_type(self, vertex: Vertex):
+        """Add a vertex type to the list of changes to remove from the graph.
+
+        Args:
+            vertex (Vertex):
+                The vertex type definition to add to the removal cache.
+        """
         gsql_def = "DROP VERTEX "+vertex.__name__+";"
         self._vertex_edits["DELETE"][vertex.__name__] = gsql_def
 
     def remove_edge_type(self, edge: Edge):
+        """Add an edge type to the list of changes to remove from the graph.
+
+        Args:
+            edge (Edge):
+                The edge type definition to add to the removal cache.
+        """
         gsql_def = "DROP EDGE "+edge.__name__+";"
         self._edge_edits["DELETE"][edge.__name__] = gsql_def
 
     def commit_changes(self, conn: TigerGraphConnection = None):
+        """Commit schema changes to the graph.
+        Args:
+            conn (TigerGraphConnection, optional):
+                Connection to the database to edit the schema of.
+                Not required if the Graph was instantiated with a connection object.        
+        """
         if not(conn):
             if self.conn:
                 conn = self.conn
@@ -478,8 +590,10 @@ class Graph():
 
     @property
     def vertex_types(self):
+        """Vertex types property."""
         return self._vertex_types
 
     @property
     def edge_types(self):
+        """Edge types property."""
         return self._edge_types
