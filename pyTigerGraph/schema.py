@@ -1,7 +1,78 @@
 """Object-Oriented Schema
 The Object-Oriented Schema functionality allows users to manipulate schema elements in the database in an object-oriented approach in Python.
 
-#TODO: EXAMPLES HERE
+To add an AccountHolder vertex and a HOLDS_ACCOUNT edge to the Ethereum dataset, simply:
+
+```
+from pyTigerGraph import TigerGraphConnection
+from pyTigerGraph.schema import Graph, Vertex, Edge
+
+from datetime import datetime
+from typing import List, Dict, Optional, Union
+from dataclasses import dataclass, fields
+
+conn = TigerGraphConnection(host="http://YOUR_HOSTNAME_HERE", graphname="Ethereum")
+
+g = Graph(conn)
+
+
+@dataclass
+class AccountHolder(Vertex):
+    name: str
+    address: str
+    accounts: List[str]
+    dob: datetime
+    some_map: Dict[str, int]
+    some_double: "DOUBLE"
+    primary_id: str = "name"
+    primary_id_as_attribute: bool = True
+
+@dataclass
+class HOLDS_ACCOUNT(Edge):
+    opened_on: datetime
+    from_vertex: Union[AccountHolder, g.vertex_types["Account"]]
+    to_vertex: g.vertex_types["Account"]
+    is_directed: bool = True
+    reverse_edge: str = "ACCOUNT_HELD_BY"
+    discriminator: str = "opened_on"
+
+g.add_vertex_type(AccountHolder)
+
+g.add_edge_type(HOLDS_ACCOUNT)
+
+g.commit_changes()
+```
+
+One could also define the entire graph schema using the approach. For example, for the Cora dataset, the schema would look something like this:
+
+```
+from pyTigerGraph import TigerGraphConnection
+from pyTigerGraph.schema import Graph, Vertex, Edge
+
+conn = TigerGraphConnection("http://YOUR_HOSTNAME_HERE")
+
+g = Graph()
+
+@dataclass
+class Paper(Vertex):
+    id: int
+    y: int
+    x: List[int]
+    primary_id: str = "id"
+    primary_id_as_attribute: bool = True
+
+@dataclass
+class CITES(Edge):
+    from_vertex: Paper
+    to_vertex: Paper
+    is_directed: bool = True
+    reverse_edge: str = "R_CITES"
+
+g.add_vertex_type(Paper)
+g.add_edge_type(CITES)
+
+g.commit_changes(conn)
+```
 """
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
@@ -99,9 +170,11 @@ class Vertex(object):
     Abstract parent class for other types of vertices to be inherited from.
     Contains class methods to edit the attributes associated with the vertex type.
 
+    When defining new vertex types, make sure to include the `primary_id` and `primary_id_as_attribute` class attributes, as these are necessary to define the vertex in TigerGraph.
+
     For example, to define an AccountHolder vertex type, use:
 
-    ```py
+    ```
     @dataclass
     class AccountHolder(Vertex):
         name: str
@@ -208,9 +281,11 @@ class Edge:
     Abstract parent class for other types of edges to be inherited from.
     Contains class methods to edit the attributes associated with the edge type.
 
+    When defining new vertex types, make sure to include the required `from_vertex`, `to_vertex`, `reverse_edge`, `is_directed` attributes and optionally the `discriminator` attribute, as these are necessary to define the vertex in TigerGraph.
+
     For example, to define an HOLDS_ACCOUNT edge type, use:
 
-    ```py
+    ```
     @dataclass
     class HOLDS_ACCOUNT(Edge):
         opened_on: datetime
@@ -313,7 +388,7 @@ class Graph():
     Serves as the way to collect the definitions of Vertex and Edge types.
 
     To instantiate the graph object with a connection to an existing graph, use:
-    ```py
+    ```
     from pyTigerGraph.schema import Graph
 
     g = Graph(conn)
