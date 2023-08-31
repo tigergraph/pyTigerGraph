@@ -24,7 +24,7 @@ class AccountHolder(Vertex):
     dob: datetime
     some_map: Dict[str, int]
     some_double: "DOUBLE"
-    primary_id: str = "name"
+    primary_id: str = "name"  # always of type string, corresponds to the desired primary ID attribute.
     primary_id_as_attribute: bool = True
 
 @dataclass
