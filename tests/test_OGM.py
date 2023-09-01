@@ -168,7 +168,41 @@ class TestHeterogeneousOGM(unittest.TestCase):
         g = Graph(self.conn)
         incoming_edge_types = g.vertex_types["v0"].incoming_edge_types
         self.assertEqual(incoming_edge_types, {"v0v0": g.edge_types["v0v0"],
-                                               "v2v0": g.edge_types["v2v0"]})        
+                                               "v2v0": g.edge_types["v2v0"]})
+
+
+class TestCreateGraph(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.conn = make_connection()
+
+    def test_create(self):
+        self.conn.graphname = "Cora2"
+        g = Graph()
+
+        @dataclass
+        class Paper(Vertex):
+            id: int
+            y: int
+            x: List[int]
+            primary_id: str = "id"
+            primary_id_as_attribute: bool = True
+
+        @dataclass
+        class CITES(Edge):
+            from_vertex: Paper
+            to_vertex: Paper
+            is_directed: bool = True
+            reverse_edge: str = "R_CITES"
+
+        g.add_vertex_type(Paper)
+        g.add_edge_type(CITES)
+
+        g.commit_changes(self.conn)
+
+        self.assertIn("id", g.vertex_types["Paper"].attributes.keys())
+
+        self.conn.gsql("DROP GRAPH Cora2")
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()

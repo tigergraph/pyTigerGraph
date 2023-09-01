@@ -414,6 +414,8 @@ class Graph():
                 conn = self.conn
             else:
                 raise TigerGraphException("No Connection Defined. Please instantiate a TigerGraphConnection to the database to commit the schema.")
+        if "does not exist." in conn.gsql("USE GRAPH "+conn.graphname):
+            conn.gsql("CREATE GRAPH "+conn.graphname+"()")
         all_attr = [x._attribute_edits for x in list(self._vertex_types.values()) + list(self._edge_types.values())]
         for elem in list(self._vertex_types.values()) + list(self._edge_types.values()): # need to remove the changes locally
             elem._attribute_edits = {"ADD": {}, "DELETE": {}}
