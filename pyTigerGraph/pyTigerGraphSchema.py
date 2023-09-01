@@ -84,6 +84,8 @@ class pyTigerGraphSchema(pyTigerGraphBase):
             val = attributes[attr]
             if isinstance(val, tuple):
                 vals[attr] = {"value": val[0], "op": val[1]}
+            elif isinstance(val, dict):
+                vals[attr] = {"value": {"keyList": list(val.keys()), "valueList": list(val.values())}}
             else:
                 vals[attr] = {"value": val}
 
