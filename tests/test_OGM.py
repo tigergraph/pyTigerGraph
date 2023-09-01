@@ -218,5 +218,6 @@ if __name__ == "__main__":
     suite.addTest(TestHeterogeneousOGM("test_type"))
     suite.addTest(TestHeterogeneousOGM("test_outgoing_edge_types"))
     suite.addTest(TestHeterogeneousOGM("test_incoming_edge_types"))
+    suite.addTest(TestCreateGraph("test_create"))
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)
