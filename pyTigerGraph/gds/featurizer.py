@@ -238,6 +238,7 @@ class Featurizer:
         replace: dict = None,
         force: bool = False,
         global_change: bool = False,
+        distributed_mode: bool = False
     ) -> str:
         """
         Reads the first line of the query file to get the query name, e.g, CREATE QUERY query_name ...
@@ -250,6 +251,8 @@ class Featurizer:
             global_change (bool):
                 False by default. Set to true if you want to run `GLOBAL SCHEMA_CHANGE JOB`. For Algorithms that are not schema free we need to specify this argument.
                 See https://docs.tigergraph.com/gsql-ref/current/ddl-and-loading/modifying-a-graph-schema#_global_vs_local_schema_changes.
+            distributed_mode (bool):
+                False by default. Set to true if DISTRIBUTED algorithm execution is desired.
 
         Return:
             Name of the installed query
@@ -305,7 +308,8 @@ class Featurizer:
                 attr_name="embedding",
                 global_change=global_change,
             )
-        # TODO: Check if Distributed query is needed.
+        if distributed_mode:
+            query.replace("CREATE QUERY", "CREATE DISTRIBUTED QUERY")
         query = (
             "USE GRAPH {}\n".format(self.conn.graphname)
             + query
@@ -323,7 +327,8 @@ class Featurizer:
         return query_name
 
     def installAlgorithm(
-        self, query_name: str, query_path: str = None, global_change: bool = False
+        self, query_name: str, query_path: str = None, global_change: bool = False,
+        distributed_query: bool = False
     ) -> str:
         """
         Checks if the query is already installed.
@@ -332,19 +337,21 @@ class Featurizer:
         Args:
             query_name (str):
                 The name of query to be installed.
-            query_path (str):
+            query_path (str, optional):
                 If using a custom query, the path to the `.gsql` file that contains the query.
                 Note: you must have the `query_name` parameter match the name of the query in the file.
-            global_change (bool):
+            global_change (bool, optional):
                 False by default. Set to true if you want to run `GLOBAL SCHEMA_CHANGE JOB`. For algorithms that are not schema free we need to specify this argument.
                 See https://docs.tigergraph.com/gsql-ref/current/ddl-and-loading/modifying-a-graph-schema#_global_vs_local_schema_changes.
+            distributed_query (bool, optional):
+                False by default. 
         Returns:
             String of query name installed.
         """
         # If a query file is given, install it directly.
         if query_path:
             self.query_name = self._install_query_file(
-                query_path, global_change=global_change
+                query_path, global_change=global_change, distributed_mode=distributed_query
             )
             return self.query_name
         # Else, install query by name from the repo.
@@ -358,7 +365,7 @@ class Featurizer:
         if query_name not in self.algo_paths:
             raise ValueError("Cannot find {} in the library.".format(query_name))
         for query in self.algo_paths[query_name]:
-            _ = self._install_query_file(query, global_change=global_change)
+            _ = self._install_query_file(query, global_change=global_change, distributed_mode=distributed_query)
         self.query_name = query_name
         return self.query_name
 
@@ -505,6 +512,7 @@ class Featurizer:
         timeout: int = 2147480,
         sizeLimit: int = None,
         templateQuery: bool = False,
+        distributed_query: bool = False
     ) -> Any:
         """
         Runs a TigerGraph Graph Data Science Algorithm. If a built-in algorithm is not installed, it will automatically install before execution.
@@ -548,6 +556,8 @@ class Featurizer:
                 Whether to call packaged template query. See https://docs.tigergraph.com/graph-ml/current/using-an-algorithm/#_packaged_template_queries for more details.
                 Note that currently not every algorithm supports template query. More will be added in the future.
                 Default: False.
+            distributed_query (bool, optional):
+                Whether to run the query in distributed mode. Defaults to False.
 
         Returns:
             The output of the query, a list of output elements (vertex sets, edge sets, variables,
@@ -626,7 +636,7 @@ class Featurizer:
                 raise ValueError(
                     "Please run installAlgorithm() to install this custom query first."
                 )
-            self.installAlgorithm(query_name, global_change=global_schema)
+            self.installAlgorithm(query_name, global_change=global_schema, distributed_query=distributed_query)
 
         # Check query parameters for built-in queries.
         if not custom_query:
