@@ -43,7 +43,7 @@ g.add_edge_type(HOLDS_ACCOUNT)
 g.commit_changes()
 ```
 
-One could also define the entire graph schema using the approach. For example, for the Cora dataset, the schema would look something like this:
+Users can define an entire graph schema in the approach below. Using the Cora dataset example, the schema would look something like this:
 
 ```
 from pyTigerGraph import TigerGraphConnection

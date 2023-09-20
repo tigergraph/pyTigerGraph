@@ -46,7 +46,7 @@ class Datasets(BaseDataset):
         Please see https://tigergraph-public-data.s3.us-west-1.amazonaws.com/inventory.json[this link]
         for datasets that are currently available. The files for the dataset with `name` will be
         downloaded to local `tmp_dir` automatically when this class is instantiated. 
-        For offline environments, download the desired tar manually from the invenetory page, and extract in the desired location.
+        For offline environments, download the desired .tar manually from the inventory page, and extract in the desired location.
         Specify the `tmp_dir` parameter to point to where the unzipped directory resides.
 
 
