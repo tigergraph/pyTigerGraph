@@ -42,7 +42,6 @@ setup(
     download_url='',
     keywords=['TigerGraph', 'Graph Database', 'Data Science', 'Machine Learning'],
     install_requires=[
-        'pyTigerDriver',
         'validators',
         'requests'],
     classifiers=[
