@@ -146,12 +146,10 @@ class TestGDSBaseLoader(unittest.TestCase):
         raw = "99|1 0 0 1 |1|0|1\n8|1 0 0 1 |1|1|1\n"
         read_task_q.put(raw)
         read_task_q.put(None)
-        self.loader._read_data(
+        self.loader._read_vertex_data(
             exit_event,
             read_task_q,
             data_q,
-            "vertex",
-            "dataframe",
             ["x"],
             ["y"],
             ["train_mask", "is_seed"],
@@ -176,12 +174,10 @@ class TestGDSBaseLoader(unittest.TestCase):
         raw = "99|1 0 0 1 |1|0|1\n8|1 0 0 1 |1|1|1\n"
         read_task_q.put(raw)
         read_task_q.put(None)
-        self.loader._read_data(
+        self.loader._read_vertex_data(
             exit_event,
             read_task_q,
             data_q,
-            "vertex",
-            "dataframe",
             ["x"],
             ["y"],
             ["train_mask", "is_seed"],
@@ -199,16 +195,10 @@ class TestGDSBaseLoader(unittest.TestCase):
         raw = "1|2|0.1|2021|1|0\n2|1|1.5|2020|0|1\n"
         read_task_q.put(raw)
         read_task_q.put(None)
-        self.loader._read_data(
+        self.loader._read_edge_data(
             exit_event,
             read_task_q,
             data_q,
-            "edge",
-            "dataframe",
-            [],
-            [],
-            [],
-            {},
             ["x", "time"],
             ["y"],
             ["is_train"],
@@ -233,16 +223,10 @@ class TestGDSBaseLoader(unittest.TestCase):
         raw = "1|2|0.1|2021|1|0\n2|1|1.5|2020|0|1\n"
         read_task_q.put(raw)
         read_task_q.put(None)
-        self.loader._read_data(
+        self.loader._read_edge_data(
             exit_event,
             read_task_q,
             data_q,
-            "edge",
-            "dataframe",
-            [],
-            [],
-            [],
-            {},
             ["x", "time"],
             ["y"],
             ["is_train"],
@@ -264,11 +248,10 @@ class TestGDSBaseLoader(unittest.TestCase):
         )
         read_task_q.put(raw)
         read_task_q.put(None)
-        self.loader._read_data(
+        self.loader._read_graph_data(
             exit_event,
             read_task_q,
             data_q,
-            "graph",
             "dataframe",
             ["x"],
             ["y"],
@@ -309,11 +292,10 @@ class TestGDSBaseLoader(unittest.TestCase):
         )
         read_task_q.put(raw)
         read_task_q.put(None)
-        self.loader._read_data(
+        self.loader._read_graph_data(
             exit_event,
             read_task_q,
             data_q,
-            "graph",
             "dataframe",
             ["x"],
             ["y"],
@@ -341,11 +323,10 @@ class TestGDSBaseLoader(unittest.TestCase):
         )
         read_task_q.put(raw)
         read_task_q.put(None)
-        self.loader._read_data(
+        self.loader._read_graph_data(
             exit_event,
             read_task_q,
             data_q,
-            "graph",
             "pyg",
             ["x"],
             ["y"],
@@ -391,11 +372,10 @@ class TestGDSBaseLoader(unittest.TestCase):
         )
         read_task_q.put(raw)
         read_task_q.put(None)
-        self.loader._read_data(
+        self.loader._read_graph_data(
             exit_event,
             read_task_q,
             data_q,
-            "graph",
             "dgl",
             ["x"],
             ["y"],
@@ -441,11 +421,10 @@ class TestGDSBaseLoader(unittest.TestCase):
         )
         read_task_q.put(raw)
         read_task_q.put(None)
-        self.loader._read_data(
+        self.loader._read_graph_data(
             exit_event,
             read_task_q,
             data_q,
-            "graph",
             "dgl",
             ["x"],
             ["y"],
@@ -473,11 +452,10 @@ class TestGDSBaseLoader(unittest.TestCase):
         raw = ("99|1\n8|0\n", "99|8\n8|99\n")
         read_task_q.put(raw)
         read_task_q.put(None)
-        self.loader._read_data(
+        self.loader._read_graph_data(
             exit_event,
             read_task_q,
             data_q,
-            "graph",
             "pyg",
             [],
             [],
@@ -512,11 +490,10 @@ class TestGDSBaseLoader(unittest.TestCase):
         )
         read_task_q.put(raw)
         read_task_q.put(None)
-        self.loader._read_data(
+        self.loader._read_graph_data(
             exit_event,
             read_task_q,
             data_q,
-            "graph",
             "pyg",
             ["x"],
             ["y"],
@@ -558,11 +535,10 @@ class TestGDSBaseLoader(unittest.TestCase):
         )
         read_task_q.put(raw)
         read_task_q.put(None)
-        self.loader._read_data(
+        self.loader._read_graph_data(
             exit_event,
             read_task_q,
             data_q,
-            "graph",
             "pyg",
             {"People": ["x"], "Company": ["x"]},
             {"People": ["y"]},
@@ -639,11 +615,10 @@ class TestGDSBaseLoader(unittest.TestCase):
         )
         read_task_q.put(raw)
         read_task_q.put(None)
-        self.loader._read_data(
+        self.loader._read_graph_data(
             exit_event,
             read_task_q,
             data_q,
-            "graph",
             "pyg",
             {"People": [], "Company": []},
             {"People": [], "Company": []},
@@ -705,11 +680,10 @@ class TestGDSBaseLoader(unittest.TestCase):
         )
         read_task_q.put(raw)
         read_task_q.put(None)
-        self.loader._read_data(
+        self.loader._read_graph_data(
             exit_event,
             read_task_q,
             data_q,
-            "graph",
             "pyg",
             {"People": ["x"], "Company": ["x"]},
             {"People": ["y"]},
@@ -776,11 +750,10 @@ class TestGDSBaseLoader(unittest.TestCase):
         )
         read_task_q.put(raw)
         read_task_q.put(None)
-        self.loader._read_data(
+        self.loader._read_graph_data(
             exit_event,
             read_task_q,
             data_q,
-            "graph",
             "dgl",
             {"People": ["x"], "Company": ["x"]},
             {"People": ["y"]},
@@ -859,11 +832,10 @@ class TestGDSBaseLoader(unittest.TestCase):
         )
         read_task_q.put(raw)
         read_task_q.put(None)
-        self.loader._read_data(
+        self.loader._read_graph_data(
             exit_event,
             read_task_q,
             data_q,
-            "graph",
             "pyg",
             ["x"],
             ["y"],
