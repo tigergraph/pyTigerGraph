@@ -728,7 +728,22 @@ class BaseLoader:
                     primary_id = {},
                     is_hetero = is_hetero,
                 )
-                if out_format == "pyg":
+                if out_format == "dataframe" or out_format == "df":
+                    vertices, edges = data
+                    if not is_hetero:
+                        for column in vertices.columns:
+                            vertices[column] = pd.to_numeric(vertices[column], errors="ignore")
+                        for column in edges.columns:
+                            edges[column] = pd.to_numeric(edges[column], errors="ignore")
+                    else:
+                        for key in vertices:
+                            for column in vertices[key].columns:
+                                vertices[key][column] = pd.to_numeric(vertices[key][column], errors="ignore")
+                        for key in edges:
+                            for column in edges[key].columns:
+                                edges[key][column] = pd.to_numeric(edges[key][column], errors="ignore")
+                    data = (vertices, edges)
+                elif out_format == "pyg":
                     data = BaseLoader._parse_df_to_pyg(
                         raw = data,
                         v_in_feats = v_in_feats,
@@ -779,8 +794,6 @@ class BaseLoader:
                         scipy = scipy,
                         spektral = spektral
                    )
-                elif out_format == "dataframe" or out_format == "df":
-                    pass
                 else:
                     raise NotImplementedError
                 if callback_fn:
@@ -822,6 +835,13 @@ class BaseLoader:
                     delimiter = delimiter,
                     is_hetero = is_hetero
                 )
+                if not is_hetero:
+                    for column in data.columns:
+                        data[column] = pd.to_numeric(data[column], errors="ignore")
+                else:
+                    for key in data:
+                        for column in data[key].columns:
+                            data[key][column] = pd.to_numeric(data[key][column], errors="ignore")
                 if callback_fn:
                     data = callback_fn(data)
                 out_q.put(data)
@@ -861,6 +881,13 @@ class BaseLoader:
                     delimiter = delimiter,
                     is_hetero = is_hetero
                 )
+                if not is_hetero:
+                    for column in data.columns:
+                        data[column] = pd.to_numeric(data[column], errors="ignore")
+                else:
+                    for key in data:
+                        for column in data[key].columns:
+                            data[key][column] = pd.to_numeric(data[key][column], errors="ignore")
                 if callback_fn:
                     data = callback_fn(data)
                 out_q.put(data)
@@ -888,10 +915,8 @@ class BaseLoader:
             # String of vertices in format vid,v_in_feats,v_out_labels,v_extra_feats
             v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
             v_file = (line.strip().split(delimiter) for line in raw.splitlines())
-            data = pd.DataFrame(v_file, columns=v_attributes)
-            for column in data.columns:
-                data[column] = pd.to_numeric(data[column], errors="ignore")
-            for v_attr in v_attributes:
+            data = pd.DataFrame(v_file, columns=v_attributes, dtype="object")
+            for v_attr in v_extra_feats:
                 if v_attr_types.get(v_attr, "") == "MAP":
                     # I am sorry that this is this ugly...
                     data[v_attr] = data[v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
@@ -901,18 +926,17 @@ class BaseLoader:
             v_file_dict = defaultdict(list)
             for line in v_file:
                 v_file_dict[line[0]].append(line[1:])
-            vertices = {}
+            data = {}
             for vtype in v_file_dict:
                 v_attributes = ["vid"] + \
                                 v_in_feats.get(vtype, []) + \
                                 v_out_labels.get(vtype, []) + \
                                 v_extra_feats.get(vtype, [])
-                vertices[vtype] = pd.DataFrame(v_file_dict[vtype], columns=v_attributes)
+                data[vtype] = pd.DataFrame(v_file_dict[vtype], columns=v_attributes, dtype="object")
                 for v_attr in v_extra_feats.get(vtype, []):
                     if v_attr_types[vtype][v_attr] == "MAP":
                         # I am sorry that this is this ugly...
-                        vertices[vtype][v_attr] = vertices[vtype][v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
-            data = vertices
+                        data[vtype][v_attr] = data[vtype][v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
         return data
 
     @staticmethod
@@ -934,10 +958,8 @@ class BaseLoader:
             #file = "\n".join(x for x in raw.split("\n") if x.strip())
             #data = pd.read_table(io.StringIO(file), header=None, names=e_attributes, sep=delimiter)
             e_file = (line.strip().split(delimiter) for line in raw.splitlines())
-            data = pd.DataFrame(e_file, columns=e_attributes)
-            for column in data.columns:
-                data[column] = pd.to_numeric(data[column], errors="ignore")
-            for e_attr in e_attributes:
+            data = pd.DataFrame(e_file, columns=e_attributes, dtype="object")
+            for e_attr in e_extra_feats:
                 if e_attr_types.get(e_attr, "") == "MAP":
                     # I am sorry that this is this ugly...
                     data[e_attr] = data[e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
@@ -947,20 +969,17 @@ class BaseLoader:
             e_file_dict = defaultdict(list)
             for line in e_file:
                 e_file_dict[line[0]].append(line[1:])
-            edges = {}
+            data = {}
             for etype in e_file_dict:
                 e_attributes = ["source", "target"] + \
                                 e_in_feats.get(etype, []) + \
                                 e_out_labels.get(etype, [])  + \
                                 e_extra_feats.get(etype, [])
-                edges[etype] = pd.DataFrame(e_file_dict[etype], columns=e_attributes)
+                data[etype] = pd.DataFrame(e_file_dict[etype], columns=e_attributes, dtype="object")
                 for e_attr in e_extra_feats.get(etype, []):
                     if e_attr_types[etype][e_attr] == "MAP":
                         # I am sorry that this is this ugly...
-                        edges[etype][e_attr] = edges[etype][e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
-            del e_file_dict, e_file
-            data = edges
-       
+                        data[etype][e_attr] = data[etype][e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})   
         return data
 
     @staticmethod
@@ -983,65 +1002,33 @@ class BaseLoader:
         # Read in vertex and edge CSVs as dataframes              
         # A pair of in-memory CSVs (vertex, edge)
         v_file, e_file = raw
-        if not is_hetero:
-            v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
-            e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
-            v_file = (line.split(delimiter) for line in v_file.splitlines())
-            vertices = pd.DataFrame(v_file, columns=v_attributes)
-            for column in vertices.columns:
-                vertices[column] = pd.to_numeric(vertices[column], errors="ignore")
-            for v_attr in v_extra_feats:
-                if v_attr_types[v_attr] == "MAP":
-                    # I am sorry that this is this ugly...
-                    vertices[v_attr] = vertices[v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
-            if primary_id:
-                id_map = pd.DataFrame({"vid": primary_id.keys(), "primary_id": primary_id.values()})
-                vertices = vertices.merge(id_map.astype({"vid": vertices["vid"].dtype}), on="vid")
+        vertices = BaseLoader._parse_vertex_data(
+            raw = v_file,
+            v_in_feats = v_in_feats,
+            v_out_labels = v_out_labels,
+            v_extra_feats = v_extra_feats,
+            v_attr_types = v_attr_types,
+            delimiter = delimiter,
+            is_hetero = is_hetero)
+        if primary_id:
+            id_map = pd.DataFrame({"vid": primary_id.keys(), "primary_id": primary_id.values()}, 
+                                  dtype="object")
+            if not is_hetero:
+                vertices = vertices.merge(id_map, on="vid")
                 v_extra_feats.append("primary_id")
-            e_file = (line.split(delimiter) for line in e_file.splitlines())
-            edges = pd.DataFrame(e_file, columns=e_attributes)
-            for column in edges.columns:
-                edges[column] = pd.to_numeric(edges[column], errors="ignore")
-            for e_attr in e_attributes:
-                if e_attr_types.get(e_attr, "") == "MAP":
-                    # I am sorry that this is this ugly...
-                    edges[e_attr] = edges[e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
-        else:
-            v_file = (line.split(delimiter) for line in v_file.splitlines())
-            v_file_dict = defaultdict(list)
-            for line in v_file:
-                v_file_dict[line[0]].append(line[1:])
-            vertices = {}
-            for vtype in v_file_dict:
-                v_attributes = ["vid"] + \
-                                v_in_feats.get(vtype, []) + \
-                                v_out_labels.get(vtype, []) + \
-                                v_extra_feats.get(vtype, [])
-                vertices[vtype] = pd.DataFrame(v_file_dict[vtype], columns=v_attributes, dtype="object")
-                for v_attr in v_extra_feats.get(vtype, []):
-                    if v_attr_types[vtype][v_attr] == "MAP":
-                        # I am sorry that this is this ugly...
-                        vertices[vtype][v_attr] = vertices[vtype][v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
-            if primary_id:
-                id_map = pd.DataFrame({"vid": primary_id.keys(), "primary_id": primary_id.values()},
-                                        dtype="object")
+            else:
                 for vtype in vertices:
                     vertices[vtype] = vertices[vtype].merge(id_map, on="vid")
-            e_file = (line.split(delimiter) for line in e_file.splitlines())
-            e_file_dict = defaultdict(list)
-            for line in e_file:
-                e_file_dict[line[0]].append(line[1:])
-            edges = {}
-            for etype in e_file_dict:
-                e_attributes = ["source", "target"] + \
-                                e_in_feats.get(etype, []) + \
-                                e_out_labels.get(etype, [])  + \
-                                e_extra_feats.get(etype, [])
-                edges[etype] = pd.DataFrame(e_file_dict[etype], columns=e_attributes, dtype="object")
-                for e_attr in e_extra_feats.get(etype, []):
-                    if e_attr_types[etype][e_attr] == "MAP":
-                        # I am sorry that this is this ugly...
-                        edges[etype][e_attr] = edges[etype][e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
+                    v_extra_feats[vtype].append("primary_id")
+        edges = BaseLoader._parse_edge_data(
+            raw = e_file,
+            e_in_feats = e_in_feats,
+            e_out_labels = e_out_labels,
+            e_extra_feats = e_extra_feats,
+            e_attr_types = e_attr_types,
+            delimiter = delimiter,
+            is_hetero = is_hetero
+        )      
         return (vertices, edges)
 
     @staticmethod
