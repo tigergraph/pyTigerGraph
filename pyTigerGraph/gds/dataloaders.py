@@ -18,6 +18,7 @@ from queue import Empty, Queue
 from threading import Event, Thread
 from time import sleep
 import pickle
+import random
 from typing import TYPE_CHECKING, Any, Iterator, NoReturn, Tuple, Union, Callable, List, Dict
 #import re
 
@@ -562,7 +563,6 @@ class BaseLoader:
         # Put raw data into reading queue
         for i in resp:
             read_task_q.put((i["vertex_batch"], i["edge_batch"]))
-        read_task_q.put(None)
 
     @staticmethod
     def _request_unimode_rest(
@@ -579,7 +579,6 @@ class BaseLoader:
         # Put raw data into reading queue
         for i in resp:
             read_task_q.put(i["data_batch"])
-        read_task_q.put(None)
 
     @staticmethod
     def _download_graph_kafka(
@@ -622,7 +621,6 @@ class BaseLoader:
                         raise ValueError(
                             "Unrecognized key {} for messages in kafka".format(key)
                         )
-        read_task_q.put(None)
 
     def _download_unimode_kafka(
         exit_event: Event,
@@ -642,13 +640,14 @@ class BaseLoader:
                 for message in msgs:
                     read_task_q.put(message.value.decode("utf-8"))
                     delivered_batch += 1
-        read_task_q.put(None)
 
     @staticmethod
     def _read_graph_data(
         exit_event: Event,
         in_q: Queue,
         out_q: Queue,
+        batch_size: int,
+        shuffle: bool = False,
         out_format: str = "dataframe",
         v_in_feats: Union[list, dict] = [],
         v_out_labels: Union[list, dict] = [],
@@ -660,7 +659,6 @@ class BaseLoader:
         e_attr_types: dict = {},
         add_self_loop: bool = False,
         delimiter: str = "|",
-        reindex: bool = True,
         is_hetero: bool = False,
         callback_fn: Callable = None
     ) -> NoReturn:
@@ -707,15 +705,29 @@ class BaseLoader:
                     "Spektral is not installed. Please install it to use spektral output."
                 )
         # Get raw data from queue and parse 
+        vertex_buffer = []
+        edge_buffer = []
+        buffer_size = 0
         while not exit_event.is_set():
-            raw = in_q.get()
-            if raw is None:
+            try:
+                raw = in_q.get(timeout=1)
+            except Empty:
+                continue
+            # if shuffle the data, 50% chance to save this data point for later 
+            if shuffle and (random.random() < 0.5): 
                 in_q.task_done()
-                out_q.put(None)
-                break
+                in_q.put(raw)
+                continue
+            # Store raw into buffer until there are enough data points for a batch
+            vertex_buffer.extend(raw[0].splitlines())
+            edge_buffer.extend(raw[1].splitlines())
+            buffer_size += 1
+            in_q.task_done()
+            if buffer_size < batch_size:
+                continue
             try:
                 data = BaseLoader._parse_graph_data_to_df(
-                    raw = raw,
+                    raw = (vertex_buffer, edge_buffer),
                     v_in_feats = v_in_feats,
                     v_out_labels = v_out_labels,
                     v_extra_feats = v_extra_feats,
@@ -755,7 +767,6 @@ class BaseLoader:
                         e_extra_feats = e_extra_feats,
                         e_attr_types = e_attr_types,
                         add_self_loop = add_self_loop,
-                        reindex = reindex,
                         is_hetero = is_hetero,
                         torch = torch,
                         pyg = pyg
@@ -772,7 +783,6 @@ class BaseLoader:
                         e_extra_feats = e_extra_feats,
                         e_attr_types = e_attr_types,
                         add_self_loop = add_self_loop,
-                        reindex = reindex,
                         is_hetero = is_hetero,
                         torch = torch,
                         dgl= dgl
@@ -789,7 +799,6 @@ class BaseLoader:
                         e_extra_feats = e_extra_feats,
                         e_attr_types = e_attr_types,
                         add_self_loop = add_self_loop,
-                        reindex = reindex,
                         is_hetero = is_hetero,
                         scipy = scipy,
                         spektral = spektral
@@ -802,15 +811,20 @@ class BaseLoader:
             except Exception as err:
                 warnings.warn("Error parsing a graph batch. Set logging level to ERROR for details.")
                 logger.error(err, exc_info=True)
-                logger.error("Error parsing data: {}".format(raw))
+                logger.error("Error parsing data: {}".format((vertex_buffer, edge_buffer)))
                 logger.error("Parameters:\n  out_format={}\n  v_in_feats={}\n  v_out_labels={}\n  v_extra_feats={}\n  v_attr_types={}\n  e_in_feats={}\n  e_out_labels={}\n  e_extra_feats={}\n  e_attr_types={}\n  delimiter={}\n".format(
                     out_format, v_in_feats, v_out_labels, v_extra_feats, v_attr_types, e_in_feats, e_out_labels, e_extra_feats, e_attr_types, delimiter))
+            vertex_buffer.clear()
+            edge_buffer.clear()
+            buffer_size = 0
             
     @staticmethod
     def _read_vertex_data(
         exit_event: Event,
         in_q: Queue,
         out_q: Queue,
+        batch_size: int,
+        shuffle: bool = False,
         v_in_feats: Union[list, dict] = [],
         v_out_labels: Union[list, dict] = [],
         v_extra_feats: Union[list, dict] = [],
@@ -819,15 +833,25 @@ class BaseLoader:
         is_hetero: bool = False,
         callback_fn: Callable = None
     ) -> NoReturn:
+        buffer = []
         while not exit_event.is_set():
-            raw = in_q.get()
-            if raw is None:
+            try:
+                raw = in_q.get(timeout=1)
+            except Empty:
+                continue
+            # if shuffle the data, 50% chance to save this data point for later 
+            if shuffle and (random.random() < 0.5): 
                 in_q.task_done()
-                out_q.put(None)
-                break
+                in_q.put(raw)
+                continue
+            # Store raw into buffer until there are enough data points for a batch
+            buffer.append(raw)
+            in_q.task_done()
+            if len(buffer) < batch_size:
+                continue
             try:
                 data = BaseLoader._parse_vertex_data(
-                    raw = raw,
+                    raw = buffer,
                     v_in_feats = v_in_feats,
                     v_out_labels = v_out_labels,
                     v_extra_feats = v_extra_feats,
@@ -848,15 +872,18 @@ class BaseLoader:
             except Exception as err:
                 warnings.warn("Error parsing a vertex batch. Set logging level to ERROR for details.")
                 logger.error(err, exc_info=True)
-                logger.error("Error parsing data: {}".format(raw))
+                logger.error("Error parsing data: {}".format(buffer))
                 logger.error("Parameters:\n  v_in_feats={}\n  v_out_labels={}\n  v_extra_feats={}\n  v_attr_types={}\n  delimiter={}\n".format(
                     v_in_feats, v_out_labels, v_extra_feats, v_attr_types, delimiter))
+            buffer.clear()
                 
     @staticmethod
     def _read_edge_data(
         exit_event: Event,
         in_q: Queue,
         out_q: Queue,
+        batch_size: int,
+        shuffle: bool = False,
         e_in_feats: Union[list, dict] = [],
         e_out_labels: Union[list, dict] = [],
         e_extra_feats: Union[list, dict] = [],
@@ -865,15 +892,25 @@ class BaseLoader:
         is_hetero: bool = False,
         callback_fn: Callable = None
     ) -> NoReturn:
+        buffer = []
         while not exit_event.is_set():
-            raw = in_q.get()
-            if raw is None:
+            try:
+                raw = in_q.get(timeout=1)
+            except Empty:
+                continue
+            # if shuffle the data, 50% chance to save this data point for later 
+            if shuffle and (random.random() < 0.5): 
                 in_q.task_done()
-                out_q.put(None)
-                break
+                in_q.put(raw)
+                continue
+            # Store raw into buffer until there are enough data points for a batch
+            buffer.append(raw)
+            in_q.task_done()
+            if len(buffer) < batch_size:
+                continue
             try:
                 data = BaseLoader._parse_edge_data(
-                    raw = raw,
+                    raw = buffer,
                     e_in_feats = e_in_feats,
                     e_out_labels = e_out_labels,
                     e_extra_feats = e_extra_feats,
@@ -894,9 +931,10 @@ class BaseLoader:
             except Exception as err:
                 warnings.warn("Error parsing an edge batch. Set logging level to ERROR for details.")
                 logger.error(err, exc_info=True)
-                logger.error("Error parsing data: {}".format(raw))
+                logger.error("Error parsing data: {}".format(buffer))
                 logger.error("Parameters:\n  e_in_feats={}\n  e_out_labels={}\n  e_extra_feats={}\n  e_attr_types={}\n  delimiter={}\n".format(
                     e_in_feats, e_out_labels, e_extra_feats, e_attr_types, delimiter))
+            buffer.clear()
 
     @staticmethod
     def _parse_vertex_data(
@@ -910,19 +948,19 @@ class BaseLoader:
     ) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
         """Parse raw vertex data into dataframes.
         """    
-        # Read in vertex CSVs as dataframes              
+        # Read in vertex CSVs as dataframes
+        # Each row is in format vid,v_in_feats,v_out_labels,v_extra_feats
+        # or vtype,vid,v_in_feats,v_out_labels,v_extra_feats           
+        v_file = (line.strip().split(delimiter) for line in raw)
         if not is_hetero:
             # String of vertices in format vid,v_in_feats,v_out_labels,v_extra_feats
             v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
-            v_file = (line.strip().split(delimiter) for line in raw.splitlines())
             data = pd.DataFrame(v_file, columns=v_attributes, dtype="object")
             for v_attr in v_extra_feats:
                 if v_attr_types.get(v_attr, "") == "MAP":
                     # I am sorry that this is this ugly...
                     data[v_attr] = data[v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
         else:
-            # String of vertices in format vtype,vid,v_in_feats,v_out_labels,v_extra_feats
-            v_file = (line.strip().split(delimiter) for line in raw.splitlines())
             v_file_dict = defaultdict(list)
             for line in v_file:
                 v_file_dict[line[0]].append(line[1:])
@@ -951,21 +989,18 @@ class BaseLoader:
     ) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
         """Parse raw edge data into dataframes.
         """    
-        # Read in edge CSVs as dataframes              
+        # Read in edge CSVs as dataframes
+        # Each row is in format source_vid,target_vid,e_in_feats,e_out_labels,e_extra_feats
+        # or etype,source_vid,target_vid,e_in_feats,e_out_labels,e_extra_feats             
+        e_file = (line.strip().split(delimiter) for line in raw)
         if not is_hetero:
-            # String of edges in format source_vid,target_vid,...
             e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
-            #file = "\n".join(x for x in raw.split("\n") if x.strip())
-            #data = pd.read_table(io.StringIO(file), header=None, names=e_attributes, sep=delimiter)
-            e_file = (line.strip().split(delimiter) for line in raw.splitlines())
             data = pd.DataFrame(e_file, columns=e_attributes, dtype="object")
             for e_attr in e_extra_feats:
                 if e_attr_types.get(e_attr, "") == "MAP":
                     # I am sorry that this is this ugly...
                     data[e_attr] = data[e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
         else:
-            # String of edges in format etype,source_vid,target_vid,...
-            e_file = (line.strip().split(delimiter) for line in raw.splitlines())
             e_file_dict = defaultdict(list)
             for line in e_file:
                 e_file_dict[line[0]].append(line[1:])
@@ -979,7 +1014,7 @@ class BaseLoader:
                 for e_attr in e_extra_feats.get(etype, []):
                     if e_attr_types[etype][e_attr] == "MAP":
                         # I am sorry that this is this ugly...
-                        data[etype][e_attr] = data[etype][e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})   
+                        data[etype][e_attr] = data[etype][e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
         return data
 
     @staticmethod
@@ -1028,7 +1063,7 @@ class BaseLoader:
             e_attr_types = e_attr_types,
             delimiter = delimiter,
             is_hetero = is_hetero
-        )      
+        )
         return (vertices, edges)
 
     @staticmethod
@@ -1108,7 +1143,6 @@ class BaseLoader:
         e_extra_feats: Union[list, dict] = [],
         e_attr_types: dict = {},
         add_self_loop: bool = False,
-        reindex: bool = True,
         is_hetero: bool = False,
         torch = None,
         pyg = None
@@ -1291,7 +1325,6 @@ class BaseLoader:
         e_extra_feats: Union[list, dict] = [],
         e_attr_types: dict = {},
         add_self_loop: bool = False,
-        reindex: bool = True,
         is_hetero: bool = False,
         torch = None,
         dgl = None
@@ -1491,7 +1524,6 @@ class BaseLoader:
         e_extra_feats: Union[list, dict] = [],
         e_attr_types: dict = {},
         add_self_loop: bool = False,
-        reindex: bool = True,
         is_hetero: bool = False,
         scipy = None,
         spektral = None

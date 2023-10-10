@@ -1,7 +1,7 @@
 import io
 import unittest
-from queue import Queue
-from threading import Event
+from queue import Queue, Empty
+from threading import Event, Thread
 
 import pandas as pd
 import torch
@@ -143,100 +143,169 @@ class TestGDSBaseLoader(unittest.TestCase):
         read_task_q = Queue()
         data_q = Queue(4)
         exit_event = Event()
-        raw = "99|1 0 0 1 |1|0|1\n8|1 0 0 1 |1|1|1\n"
-        read_task_q.put(raw)
-        read_task_q.put(None)
-        self.loader._read_vertex_data(
-            exit_event,
-            read_task_q,
-            data_q,
-            ["x"],
-            ["y"],
-            ["train_mask", "is_seed"],
-            {"x": "INT", "y": "INT", "train_mask": "BOOL", "is_seed": "BOOL"},
-            delimiter="|"
+        raw = ["99|1 0 0 1 |1|0|1\n",
+               "8|1 0 0 1 |1|1|1\n"]
+        for i in raw:
+            read_task_q.put(i)
+        thread = Thread(
+            target=self.loader._read_vertex_data,
+            kwargs=dict(
+                exit_event = exit_event,
+                in_q = read_task_q,
+                out_q = data_q,
+                batch_size = 2,
+                v_in_feats = ["x"],
+                v_out_labels = ["y"],
+                v_extra_feats = ["train_mask", "is_seed"],
+                v_attr_types = {"x": "INT", "y": "INT", "train_mask": "BOOL", "is_seed": "BOOL"},
+                delimiter = "|"
+            )
         )
+        thread.start()
         data = data_q.get()
+        exit_event.set()
+        thread.join()
         truth = pd.read_csv(
-            io.StringIO(raw),
+            io.StringIO("".join(raw)),
             header=None,
             names=["vid", "x", "y", "train_mask", "is_seed"],
             sep=self.loader.delimiter
         )
         assert_frame_equal(data, truth)
+
+    def test_read_vertex_shuffle(self):
+        read_task_q = Queue()
+        data_q = Queue(4)
+        exit_event = Event()
+        raw = ["99|1 0 0 1 |1|0|1\n",
+               "8|1 0 0 1 |1|1|1\n"]
+        for i in raw:
+            read_task_q.put(i)
+        thread = Thread(
+            target=self.loader._read_vertex_data,
+            kwargs=dict(
+                exit_event = exit_event,
+                in_q = read_task_q,
+                out_q = data_q,
+                batch_size = 2,
+                shuffle= True,
+                v_in_feats = ["x"],
+                v_out_labels = ["y"],
+                v_extra_feats = ["train_mask", "is_seed"],
+                v_attr_types = {"x": "INT", "y": "INT", "train_mask": "BOOL", "is_seed": "BOOL"},
+                delimiter = "|"
+            )
+        )
+        thread.start()
         data = data_q.get()
-        self.assertIsNone(data)
+        exit_event.set()
+        thread.join()
+        truth1 = pd.read_csv(
+            io.StringIO("".join(raw)),
+            header=None,
+            names=["vid", "x", "y", "train_mask", "is_seed"],
+            sep=self.loader.delimiter
+        )
+        raw.reverse()
+        truth2 = pd.read_csv(
+            io.StringIO("".join(raw)),
+            header=None,
+            names=["vid", "x", "y", "train_mask", "is_seed"],
+            sep=self.loader.delimiter
+        )
+        self.assertTrue((data==truth1).all().all() or (data==truth2).all().all())
 
     def test_read_vertex_callback(self):
         read_task_q = Queue()
         data_q = Queue(4)
         exit_event = Event()
-        raw = "99|1 0 0 1 |1|0|1\n8|1 0 0 1 |1|1|1\n"
-        read_task_q.put(raw)
-        read_task_q.put(None)
-        self.loader._read_vertex_data(
-            exit_event,
-            read_task_q,
-            data_q,
-            ["x"],
-            ["y"],
-            ["train_mask", "is_seed"],
-            {"x": "INT", "y": "INT", "train_mask": "BOOL", "is_seed": "BOOL"},
-            callback_fn=lambda x: 1,
-            delimiter="|"
+        raw = ["99|1 0 0 1 |1|0|1\n",
+               "8|1 0 0 1 |1|1|1\n"]
+        for i in raw:
+            read_task_q.put(i)
+        thread = Thread(
+            target=self.loader._read_vertex_data,
+            kwargs=dict(
+                exit_event = exit_event,
+                in_q = read_task_q,
+                out_q = data_q,
+                batch_size = 2,
+                v_in_feats = ["x"],
+                v_out_labels = ["y"],
+                v_extra_feats = ["train_mask", "is_seed"],
+                v_attr_types = {"x": "INT", "y": "INT", "train_mask": "BOOL", "is_seed": "BOOL"},
+                delimiter = "|",
+                callback_fn = lambda x: 1
+            )
         )
+        thread.start()
         data = data_q.get()
+        exit_event.set()
+        thread.join()
         self.assertEqual(1, data)
 
     def test_read_edge(self):
         read_task_q = Queue()
         data_q = Queue(4)
         exit_event = Event()
-        raw = "1|2|0.1|2021|1|0\n2|1|1.5|2020|0|1\n"
-        read_task_q.put(raw)
-        read_task_q.put(None)
-        self.loader._read_edge_data(
-            exit_event,
-            read_task_q,
-            data_q,
-            ["x", "time"],
-            ["y"],
-            ["is_train"],
-            {"x": "FLOAT", "time": "INT", "y": "INT", "is_train": "BOOL"},
-            delimiter="|"
+        raw = ["1|2|0.1|2021|1|0\n",
+               "2|1|1.5|2020|0|1\n"]
+        for i in raw:
+            read_task_q.put(i)
+        thread = Thread(
+            target=self.loader._read_edge_data,
+            kwargs=dict(
+                exit_event = exit_event,
+                in_q = read_task_q,
+                out_q = data_q,
+                batch_size = 2,
+                e_in_feats = ["x", "time"],
+                e_out_labels = ["y"],
+                e_extra_feats = ["is_train"],
+                e_attr_types = {"x": "FLOAT", "time": "INT", "y": "INT", "is_train": "BOOL"},
+                delimiter = "|"
+            )
         )
+        thread.start()
         data = data_q.get()
+        exit_event.set()
+        thread.join()
         truth = pd.read_csv(
-            io.StringIO(raw),
+            io.StringIO("".join(raw)),
             header=None,
             names=["source", "target", "x", "time", "y", "is_train"],
             sep=self.loader.delimiter,
         )
         assert_frame_equal(data, truth)
-        data = data_q.get()
-        self.assertIsNone(data)
 
     def test_read_edge_callback(self):
         read_task_q = Queue()
         data_q = Queue(4)
         exit_event = Event()
-        raw = "1|2|0.1|2021|1|0\n2|1|1.5|2020|0|1\n"
-        read_task_q.put(raw)
-        read_task_q.put(None)
-        self.loader._read_edge_data(
-            exit_event,
-            read_task_q,
-            data_q,
-            ["x", "time"],
-            ["y"],
-            ["is_train"],
-            {"x": "FLOAT", "time": "INT", "y": "INT", "is_train": "BOOL"},
-            callback_fn=lambda x: 1,
-            delimiter="|"
+        raw = ["1|2|0.1|2021|1|0\n",
+               "2|1|1.5|2020|0|1\n"]
+        for i in raw:
+            read_task_q.put(i)
+        thread = Thread(
+            target=self.loader._read_edge_data,
+            kwargs=dict(
+                exit_event = exit_event,
+                in_q = read_task_q,
+                out_q = data_q,
+                batch_size = 2,
+                e_in_feats = ["x", "time"],
+                e_out_labels = ["y"],
+                e_extra_feats = ["is_train"],
+                e_attr_types = {"x": "FLOAT", "time": "INT", "y": "INT", "is_train": "BOOL"},
+                delimiter = "|",
+                callback_fn=lambda x: 1
+            )
         )
+        thread.start()
         data = data_q.get()
+        exit_event.set()
+        thread.join()
         self.assertEqual(data, 1)
-
 
     def test_read_graph_out_df(self):
         read_task_q = Queue()
@@ -247,23 +316,28 @@ class TestGDSBaseLoader(unittest.TestCase):
             "1|2|0.1|2021|1|0\n2|1|1.5|2020|0|1\n",
         )
         read_task_q.put(raw)
-        read_task_q.put(None)
-        self.loader._read_graph_data(
-            exit_event,
-            read_task_q,
-            data_q,
-            "dataframe",
-            ["x"],
-            ["y"],
-            ["train_mask", "is_seed"],
-            {"x": "INT", "y": "INT", "train_mask": "BOOL", "is_seed": "BOOL"},
-            ["x", "time"],
-            ["y"],
-            ["is_train"],
-            {"x": "FLOAT", "time": "INT", "y": "INT", "is_train": "BOOL"},
-            delimiter="|"
+        thread = Thread(
+            target=self.loader._read_graph_data,
+            kwargs=dict(
+                exit_event = exit_event,
+                in_q = read_task_q,
+                out_q = data_q,
+                batch_size = 1,
+                v_in_feats = ["x"],
+                v_out_labels = ["y"],
+                v_extra_feats = ["train_mask", "is_seed"],
+                v_attr_types = {"x": "INT", "y": "INT", "train_mask": "BOOL", "is_seed": "BOOL"},
+                e_in_feats = ["x", "time"],
+                e_out_labels = ["y"],
+                e_extra_feats = ["is_train"],
+                e_attr_types = {"x": "FLOAT", "time": "INT", "y": "INT", "is_train": "BOOL"},
+                delimiter = "|"
+            )
         )
+        thread.start()
         data = data_q.get()
+        exit_event.set()
+        thread.join()
         vertices = pd.read_csv(
             io.StringIO(raw[0]),
             header=None,
@@ -278,9 +352,6 @@ class TestGDSBaseLoader(unittest.TestCase):
         )
         assert_frame_equal(data[0], vertices)
         assert_frame_equal(data[1], edges)
-        data = data_q.get()
-        self.assertIsNone(data)
-
 
     def test_read_graph_out_df_callback(self):
         read_task_q = Queue()
@@ -291,27 +362,31 @@ class TestGDSBaseLoader(unittest.TestCase):
             "1|2|0.1|2021|1|0\n2|1|1.5|2020|0|1\n",
         )
         read_task_q.put(raw)
-        read_task_q.put(None)
-        self.loader._read_graph_data(
-            exit_event,
-            read_task_q,
-            data_q,
-            "dataframe",
-            ["x"],
-            ["y"],
-            ["train_mask", "is_seed"],
-            {"x": "INT", "y": "INT", "train_mask": "BOOL", "is_seed": "BOOL"},
-            ["x", "time"],
-            ["y"],
-            ["is_train"],
-            {"x": "FLOAT", "time": "INT", "y": "INT", "is_train": "BOOL"},
-            callback_fn=lambda x: (1, 2),
-            delimiter="|"
+        thread = Thread(
+            target=self.loader._read_graph_data,
+            kwargs=dict(
+                exit_event = exit_event,
+                in_q = read_task_q,
+                out_q = data_q,
+                batch_size = 1,
+                v_in_feats = ["x"],
+                v_out_labels = ["y"],
+                v_extra_feats = ["train_mask", "is_seed"],
+                v_attr_types = {"x": "INT", "y": "INT", "train_mask": "BOOL", "is_seed": "BOOL"},
+                e_in_feats = ["x", "time"],
+                e_out_labels = ["y"],
+                e_extra_feats = ["is_train"],
+                e_attr_types = {"x": "FLOAT", "time": "INT", "y": "INT", "is_train": "BOOL"},
+                delimiter = "|",
+                callback_fn = lambda x: (1, 2),
+            )
         )
+        thread.start()
         data = data_q.get()
+        exit_event.set()
+        thread.join()
         self.assertEqual(data[0], 1)
         self.assertEqual(data[1], 2)
-
 
     def test_read_graph_out_pyg(self):
         read_task_q = Queue()
@@ -322,29 +397,36 @@ class TestGDSBaseLoader(unittest.TestCase):
             "99|8|0.1|2021|1|0|a b \n8|99|1.5|2020|0|1|c d \n",
         )
         read_task_q.put(raw)
-        read_task_q.put(None)
-        self.loader._read_graph_data(
-            exit_event,
-            read_task_q,
-            data_q,
-            "pyg",
-            ["x"],
-            ["y"],
-            ["train_mask", "name", "is_seed"],
-            {
-                "x": "LIST:INT",
-                "y": "INT",
-                "train_mask": "BOOL",
-                "name": "STRING",
-                "is_seed": "BOOL",
-            },
-            ["x", "time"],
-            ["y"],
-            ["is_train", "category"],
-            {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL", "category": "LIST:STRING"},
-            delimiter="|"
+        thread = Thread(
+            target=self.loader._read_graph_data,
+            kwargs=dict(
+                exit_event = exit_event,
+                in_q = read_task_q,
+                out_q = data_q,
+                batch_size = 1,
+                out_format = "pyg",
+                v_in_feats = ["x"],
+                v_out_labels = ["y"],
+                v_extra_feats = ["train_mask", "name", "is_seed"],
+                v_attr_types = 
+                    {
+                        "x": "LIST:INT",
+                        "y": "INT",
+                        "train_mask": "BOOL",
+                        "name": "STRING",
+                        "is_seed": "BOOL",
+                    },
+                e_in_feats = ["x", "time"],
+                e_out_labels = ["y"],
+                e_extra_feats = ["is_train", "category"],
+                e_attr_types = {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL", "category": "LIST:STRING"},
+                delimiter = "|"
+            )
         )
+        thread.start()
         data = data_q.get()
+        exit_event.set()
+        thread.join()
         self.assertIsInstance(data, pygData)
         assert_close_torch(data["edge_index"], torch.tensor([[0, 1], [1, 0]]))
         assert_close_torch(
@@ -359,8 +441,6 @@ class TestGDSBaseLoader(unittest.TestCase):
         assert_close_torch(data["is_seed"], torch.tensor([True, False]))
         self.assertListEqual(data["name"], ["Alex", "Bill"])
         self.assertListEqual(data["category"], [['a', 'b'], ['c', 'd']])
-        data = data_q.get()
-        self.assertIsNone(data)
 
     def test_read_graph_out_dgl(self):
         read_task_q = Queue()
@@ -371,29 +451,36 @@ class TestGDSBaseLoader(unittest.TestCase):
             "99|8|0.1|2021|1|0|a b \n8|99|1.5|2020|0|1|c d \n",
         )
         read_task_q.put(raw)
-        read_task_q.put(None)
-        self.loader._read_graph_data(
-            exit_event,
-            read_task_q,
-            data_q,
-            "dgl",
-            ["x"],
-            ["y"],
-            ["train_mask", "name", "is_seed"],
-            {
-                "x": "LIST:INT",
-                "y": "INT",
-                "train_mask": "BOOL",
-                "name": "STRING",
-                "is_seed": "BOOL",
-            },
-            ["x", "time"],
-            ["y"],
-            ["is_train", "category"],
-            {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL", "category": "LIST:STRING"},
-            delimiter="|"
+        thread = Thread(
+            target=self.loader._read_graph_data,
+            kwargs=dict(
+                exit_event = exit_event,
+                in_q = read_task_q,
+                out_q = data_q,
+                batch_size = 1,
+                out_format = "dgl",
+                v_in_feats = ["x"],
+                v_out_labels = ["y"],
+                v_extra_feats = ["train_mask", "name", "is_seed"],
+                v_attr_types = 
+                    {
+                        "x": "LIST:INT",
+                        "y": "INT",
+                        "train_mask": "BOOL",
+                        "name": "STRING",
+                        "is_seed": "BOOL",
+                    },
+                e_in_feats = ["x", "time"],
+                e_out_labels = ["y"],
+                e_extra_feats = ["is_train", "category"],
+                e_attr_types = {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL", "category": "LIST:STRING"},
+                delimiter = "|"
+            )
         )
+        thread.start()
         data = data_q.get()
+        exit_event.set()
+        thread.join()
         self.assertIsInstance(data, DGLGraph)
         assert_close_torch(data.edges(), (torch.tensor([0, 1]), torch.tensor([1, 0])))
         assert_close_torch(
@@ -408,8 +495,6 @@ class TestGDSBaseLoader(unittest.TestCase):
         assert_close_torch(data.ndata["is_seed"], torch.tensor([True, False]))
         self.assertListEqual(data.extra_data["name"], ["Alex", "Bill"])
         self.assertListEqual(data.extra_data["category"], [['a', 'b'], ['c', 'd']])
-        data = data_q.get()
-        self.assertIsNone(data)
 
     def test_read_graph_parse_error(self):
         read_task_q = Queue()
@@ -420,30 +505,37 @@ class TestGDSBaseLoader(unittest.TestCase):
             "99|8|0.1|2021|1|0|a b \n8|99|1.5|2020|0|1|c d \n",
         )
         read_task_q.put(raw)
-        read_task_q.put(None)
-        self.loader._read_graph_data(
-            exit_event,
-            read_task_q,
-            data_q,
-            "dgl",
-            ["x"],
-            ["y"],
-            ["train_mask", "name", "is_seed"],
-            {
-                "x": "LIST:INT",
-                "y": "INT",
-                "train_mask": "BOOL",
-                "name": "STRING",
-                "is_seed": "BOOL",
-            },
-            ["x", "time"],
-            ["y"],
-            ["is_train", "category"],
-            {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL", "category": "LIST:STRING"},
-            delimiter="|"
+        thread = Thread(
+            target=self.loader._read_graph_data,
+            kwargs=dict(
+                exit_event = exit_event,
+                in_q = read_task_q,
+                out_q = data_q,
+                batch_size = 1,
+                out_format = "dgl",
+                v_in_feats = ["x"],
+                v_out_labels = ["y"],
+                v_extra_feats = ["train_mask", "name", "is_seed"],
+                v_attr_types = 
+                    {
+                        "x": "LIST:INT",
+                        "y": "INT",
+                        "train_mask": "BOOL",
+                        "name": "STRING",
+                        "is_seed": "BOOL",
+                    },
+                e_in_feats = ["x", "time"],
+                e_out_labels = ["y"],
+                e_extra_feats = ["is_train", "category"],
+                e_attr_types = {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL", "category": "LIST:STRING"},
+                delimiter = "|"
+            )
         )
-        data = data_q.get()
-        self.assertIsNone(data)
+        thread.start()
+        with self.assertRaises(Empty):
+            data = data_q.get(timeout=1)
+        exit_event.set()
+        thread.join()
 
     def test_read_graph_no_attr(self):
         read_task_q = Queue()
@@ -451,34 +543,33 @@ class TestGDSBaseLoader(unittest.TestCase):
         exit_event = Event()
         raw = ("99|1\n8|0\n", "99|8\n8|99\n")
         read_task_q.put(raw)
-        read_task_q.put(None)
-        self.loader._read_graph_data(
-            exit_event,
-            read_task_q,
-            data_q,
-            "pyg",
-            [],
-            [],
-            ["is_seed"],
-            {
-                "x": "INT",
-                "y": "INT",
-                "train_mask": "BOOL",
-                "name": "STRING",
-                "is_seed": "BOOL",
-            },
-            [],
-            [],
-            [],
-            {},
-            delimiter="|"
+        thread = Thread(
+            target=self.loader._read_graph_data,
+            kwargs=dict(
+                exit_event = exit_event,
+                in_q = read_task_q,
+                out_q = data_q,
+                batch_size = 1,
+                out_format = "pyg",
+                v_extra_feats = ["is_seed"],
+                v_attr_types = 
+                    {
+                        "x": "LIST:INT",
+                        "y": "INT",
+                        "train_mask": "BOOL",
+                        "name": "STRING",
+                        "is_seed": "BOOL",
+                    },
+                delimiter = "|"
+            )
         )
+        thread.start()
         data = data_q.get()
+        exit_event.set()
+        thread.join()
         self.assertIsInstance(data, pygData)
         assert_close_torch(data["edge_index"], torch.tensor([[0, 1], [1, 0]]))
         assert_close_torch(data["is_seed"], torch.tensor([True, False]))
-        data = data_q.get()
-        self.assertIsNone(data)
 
     def test_read_graph_no_edge(self):
         read_task_q = Queue()
@@ -489,29 +580,36 @@ class TestGDSBaseLoader(unittest.TestCase):
             "",
         )
         read_task_q.put(raw)
-        read_task_q.put(None)
-        self.loader._read_graph_data(
-            exit_event,
-            read_task_q,
-            data_q,
-            "pyg",
-            ["x"],
-            ["y"],
-            ["train_mask", "name", "is_seed"],
-            {
-                "x": "LIST:INT",
-                "y": "INT",
-                "train_mask": "BOOL",
-                "name": "STRING",
-                "is_seed": "BOOL",
-            },
-            ["x", "time"],
-            ["y"],
-            ["is_train"],
-            {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL"},
-            delimiter="|"
+        thread = Thread(
+            target=self.loader._read_graph_data,
+            kwargs=dict(
+                exit_event = exit_event,
+                in_q = read_task_q,
+                out_q = data_q,
+                batch_size = 1,
+                out_format = "pyg",
+                v_in_feats = ["x"],
+                v_out_labels = ["y"],
+                v_extra_feats = ["train_mask", "name", "is_seed"],
+                v_attr_types = 
+                    {
+                        "x": "LIST:INT",
+                        "y": "INT",
+                        "train_mask": "BOOL",
+                        "name": "STRING",
+                        "is_seed": "BOOL",
+                    },
+                e_in_feats = ["x", "time"],
+                e_out_labels = ["y"],
+                e_extra_feats = ["is_train"],
+                e_attr_types = {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL"},
+                delimiter = "|"
+            )
         )
+        thread.start()
         data = data_q.get()
+        exit_event.set()
+        thread.join()
         self.assertIsInstance(data, pygData)
         self.assertListEqual(list(data["edge_index"].shape), [2,0])
         self.assertListEqual(list(data["edge_feat"].shape), [0,2])
@@ -522,8 +620,6 @@ class TestGDSBaseLoader(unittest.TestCase):
         assert_close_torch(data["train_mask"], torch.tensor([False, True]))
         assert_close_torch(data["is_seed"], torch.tensor([True, False]))
         self.assertListEqual(data["name"], ["Alex", "Bill"])
-        data = data_q.get()
-        self.assertIsNone(data)
 
     def test_read_hetero_graph_out_pyg(self):
         read_task_q = Queue()
@@ -534,50 +630,53 @@ class TestGDSBaseLoader(unittest.TestCase):
             "Colleague|99|8|0.1|2021|1|0\nColleague|8|99|1.5|2020|0|1\nWork|99|2\nWork|2|8\n",
         )
         read_task_q.put(raw)
-        read_task_q.put(None)
-        self.loader._read_graph_data(
-            exit_event,
-            read_task_q,
-            data_q,
-            "pyg",
-            {"People": ["x"], "Company": ["x"]},
-            {"People": ["y"]},
-            {"People": ["train_mask", "name", "is_seed"], "Company": ["is_seed"]},
-            {
-                "People": {
-                    "x": "LIST:INT",
-                    "y": "INT",
-                    "train_mask": "BOOL",
-                    "name": "STRING",
-                    "is_seed": "BOOL",
+        thread = Thread(
+            target=self.loader._read_graph_data,
+            kwargs=dict(
+                exit_event = exit_event,
+                in_q = read_task_q,
+                out_q = data_q,
+                batch_size = 1,
+                out_format = "pyg",
+                v_in_feats = {"People": ["x"], "Company": ["x"]},
+                v_out_labels = {"People": ["y"]},
+                v_extra_feats = {"People": ["train_mask", "name", "is_seed"], "Company": ["is_seed"]},
+                v_attr_types = 
+                    {
+                        "People": {
+                            "x": "LIST:INT",
+                            "y": "INT",
+                            "train_mask": "BOOL",
+                            "name": "STRING",
+                            "is_seed": "BOOL",
+                        },
+                        "Company": {"x": "FLOAT", "is_seed": "BOOL"},
+                    },
+                e_in_feats = {"Colleague": ["x", "time"]},
+                e_out_labels = {"Colleague": ["y"]},
+                e_extra_feats = {"Colleague": ["is_train"]},
+                e_attr_types = {
+                    "Colleague": {
+                        "FromVertexTypeName": "People",
+                        "ToVertexTypeName": "People",
+                        "IsDirected": False,
+                        "x": "DOUBLE",
+                        "time": "INT",
+                        "y": "INT",
+                        "is_train": "BOOL"},
+                    "Work": {
+                        "FromVertexTypeName": "People",
+                        "ToVertexTypeName": "Company",
+                        "IsDirected": False}
                 },
-                "Company": {"x": "FLOAT", "is_seed": "BOOL"},
-            },
-            {"Colleague": ["x", "time"]},
-            {"Colleague": ["y"]},
-            {"Colleague": ["is_train"]},
-            {
-                "Colleague": {
-                    "FromVertexTypeName": "People",
-                    "ToVertexTypeName": "People",
-                    "IsDirected": False,
-                    "x": "DOUBLE",
-                    "time": "INT",
-                    "y": "INT",
-                    "is_train": "BOOL",
-                },
-                "Work": {
-                    "FromVertexTypeName": "People",
-                    "ToVertexTypeName": "Company",
-                    "IsDirected": False,
-                }
-            },
-            False,
-            "|",
-            True,
-            True,
+                delimiter = "|",
+                is_hetero = True
+            )
         )
+        thread.start()
         data = data_q.get()
+        exit_event.set()
+        thread.join()
         self.assertIsInstance(data, pygHeteroData)
         assert_close_torch(
             data["Colleague"]["edge_index"], torch.tensor([[0, 1], [1, 0]])
@@ -602,8 +701,6 @@ class TestGDSBaseLoader(unittest.TestCase):
         assert_close_torch(
             data["Work"]["edge_index"], torch.tensor([[0, 1], [0, 0]])
         )
-        data = data_q.get()
-        self.assertIsNone(data)
 
     def test_read_hetero_graph_no_attr(self):
         read_task_q = Queue()
@@ -614,50 +711,53 @@ class TestGDSBaseLoader(unittest.TestCase):
             "Colleague|99|8\nColleague|8|99\nWork|99|2\nWork|2|8\n",
         )
         read_task_q.put(raw)
-        read_task_q.put(None)
-        self.loader._read_graph_data(
-            exit_event,
-            read_task_q,
-            data_q,
-            "pyg",
-            {"People": [], "Company": []},
-            {"People": [], "Company": []},
-            {"People": ["is_seed"], "Company": ["is_seed"]},
-            {
-                "People": {
-                    "x": "LIST:INT",
-                    "y": "INT",
-                    "train_mask": "BOOL",
-                    "name": "STRING",
-                    "is_seed": "BOOL",
+        thread = Thread(
+            target=self.loader._read_graph_data,
+            kwargs=dict(
+                exit_event = exit_event,
+                in_q = read_task_q,
+                out_q = data_q,
+                batch_size = 1,
+                out_format = "pyg",
+                v_in_feats = {"People": [], "Company": []},
+                v_out_labels = {"People": [], "Company": []},
+                v_extra_feats = {"People": ["is_seed"], "Company": ["is_seed"]},
+                v_attr_types = 
+                    {
+                        "People": {
+                            "x": "LIST:INT",
+                            "y": "INT",
+                            "train_mask": "BOOL",
+                            "name": "STRING",
+                            "is_seed": "BOOL",
+                        },
+                        "Company": {"x": "FLOAT", "is_seed": "BOOL"},
+                    },
+                e_in_feats = {"Colleague": [], "Work": []},
+                e_out_labels = {"Colleague": [], "Work": []},
+                e_extra_feats = {"Colleague": [], "Work": []},
+                e_attr_types = {
+                    "Colleague": {
+                        "FromVertexTypeName": "People",
+                        "ToVertexTypeName": "People",
+                        "IsDirected": False,
+                        "x": "DOUBLE",
+                        "time": "INT",
+                        "y": "INT",
+                        "is_train": "BOOL"},
+                    "Work": {
+                        "FromVertexTypeName": "People",
+                        "ToVertexTypeName": "Company",
+                        "IsDirected": False}
                 },
-                "Company": {"x": "FLOAT", "is_seed": "BOOL"},
-            },
-            {"Colleague": [], "Work": []},
-            {"Colleague": [], "Work": []},
-            {"Colleague": [], "Work": []},
-            {
-                "Colleague": {
-                    "FromVertexTypeName": "People",
-                    "ToVertexTypeName": "People",
-                    "IsDirected": False,
-                    "x": "DOUBLE",
-                    "time": "INT",
-                    "y": "INT",
-                    "is_train": "BOOL",
-                },
-                "Work": {
-                    "FromVertexTypeName": "People",
-                    "ToVertexTypeName": "Company",
-                    "IsDirected": False,
-                }
-            },
-            False,
-            "|",
-            True,
-            True,
+                delimiter = "|",
+                is_hetero = True
+            )
         )
+        thread.start()
         data = data_q.get()
+        exit_event.set()
+        thread.join()
         self.assertIsInstance(data, pygHeteroData)
         assert_close_torch(
             data["Colleague"]["edge_index"], torch.tensor([[0, 1], [1, 0]])
@@ -667,8 +767,6 @@ class TestGDSBaseLoader(unittest.TestCase):
         )
         assert_close_torch(data["People"]["is_seed"], torch.tensor([True, False]))
         assert_close_torch(data["Company"]["is_seed"], torch.tensor([False]))
-        data = data_q.get()
-        self.assertIsNone(data)
 
     def test_read_hetero_graph_no_edge(self):
         read_task_q = Queue()
@@ -679,50 +777,53 @@ class TestGDSBaseLoader(unittest.TestCase):
             "",
         )
         read_task_q.put(raw)
-        read_task_q.put(None)
-        self.loader._read_graph_data(
-            exit_event,
-            read_task_q,
-            data_q,
-            "pyg",
-            {"People": ["x"], "Company": ["x"]},
-            {"People": ["y"]},
-            {"People": ["train_mask", "name", "is_seed"], "Company": ["is_seed"]},
-            {
-                "People": {
-                    "x": "LIST:INT",
-                    "y": "INT",
-                    "train_mask": "BOOL",
-                    "name": "STRING",
-                    "is_seed": "BOOL",
+        thread = Thread(
+            target=self.loader._read_graph_data,
+            kwargs=dict(
+                exit_event = exit_event,
+                in_q = read_task_q,
+                out_q = data_q,
+                batch_size = 1,
+                out_format = "pyg",
+                v_in_feats = {"People": ["x"], "Company": ["x"]},
+                v_out_labels = {"People": ["y"]},
+                v_extra_feats = {"People": ["train_mask", "name", "is_seed"], "Company": ["is_seed"]},
+                v_attr_types = 
+                    {
+                        "People": {
+                            "x": "LIST:INT",
+                            "y": "INT",
+                            "train_mask": "BOOL",
+                            "name": "STRING",
+                            "is_seed": "BOOL",
+                        },
+                        "Company": {"x": "FLOAT", "is_seed": "BOOL"},
+                    },
+                e_in_feats = {"Colleague": ["x", "time"]},
+                e_out_labels = {"Colleague": ["y"]},
+                e_extra_feats = {"Colleague": ["is_train"]},
+                e_attr_types = {
+                    "Colleague": {
+                        "FromVertexTypeName": "People",
+                        "ToVertexTypeName": "People",
+                        "IsDirected": False,
+                        "x": "DOUBLE",
+                        "time": "INT",
+                        "y": "INT",
+                        "is_train": "BOOL"},
+                    "Work": {
+                        "FromVertexTypeName": "People",
+                        "ToVertexTypeName": "Company",
+                        "IsDirected": False}
                 },
-                "Company": {"x": "FLOAT", "is_seed": "BOOL"},
-            },
-            {"Colleague": ["x", "time"]},
-            {"Colleague": ["y"]},
-            {"Colleague": ["is_train"]},
-            {
-                "Colleague": {
-                    "FromVertexTypeName": "People",
-                    "ToVertexTypeName": "People",
-                    "IsDirected": False,
-                    "x": "DOUBLE",
-                    "time": "INT",
-                    "y": "INT",
-                    "is_train": "BOOL",
-                },
-                "Work": {
-                    "FromVertexTypeName": "People",
-                    "ToVertexTypeName": "Company",
-                    "IsDirected": False,
-                }
-            },
-            False,
-            "|",
-            True,
-            True,
+                delimiter = "|",
+                is_hetero = True
+            )
         )
+        thread.start()
         data = data_q.get()
+        exit_event.set()
+        thread.join()
         self.assertIsInstance(data, pygHeteroData)
         self.assertNotIn("Colleague", data)
         assert_close_torch(
@@ -737,8 +838,6 @@ class TestGDSBaseLoader(unittest.TestCase):
         )
         assert_close_torch(data["Company"]["is_seed"], torch.tensor([False]))
         self.assertNotIn("Work", data)
-        data = data_q.get()
-        self.assertIsNone(data)
 
     def test_read_hetero_graph_out_dgl(self):
         read_task_q = Queue()
@@ -749,51 +848,54 @@ class TestGDSBaseLoader(unittest.TestCase):
             "Colleague|99|8|0.1|2021|1|0\nColleague|8|99|1.5|2020|0|1\nWork|99|2|a b \nWork|2|8|c d \n",
         )
         read_task_q.put(raw)
-        read_task_q.put(None)
-        self.loader._read_graph_data(
-            exit_event,
-            read_task_q,
-            data_q,
-            "dgl",
-            {"People": ["x"], "Company": ["x"]},
-            {"People": ["y"]},
-            {"People": ["train_mask", "name", "is_seed"], "Company": ["is_seed"]},
-            {
-                "People": {
-                    "x": "LIST:INT",
-                    "y": "INT",
-                    "train_mask": "BOOL",
-                    "name": "STRING",
-                    "is_seed": "BOOL",
+        thread = Thread(
+            target=self.loader._read_graph_data,
+            kwargs=dict(
+                exit_event = exit_event,
+                in_q = read_task_q,
+                out_q = data_q,
+                batch_size = 1,
+                out_format = "dgl",
+                v_in_feats = {"People": ["x"], "Company": ["x"]},
+                v_out_labels = {"People": ["y"]},
+                v_extra_feats = {"People": ["train_mask", "name", "is_seed"], "Company": ["is_seed"]},
+                v_attr_types = 
+                    {
+                        "People": {
+                            "x": "LIST:INT",
+                            "y": "INT",
+                            "train_mask": "BOOL",
+                            "name": "STRING",
+                            "is_seed": "BOOL",
+                        },
+                        "Company": {"x": "FLOAT", "is_seed": "BOOL"},
+                    },
+                e_in_feats = {"Colleague": ["x", "time"]},
+                e_out_labels = {"Colleague": ["y"]},
+                e_extra_feats = {"Colleague": ["is_train"], "Work": ["category"]},
+                e_attr_types = {
+                    "Colleague": {
+                        "FromVertexTypeName": "People",
+                        "ToVertexTypeName": "People",
+                        "IsDirected": False,
+                        "x": "DOUBLE",
+                        "time": "INT",
+                        "y": "INT",
+                        "is_train": "BOOL"},
+                    "Work": {
+                        "FromVertexTypeName": "People",
+                        "ToVertexTypeName": "Company",
+                        "IsDirected": False,
+                        "category": "LIST:STRING"}
                 },
-                "Company": {"x": "FLOAT", "is_seed": "BOOL"},
-            },
-            {"Colleague": ["x", "time"]},
-            {"Colleague": ["y"]},
-            {"Colleague": ["is_train"], "Work": ["category"]},
-            {
-                "Colleague": {
-                    "FromVertexTypeName": "People",
-                    "ToVertexTypeName": "People",
-                    "IsDirected": False,
-                    "x": "DOUBLE",
-                    "time": "INT",
-                    "y": "INT",
-                    "is_train": "BOOL",
-                },
-                "Work": {
-                    "FromVertexTypeName": "People",
-                    "ToVertexTypeName": "Company",
-                    "IsDirected": False,
-                    "category": "LIST:STRING"
-                }
-            },
-            False,
-            "|",
-            True,
-            True,
+                delimiter = "|",
+                is_hetero = True
+            )
         )
+        thread.start()
         data = data_q.get()
+        exit_event.set()
+        thread.join()
         self.assertIsInstance(data, DGLGraph)
         assert_close_torch(
             data.edges(etype="Colleague"), (torch.tensor([0, 1]), torch.tensor([1, 0]))
@@ -819,8 +921,6 @@ class TestGDSBaseLoader(unittest.TestCase):
             data.edges(etype="Work"), (torch.tensor([0, 1]), torch.tensor([0, 0]))
         )
         self.assertListEqual(data.extra_data["Work"]["category"], [['a', 'b'], ['c', 'd']])
-        data = data_q.get()
-        self.assertIsNone(data)
 
     def test_read_bool_label(self):
         read_task_q = Queue()
@@ -831,29 +931,36 @@ class TestGDSBaseLoader(unittest.TestCase):
             "99|8|0.1|2021|1|0\n8|99|1.5|2020|0|1\n",
         )
         read_task_q.put(raw)
-        read_task_q.put(None)
-        self.loader._read_graph_data(
-            exit_event,
-            read_task_q,
-            data_q,
-            "pyg",
-            ["x"],
-            ["y"],
-            ["train_mask", "name", "is_seed"],
-            {
-                "x": "LIST:INT",
-                "y": "BOOL",
-                "train_mask": "BOOL",
-                "name": "STRING",
-                "is_seed": "BOOL",
-            },
-            ["x", "time"],
-            ["y"],
-            ["is_train"],
-            {"x": "DOUBLE", "time": "INT", "y": "BOOL", "is_train": "BOOL"},
-            delimiter="|"
+        thread = Thread(
+            target=self.loader._read_graph_data,
+            kwargs=dict(
+                exit_event = exit_event,
+                in_q = read_task_q,
+                out_q = data_q,
+                batch_size = 1,
+                out_format = "pyg",
+                v_in_feats = ["x"],
+                v_out_labels = ["y"],
+                v_extra_feats = ["train_mask", "name", "is_seed"],
+                v_attr_types = 
+                    {
+                        "x": "LIST:INT",
+                        "y": "BOOL",
+                        "train_mask": "BOOL",
+                        "name": "STRING",
+                        "is_seed": "BOOL",
+                    },
+                e_in_feats = ["x", "time"],
+                e_out_labels = ["y"],
+                e_extra_feats = ["is_train"],
+                e_attr_types = {"x": "DOUBLE", "time": "INT", "y": "BOOL", "is_train": "BOOL"},
+                delimiter = "|"
+            )
         )
+        thread.start()
         data = data_q.get()
+        exit_event.set()
+        thread.join()
         self.assertIsInstance(data, pygData)
         assert_close_torch(data["edge_index"], torch.tensor([[0, 1], [1, 0]]))
         assert_close_torch(
@@ -867,17 +974,16 @@ class TestGDSBaseLoader(unittest.TestCase):
         assert_close_torch(data["train_mask"], torch.tensor([False, True]))
         assert_close_torch(data["is_seed"], torch.tensor([True, False]))
         self.assertListEqual(data["name"], ["Alex", "Bill"])
-        data = data_q.get()
-        self.assertIsNone(data)
 
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
-    suite.addTest(TestGDSBaseLoader("test_get_schema"))
-    suite.addTest(TestGDSBaseLoader("test_get_schema_no_primary_id_attr"))
-    suite.addTest(TestGDSBaseLoader("test_validate_vertex_attributes"))
-    suite.addTest(TestGDSBaseLoader("test_validate_edge_attributes"))
+    # suite.addTest(TestGDSBaseLoader("test_get_schema"))
+    # suite.addTest(TestGDSBaseLoader("test_get_schema_no_primary_id_attr"))
+    # suite.addTest(TestGDSBaseLoader("test_validate_vertex_attributes"))
+    # suite.addTest(TestGDSBaseLoader("test_validate_edge_attributes"))
     suite.addTest(TestGDSBaseLoader("test_read_vertex"))
+    suite.addTest(TestGDSBaseLoader("test_read_vertex_shuffle"))
     suite.addTest(TestGDSBaseLoader("test_read_vertex_callback"))
     suite.addTest(TestGDSBaseLoader("test_read_edge"))
     suite.addTest(TestGDSBaseLoader("test_read_edge_callback"))
