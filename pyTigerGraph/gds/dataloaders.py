@@ -1616,22 +1616,32 @@ class BaseLoader:
             raise NotImplementedError
         return data
 
-    def _start_request(self, out_tuple: bool, resp_type: str):
+    def _start_request(self, is_graph: bool):
         # If using kafka
         if self.kafka_address_consumer:
             # Generate topic
             self._set_kafka_topic()
             # Start consumer thread
-            self._downloader = Thread(
-                target=self._download_from_kafka,
-                args=(
-                    self._exit_event,
-                    self._read_task_q,
-                    self.num_batches,
-                    out_tuple,
-                    self._kafka_consumer,
-                ),
-            )
+            if is_graph:
+                self._downloader = Thread(
+                    target=self._download_graph_kafka,
+                    kwargs=dict(
+                        exit_event = self._exit_event,
+                        read_task_q = self._read_task_q,
+                        kafka_consumer = self._kafka_consumer,
+                        max_wait_time = self.timeout
+                    ),
+                )
+            else:
+                self._downloader = Thread(
+                    target=self._download_unimode_kafka,
+                    kwargs=dict(
+                        exit_event = self._exit_event,
+                        read_task_q = self._read_task_q,
+                        kafka_consumer = self._kafka_consumer,
+                        max_wait_time = self.timeout
+                    ),
+                )
             self._downloader.start()
             # Start requester thread
             if not self.kafka_skip_produce:
@@ -1648,17 +1658,28 @@ class BaseLoader:
                 self._requester.start()
         else:
             # Otherwise, use rest api
-            self._requester = Thread(
-                target=self._request_rest,
-                args=(
-                    self._graph,
-                    self.query_name,
-                    self._read_task_q,
-                    self.timeout,
-                    self._payload,
-                    resp_type,
-                ),
-            )
+            if is_graph:
+                self._requester = Thread(
+                    target=self._request_graph_rest,
+                    kwargs=dict(
+                        tgraph = self._graph,
+                        query_name = self.query_name,
+                        read_task_q = self._read_task_q,
+                        timeout = self.timeout,
+                        payload = self._payload
+                    ),
+                )
+            else:
+                self._requester = Thread(
+                    target=self._request_unimode_rest,
+                    kwargs=dict(
+                        tgraph = self._graph,
+                        query_name = self.query_name,
+                        read_task_q = self._read_task_q,
+                        timeout = self.timeout,
+                        payload = self._payload
+                    ),
+                )
             self._requester.start()
 
     def _start(self) -> None:
@@ -1730,20 +1751,27 @@ class BaseLoader:
             return self
 
     def _reset(self, theend=False) -> None:
-        logging.debug("Resetting the loader")
+        logger.debug("Resetting the data loader")
         if self._exit_event:
             self._exit_event.set()
         if self._request_task_q:
-            self._request_task_q.put(None)
+            while True:
+                try:
+                    self._request_task_q.get(block=False)
+                except Empty:
+                    break
         if self._download_task_q:
-            self._download_task_q.put(None)
+            while True:
+                try:
+                    self._download_task_q.get(block=False)
+                except Empty:
+                    break
         if self._read_task_q:
             while True:
                 try:
                     self._read_task_q.get(block=False)
                 except Empty:
                     break
-            self._read_task_q.put(None)
         if self._data_q:
             while True:
                 try:
@@ -1787,7 +1815,7 @@ class BaseLoader:
                         "Failed to delete topic {}".format(del_res["topic"])
                     )
                 self._kafka_topic = None
-        logging.debug("Successfully reset the loader")
+        logger.debug("Successfully reset the data loader")
 
     def _generate_attribute_string(self, schema_type, attr_names, attr_types) -> str:
         if schema_type.lower() == "vertex":
