@@ -2658,7 +2658,7 @@ class VertexLoader(BaseLoader):
         print("----Batch {}: Shape {}----".format(i, batch.shape))
         print(batch.head(1)) <1>
     ----
-    <1> Since the example does not provide an output format, the output format defaults to panda frames, have access to the methods of panda frame instances.
+    <1> The output format is Pandas dataframe.
     --
     Output::
     +
@@ -2811,7 +2811,11 @@ class VertexLoader(BaseLoader):
         self._vtypes = sorted(self._vtypes)
         # Initialize parameters for the query
         if batch_size:
-            # If batch_size is given, calculate the number of batches
+            # batch size takes precedence over number of batches
+            self.batch_size = batch_size
+            self.num_batches = None
+        else:
+            # If number of batches is given, calculate batch size
             num_vertices_by_type = self._graph.getVertexCount(self._vtypes)
             if filter_by:
                 num_vertices = sum(
@@ -2820,20 +2824,13 @@ class VertexLoader(BaseLoader):
                 )
             else:
                 num_vertices = sum(num_vertices_by_type.values())
-            self.num_batches = math.ceil(num_vertices / batch_size)
-        else:
-            # Otherwise, take the number of batches as is.
+            self.batch_size = math.ceil(num_vertices / num_batches)
             self.num_batches = num_batches
-        self._payload["num_batches"] = self.num_batches
         if filter_by:
             self._payload["filter_by"] = filter_by
-        if batch_size:
-            self._payload["batch_size"] = batch_size
-        self._payload["shuffle"] = shuffle
         self._payload["delimiter"] = delimiter
         self._payload["v_types"] = self._vtypes
         self._payload["input_vertices"] = []
-        self._payload["num_heap_inserts"] = self.num_heap_inserts
         # Install query
         self.query_name = self._install_query()
 
@@ -2849,31 +2846,43 @@ class VertexLoader(BaseLoader):
 
         if isinstance(self.attributes, dict):
             # Multiple vertex types
-            print_query = ""
+            print_query_kafka = ""
+            print_query_http = ""
             for idx, vtype in enumerate(self._vtypes):
                 v_attr_names = self.attributes.get(vtype, [])
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + "\\n")\n'.format(
+                    print_query_http += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + "\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", vtype, print_attr)
+                    print_query_kafka += '{} s.type == "{}" THEN \n s.@v_data += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype, print_attr)
                 else:
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + "\\n")\n'.format(
+                    print_query_http += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + "\\n")\n'.format(
                             "IF" if idx==0 else "ELSE IF", vtype)
-            print_query += "END"
-            query_replace["{VERTEXATTRS}"] = print_query
+                    print_query_kafka += '{} s.type == "{}" THEN \n s.@v_data += (s.type + delimiter + stringify(getvid(s)) + "\\n")\n'.format(
+                            "IF" if idx==0 else "ELSE IF", vtype)
+            print_query_http += "END"
+            print_query_kafka += "END"
+            query_replace["{VERTEXATTRSHTTP}"] = print_query_http
+            query_replace["{VERTEXATTRSKAFKA}"] = print_query_kafka
         else:
             # Ignore vertex types
             v_attr_names = self.attributes
             v_attr_types = next(iter(self._v_schema.values()))
             if v_attr_names:
                 print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
-                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + {} + "\\n")'.format(
+                print_query_http = '@@v_batch += (stringify(getvid(s)) + delimiter + {} + "\\n")'.format(
+                    print_attr
+                )
+                print_query_kafka = 's.@v_data += (stringify(getvid(s)) + delimiter + {} + "\\n")'.format(
                     print_attr
                 )
             else:
-                print_query = '@@v_batch += (stringify(getvid(s)) + "\\n")'
-            query_replace["{VERTEXATTRS}"] = print_query
+                print_query_http = '@@v_batch += (stringify(getvid(s)) + "\\n")'
+                print_query_kafka = 's.@v_data += (stringify(getvid(s)) + "\\n")'
+            query_replace["{VERTEXATTRSHTTP}"] = print_query_http
+            query_replace["{VERTEXATTRSKAFKA}"] = print_query_kafka
         # Install query
         query_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
