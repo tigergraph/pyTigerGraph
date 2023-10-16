@@ -2898,7 +2898,7 @@ class VertexLoader(BaseLoader):
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
-        self._start_request(False, "vertex")
+        self._start_request(False)
             
         # Start reading thread.
         if not self.is_hetero:
@@ -2906,27 +2906,20 @@ class VertexLoader(BaseLoader):
         else:
             v_attr_types = self._v_schema
         self._reader = Thread(
-            target=self._read_data,
-            args=(
-                self._exit_event,
-                self._read_task_q,
-                self._data_q,
-                "vertex",
-                self.output_format,
-                self.attributes,
-                {} if self.is_hetero else [],
-                {} if self.is_hetero else [],
-                v_attr_types,
-                [],
-                [],
-                [],
-                {},
-                False,
-                self.delimiter,
-                False,
-                self.is_hetero,
-                self.callback_fn
-            ),
+            target=self._read_vertex_data,
+            kwargs=dict(
+                exit_event = self._exit_event,
+                in_q = self._read_task_q,
+                out_q = self._data_q,
+                batch_size = self.batch_size,
+                v_in_feats = self.attributes,
+                v_out_labels = {} if self.is_hetero else [],
+                v_extra_feats = {} if self.is_hetero else [],
+                v_attr_types = v_attr_types,
+                delimiter = self.delimiter,
+                is_hetero = self.is_hetero,
+                callback_fn = self.callback_fn
+            )
         )
         self._reader.start()
 
