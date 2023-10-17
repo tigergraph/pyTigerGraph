@@ -69,8 +69,8 @@ CREATE QUERY vertex_loader_{QUERYSUFFIX}(
                     {VERTEXATTRSKAFKA},
                     INT kafka_errcode = write_to_kafka(producer, kafka_topic, getvid(s)%kafka_topic_partitions, "vertex_" + stringify(getvid(s)), s.@v_data),
                     IF kafka_errcode!=0 THEN 
-                        @@kafka_error += ("Error sending data for vertex " + stringify(getvid(s)) + ": "+ stringify(kafka_errcode) + "\n"),
-                    END
+                        @@kafka_error += ("Error sending data for vertex " + stringify(getvid(s)) + ": "+ stringify(kafka_errcode) + "\n")
+                    END,
                     s.@v_data = ""
                 LIMIT 1;
 
