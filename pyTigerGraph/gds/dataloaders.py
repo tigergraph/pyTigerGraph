@@ -622,6 +622,7 @@ class BaseLoader:
                             "Unrecognized key {} for messages in kafka".format(key)
                         )
 
+    @staticmethod
     def _download_unimode_kafka(
         exit_event: Event,
         read_task_q: Queue,
