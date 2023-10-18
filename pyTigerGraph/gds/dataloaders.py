@@ -647,21 +647,21 @@ class BaseLoader:
     def _download_unimode_kafka(
         exit_event: Event,
         read_task_q: Queue,
-        kafka_consumer: "KafkaConsumer",
-        max_wait_time: int = 300
+        kafka_consumer: "KafkaConsumer"
     ) -> NoReturn:
-        delivered_batch = 0
-        wait_time = 0
-        while (not exit_event.is_set()) and (wait_time < max_wait_time):
+        empty = False
+        while (not exit_event.is_set()) and (not empty):
             resp = kafka_consumer.poll(1000)
             if not resp:
-                wait_time += 1
                 continue
-            wait_time = 0
             for msgs in resp.values():
                 for message in msgs:
-                    read_task_q.put(message.value.decode("utf-8"))
-                    delivered_batch += 1
+                    key = message.key.decode("utf-8")
+                    if key == "STOP":
+                        read_task_q.put(None)
+                        empty = True
+                    else:
+                        read_task_q.put(message.value.decode("utf-8"))
 
     @staticmethod
     def _read_graph_data(

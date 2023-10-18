@@ -73,6 +73,13 @@ CREATE QUERY vertex_loader_{QUERYSUFFIX}(
                     END,
                     s.@v_data = ""
                 LIMIT 1;
+            
+            FOREACH i IN RANGE[0, kafka_topic_partitions-1] DO
+                INT kafka_errcode = write_to_kafka(producer, kafka_topic, i, "STOP", "");
+                IF kafka_errcode!=0 THEN 
+                    @@kafka_error += ("Error sending STOP signal to topic partition " + stringify(i) + ": " + stringify(kafka_errcode) + "\n");
+                END;
+            END;
 
             INT kafka_errcode = close_kafka_producer(producer, kafka_timeout);
             IF kafka_errcode!=0 THEN 
