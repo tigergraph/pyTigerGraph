@@ -646,8 +646,10 @@ class BaseLoader:
     @staticmethod
     def _download_unimode_kafka(
         exit_event: Event,
-        read_task_q: Queue,
-        kafka_consumer: "KafkaConsumer"
+        read_task_q1: Queue,
+        read_task_q2: Queue,
+        kafka_consumer: "KafkaConsumer",
+        shuffle: bool = False
     ) -> NoReturn:
         empty = False
         while (not exit_event.is_set()) and (not empty):
@@ -658,10 +660,14 @@ class BaseLoader:
                 for message in msgs:
                     key = message.key.decode("utf-8")
                     if key == "STOP":
-                        read_task_q.put(None)
+                        read_task_q1.put(None)
+                        read_task_q2.put(None)
                         empty = True
                     else:
-                        read_task_q.put(message.value.decode("utf-8"))
+                        if shuffle and random.random()>0.5:
+                            read_task_q2.put(message.value.decode("utf-8"))
+                        else:
+                            read_task_q1.put(message.value.decode("utf-8"))
 
     @staticmethod
     def _read_graph_data(
@@ -1666,9 +1672,10 @@ class BaseLoader:
                     target=self._download_unimode_kafka,
                     kwargs=dict(
                         exit_event = self._exit_event,
-                        read_task_q = self._read_task_q,
+                        read_task_q1 = self._read_task_q1,
+                        read_task_q2 = self._read_task_q2,
                         kafka_consumer = self._kafka_consumer,
-                        max_wait_time = self.timeout
+                        shuffle = self.shuffle
                     ),
                 )
             self._downloader.start()
