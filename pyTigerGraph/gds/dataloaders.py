@@ -53,6 +53,7 @@ class BaseLoader:
         graph: "TigerGraphConnection",
         loader_id: str = None,
         num_batches: int = 1,
+        shuffle: bool = False,
         buffer_size: int = 4,
         output_format: str = "dataframe",
         reverse_edge: bool = False,
@@ -185,7 +186,8 @@ class BaseLoader:
         # Queues to store tasks and data
         self._request_task_q = None
         self._download_task_q = None
-        self._read_task_q = None
+        self._read_task_q1 = None
+        self._read_task_q2 = None
         self._data_q = None
         self._kafka_topic = None
         self._all_kafka_topics = set()
@@ -237,7 +239,7 @@ class BaseLoader:
         self._iterator = False
         self.callback_fn = callback_fn
         self.distributed_query = distributed_query
-        self.num_heap_inserts = 10
+        self.shuffle = shuffle
         # Kafka consumer and admin
         self.max_kafka_msg_size = Kafka_max_msg_size
         self.kafka_address_consumer = (
@@ -552,7 +554,9 @@ class BaseLoader:
     def _request_graph_rest(
         tgraph: "TigerGraphConnection",
         query_name: str,
-        read_task_q: Queue,
+        read_task_q1: Queue,
+        read_task_q2: Queue,
+        shuffle: bool = False,
         timeout: int = 600000,
         payload: dict = {},
     ) -> NoReturn:
@@ -560,25 +564,42 @@ class BaseLoader:
         resp = tgraph.runInstalledQuery(
             query_name, params=payload, timeout=timeout, usePost=True
         )
-        # Put raw data into reading queue
+        # Put raw data into reading queue. 
+        # If shuffle, randomly choose between the two queues.
+        # Otherwise, put all into queue 1.
         for i in resp:
-            read_task_q.put((i["vertex_batch"], i["edge_batch"]))
+            if shuffle and random.random>0.5:
+                read_task_q2.put((i["vertex_batch"], i["edge_batch"]))
+            else:
+                read_task_q1.put((i["vertex_batch"], i["edge_batch"]))
+        read_task_q1.put(None)
+        read_task_q2.put(None)
 
     @staticmethod
     def _request_unimode_rest(
         tgraph: "TigerGraphConnection",
         query_name: str,
-        read_task_q: Queue,
+        read_task_q1: Queue,
+        read_task_q2: Queue,
+        shuffle: bool = False,
         timeout: int = 600000,
         payload: dict = {},
     ) -> NoReturn:
         # Run query
+        #TODO: check what happens when the query times out
         resp = tgraph.runInstalledQuery(
             query_name, params=payload, timeout=timeout, usePost=True
         )
         # Put raw data into reading queue
+        # If shuffle, randomly choose between the two queues.
+        # Otherwise, put all into queue 1.
         for i in resp:
-            read_task_q.put(i["data_batch"])
+            if shuffle and random.random()>0.5:
+                read_task_q2.put(i["data_batch"])
+            else:
+                read_task_q1.put(i["data_batch"])
+        read_task_q1.put(None)
+        read_task_q2.put(None)
 
     @staticmethod
     def _download_graph_kafka(
@@ -822,10 +843,9 @@ class BaseLoader:
     @staticmethod
     def _read_vertex_data(
         exit_event: Event,
-        in_q: Queue,
+        in_q: List[Queue],
         out_q: Queue,
         batch_size: int,
-        shuffle: bool = False,
         v_in_feats: Union[list, dict] = [],
         v_out_labels: Union[list, dict] = [],
         v_extra_feats: Union[list, dict] = [],
@@ -835,20 +855,27 @@ class BaseLoader:
         callback_fn: Callable = None
     ) -> NoReturn:
         buffer = []
-        while not exit_event.is_set():
+        curr_q_idx = 0
+        curr_q = in_q[curr_q_idx]
+        is_q_empty = [False]*len(in_q)
+        last_batch = False
+        while (not exit_event.is_set()) and (not all(is_q_empty)):
             try:
-                raw = in_q.get(timeout=1)
+                raw = curr_q.get(timeout=0.5)
             except Empty:
+                next_q_idx = 1 - curr_q_idx
+                if not is_q_empty[next_q_idx]:
+                    curr_q_idx = next_q_idx
+                    curr_q = in_q[curr_q_idx]
                 continue
-            # if shuffle the data, 50% chance to save this data point for later 
-            if shuffle and (random.random() < 0.5): 
-                in_q.task_done()
-                in_q.put(raw)
-                continue
-            # Store raw into buffer until there are enough data points for a batch
-            buffer.append(raw)
-            in_q.task_done()
-            if len(buffer) < batch_size:
+            if raw is None:
+                is_q_empty[curr_q_idx] = True
+                if all(is_q_empty):
+                    if len(buffer) > 0:
+                        last_batch = True
+            else:
+                buffer.append(raw)
+            if (len(buffer) < batch_size) and (not last_batch):
                 continue
             try:
                 data = BaseLoader._parse_vertex_data(
@@ -877,6 +904,7 @@ class BaseLoader:
                 logger.error("Parameters:\n  v_in_feats={}\n  v_out_labels={}\n  v_extra_feats={}\n  v_attr_types={}\n  delimiter={}\n".format(
                     v_in_feats, v_out_labels, v_extra_feats, v_attr_types, delimiter))
             buffer.clear()
+        out_q.put(None)
                 
     @staticmethod
     def _read_edge_data(
@@ -1676,7 +1704,9 @@ class BaseLoader:
                     kwargs=dict(
                         tgraph = self._graph,
                         query_name = self.query_name,
-                        read_task_q = self._read_task_q,
+                        read_task_q1 = self._read_task_q1,
+                        read_task_q2 = self._read_task_q2,
+                        shuffle = self.shuffle,
                         timeout = self.timeout,
                         payload = self._payload
                     ),
@@ -1767,10 +1797,16 @@ class BaseLoader:
                     self._download_task_q.get(block=False)
                 except Empty:
                     break
-        if self._read_task_q:
+        if self._read_task_q1:
             while True:
                 try:
-                    self._read_task_q.get(block=False)
+                    self._read_task_q1.get(block=False)
+                except Empty:
+                    break
+        if self._read_task_q2:
+            while True:
+                try:
+                    self._read_task_q2.get(block=False)
                 except Empty:
                     break
         if self._data_q:
@@ -1785,14 +1821,15 @@ class BaseLoader:
             self._downloader.join()
         if self._reader:
             self._reader.join()
-        del self._request_task_q, self._download_task_q, self._read_task_q, self._data_q
+        del self._request_task_q, self._download_task_q, self._read_task_q1, self._read_task_q2, self._data_q
         self._exit_event = None
         self._requester, self._downloader, self._reader = None, None, None
-        self._request_task_q, self._download_task_q, self._read_task_q, self._data_q = (
+        self._request_task_q, self._download_task_q, self._read_task_q1, self._read_task_q2, self._data_q = (
             None,
             None,
             None,
             None,
+            None
         )
         if theend:
             if self._kafka_topic and self._kafka_consumer:
@@ -2760,6 +2797,7 @@ class VertexLoader(BaseLoader):
             graph,
             loader_id,
             num_batches,
+            shuffle,
             buffer_size,
             output_format,
             reverse_edge,
@@ -2895,7 +2933,8 @@ class VertexLoader(BaseLoader):
 
     def _start(self) -> None:
         # Create task and result queues
-        self._read_task_q = Queue(self.buffer_size * 2)
+        self._read_task_q1 = Queue(self.buffer_size)
+        self._read_task_q2 = Queue(self.buffer_size)
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
@@ -2910,7 +2949,7 @@ class VertexLoader(BaseLoader):
             target=self._read_vertex_data,
             kwargs=dict(
                 exit_event = self._exit_event,
-                in_q = self._read_task_q,
+                in_q = [self._read_task_q1, self._read_task_q2],
                 out_q = self._data_q,
                 batch_size = self.batch_size,
                 v_in_feats = self.attributes,
