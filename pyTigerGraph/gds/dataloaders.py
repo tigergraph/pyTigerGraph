@@ -2899,17 +2899,33 @@ class VertexLoader(BaseLoader):
                 v_attr_types = self._v_schema[vtype]
                 if v_attr_names:
                     print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
-                    print_query_http += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + "\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", vtype, print_attr)
-                    print_query_kafka += '{} s.type == "{}" THEN \n s.@v_data += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + "\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", vtype, print_attr)
+                    print_query_http += """
+                        {} s.type == "{}" THEN
+                            @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + "\\n")\n"""\
+                        .format("IF" if idx==0 else "ELSE IF", vtype, print_attr)
+                    print_query_kafka += """
+                        {} s.type == "{}" THEN 
+                            STRING msg = (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + "\\n"),
+                            INT kafka_errcode = write_to_kafka(producer, kafka_topic, getvid(s)%kafka_topic_partitions, "vertex_" + stringify(getvid(s)), msg),
+                            IF kafka_errcode!=0 THEN 
+                                @@kafka_error += ("Error sending data for vertex " + stringify(getvid(s)) + ": "+ stringify(kafka_errcode) + "\\n")
+                            END\n""".format("IF" if idx==0 else "ELSE IF", vtype, print_attr)
                 else:
-                    print_query_http += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + "\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", vtype)
-                    print_query_kafka += '{} s.type == "{}" THEN \n s.@v_data += (s.type + delimiter + stringify(getvid(s)) + "\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", vtype)
-            print_query_http += "END"
-            print_query_kafka += "END"
+                    print_query_http += """
+                        {} s.type == "{}" THEN
+                            @@v_batch += (s.type + delimiter + stringify(getvid(s)) + "\\n")\n"""\
+                        .format("IF" if idx==0 else "ELSE IF", vtype)
+                    print_query_kafka += """
+                        {} s.type == "{}" THEN
+                            STRING msg = (s.type + delimiter + stringify(getvid(s)) + "\\n"),
+                            INT kafka_errcode = write_to_kafka(producer, kafka_topic, getvid(s)%kafka_topic_partitions, "vertex_" + stringify(getvid(s)), msg),
+                            IF kafka_errcode!=0 THEN 
+                                @@kafka_error += ("Error sending data for vertex " + stringify(getvid(s)) + ": "+ stringify(kafka_errcode) + "\\n")
+                            END\n""".format("IF" if idx==0 else "ELSE IF", vtype)
+            print_query_http += "\
+                        END"
+            print_query_kafka += "\
+                        END"
             query_replace["{VERTEXATTRSHTTP}"] = print_query_http
             query_replace["{VERTEXATTRSKAFKA}"] = print_query_kafka
         else:
@@ -2921,12 +2937,20 @@ class VertexLoader(BaseLoader):
                 print_query_http = '@@v_batch += (stringify(getvid(s)) + delimiter + {} + "\\n")'.format(
                     print_attr
                 )
-                print_query_kafka = 's.@v_data += (stringify(getvid(s)) + delimiter + {} + "\\n")'.format(
-                    print_attr
-                )
+                print_query_kafka = """
+                    STRING msg = (stringify(getvid(s)) + delimiter + {} + "\\n"),
+                    INT kafka_errcode = write_to_kafka(producer, kafka_topic, getvid(s)%kafka_topic_partitions, "vertex_" + stringify(getvid(s)), msg),
+                    IF kafka_errcode!=0 THEN 
+                        @@kafka_error += ("Error sending data for vertex " + stringify(getvid(s)) + ": "+ stringify(kafka_errcode) + "\\n")
+                    END""".format(print_attr)
             else:
                 print_query_http = '@@v_batch += (stringify(getvid(s)) + "\\n")'
-                print_query_kafka = 's.@v_data += (stringify(getvid(s)) + "\\n")'
+                print_query_kafka = """
+                    STRING msg = (stringify(getvid(s)) + "\\n"),
+                    INT kafka_errcode = write_to_kafka(producer, kafka_topic, getvid(s)%kafka_topic_partitions, "vertex_" + stringify(getvid(s)), msg),
+                    IF kafka_errcode!=0 THEN 
+                        @@kafka_error += ("Error sending data for vertex " + stringify(getvid(s)) + ": "+ stringify(kafka_errcode) + "\\n")
+                    END"""
             query_replace["{VERTEXATTRSHTTP}"] = print_query_http
             query_replace["{VERTEXATTRSKAFKA}"] = print_query_kafka
         # Install query

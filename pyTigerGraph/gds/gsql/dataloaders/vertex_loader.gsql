@@ -4,7 +4,7 @@ CREATE QUERY vertex_loader_{QUERYSUFFIX}(
     SET<STRING> v_types,
     STRING delimiter,
     STRING kafka_address="",
-    STRING kafka_topic,
+    STRING kafka_topic="",
     INT kafka_topic_partitions=1,
     STRING kafka_max_size="104857600",
     INT kafka_timeout=300000,
@@ -43,11 +43,7 @@ CREATE QUERY vertex_loader_{QUERYSUFFIX}(
     */
     # If getting all vertices of given types
     IF input_vertices.size()==0 THEN
-        # Filter seeds if needed.
         start = {v_types};
-        seeds = SELECT s 
-            FROM start:s 
-            WHERE filter_by is NULL OR s.getAttr(filter_by, "BOOL");
         
         # Generate batches
         # If using kafka to export 
@@ -64,14 +60,10 @@ CREATE QUERY vertex_loader_{QUERYSUFFIX}(
                 sasl_kerberos_keytab, sasl_kerberos_principal);
 
             res = SELECT s 
-                FROM seeds:s 
+                FROM start:s
+                WHERE filter_by is NULL OR s.getAttr(filter_by, "BOOL")
                 POST-ACCUM
-                    {VERTEXATTRSKAFKA},
-                    INT kafka_errcode = write_to_kafka(producer, kafka_topic, getvid(s)%kafka_topic_partitions, "vertex_" + stringify(getvid(s)), s.@v_data),
-                    IF kafka_errcode!=0 THEN 
-                        @@kafka_error += ("Error sending data for vertex " + stringify(getvid(s)) + ": "+ stringify(kafka_errcode) + "\n")
-                    END,
-                    s.@v_data = ""
+                    {VERTEXATTRSKAFKA}
                 LIMIT 1;
             
             FOREACH i IN RANGE[0, kafka_topic_partitions-1] DO
@@ -90,8 +82,9 @@ CREATE QUERY vertex_loader_{QUERYSUFFIX}(
         ELSE
             ListAccum<STRING> @@v_batch;
             res = SELECT s 
-                FROM seeds:s 
-                ACCUM 
+                FROM start:s
+                WHERE filter_by is NULL OR s.getAttr(filter_by, "BOOL")
+                POST-ACCUM 
                     {VERTEXATTRSHTTP};
             
             FOREACH i IN @@v_batch DO
@@ -102,10 +95,11 @@ CREATE QUERY vertex_loader_{QUERYSUFFIX}(
     ELSE
         ListAccum<STRING> @@v_batch;
         start = input_vertices;
-        seeds = SELECT s 
-                FROM start:s 
-                POST-ACCUM 
-                    {VERTEXATTRSHTTP};
+        res = SELECT s 
+            FROM start:s 
+            POST-ACCUM 
+                {VERTEXATTRSHTTP}
+            LIMIT 1;
         FOREACH i IN @@v_batch DO
             PRINT i as data_batch;
         END;
