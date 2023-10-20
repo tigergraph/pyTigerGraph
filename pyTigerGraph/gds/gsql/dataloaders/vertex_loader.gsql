@@ -3,6 +3,8 @@ CREATE QUERY vertex_loader_{QUERYSUFFIX}(
     STRING filter_by,
     SET<STRING> v_types,
     STRING delimiter,
+    BOOL shuffle=FALSE,
+    INT num_chunks=2,
     STRING kafka_address="",
     STRING kafka_topic="",
     INT kafka_topic_partitions=1,
@@ -41,15 +43,33 @@ CREATE QUERY vertex_loader_{QUERYSUFFIX}(
       sasl_password  : SASL password for Kafka. 
       ssl_ca_location: Path to CA certificate for verifying the Kafka broker key.
     */
+    SumAccum<INT> @tmp_id;
+
     # If getting all vertices of given types
     IF input_vertices.size()==0 THEN
         start = {v_types};
+        # Filter seeds if needed
+        seeds = SELECT s
+            FROM start:s
+            WHERE filter_by is NULL OR s.getAttr(filter_by, "BOOL");
+        # Shuffle vertex ID if needed
+        IF shuffle THEN
+            INT num_vertices = seeds.size();
+            res = SELECT s 
+                FROM seeds:s
+                POST-ACCUM s.@tmp_id = floor(rand()*num_vertices)
+                LIMIT 1;
+        ELSE
+            res = SELECT s 
+                FROM seeds:s
+                POST-ACCUM s.@tmp_id = getvid(s)
+                LIMIT 1;
+        END;
         
-        # Generate batches
+        # Export data
         # If using kafka to export 
         IF kafka_address != "" THEN
             SumAccum<STRING> @@kafka_error;
-            SumAccum<STRING> @v_data;
 
             # Initialize Kafka producer
             UINT producer = init_kafka_producer(
@@ -59,13 +79,15 @@ CREATE QUERY vertex_loader_{QUERYSUFFIX}(
                 ssl_endpoint_identification_algorithm, sasl_kerberos_service_name,
                 sasl_kerberos_keytab, sasl_kerberos_principal);
 
-            res = SELECT s 
-                FROM start:s
-                WHERE filter_by is NULL OR s.getAttr(filter_by, "BOOL")
-                POST-ACCUM
-                    {VERTEXATTRSKAFKA}
-                LIMIT 1;
-            
+            FOREACH chunk IN RANGE[0, num_chunks-1] DO
+                res = SELECT s 
+                    FROM seeds:s
+                    WHERE s.@tmp_id % num_chunks == chunk
+                    POST-ACCUM
+                        {VERTEXATTRSKAFKA}
+                    LIMIT 1;
+            END;
+                
             FOREACH i IN RANGE[0, kafka_topic_partitions-1] DO
                 INT kafka_errcode = write_to_kafka(producer, kafka_topic, i, "STOP", "");
                 IF kafka_errcode!=0 THEN 
@@ -80,15 +102,18 @@ CREATE QUERY vertex_loader_{QUERYSUFFIX}(
             PRINT @@kafka_error as kafkaError;
         # Else return as http response
         ELSE
-            ListAccum<STRING> @@v_batch;
-            res = SELECT s 
-                FROM start:s
-                WHERE filter_by is NULL OR s.getAttr(filter_by, "BOOL")
-                POST-ACCUM 
-                    {VERTEXATTRSHTTP};
-            
-            FOREACH i IN @@v_batch DO
-                PRINT i as data_batch;
+            FOREACH chunk IN RANGE[0, num_chunks-1] DO
+                ListAccum<STRING> @@v_batch;
+                res = SELECT s 
+                    FROM seeds:s
+                    WHERE s.@tmp_id % num_chunks == chunk
+                    POST-ACCUM 
+                        {VERTEXATTRSHTTP}
+                    LIMIT 1;
+
+                FOREACH i IN @@v_batch DO
+                    PRINT i as data_batch;
+                END;
             END;
         END;
     # Else get given vertices. 

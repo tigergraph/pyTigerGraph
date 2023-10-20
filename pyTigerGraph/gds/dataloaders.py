@@ -53,7 +53,6 @@ class BaseLoader:
         graph: "TigerGraphConnection",
         loader_id: str = None,
         num_batches: int = 1,
-        shuffle: bool = False,
         buffer_size: int = 4,
         output_format: str = "dataframe",
         reverse_edge: bool = False,
@@ -186,8 +185,7 @@ class BaseLoader:
         # Queues to store tasks and data
         self._request_task_q = None
         self._download_task_q = None
-        self._read_task_q1 = None
-        self._read_task_q2 = None
+        self._read_task_q = None
         self._data_q = None
         self._kafka_topic = None
         self._all_kafka_topics = set()
@@ -239,7 +237,6 @@ class BaseLoader:
         self._iterator = False
         self.callback_fn = callback_fn
         self.distributed_query = distributed_query
-        self.shuffle = shuffle
         # Kafka consumer and admin
         self.max_kafka_msg_size = Kafka_max_msg_size
         self.kafka_address_consumer = (
@@ -554,9 +551,7 @@ class BaseLoader:
     def _request_graph_rest(
         tgraph: "TigerGraphConnection",
         query_name: str,
-        read_task_q1: Queue,
-        read_task_q2: Queue,
-        shuffle: bool = False,
+        read_task_q: Queue,
         timeout: int = 600000,
         payload: dict = {},
     ) -> NoReturn:
@@ -565,23 +560,15 @@ class BaseLoader:
             query_name, params=payload, timeout=timeout, usePost=True
         )
         # Put raw data into reading queue. 
-        # If shuffle, randomly choose between the two queues.
-        # Otherwise, put all into queue 1.
         for i in resp:
-            if shuffle and random.random>0.5:
-                read_task_q2.put((i["vertex_batch"], i["edge_batch"]))
-            else:
-                read_task_q1.put((i["vertex_batch"], i["edge_batch"]))
-        read_task_q1.put(None)
-        read_task_q2.put(None)
+            read_task_q.put((i["vertex_batch"], i["edge_batch"]))
+        read_task_q.put(None)
 
     @staticmethod
     def _request_unimode_rest(
         tgraph: "TigerGraphConnection",
         query_name: str,
-        read_task_q1: Queue,
-        read_task_q2: Queue,
-        shuffle: bool = False,
+        read_task_q: Queue,
         timeout: int = 600000,
         payload: dict = {},
     ) -> NoReturn:
@@ -591,15 +578,9 @@ class BaseLoader:
             query_name, params=payload, timeout=timeout, usePost=True
         )
         # Put raw data into reading queue
-        # If shuffle, randomly choose between the two queues.
-        # Otherwise, put all into queue 1.
         for i in resp:
-            if shuffle and random.random()>0.5:
-                read_task_q2.put(i["data_batch"])
-            else:
-                read_task_q1.put(i["data_batch"])
-        read_task_q1.put(None)
-        read_task_q2.put(None)
+            read_task_q.put(i["data_batch"])
+        read_task_q.put(None)
 
     @staticmethod
     def _download_graph_kafka(
@@ -646,10 +627,8 @@ class BaseLoader:
     @staticmethod
     def _download_unimode_kafka(
         exit_event: Event,
-        read_task_q1: Queue,
-        read_task_q2: Queue,
-        kafka_consumer: "KafkaConsumer",
-        shuffle: bool = False
+        read_task_q: Queue,
+        kafka_consumer: "KafkaConsumer"
     ) -> NoReturn:
         empty = False
         while (not exit_event.is_set()) and (not empty):
@@ -660,14 +639,10 @@ class BaseLoader:
                 for message in msgs:
                     key = message.key.decode("utf-8")
                     if key == "STOP":
-                        read_task_q1.put(None)
-                        read_task_q2.put(None)
+                        read_task_q.put(None)
                         empty = True
                     else:
-                        if shuffle and random.random()>0.5:
-                            read_task_q2.put(message.value.decode("utf-8"))
-                        else:
-                            read_task_q1.put(message.value.decode("utf-8"))
+                        read_task_q.put(message.value.decode("utf-8"))
 
     @staticmethod
     def _read_graph_data(
@@ -849,7 +824,7 @@ class BaseLoader:
     @staticmethod
     def _read_vertex_data(
         exit_event: Event,
-        in_q: List[Queue],
+        in_q: Queue,
         out_q: Queue,
         batch_size: int,
         v_in_feats: Union[list, dict] = [],
@@ -861,24 +836,17 @@ class BaseLoader:
         callback_fn: Callable = None
     ) -> NoReturn:
         buffer = []
-        curr_q_idx = 0
-        curr_q = in_q[curr_q_idx]
-        is_q_empty = [False]*len(in_q)
         last_batch = False
-        while (not exit_event.is_set()) and (not all(is_q_empty)):
+        is_empty = False
+        while (not exit_event.is_set()) and (not is_empty):
             try:
-                raw = curr_q.get(timeout=0.5)
+                raw = in_q.get(timeout=1)
             except Empty:
-                next_q_idx = 1 - curr_q_idx
-                if not is_q_empty[next_q_idx]:
-                    curr_q_idx = next_q_idx
-                    curr_q = in_q[curr_q_idx]
                 continue
             if raw is None:
-                is_q_empty[curr_q_idx] = True
-                if all(is_q_empty):
-                    if len(buffer) > 0:
-                        last_batch = True
+                is_empty = True
+                if len(buffer) > 0:
+                    last_batch = True
             else:
                 buffer.append(raw)
             if (len(buffer) < batch_size) and (not last_batch):
@@ -918,7 +886,6 @@ class BaseLoader:
         in_q: Queue,
         out_q: Queue,
         batch_size: int,
-        shuffle: bool = False,
         e_in_feats: Union[list, dict] = [],
         e_out_labels: Union[list, dict] = [],
         e_extra_feats: Union[list, dict] = [],
@@ -928,20 +895,20 @@ class BaseLoader:
         callback_fn: Callable = None
     ) -> NoReturn:
         buffer = []
-        while not exit_event.is_set():
+        is_empty = False
+        last_batch = False
+        while not exit_event.is_set() and (not is_empty):
             try:
                 raw = in_q.get(timeout=1)
             except Empty:
                 continue
-            # if shuffle the data, 50% chance to save this data point for later 
-            if shuffle and (random.random() < 0.5): 
-                in_q.task_done()
-                in_q.put(raw)
-                continue
-            # Store raw into buffer until there are enough data points for a batch
-            buffer.append(raw)
-            in_q.task_done()
-            if len(buffer) < batch_size:
+            if raw is None:
+                is_empty = True
+                if len(buffer) > 0:
+                    last_batch = True
+            else:
+                buffer.append(raw)
+            if (len(buffer) < batch_size) and (not last_batch):
                 continue
             try:
                 data = BaseLoader._parse_edge_data(
@@ -970,6 +937,7 @@ class BaseLoader:
                 logger.error("Parameters:\n  e_in_feats={}\n  e_out_labels={}\n  e_extra_feats={}\n  e_attr_types={}\n  delimiter={}\n".format(
                     e_in_feats, e_out_labels, e_extra_feats, e_attr_types, delimiter))
             buffer.clear()
+        out_q.put(None)
 
     @staticmethod
     def _parse_vertex_data(
@@ -1672,10 +1640,8 @@ class BaseLoader:
                     target=self._download_unimode_kafka,
                     kwargs=dict(
                         exit_event = self._exit_event,
-                        read_task_q1 = self._read_task_q1,
-                        read_task_q2 = self._read_task_q2,
-                        kafka_consumer = self._kafka_consumer,
-                        shuffle = self.shuffle
+                        read_task_q = self._read_task_q,
+                        kafka_consumer = self._kafka_consumer
                     ),
                 )
             self._downloader.start()
@@ -1711,9 +1677,7 @@ class BaseLoader:
                     kwargs=dict(
                         tgraph = self._graph,
                         query_name = self.query_name,
-                        read_task_q1 = self._read_task_q1,
-                        read_task_q2 = self._read_task_q2,
-                        shuffle = self.shuffle,
+                        read_task_q = self._read_task_q,
                         timeout = self.timeout,
                         payload = self._payload
                     ),
@@ -1804,16 +1768,10 @@ class BaseLoader:
                     self._download_task_q.get(block=False)
                 except Empty:
                     break
-        if self._read_task_q1:
+        if self._read_task_q:
             while True:
                 try:
-                    self._read_task_q1.get(block=False)
-                except Empty:
-                    break
-        if self._read_task_q2:
-            while True:
-                try:
-                    self._read_task_q2.get(block=False)
+                    self._read_task_q.get(block=False)
                 except Empty:
                     break
         if self._data_q:
@@ -1828,11 +1786,10 @@ class BaseLoader:
             self._downloader.join()
         if self._reader:
             self._reader.join()
-        del self._request_task_q, self._download_task_q, self._read_task_q1, self._read_task_q2, self._data_q
+        del self._request_task_q, self._download_task_q, self._read_task_q, self._data_q
         self._exit_event = None
         self._requester, self._downloader, self._reader = None, None, None
-        self._request_task_q, self._download_task_q, self._read_task_q1, self._read_task_q2, self._data_q = (
-            None,
+        self._request_task_q, self._download_task_q, self._read_task_q, self._data_q = (
             None,
             None,
             None,
@@ -2556,19 +2513,18 @@ class EdgeLoader(BaseLoader):
         self._etypes = sorted(self._etypes)
         # Initialize parameters for the query
         if batch_size:
-            # If batch_size is given, calculate the number of batches
+            # batch size takes precedence over number of batches
+            self.batch_size = batch_size
+            self.num_batches = None
+        else:
+            # If number of batches is given, calculate batch size
             if filter_by:
                 num_edges = sum(self._graph.getEdgeStats(e_type)[e_type][filter_by if isinstance(filter_by, str) else filter_by[e_type]]["TRUE"] for e_type in self._etypes)
             else:
                 num_edges = sum(self._graph.getEdgeCount(i) for i in self._etypes)
-            self.num_batches = math.ceil(num_edges / batch_size)
-        else:
-            # Otherwise, take the number of batches as is.
+            self.batch_size = math.ceil(num_edges / num_batches)
             self.num_batches = num_batches
         # Initialize the exporter
-        if batch_size:
-            self._payload["batch_size"] = batch_size
-        self._payload["num_batches"] = self.num_batches
         if filter_by:
             self._payload["filter_by"] = filter_by
         self._payload["shuffle"] = shuffle
@@ -2590,31 +2546,65 @@ class EdgeLoader(BaseLoader):
 
         if isinstance(self.attributes, dict):
             # Multiple edge types
-            print_query = ""
+            print_query_kafka = ""
+            print_query_http = ""
             for idx, etype in enumerate(self._etypes):
                 e_attr_names = self.attributes.get(etype, [])
                 e_attr_types = self._e_schema[etype]
                 if e_attr_names:
                     print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
-                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", etype, print_attr)
+                    print_query_http += """
+                        {} e.type == "{}" THEN
+                            @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n")\n"""\
+                        .format("IF" if idx==0 else "ELSE IF", etype, print_attr)
+                    print_query_kafka += """
+                        {} e.type == "{}" THEN 
+                            STRING msg = (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n"),
+                            INT kafka_errcode = write_to_kafka(producer, kafka_topic, (getvid(s)+getvid(t))%kafka_topic_partitions, "edge_" + stringify(getvid(s)) + "_" + stringify(getvid(t)), msg),
+                            IF kafka_errcode!=0 THEN 
+                                @@kafka_error += ("Error sending data for edge " + stringify(getvid(s)) + "_" + stringify(getvid(t)) + ": "+ stringify(kafka_errcode) + "\\n")
+                            END\n""".format("IF" if idx==0 else "ELSE IF", etype, print_attr)
                 else:
-                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + "\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", etype)
-            print_query += "END"
-            query_replace["{EDGEATTRS}"] = print_query
+                    print_query_http += """
+                        {} e.type == "{}" THEN 
+                            @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + "\\n")\n"""\
+                        .format("IF" if idx==0 else "ELSE IF", etype)
+                    print_query_kafka += """
+                        {} e.type == "{}" THEN
+                            STRING msg = (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + "\\n"),
+                            INT kafka_errcode = write_to_kafka(producer, kafka_topic, (getvid(s)+getvid(t))%kafka_topic_partitions, "edge_" + stringify(getvid(s)) + "_" + stringify(getvid(t)), msg),
+                            IF kafka_errcode!=0 THEN 
+                                @@kafka_error += ("Error sending data for edge " + stringify(getvid(s)) + "_" + stringify(getvid(t)) + ": "+ stringify(kafka_errcode) + "\\n")
+                            END\n""".format("IF" if idx==0 else "ELSE IF", etype)
+            print_query_http += "\
+                        END"
+            print_query_kafka += "\
+                        END"
         else:
             # Ignore edge types
             e_attr_names = self.attributes
             e_attr_types = next(iter(self._e_schema.values()))
             if e_attr_names:
                 print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
-                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n")'.format(
+                print_query_http = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n")'.format(
                     print_attr
                 )
+                print_query_kafka = """
+                    STRING msg = (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n"),
+                    INT kafka_errcode = write_to_kafka(producer, kafka_topic, (getvid(s)+getvid(t))%kafka_topic_partitions, "edge_" + stringify(getvid(s)) + "_" + stringify(getvid(t)), msg),
+                    IF kafka_errcode!=0 THEN 
+                        @@kafka_error += ("Error sending data for edge " + stringify(getvid(s)) + "_" + stringify(getvid(t)) + ": "+ stringify(kafka_errcode) + "\\n")
+                    END""".format(print_attr)
             else:
-                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + "\\n")'
-            query_replace["{EDGEATTRS}"] = print_query
+                print_query_http = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + "\\n")'
+                print_query_kafka = """
+                    STRING msg = (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + "\\n"),
+                    INT kafka_errcode = write_to_kafka(producer, kafka_topic, (getvid(s)+getvid(t))%kafka_topic_partitions, "edge_" + stringify(getvid(s)) + "_" + stringify(getvid(t)), msg),
+                    IF kafka_errcode!=0 THEN 
+                        @@kafka_error += ("Error sending data for edge " + stringify(getvid(s)) + "_" + stringify(getvid(t)) + ": "+ stringify(kafka_errcode) + "\\n")
+                    END"""
+        query_replace["{EDGEATTRSHTTP}"] = print_query_http
+        query_replace["{EDGEATTRSKAFKA}"] = print_query_kafka
         # Install query
         query_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
@@ -2626,11 +2616,11 @@ class EdgeLoader(BaseLoader):
 
     def _start(self) -> None:
         # Create task and result queues
-        self._read_task_q = Queue(self.buffer_size * 2)
+        self._read_task_q = Queue(self.buffer_size)
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
-        self._start_request(False, "edge")
+        self._start_request(False)
 
         # Start reading thread.
         if not self.is_hetero:
@@ -2638,27 +2628,20 @@ class EdgeLoader(BaseLoader):
         else:
             e_attr_types = self._e_schema
         self._reader = Thread(
-            target=self._read_data,
-            args=(
-                self._exit_event,
-                self._read_task_q,
-                self._data_q,
-                "edge",
-                self.output_format,
-                [],
-                [],
-                [],
-                {},
-                self.attributes,
-                {} if self.is_hetero else [],
-                {} if self.is_hetero else [],
-                e_attr_types,
-                False,
-                self.delimiter,
-                False,
-                self.is_hetero,
-                self.callback_fn
-            ),
+            target=self._read_edge_data,
+            kwargs=dict(
+                exit_event = self._exit_event,
+                in_q = self._read_task_q,
+                out_q = self._data_q,
+                batch_size = self.batch_size,
+                e_in_feats = self.attributes,
+                e_out_labels = {} if self.is_hetero else [],
+                e_extra_feats = {} if self.is_hetero else [],
+                e_attr_types = e_attr_types,
+                delimiter = self.delimiter,
+                is_hetero = self.is_hetero,
+                callback_fn = self.callback_fn
+            )
         )
         self._reader.start()
 
@@ -2804,7 +2787,6 @@ class VertexLoader(BaseLoader):
             graph,
             loader_id,
             num_batches,
-            shuffle,
             buffer_size,
             output_format,
             reverse_edge,
@@ -2874,6 +2856,7 @@ class VertexLoader(BaseLoader):
             self.num_batches = num_batches
         if filter_by:
             self._payload["filter_by"] = filter_by
+        self._payload["shuffle"] = shuffle
         self._payload["delimiter"] = delimiter
         self._payload["v_types"] = self._vtypes
         self._payload["input_vertices"] = []
@@ -2926,8 +2909,6 @@ class VertexLoader(BaseLoader):
                         END"
             print_query_kafka += "\
                         END"
-            query_replace["{VERTEXATTRSHTTP}"] = print_query_http
-            query_replace["{VERTEXATTRSKAFKA}"] = print_query_kafka
         else:
             # Ignore vertex types
             v_attr_names = self.attributes
@@ -2951,8 +2932,8 @@ class VertexLoader(BaseLoader):
                     IF kafka_errcode!=0 THEN 
                         @@kafka_error += ("Error sending data for vertex " + stringify(getvid(s)) + ": "+ stringify(kafka_errcode) + "\\n")
                     END"""
-            query_replace["{VERTEXATTRSHTTP}"] = print_query_http
-            query_replace["{VERTEXATTRSKAFKA}"] = print_query_kafka
+        query_replace["{VERTEXATTRSHTTP}"] = print_query_http
+        query_replace["{VERTEXATTRSKAFKA}"] = print_query_kafka
         # Install query
         query_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
@@ -2964,8 +2945,7 @@ class VertexLoader(BaseLoader):
 
     def _start(self) -> None:
         # Create task and result queues
-        self._read_task_q1 = Queue(self.buffer_size)
-        self._read_task_q2 = Queue(self.buffer_size)
+        self._read_task_q = Queue(self.buffer_size)
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
@@ -2980,7 +2960,7 @@ class VertexLoader(BaseLoader):
             target=self._read_vertex_data,
             kwargs=dict(
                 exit_event = self._exit_event,
-                in_q = [self._read_task_q1, self._read_task_q2],
+                in_q = self._read_task_q,
                 out_q = self._data_q,
                 batch_size = self.batch_size,
                 v_in_feats = self.attributes,
