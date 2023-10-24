@@ -39,7 +39,7 @@ import numpy as np
 import pandas as pd
 
 from ..pyTigerGraphException import TigerGraphException
-from .utilities import install_query_file, random_string, add_attribute
+from .utilities import install_query_file, random_string, add_attribute, install_query_files
 
 __all__ = ["VertexLoader", "EdgeLoader", "NeighborLoader", "GraphLoader", "EdgeNeighborLoader", "NodePieceLoader", "HGTLoader"]
 
@@ -183,8 +183,6 @@ class BaseLoader:
         self._downloader = None
         self._reader = None
         # Queues to store tasks and data
-        self._request_task_q = None
-        self._download_task_q = None
         self._read_task_q = None
         self._data_q = None
         self._kafka_topic = None
@@ -586,28 +584,27 @@ class BaseLoader:
     def _download_graph_kafka(
         exit_event: Event,
         read_task_q: Queue,
-        kafka_consumer: "KafkaConsumer",
-        max_wait_time: int = 300
+        kafka_consumer: "KafkaConsumer"
     ) -> NoReturn:
-        delivered_batch = 0
+        empty = False
         buffer = {}
-        wait_time = 0
-        while (not exit_event.is_set()) and (wait_time < max_wait_time):
+        while (not exit_event.is_set()) and (not empty):
             resp = kafka_consumer.poll(1000)
             if not resp:
-                wait_time += 1
                 continue
-            wait_time = 0
             for msgs in resp.values():
                 for message in msgs:
                     key = message.key.decode("utf-8")
+                    if key == "STOP":
+                        read_task_q.put(None)
+                        empty = True
+                        continue
                     if key.startswith("vertex"):
                         companion_key = key.replace("vertex", "edge")
                         if companion_key in buffer:
                             read_task_q.put((message.value.decode("utf-8"), 
                                              buffer[companion_key]))
                             del buffer[companion_key]
-                            delivered_batch += 1
                         else:
                             buffer[key] = message.value.decode("utf-8")
                     elif key.startswith("edge"):
@@ -616,11 +613,10 @@ class BaseLoader:
                             read_task_q.put((buffer[companion_key], 
                                              message.value.decode("utf-8")))
                             del buffer[companion_key]
-                            delivered_batch += 1
                         else:
                             buffer[key] = message.value.decode("utf-8")
                     else:
-                        raise ValueError(
+                        warnings.warn(
                             "Unrecognized key {} for messages in kafka".format(key)
                         )
 
@@ -650,7 +646,6 @@ class BaseLoader:
         in_q: Queue,
         out_q: Queue,
         batch_size: int,
-        shuffle: bool = False,
         out_format: str = "dataframe",
         v_in_feats: Union[list, dict] = [],
         v_out_labels: Union[list, dict] = [],
@@ -708,25 +703,25 @@ class BaseLoader:
                     "Spektral is not installed. Please install it to use spektral output."
                 )
         # Get raw data from queue and parse 
-        vertex_buffer = []
-        edge_buffer = []
+        vertex_buffer = set()
+        edge_buffer = set()
         buffer_size = 0
-        while not exit_event.is_set():
+        is_empty = False
+        last_batch = False
+        while (not exit_event.is_set()) and (not is_empty):
             try:
                 raw = in_q.get(timeout=1)
             except Empty:
                 continue
-            # if shuffle the data, 50% chance to save this data point for later 
-            if shuffle and (random.random() < 0.5): 
-                in_q.task_done()
-                in_q.put(raw)
-                continue
-            # Store raw into buffer until there are enough data points for a batch
-            vertex_buffer.extend(raw[0].splitlines())
-            edge_buffer.extend(raw[1].splitlines())
-            buffer_size += 1
-            in_q.task_done()
-            if buffer_size < batch_size:
+            if raw is None:
+                is_empty = True
+                if buffer_size > 0:
+                    last_batch = True
+            else:          
+                vertex_buffer.update(raw[0].splitlines())
+                edge_buffer.update(raw[1].splitlines())
+                buffer_size += 1
+            if (buffer_size < batch_size) and (not last_batch):
                 continue
             try:
                 data = BaseLoader._parse_graph_data_to_df(
@@ -820,6 +815,7 @@ class BaseLoader:
             vertex_buffer.clear()
             edge_buffer.clear()
             buffer_size = 0
+        out_q.put(None)
             
     @staticmethod
     def _read_vertex_data(
@@ -897,7 +893,7 @@ class BaseLoader:
         buffer = []
         is_empty = False
         last_batch = False
-        while not exit_event.is_set() and (not is_empty):
+        while (not exit_event.is_set()) and (not is_empty):
             try:
                 raw = in_q.get(timeout=1)
             except Empty:
@@ -1632,7 +1628,6 @@ class BaseLoader:
                         exit_event = self._exit_event,
                         read_task_q = self._read_task_q,
                         kafka_consumer = self._kafka_consumer,
-                        max_wait_time = self.timeout
                     ),
                 )
             else:
@@ -1687,7 +1682,6 @@ class BaseLoader:
     def _start(self) -> None:
         # This is a template. Implement your own logics here.
         # Create task and result queues
-        self._request_task_q = Queue()
         self._read_task_q = Queue()
         self._data_q = Queue(self._buffer_size)
         self._exit_event = Event()
@@ -1753,48 +1747,38 @@ class BaseLoader:
             return self
 
     def _reset(self, theend=False) -> None:
-        logger.debug("Resetting the data loader")
+        logger.debug("Resetting data loader")
         if self._exit_event:
             self._exit_event.set()
-        if self._request_task_q:
-            while True:
-                try:
-                    self._request_task_q.get(block=False)
-                except Empty:
-                    break
-        if self._download_task_q:
-            while True:
-                try:
-                    self._download_task_q.get(block=False)
-                except Empty:
-                    break
+        logger.debug("Set exit event")
         if self._read_task_q:
             while True:
                 try:
-                    self._read_task_q.get(block=False)
+                    self._read_task_q.get(timeout=1)
                 except Empty:
                     break
+        logger.debug("Emptied read task queue")
         if self._data_q:
             while True:
                 try:
-                    self._data_q.get(block=False)
+                    self._data_q.get(timeout=1)
                 except Empty:
                     break
+        logger.debug("Emptied data queue")
         if self._requester:
             self._requester.join()
+        logger.debug("Stopped requester thread")
         if self._downloader:
             self._downloader.join()
+        logger.debug("Stopped downloader thread")
         if self._reader:
             self._reader.join()
-        del self._request_task_q, self._download_task_q, self._read_task_q, self._data_q
+        logger.debug("Stopped reader thread")
+        del self._read_task_q, self._data_q
         self._exit_event = None
         self._requester, self._downloader, self._reader = None, None, None
-        self._request_task_q, self._download_task_q, self._read_task_q, self._data_q = (
-            None,
-            None,
-            None,
-            None
-        )
+        self._read_task_q, self._data_q = None, None
+        logger.debug("Deleted all queues and threads")
         if theend:
             if self._kafka_topic and self._kafka_consumer:
                 self._kafka_consumer.unsubscribe()
@@ -1806,6 +1790,7 @@ class BaseLoader:
                         raise TigerGraphException(
                             "Failed to delete topic {}".format(del_res["topic"])
                         )
+            logger.debug("Finished with Kafka. Reached the end.")
         else:
             if self.delete_epoch_topic and self._kafka_admin:
                 if self._kafka_topic and self._kafka_consumer:
@@ -1817,7 +1802,8 @@ class BaseLoader:
                         "Failed to delete topic {}".format(del_res["topic"])
                     )
                 self._kafka_topic = None
-        logger.debug("Successfully reset the data loader")
+            logger.debug("Finished with Kafka")
+        logger.debug("Reset data loader successfully")
 
     def _generate_attribute_string(self, schema_type, attr_names, attr_types) -> str:
         if schema_type.lower() == "vertex":
@@ -2519,9 +2505,21 @@ class EdgeLoader(BaseLoader):
         else:
             # If number of batches is given, calculate batch size
             if filter_by:
-                num_edges = sum(self._graph.getEdgeStats(e_type)[e_type][filter_by if isinstance(filter_by, str) else filter_by[e_type]]["TRUE"] for e_type in self._etypes)
+                num_edges = 0
+                for e_type in self._etypes:
+                    tmp = self._graph.getEdgeStats(e_type)[e_type][filter_by if isinstance(filter_by, str) else filter_by[e_type]]["TRUE"]
+                    if self._e_schema[e_type]["IsDirected"]:
+                        num_edges += tmp
+                    else:
+                        num_edges += 2*tmp
             else:
-                num_edges = sum(self._graph.getEdgeCount(i) for i in self._etypes)
+                num_edges = 0
+                for e_type in self._etypes:
+                    tmp = self._graph.getEdgeCount(e_type)
+                    if self._e_schema[e_type]["IsDirected"]:
+                        num_edges += tmp
+                    else:
+                        num_edges += 2*tmp
             self.batch_size = math.ceil(num_edges / num_batches)
             self.num_batches = num_batches
         # Initialize the exporter
@@ -3194,24 +3192,35 @@ class GraphLoader(BaseLoader):
         self._etypes = sorted(self._etypes)
         # Initialize parameters for the query
         if batch_size:
-            # If batch_size is given, calculate the number of batches
-            if filter_by:
-                # TODO: get edge count with filter
-                raise NotImplementedError
-            else:
-                num_edges = sum(self._graph.getEdgeCount(i) for i in self._etypes)
-            self.num_batches = math.ceil(num_edges / batch_size)
+            # batch size takes precedence over number of batches
+            self.batch_size = batch_size
+            self.num_batches = None
         else:
-            # Otherwise, take the number of batches as is.
+             # If number of batches is given, calculate batch size
+            if filter_by:
+                num_edges = 0
+                for e_type in self._etypes:
+                    tmp = self._graph.getEdgeStats(e_type)[e_type][filter_by if isinstance(filter_by, str) else filter_by[e_type]]["TRUE"]
+                    if self._e_schema[e_type]["IsDirected"]:
+                        num_edges += tmp
+                    else:
+                        num_edges += 2*tmp
+            else:
+                num_edges = 0
+                for e_type in self._etypes:
+                    tmp = self._graph.getEdgeCount(e_type)
+                    if self._e_schema[e_type]["IsDirected"]:
+                        num_edges += tmp
+                    else:
+                        num_edges += 2*tmp
+            self.batch_size = math.ceil(num_edges / num_batches)
             self.num_batches = num_batches
-        self._payload["num_batches"] = self.num_batches
         if filter_by:
             self._payload["filter_by"] = filter_by
         self._payload["shuffle"] = shuffle
         self._payload["v_types"] = self._vtypes
         self._payload["e_types"] = self._etypes
         self._payload["delimiter"] = self.delimiter
-        self._payload["num_heap_inserts"] = self.num_heap_inserts
         # Output
         self.add_self_loop = add_self_loop
         # Install query
@@ -3232,9 +3241,11 @@ class GraphLoader(BaseLoader):
         md5.update(json.dumps(query_suffix).encode())
         query_replace = {"{QUERYSUFFIX}": md5.hexdigest()}
 
+        print_vertex_attr = ""
+        print_edge_http = ""
+        print_edge_kafka = ""
         if isinstance(self.v_in_feats, dict):
             # Multiple vertex types
-            print_query = ""
             for idx, vtype in enumerate(self._vtypes):
                 v_attr_names = (
                     self.v_in_feats.get(vtype, [])
@@ -3242,17 +3253,16 @@ class GraphLoader(BaseLoader):
                     + self.v_extra_feats.get(vtype, [])
                 )
                 v_attr_types = self._v_schema[vtype]
-                if v_attr_names:
-                    print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + "\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", vtype, print_attr)
-                else:
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + "\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", vtype)
-            print_query += "END"
-            query_replace["{VERTEXATTRS}"] = print_query
+                print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
+                print_vertex_attr += """
+                    {} s.type == "{}" THEN
+                        ret = (s.type + delimiter + stringify(getvid(s)) {}+ "\\n")"""\
+                    .format("IF" if idx==0 else "ELSE IF", 
+                            vtype, 
+                            "+ delimiter + {}".format(print_attr) if v_attr_names else "")
+            print_vertex_attr += """
+                    END"""
             # Multiple edge types
-            print_query = ""
             for idx, etype in enumerate(self._etypes):
                 e_attr_names = (
                     self.e_in_feats.get(etype, [])
@@ -3260,38 +3270,51 @@ class GraphLoader(BaseLoader):
                     + self.e_extra_feats.get(etype, [])
                 )
                 e_attr_types = self._e_schema[etype]
-                if e_attr_names:
-                    print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
-                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", etype, print_attr)
-                else:
-                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + "\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", etype)
-            print_query += "END"
-            query_replace["{EDGEATTRS}"] = print_query
+                print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
+                print_edge_http += """
+                    {} e.type == "{}" THEN
+                        STRING e_msg = (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) {}+ "\\n"),
+                        @@e_batch += (stringify(getvid(s))+e.type+stringify(getvid(t)) -> e_msg)"""\
+                    .format("IF" if idx==0 else "ELSE IF", etype, 
+                            "+ delimiter + " + print_attr if e_attr_names else "")
+                print_edge_kafka += """
+                    {} e.type == "{}" THEN
+                        STRING e_msg = (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) {}+ "\\n"),
+                        INT kafka_errcode = write_to_kafka(producer, kafka_topic, (getvid(s)+getvid(t))%kafka_topic_partitions, "edge_batch_" + stringify(getvid(s))+e.type+stringify(getvid(t)), e_msg),
+                        IF kafka_errcode!=0 THEN 
+                            @@kafka_error += ("Error sending edge data for edge " + stringify(getvid(s))+e.type+stringify(getvid(t)) + ": "+ stringify(kafka_errcode) + "\\n")
+                        END""".format("IF" if idx==0 else "ELSE IF", etype, 
+                                        "+ delimiter + " + print_attr if e_attr_names else "")
+            print_edge_http += """
+                        END"""
+            print_edge_kafka += """
+                        END"""
         else:
             # Ignore vertex types
             v_attr_names = self.v_in_feats + self.v_out_labels + self.v_extra_feats
             v_attr_types = next(iter(self._v_schema.values()))
-            if v_attr_names:
-                print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
-                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + {} + "\\n")'.format(
-                    print_attr
-                )
-            else:
-                print_query = '@@v_batch += (stringify(getvid(s)) + "\\n")'
-            query_replace["{VERTEXATTRS}"] = print_query
+            print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
+            print_vertex_attr += """
+                ret = (stringify(getvid(s)) {}+ "\\n")"""\
+            .format("+ delimiter + " + print_attr if v_attr_names else "")
             # Ignore edge types
             e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
             e_attr_types = next(iter(self._e_schema.values()))
-            if e_attr_names:
-                print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
-                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n")'.format(
-                    print_attr
-                )
-            else:
-                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + "\\n")'
-            query_replace["{EDGEATTRS}"] = print_query
+            print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
+            print_edge_http += """
+                STRING e_msg = (stringify(getvid(s)) + delimiter + stringify(getvid(t)) {}+ "\\n"),
+                @@e_batch += (stringify(getvid(s))+e.type+stringify(getvid(t)) -> e_msg)"""\
+                .format("+ delimiter + " + print_attr if e_attr_names else "")
+            print_edge_kafka += """
+                STRING e_msg = (stringify(getvid(s)) + delimiter + stringify(getvid(t)) {}+ "\\n"),
+                INT kafka_errcode2 = write_to_kafka(producer, kafka_topic, (getvid(s)+getvid(t))%kafka_topic_partitions, "edge_batch_" + stringify(getvid(s))+e.type+stringify(getvid(t)), e_msg),
+                IF kafka_errcode2!=0 THEN 
+                    @@kafka_error += ("Error sending edge data for edge " + stringify(getvid(s))+e.type+stringify(getvid(t)) + ": "+ stringify(kafka_errcode2) + "\\n")
+                END""".format("+ delimiter + " + print_attr if e_attr_names else "")
+        query_replace["{VERTEXATTRS}"] = print_vertex_attr
+        query_replace["{EDGEATTRSKAFKA}"] = print_edge_kafka
+        query_replace["{EDGEATTRSHTTP}"] = print_edge_http
+
         # Install query
         query_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
@@ -3299,15 +3322,21 @@ class GraphLoader(BaseLoader):
             "dataloaders",
             "graph_loader.gsql",
         )
-        return install_query_file(self._graph, query_path, query_replace, force=force, distributed=self.distributed_query)
+        sub_query_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "gsql",
+            "dataloaders",
+            "graph_loader_sub.gsql",
+        )
+        return install_query_files(self._graph, [sub_query_path, query_path], query_replace, force=force, distributed=[False, self.distributed_query])
 
     def _start(self) -> None:
         # Create task and result queues
-        self._read_task_q = Queue(self.buffer_size * 2)
+        self._read_task_q = Queue(self.buffer_size)
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
-        self._start_request(True, "both")
+        self._start_request(True)
 
         # Start reading thread.
         if not self.is_hetero:
@@ -3317,26 +3346,25 @@ class GraphLoader(BaseLoader):
             v_attr_types = self._v_schema
             e_attr_types = self._e_schema
         self._reader = Thread(
-            target=self._read_data,
-            args=(
-                self._exit_event,
-                self._read_task_q,
-                self._data_q,
-                "graph",
-                self.output_format,
-                self.v_in_feats,
-                self.v_out_labels,
-                self.v_extra_feats,
-                v_attr_types,
-                self.e_in_feats,
-                self.e_out_labels,
-                self.e_extra_feats,
-                e_attr_types,
-                self.add_self_loop,
-                self.delimiter,
-                True,
-                self.is_hetero,
-                self.callback_fn
+            target=self._read_graph_data,
+            kwargs=dict(
+                exit_event = self._exit_event,
+                in_q = self._read_task_q,
+                out_q = self._data_q,
+                batch_size = self.batch_size,
+                out_format = self.output_format,
+                v_in_feats = self.v_in_feats,
+                v_out_labels = self.v_out_labels,
+                v_extra_feats = self.v_extra_feats,
+                v_attr_types = v_attr_types,
+                e_in_feats = self.e_in_feats,
+                e_out_labels = self.e_out_labels,
+                e_extra_feats = self.e_extra_feats,
+                e_attr_types = e_attr_types,
+                add_self_loop = self.add_self_loop,
+                delimiter = self.delimiter,
+                is_hetero = self.is_hetero,
+                callback_fn = self.callback_fn
             ),
         )
         self._reader.start()
