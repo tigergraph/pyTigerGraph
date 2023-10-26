@@ -1,0 +1,38 @@
+CREATE QUERY neighbor_loader_sub_{QUERYSUFFIX} (VERTEX v, STRING delimiter, INT num_hops, INT num_neighbors, SET<STRING> e_types, SET<STRING> v_types)
+RETURNS (ListAccum<STRING>) 
+SYNTAX V1
+{
+    SumAccum<STRING> @@v_batch;
+    SumAccum<STRING> @@e_batch;
+    SetAccum<VERTEX> @@printed_vertices;
+    SetAccum<EDGE> @@printed_edges;
+    ListAccum<STRING> @@ret;
+
+    start = {v};
+    res = SELECT s
+        FROM start:s
+        POST-ACCUM
+            @@printed_vertices += s,
+            {SEEDVERTEXATTRS};
+
+    FOREACH i IN RANGE[1, num_hops] DO
+        start = SELECT t
+            FROM start:s -(e_types:e)- v_types:t 
+            SAMPLE num_neighbors EDGE WHEN s.outdegree() >= 1
+            ACCUM
+                IF NOT @@printed_edges.contains(e) THEN
+                    @@printed_edges += e,
+                    {EDGEATTRS}
+                END;
+        start = SELECT s
+            FROM start:s 
+            POST-ACCUM 
+                IF NOT @@printed_vertices.contains(s) THEN
+                    @@printed_vertices += s,
+                    {OTHERVERTEXATTRS}
+                END;
+    END;
+    @@ret += @@v_batch;
+    @@ret += @@e_batch;
+    RETURN @@ret;
+}

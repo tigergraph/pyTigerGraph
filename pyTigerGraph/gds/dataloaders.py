@@ -228,7 +228,7 @@ class BaseLoader:
         else:
             self._kafka_topic_base = self.loader_id + "_topic"
         self.num_batches = num_batches
-        self.output_format = output_format
+        self.output_format = output_format.lower()
         self.buffer_size = buffer_size
         self.timeout = timeout
         self._iterations = 0
@@ -800,7 +800,7 @@ class BaseLoader:
                         is_hetero = is_hetero,
                         scipy = scipy,
                         spektral = spektral
-                   )
+                    )
                 else:
                     raise NotImplementedError
                 if callback_fn:
@@ -1222,6 +1222,19 @@ class BaseLoader:
         # Reformat as a graph.
         # Need to have a pair of tables for edges and vertices.
         vertices, edges = raw
+        # Dedupe vertices if there is is_seed column as the same vertex might be seed and non-seed at the same time
+        if not is_hetero:
+            if "is_seed" in vertices.columns:
+                seeds = set(vertices[vertices.is_seed.astype(int).astype(bool)]["vid"])
+                vertices.loc[vertices.vid.isin(seeds), "is_seed"] = True
+                vertices.drop_duplicates(subset="vid", inplace=True, ignore_index=True)
+        else:
+            for vtype in vertices:
+                df = vertices[vtype]
+                if "is_seed" in df.columns:
+                    seeds = set(df[df.is_seed.astype(int).astype(bool)]["vid"])
+                    df.loc[df.vid.isin(seeds), "is_seed"] = True
+                    df.drop_duplicates(subset="vid", inplace=True, ignore_index=True)
         edgelist = BaseLoader._get_edgelist(vertices, edges, is_hetero, e_attr_types)
         if not is_hetero:
             # Deal with edgelist first
@@ -1423,6 +1436,19 @@ class BaseLoader:
         # Reformat as a graph.
         # Need to have a pair of tables for edges and vertices.
         vertices, edges = raw
+        # Dedupe vertices if there is is_seed column as the same vertex might be seed and non-seed at the same time
+        if not is_hetero:
+            if "is_seed" in vertices.columns:
+                seeds = set(vertices[vertices.is_seed.astype(int).astype(bool)]["vid"])
+                vertices.loc[vertices.vid.isin(seeds), "is_seed"] = True
+                vertices.drop_duplicates(subset="vid", inplace=True, ignore_index=True)
+        else:
+            for vtype in vertices:
+                df = vertices[vtype]
+                if "is_seed" in df.columns:
+                    seeds = set(df[df.is_seed.astype(int).astype(bool)]["vid"])
+                    df.loc[df.vid.isin(seeds), "is_seed"] = True
+                    df.drop_duplicates(subset="vid", inplace=True, ignore_index=True)
         edgelist = BaseLoader._get_edgelist(vertices, edges, is_hetero, e_attr_types)
         if not is_hetero:
             # Deal with edgelist first
@@ -1569,6 +1595,19 @@ class BaseLoader:
         # Reformat as a graph.
         # Need to have a pair of tables for edges and vertices.
         vertices, edges = raw
+        # Dedupe vertices if there is is_seed column as the same vertex might be seed and non-seed at the same time
+        if not is_hetero:
+            if "is_seed" in vertices.columns:
+                seeds = set(vertices[vertices.is_seed.astype(int).astype(bool)]["vid"])
+                vertices.loc[vertices.vid.isin(seeds), "is_seed"] = True
+                vertices.drop_duplicates(subset="vid", inplace=True, ignore_index=True)
+        else:
+            for vtype in vertices:
+                df = vertices[vtype]
+                if "is_seed" in df.columns:
+                    seeds = set(df[df.is_seed.astype(int).astype(bool)]["vid"])
+                    df.loc[df.vid.isin(seeds), "is_seed"] = True
+                    df.drop_duplicates(subset="vid", inplace=True, ignore_index=True)
         edgelist = BaseLoader._get_edgelist(vertices, edges, is_hetero, e_attr_types)
         if not is_hetero:
             # Deal with edgelist first
@@ -2030,6 +2069,7 @@ class NeighborLoader(BaseLoader):
             self._etypes = list(self._e_schema.keys())
         self._vtypes = sorted(self._vtypes)
         self._etypes = sorted(self._etypes)
+        # Resolve seeds
         if v_seed_types:
             if isinstance(v_seed_types, list):
                 self._seed_types = v_seed_types
@@ -2041,10 +2081,15 @@ class NeighborLoader(BaseLoader):
             self._seed_types = list(filter_by.keys())
         else:
             self._seed_types = self._vtypes
+        if set(self._seed_types) - set(self._vtypes):
+            raise ValueError("Seed type has to be one of the vertex types to retrieve")
 
-        # Resolve seeds
         if batch_size:
-            # If batch_size is given, calculate the number of batches
+            # batch size takes precedence over number of batches
+            self.batch_size = batch_size
+            self.num_batches = None
+        else:
+            # If number of batches is given, calculate batch size
             if not filter_by:
                 num_vertices = sum(self._graph.getVertexCount(self._seed_types).values())
             elif isinstance(filter_by, str):
@@ -2059,17 +2104,11 @@ class NeighborLoader(BaseLoader):
                 )
             else:
                 raise ValueError("filter_by should be None, attribute name, or dict of {type name: attribute name}.")
-            self.num_batches = math.ceil(num_vertices / batch_size)
-        else:
-            # Otherwise, take the number of batches as is.
+            self.batch_size = math.ceil(num_vertices / num_batches)
             self.num_batches = num_batches
         # Initialize parameters for the query
-        if batch_size:
-            self._payload["batch_size"] = batch_size
-        self._payload["num_batches"] = self.num_batches
         self._payload["num_neighbors"] = num_neighbors
         self._payload["num_hops"] = num_hops
-        self._payload["num_heap_inserts"] = self.num_heap_inserts
         if filter_by:
             if isinstance(filter_by, str):
                 self._payload["filter_by"] = filter_by
@@ -2107,6 +2146,23 @@ class NeighborLoader(BaseLoader):
         if isinstance(self.v_in_feats, dict) or isinstance(self.e_in_feats, dict):
             # Multiple vertex types
             print_query_seed = ""
+            for idx, vtype in enumerate(self._seed_types):
+                v_attr_names = (
+                    self.v_in_feats.get(vtype, [])
+                    + self.v_out_labels.get(vtype, [])
+                    + self.v_extra_feats.get(vtype, [])
+                )
+                v_attr_types = self._v_schema[vtype]
+                print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
+                print_query_seed += """
+                    {} s.type == "{}" THEN
+                        @@v_batch += (s.type + delimiter + stringify(getvid(s)) {} + delimiter + "1\\n")"""\
+                    .format("IF" if idx==0 else "ELSE IF", 
+                            vtype, 
+                            "+ delimiter + " + print_attr if v_attr_names else "")
+            print_query_seed += """
+                    END"""
+            query_replace["{SEEDVERTEXATTRS}"] = print_query_seed
             print_query_other = ""
             for idx, vtype in enumerate(self._vtypes):
                 v_attr_names = (
@@ -2115,20 +2171,15 @@ class NeighborLoader(BaseLoader):
                     + self.v_extra_feats.get(vtype, [])
                 )
                 v_attr_types = self._v_schema[vtype]
-                if v_attr_names:
-                    print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
-                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + delimiter + "1\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", vtype, print_attr)
-                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + delimiter + "0\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", vtype, print_attr)
-                else:
-                    print_query_seed += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + "1\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", vtype)
-                    print_query_other += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + "0\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", vtype)
-            print_query_seed += "END"
-            print_query_other += "END"
-            query_replace["{SEEDVERTEXATTRS}"] = print_query_seed
+                print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
+                print_query_other += """
+                    {} s.type == "{}" THEN
+                        @@v_batch += (s.type + delimiter + stringify(getvid(s)) {} + delimiter + "0\\n")"""\
+                    .format("IF" if idx==0 else "ELSE IF", 
+                            vtype, 
+                            "+ delimiter + " + print_attr if v_attr_names else "")
+            print_query_other += """
+                    END"""
             query_replace["{OTHERVERTEXATTRS}"] = print_query_other
             # Multiple edge types
             print_query = ""
@@ -2139,44 +2190,36 @@ class NeighborLoader(BaseLoader):
                     + self.e_extra_feats.get(etype, [])
                 )
                 e_attr_types = self._e_schema[etype]
-                if e_attr_names:
-                    print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
-                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", etype, print_attr)
-                else:
-                    print_query += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + "\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", etype)
-            print_query += "END"
+                print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
+                print_query += """
+                    {} e.type == "{}" THEN
+                        @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) {} + "\\n")"""\
+                    .format("IF" if idx==0 else "ELSE IF", 
+                            etype,                                 
+                            "+ delimiter + " + print_attr if e_attr_names else "")
+            print_query += """
+                    END"""
             query_replace["{EDGEATTRS}"] = print_query
         else:
             # Ignore vertex types
             v_attr_names = self.v_in_feats + self.v_out_labels + self.v_extra_feats
             v_attr_types = next(iter(self._v_schema.values()))
-            if v_attr_names:
-                print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
-                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + {} + delimiter + "1\\n")'.format(
-                    print_attr
-                )
-                query_replace["{SEEDVERTEXATTRS}"] = print_query
-                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + {} + delimiter + "0\\n")'.format(
-                    print_attr
-                )
-                query_replace["{OTHERVERTEXATTRS}"] = print_query
-            else:
-                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + "1\\n")'
-                query_replace["{SEEDVERTEXATTRS}"] = print_query
-                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + "0\\n")'
-                query_replace["{OTHERVERTEXATTRS}"] = print_query
+            print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
+            print_query = '@@v_batch += (stringify(getvid(s)) {} + delimiter + "1\\n")'.format(
+                "+ delimiter + " + print_attr if v_attr_names else ""
+            )
+            query_replace["{SEEDVERTEXATTRS}"] = print_query
+            print_query = '@@v_batch += (stringify(getvid(s)) {} + delimiter + "0\\n")'.format(
+                "+ delimiter + " + print_attr if v_attr_names else ""
+            )
+            query_replace["{OTHERVERTEXATTRS}"] = print_query
             # Ignore edge types
             e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
             e_attr_types = next(iter(self._e_schema.values()))
-            if e_attr_names:
-                print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
-                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + "\\n")'.format(
-                    print_attr
-                )
-            else:
-                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + "\\n")'
+            print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
+            print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) {} + "\\n")'.format(
+                " + delimiter + " + print_attr if e_attr_names else ""
+            )
             query_replace["{EDGEATTRS}"] = print_query
         # Install query
         query_path = os.path.join(
@@ -2185,15 +2228,21 @@ class NeighborLoader(BaseLoader):
                 "dataloaders",
                 "neighbor_loader.gsql",
         )
-        return install_query_file(self._graph, query_path, query_replace, force=force, distributed=self.distributed_query)
+        sub_query_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "gsql",
+            "dataloaders",
+            "neighbor_loader_sub.gsql",
+        )
+        return install_query_files(self._graph, [sub_query_path, query_path], query_replace, force=force, distributed=[False, self.distributed_query])
 
     def _start(self) -> None:
         # Create task and result queues
-        self._read_task_q = Queue(self.buffer_size * 2)
+        self._read_task_q = Queue(self.buffer_size)
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
-        self._start_request(True, "both")
+        self._start_request(True)
 
         # Start reading thread.
         if not self.is_hetero:
@@ -2210,26 +2259,25 @@ class NeighborLoader(BaseLoader):
                 v_attr_types[vtype]["is_seed"] = "bool"
             e_attr_types = self._e_schema
         self._reader = Thread(
-            target=self._read_data,
-            args=(
-                self._exit_event,
-                self._read_task_q,
-                self._data_q,
-                "graph",
-                self.output_format,
-                self.v_in_feats,
-                self.v_out_labels,
-                v_extra_feats,
-                v_attr_types,
-                self.e_in_feats,
-                self.e_out_labels,
-                self.e_extra_feats,
-                e_attr_types,
-                self.add_self_loop,
-                self.delimiter,
-                True,
-                self.is_hetero,
-                self.callback_fn
+            target=self._read_graph_data,
+            kwargs=dict(
+                exit_event = self._exit_event,
+                in_q = self._read_task_q,
+                out_q = self._data_q,
+                batch_size = self.batch_size,
+                out_format = self.output_format,
+                v_in_feats = self.v_in_feats,
+                v_out_labels = self.v_out_labels,
+                v_extra_feats = v_extra_feats,
+                v_attr_types = v_attr_types,
+                e_in_feats = self.e_in_feats,
+                e_out_labels = self.e_out_labels,
+                e_extra_feats = self.e_extra_feats,
+                e_attr_types = e_attr_types,
+                add_self_loop = self.add_self_loop,
+                delimiter = self.delimiter,
+                is_hetero = self.is_hetero,
+                callback_fn = self.callback_fn
             ),
         )
         self._reader.start()
@@ -2266,7 +2314,6 @@ class NeighborLoader(BaseLoader):
         _payload = {}
         _payload["v_types"] = self._payload["v_types"]
         _payload["e_types"] = self._payload["e_types"]
-        _payload["num_batches"] = 1
         _payload["num_neighbors"] = self._payload["num_neighbors"]
         _payload["num_hops"] = self._payload["num_hops"]
         _payload["delimiter"] = self._payload["delimiter"]
@@ -2292,11 +2339,15 @@ class NeighborLoader(BaseLoader):
                 v_attr_types[vtype]["is_seed"] = "bool"
                 v_attr_types[vtype]["primary_id"] = "str"
             e_attr_types = self._e_schema
-        i = resp[0]
-        data = self._parse_data(
-            raw = (i["vertex_batch"], i["edge_batch"]),
-            in_format = "graph",
-            out_format = self.output_format,
+        vertex_batch = set()
+        edge_batch = set()
+        for i in resp:
+            if "pids" in i:
+                break
+            vertex_batch.update(i["vertex_batch"].splitlines())
+            edge_batch.update(i["edge_batch"].splitlines())
+        data = self._parse_graph_data_to_df(
+            raw = (vertex_batch, edge_batch),
             v_in_feats = self.v_in_feats,
             v_out_labels = self.v_out_labels,
             v_extra_feats = v_extra_feats,
@@ -2305,14 +2356,119 @@ class NeighborLoader(BaseLoader):
             e_out_labels = self.e_out_labels,
             e_extra_feats = self.e_extra_feats,
             e_attr_types = e_attr_types,
-            add_self_loop = self.add_self_loop,
             delimiter = self.delimiter,
-            reindex = True,
             primary_id = i["pids"],
             is_hetero = self.is_hetero,
-            callback_fn = self.callback_fn
         )
-        # Return data
+        if self.output_format == "dataframe" or self.output_format== "df":
+            vertices, edges = data
+            if not self.is_hetero:
+                for column in vertices.columns:
+                    vertices[column] = pd.to_numeric(vertices[column], errors="ignore")
+                for column in edges.columns:
+                    edges[column] = pd.to_numeric(edges[column], errors="ignore")
+            else:
+                for key in vertices:
+                    for column in vertices[key].columns:
+                        vertices[key][column] = pd.to_numeric(vertices[key][column], errors="ignore")
+                for key in edges:
+                    for column in edges[key].columns:
+                        edges[key][column] = pd.to_numeric(edges[key][column], errors="ignore")
+            data = (vertices, edges)
+        elif self.output_format == "pyg":
+            try:
+                import torch
+            except ImportError:
+                raise ImportError(
+                    "PyTorch is not installed. Please install it to use PyG or DGL output."
+                )
+            try:
+                import torch_geometric as pyg
+            except ImportError:
+                raise ImportError(
+                    "PyG is not installed. Please install PyG to use PyG format."
+                )
+            data = BaseLoader._parse_df_to_pyg(
+                raw = data,
+                v_in_feats = self.v_in_feats,
+                v_out_labels = self.v_out_labels,
+                v_extra_feats = v_extra_feats,
+                v_attr_types = v_attr_types,
+                e_in_feats = self.e_in_feats,
+                e_out_labels = self.e_out_labels,
+                e_extra_feats = self.e_extra_feats,
+                e_attr_types = e_attr_types,
+                add_self_loop = self.add_self_loop,
+                is_hetero = self.is_hetero,
+                torch = torch,
+                pyg = pyg
+            )
+        elif self.output_format == "dgl":
+            try:
+                import torch
+            except ImportError:
+                raise ImportError(
+                    "PyTorch is not installed. Please install it to use PyG or DGL output."
+                )
+            try:
+                import dgl
+            except ImportError:
+                raise ImportError(
+                    "DGL is not installed. Please install DGL to use DGL format."
+                )
+            data = BaseLoader._parse_df_to_dgl(
+                raw = data,
+                v_in_feats = self.v_in_feats,
+                v_out_labels = self.v_out_labels,
+                v_extra_feats = v_extra_feats,
+                v_attr_types = v_attr_types,
+                e_in_feats = self.e_in_feats,
+                e_out_labels = self.e_out_labels,
+                e_extra_feats = self.e_extra_feats,
+                e_attr_types = e_attr_types,
+                add_self_loop = self.add_self_loop,
+                is_hetero = self.is_hetero,
+                torch = torch,
+                dgl= dgl
+            )
+        elif self.output_format == "spektral" and self.is_hetero==False:
+            try:
+                import tensorflow as tf
+            except ImportError:
+                raise ImportError(
+                    "Tensorflow is not installed. Please install it to use spektral output."
+                )
+            try:
+                import scipy
+            except ImportError:
+                raise ImportError(
+                    "scipy is not installed. Please install it to use spektral output."
+                )
+            try:
+                import spektral
+            except ImportError:
+                raise ImportError(
+                    "Spektral is not installed. Please install it to use spektral output."
+                )
+            data = BaseLoader._parse_df_to_spektral(
+                raw = data,
+                v_in_feats = self.v_in_feats,
+                v_out_labels = self.v_out_labels,
+                v_extra_feats = v_extra_feats,
+                v_attr_types = v_attr_types,
+                e_in_feats = self.e_in_feats,
+                e_out_labels = self.e_out_labels,
+                e_extra_feats = self.e_extra_feats,
+                e_attr_types = e_attr_types,
+                add_self_loop = self.add_self_loop,
+                is_hetero = self.is_hetero,
+                scipy = scipy,
+                spektral = spektral
+            )
+        else:
+            raise NotImplementedError
+        if self.callback_fn:
+            data = self.callback_fn(data)
         return data
 
 
@@ -3196,7 +3352,7 @@ class GraphLoader(BaseLoader):
             self.batch_size = batch_size
             self.num_batches = None
         else:
-             # If number of batches is given, calculate batch size
+            # If number of batches is given, calculate batch size
             if filter_by:
                 num_edges = 0
                 for e_type in self._etypes:

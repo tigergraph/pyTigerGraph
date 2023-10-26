@@ -6,7 +6,7 @@ CREATE QUERY graph_loader_{QUERYSUFFIX}(
     BOOL shuffle=FALSE,
     INT num_chunks=2,
     STRING kafka_address="",
-    STRING kafka_topic,
+    STRING kafka_topic="",
     INT kafka_topic_partitions=1,
     STRING kafka_max_size="104857600",
     INT kafka_timeout=300000,
