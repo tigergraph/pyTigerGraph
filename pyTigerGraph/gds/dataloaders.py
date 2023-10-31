@@ -3372,7 +3372,13 @@ class GraphLoader(BaseLoader):
             self.batch_size = math.ceil(num_edges / num_batches)
             self.num_batches = num_batches
         if filter_by:
-            self._payload["filter_by"] = filter_by
+            if isinstance(filter_by, str):
+                self._payload["filter_by"] = filter_by
+            else:
+                attr = set(filter_by.values())
+                if len(attr) != 1:
+                    raise NotImplementedError("Filtering by different attributes for different edge types is not supported. Please use the same attribute for different types.")
+                self._payload["filter_by"] = attr.pop()
         self._payload["shuffle"] = shuffle
         self._payload["v_types"] = self._vtypes
         self._payload["e_types"] = self._etypes
@@ -3700,29 +3706,45 @@ class EdgeNeighborLoader(BaseLoader):
         self._vtypes = sorted(self._vtypes)
         self._etypes = sorted(self._etypes)
         # Resolve seeds
-        self._seed_types = self._etypes if ((not filter_by) or isinstance(filter_by, str)) else list(filter_by.keys())
-        if not(filter_by) and e_seed_types:
-            if isinstance(e_seed_types, str):
-                self._seed_types = [e_seed_types]
-            elif isinstance(e_seed_types, list):
+        if e_seed_types:
+            if isinstance(e_seed_types, list):
                 self._seed_types = e_seed_types
+            elif isinstance(e_seed_types, str):
+                self._seed_types = [e_seed_types]
             else:
-                raise TigerGraphException("e_seed_types must be type list or string.")
+                raise TigerGraphException("e_seed_types must be either of type list or string.")
+        elif isinstance(filter_by, dict):
+            self._seed_types = list(filter_by.keys())
+        else:
+            self._seed_types = self._etypes
+        if set(self._seed_types) - set(self._etypes):
+            raise ValueError("Seed type has to be one of the edge types to retrieve")
         # Resolve number of batches
         if batch_size:
-            # If batch_size is given, calculate the number of batches
-            if filter_by:
-                num_edges = sum(self._graph.getEdgeStats(e_type)[e_type][filter_by if isinstance(filter_by, str) else filter_by[e_type]]["TRUE"] for e_type in self._seed_types)
-            else:
-                num_edges = sum(self._graph.getEdgeCount(i) for i in self._seed_types)
-            self.num_batches = math.ceil(num_edges / batch_size)
+            # batch size takes precedence over number of batches
+            self.batch_size = batch_size
+            self.num_batches = None
         else:
-            # Otherwise, take the number of batches as is.
-            self.num_batches = num_batches
+            # If number of batches is given, calculate batch size
+            if filter_by:
+                num_edges = 0
+                for e_type in self._seed_types:
+                    tmp = self._graph.getEdgeStats(e_type)[e_type][filter_by if isinstance(filter_by, str) else filter_by[e_type]]["TRUE"]
+                    if self._e_schema[e_type]["IsDirected"]:
+                        num_edges += tmp
+                    else:
+                        num_edges += 2*tmp
+            else:
+                num_edges = 0
+                for e_type in self._seed_types:
+                    tmp = self._graph.getEdgeCount(e_type)
+                    if self._e_schema[e_type]["IsDirected"]:
+                        num_edges += tmp
+                    else:
+                        num_edges += 2*tmp
+            self.batch_size = math.ceil(num_edges / num_batches)
+            self.num_batches = num_batches          
         # Initialize parameters for the query
-        if batch_size:
-            self._payload["batch_size"] = batch_size
-        self._payload["num_batches"] = self.num_batches
         self._payload["num_neighbors"] = num_neighbors
         self._payload["num_hops"] = num_hops
         self._payload["delimiter"] = delimiter
@@ -3768,17 +3790,33 @@ class EdgeNeighborLoader(BaseLoader):
                     + self.v_extra_feats.get(vtype, [])
                 )
                 v_attr_types = self._v_schema[vtype]
-                if v_attr_names:
-                    print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + {} + "\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", vtype, print_attr)
-                else:
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + "\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", vtype)
-            print_query += "END"
+                print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
+                print_query += """
+                    {} s.type == "{}" THEN
+                        @@v_batch += (s.type + delimiter + stringify(getvid(s)) {}+ "\\n")"""\
+                    .format("IF" if idx==0 else "ELSE IF", vtype, 
+                            "+ delimiter + " + print_attr if v_attr_names else "")
+            print_query += """
+                    END"""
             query_replace["{VERTEXATTRS}"] = print_query
             # Multiple edge types
             print_query_seed = ""
+            for idx, etype in enumerate(self._seed_types):
+                e_attr_names = (
+                    self.e_in_feats.get(etype, [])
+                    + self.e_out_labels.get(etype, [])
+                    + self.e_extra_feats.get(etype, [])
+                )
+                e_attr_types = self._e_schema[etype]
+                print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
+                print_query_seed += """
+                    {} e.type == "{}" THEN
+                        @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) {}+ delimiter + "1\\n")"""\
+                    .format("IF" if idx==0 else "ELSE IF", etype, 
+                            "+ delimiter + " + print_attr if e_attr_names else "")
+            print_query_seed += """
+                    END"""
+            query_replace["{SEEDEDGEATTRS}"] = print_query_seed
             print_query_other = ""
             for idx, etype in enumerate(self._etypes):
                 e_attr_names = (
@@ -3787,52 +3825,36 @@ class EdgeNeighborLoader(BaseLoader):
                     + self.e_extra_feats.get(etype, [])
                 )
                 e_attr_types = self._e_schema[etype]
-                if e_attr_names:
-                    print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
-                    print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + delimiter + "1\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", etype, print_attr)
-                    print_query_other += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + delimiter + "0\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", etype, print_attr)
-                else:
-                    print_query_seed += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + "1\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", etype)
-                    print_query_other += '{} e.type == "{}" THEN \n @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + "0\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", etype)
-            print_query_seed += "END"
-            print_query_other += "END"
-            query_replace["{SEEDEDGEATTRS}"] = print_query_seed
+                print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
+                print_query_other += """
+                    {} e.type == "{}" THEN
+                        @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) {}+ delimiter + "0\\n")"""\
+                    .format("IF" if idx==0 else "ELSE IF", etype, 
+                            "+ delimiter + "+ print_attr if e_attr_names else "")
+            print_query_other += """
+                    END"""
             query_replace["{OTHEREDGEATTRS}"] = print_query_other
         else:
             # Ignore vertex types
             v_attr_names = self.v_in_feats + self.v_out_labels + self.v_extra_feats
             v_attr_types = next(iter(self._v_schema.values()))
-            if v_attr_names:
-                print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
-                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + {} + "\\n")'.format(
-                    print_attr
-                )
-                query_replace["{VERTEXATTRS}"] = print_query
-            else:
-                print_query = '@@v_batch += (stringify(getvid(s)) + "\\n")'
-                query_replace["{VERTEXATTRS}"] = print_query
+            print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
+            print_query = '@@v_batch += (stringify(getvid(s)) {}+ "\\n")'.format(
+                "+ delimiter + " + print_attr if v_attr_names else ""
+            )
+            query_replace["{VERTEXATTRS}"] = print_query
             # Ignore edge types
             e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
             e_attr_types = next(iter(self._e_schema.values()))
-            if e_attr_names:
-                print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
-                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + delimiter + "1\\n")'.format(
-                    print_attr
-                )
-                query_replace["{SEEDEDGEATTRS}"] = print_query
-                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + {} + delimiter + "0\\n")'.format(
-                    print_attr
-                )
-                query_replace["{OTHEREDGEATTRS}"] = print_query
-            else:
-                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + "1\\n")'
-                query_replace["{SEEDEDGEATTRS}"] = print_query
-                print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) + delimiter + "0\\n")'
-                query_replace["{OTHEREDGEATTRS}"] = print_query
+            print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
+            print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) {}+ delimiter + "1\\n")'.format(
+                "+ delimiter + " + print_attr if e_attr_names else ""
+            )
+            query_replace["{SEEDEDGEATTRS}"] = print_query
+            print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) {}+ delimiter + "0\\n")'.format(
+                "+ delimiter + " + print_attr if e_attr_names else ""
+            )
+            query_replace["{OTHEREDGEATTRS}"] = print_query
         # Install query
         query_path = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
@@ -3840,15 +3862,21 @@ class EdgeNeighborLoader(BaseLoader):
                 "dataloaders",
                 "edge_nei_loader.gsql",
         )
-        return install_query_file(self._graph, query_path, query_replace, force=force, distributed=self.distributed_query)
+        sub_query_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "gsql",
+            "dataloaders",
+            "edge_nei_loader_sub.gsql",
+        )
+        return install_query_files(self._graph, [sub_query_path, query_path], query_replace, force=force, distributed=[False, self.distributed_query])
 
     def _start(self) -> None:
         # Create task and result queues
-        self._read_task_q = Queue(self.buffer_size * 2)
+        self._read_task_q = Queue(self.buffer_size)
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
-        self._start_request(True, "both")
+        self._start_request(True)
 
         # Start reading thread.
         if not self.is_hetero:
@@ -3865,26 +3893,25 @@ class EdgeNeighborLoader(BaseLoader):
                 e_attr_types[etype]["is_seed"] = "bool"
             v_attr_types = self._v_schema
         self._reader = Thread(
-            target=self._read_data,
-            args=(
-                self._exit_event,
-                self._read_task_q,
-                self._data_q,
-                "graph",
-                self.output_format,
-                self.v_in_feats,
-                self.v_out_labels,
-                self.v_extra_feats,
-                v_attr_types,
-                self.e_in_feats,
-                self.e_out_labels,
-                e_extra_feats,
-                e_attr_types,
-                self.add_self_loop,
-                self.delimiter,
-                True,
-                self.is_hetero,
-                self.callback_fn
+            target=self._read_graph_data,
+            kwargs=dict(
+                exit_event = self._exit_event,
+                in_q = self._read_task_q,
+                out_q = self._data_q,
+                batch_size = self.batch_size,
+                out_format = self.output_format,
+                v_in_feats = self.v_in_feats,
+                v_out_labels = self.v_out_labels,
+                v_extra_feats = self.v_extra_feats,
+                v_attr_types = v_attr_types,
+                e_in_feats = self.e_in_feats,
+                e_out_labels = self.e_out_labels,
+                e_extra_feats = e_extra_feats,
+                e_attr_types = e_attr_types,
+                add_self_loop = self.add_self_loop,
+                delimiter = self.delimiter,
+                is_hetero = self.is_hetero,
+                callback_fn = self.callback_fn
             ),
         )
         self._reader.start()
