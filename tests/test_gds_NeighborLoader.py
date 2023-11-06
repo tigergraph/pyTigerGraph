@@ -586,7 +586,7 @@ class TestGDSHeteroNeighborLoaderREST(unittest.TestCase):
             if "v1" in data.node_types:
                 self.assertGreater(data["v1"]["x"].shape[0], 0)
                 self.assertEqual(data["v1"]["x"].shape[0], data["v1"]["is_seed"].shape[0])
-            if "v2" in data.node_types:
+            if "v0" in data.node_types:
                 self.assertGreater(data["v0"]["x"].shape[0], 0)
                 self.assertEqual(data["v0"]["x"].shape[0], data["v0"]["y"].shape[0])
                 self.assertEqual(
