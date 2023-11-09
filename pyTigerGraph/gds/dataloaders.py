@@ -2148,7 +2148,8 @@ class NeighborLoader(BaseLoader):
         if isinstance(self.v_in_feats, dict) or isinstance(self.e_in_feats, dict):
             # Multiple vertex types
             print_query_seed = ""
-            for idx, vtype in enumerate(self._seed_types):
+            print_query_other = ""
+            for idx, vtype in enumerate(self._vtypes):
                 v_attr_names = (
                     self.v_in_feats.get(vtype, [])
                     + self.v_out_labels.get(vtype, [])
@@ -2162,26 +2163,17 @@ class NeighborLoader(BaseLoader):
                     .format("IF" if idx==0 else "ELSE IF", 
                             vtype, 
                             "+ delimiter + " + print_attr if v_attr_names else "")
-            print_query_seed += """
-                    END"""
-            query_replace["{SEEDVERTEXATTRS}"] = print_query_seed
-            print_query_other = ""
-            for idx, vtype in enumerate(self._vtypes):
-                v_attr_names = (
-                    self.v_in_feats.get(vtype, [])
-                    + self.v_out_labels.get(vtype, [])
-                    + self.v_extra_feats.get(vtype, [])
-                )
-                v_attr_types = self._v_schema[vtype]
-                print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
                 print_query_other += """
                     {} s.type == "{}" THEN
                         @@v_batch += (s.type + delimiter + stringify(getvid(s)) {} + delimiter + "0\\n")"""\
                     .format("IF" if idx==0 else "ELSE IF", 
                             vtype, 
                             "+ delimiter + " + print_attr if v_attr_names else "")
+            print_query_seed += """
+                    END"""
             print_query_other += """
                     END"""
+            query_replace["{SEEDVERTEXATTRS}"] = print_query_seed
             query_replace["{OTHERVERTEXATTRS}"] = print_query_other
             # Multiple edge types
             print_query = ""
@@ -3803,7 +3795,8 @@ class EdgeNeighborLoader(BaseLoader):
             query_replace["{VERTEXATTRS}"] = print_query
             # Multiple edge types
             print_query_seed = ""
-            for idx, etype in enumerate(self._seed_types):
+            print_query_other = ""
+            for idx, etype in enumerate(self._etypes):
                 e_attr_names = (
                     self.e_in_feats.get(etype, [])
                     + self.e_out_labels.get(etype, [])
@@ -3816,25 +3809,16 @@ class EdgeNeighborLoader(BaseLoader):
                         @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) {}+ delimiter + "1\\n")"""\
                     .format("IF" if idx==0 else "ELSE IF", etype, 
                             "+ delimiter + " + print_attr if e_attr_names else "")
-            print_query_seed += """
-                    END"""
-            query_replace["{SEEDEDGEATTRS}"] = print_query_seed
-            print_query_other = ""
-            for idx, etype in enumerate(self._etypes):
-                e_attr_names = (
-                    self.e_in_feats.get(etype, [])
-                    + self.e_out_labels.get(etype, [])
-                    + self.e_extra_feats.get(etype, [])
-                )
-                e_attr_types = self._e_schema[etype]
-                print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
                 print_query_other += """
                     {} e.type == "{}" THEN
                         @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) {}+ delimiter + "0\\n")"""\
                     .format("IF" if idx==0 else "ELSE IF", etype, 
                             "+ delimiter + "+ print_attr if e_attr_names else "")
+            print_query_seed += """
+                    END"""
             print_query_other += """
                     END"""
+            query_replace["{SEEDEDGEATTRS}"] = print_query_seed
             query_replace["{OTHEREDGEATTRS}"] = print_query_other
         else:
             # Ignore vertex types
@@ -4713,7 +4697,8 @@ class HGTLoader(BaseLoader):
         if isinstance(self.v_in_feats, dict) or isinstance(self.e_in_feats, dict):
             # Multiple vertex types
             print_query_seed = ""
-            for idx, vtype in enumerate(self._seed_types):
+            print_query_other = ""
+            for idx, vtype in enumerate(self._vtypes):
                 v_attr_names = (
                     self.v_in_feats.get(vtype, [])
                     + self.v_out_labels.get(vtype, [])
@@ -4727,26 +4712,17 @@ class HGTLoader(BaseLoader):
                     .format("IF" if idx==0 else "ELSE IF", 
                             vtype, 
                             "+ delimiter + " + print_attr if v_attr_names else "")
-            print_query_seed += """
-                    END"""
-            query_replace["{SEEDVERTEXATTRS}"] = print_query_seed
-            print_query_other = ""
-            for idx, vtype in enumerate(self._vtypes):
-                v_attr_names = (
-                    self.v_in_feats.get(vtype, [])
-                    + self.v_out_labels.get(vtype, [])
-                    + self.v_extra_feats.get(vtype, [])
-                )
-                v_attr_types = self._v_schema[vtype]
-                print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
                 print_query_other += """
                     {} s.type == "{}" THEN
                         @@v_batch += (s.type + delimiter + stringify(getvid(s)) {} + delimiter + "0\\n")"""\
                     .format("IF" if idx==0 else "ELSE IF", 
                             vtype, 
                             "+ delimiter + " + print_attr if v_attr_names else "")
+            print_query_seed += """
+                    END"""
             print_query_other += """
                     END"""
+            query_replace["{SEEDVERTEXATTRS}"] = print_query_seed
             query_replace["{OTHERVERTEXATTRS}"] = print_query_other
             # Generate select for each type of neighbors
             print_select = ""
@@ -4914,7 +4890,6 @@ class HGTLoader(BaseLoader):
                 break
             vertex_batch.update(i["vertex_batch"].splitlines())
             edge_batch.update(i["edge_batch"].splitlines())
-        print(len(vertex_batch), len(edge_batch))
         data = self._parse_graph_data_to_df(
             raw = (vertex_batch, edge_batch),
             v_in_feats = self.v_in_feats,
@@ -4929,8 +4904,6 @@ class HGTLoader(BaseLoader):
             primary_id = i["pids"],
             is_hetero = self.is_hetero,
         )
-        print(data[0])
-        print(data[1])
         if self.output_format == "dataframe" or self.output_format== "df":
             vertices, edges = data
             if not self.is_hetero:
