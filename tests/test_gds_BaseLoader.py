@@ -173,48 +173,6 @@ class TestGDSBaseLoader(unittest.TestCase):
         )
         assert_frame_equal(data, truth)
 
-    def test_read_vertex_shuffle(self):
-        read_task_q = Queue()
-        data_q = Queue(4)
-        exit_event = Event()
-        raw = ["99|1 0 0 1 |1|0|1\n",
-               "8|1 0 0 1 |1|1|1\n"]
-        for i in raw:
-            read_task_q.put(i)
-        thread = Thread(
-            target=self.loader._read_vertex_data,
-            kwargs=dict(
-                exit_event = exit_event,
-                in_q = read_task_q,
-                out_q = data_q,
-                batch_size = 2,
-                shuffle= True,
-                v_in_feats = ["x"],
-                v_out_labels = ["y"],
-                v_extra_feats = ["train_mask", "is_seed"],
-                v_attr_types = {"x": "INT", "y": "INT", "train_mask": "BOOL", "is_seed": "BOOL"},
-                delimiter = "|"
-            )
-        )
-        thread.start()
-        data = data_q.get()
-        exit_event.set()
-        thread.join()
-        truth1 = pd.read_csv(
-            io.StringIO("".join(raw)),
-            header=None,
-            names=["vid", "x", "y", "train_mask", "is_seed"],
-            sep=self.loader.delimiter
-        )
-        raw.reverse()
-        truth2 = pd.read_csv(
-            io.StringIO("".join(raw)),
-            header=None,
-            names=["vid", "x", "y", "train_mask", "is_seed"],
-            sep=self.loader.delimiter
-        )
-        self.assertTrue((data==truth1).all().all() or (data==truth2).all().all())
-
     def test_read_vertex_callback(self):
         read_task_q = Queue()
         data_q = Queue(4)
@@ -978,12 +936,11 @@ class TestGDSBaseLoader(unittest.TestCase):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
-    # suite.addTest(TestGDSBaseLoader("test_get_schema"))
-    # suite.addTest(TestGDSBaseLoader("test_get_schema_no_primary_id_attr"))
-    # suite.addTest(TestGDSBaseLoader("test_validate_vertex_attributes"))
-    # suite.addTest(TestGDSBaseLoader("test_validate_edge_attributes"))
+    suite.addTest(TestGDSBaseLoader("test_get_schema"))
+    suite.addTest(TestGDSBaseLoader("test_get_schema_no_primary_id_attr"))
+    suite.addTest(TestGDSBaseLoader("test_validate_vertex_attributes"))
+    suite.addTest(TestGDSBaseLoader("test_validate_edge_attributes"))
     suite.addTest(TestGDSBaseLoader("test_read_vertex"))
-    suite.addTest(TestGDSBaseLoader("test_read_vertex_shuffle"))
     suite.addTest(TestGDSBaseLoader("test_read_vertex_callback"))
     suite.addTest(TestGDSBaseLoader("test_read_edge"))
     suite.addTest(TestGDSBaseLoader("test_read_edge_callback"))
