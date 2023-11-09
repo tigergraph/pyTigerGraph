@@ -703,8 +703,8 @@ class BaseLoader:
                     "Spektral is not installed. Please install it to use spektral output."
                 )
         # Get raw data from queue and parse 
-        vertex_buffer = set()
-        edge_buffer = set()
+        vertex_buffer = []
+        edge_buffer = []
         buffer_size = 0
         is_empty = False
         last_batch = False
@@ -718,14 +718,16 @@ class BaseLoader:
                 if buffer_size > 0:
                     last_batch = True
             else:          
-                vertex_buffer.update(raw[0].splitlines())
-                edge_buffer.update(raw[1].splitlines())
+                vertex_buffer.extend(raw[0].splitlines())
+                edge_buffer.extend(raw[1].splitlines())
                 buffer_size += 1
             if (buffer_size < batch_size) and (not last_batch):
                 continue
             try:
+                vertex_buffer_d = dict.fromkeys(vertex_buffer)
+                edge_buffer_d = dict.fromkeys(edge_buffer)
                 data = BaseLoader._parse_graph_data_to_df(
-                    raw = (vertex_buffer, edge_buffer),
+                    raw = (vertex_buffer_d.keys(), edge_buffer_d.keys()),
                     v_in_feats = v_in_feats,
                     v_out_labels = v_out_labels,
                     v_extra_feats = v_extra_feats,
@@ -4084,7 +4086,12 @@ class NodePieceLoader(BaseLoader):
         else:
             self._seed_types = self._vtypes
             self._target_v_types = self._vtypes
+
         if batch_size:
+            # batch size takes precedence over number of batches
+            self.batch_size = batch_size
+            self.num_batches = None
+        else:
             if not filter_by:
                 num_vertices = sum(self._graph.getVertexCount(self._seed_types).values())
             elif isinstance(filter_by, str):
@@ -4100,12 +4107,9 @@ class NodePieceLoader(BaseLoader):
                 )
             else:
                 raise ValueError("filter_by should be None, attribute name, or dict of {type name: attribute name}.")
-            self.num_batches = math.ceil(num_vertices / batch_size)
-        else:
-            # Otherwise, take the number of batches as is.
+            self.batch_size = math.ceil(num_vertices / num_batches)
             self.num_batches = num_batches
         self.filter_by = filter_by
-        self._payload["num_batches"] = self.num_batches
         if filter_by:
             if isinstance(filter_by, str):
                 self._payload["filter_by"] = filter_by
@@ -4113,8 +4117,7 @@ class NodePieceLoader(BaseLoader):
                 attr = set(filter_by.values())
                 if len(attr) != 1:
                     raise NotImplementedError("Filtering by different attributes for different vertex types is not supported. Please use the same attribute for different types.")
-        if batch_size:
-            self._payload["batch_size"] = batch_size
+                self._payload["filter_by"] = attr.pop()
         self._payload["shuffle"] = shuffle
         self._payload["v_types"] = self._vtypes
         self._payload["seed_types"] = self._seed_types
@@ -4126,7 +4129,6 @@ class NodePieceLoader(BaseLoader):
         self._payload["clear_cache"] = clear_cache
         self._payload["delimiter"] = delimiter
         self._payload["input_vertices"] = []
-        self._payload["num_heap_inserts"] = self.num_heap_inserts
         self._payload["num_edge_batches"] = self.num_edge_batches
         if e_types:
             self._payload["e_types"] = e_types
@@ -4141,7 +4143,7 @@ class NodePieceLoader(BaseLoader):
             for v_type in self._vtypes:
                 if anchor_attribute not in self._v_schema[v_type].keys():
                     to_change.append(v_type)
-            if to_change != []:
+            if to_change:
                 print("Adding anchor attribute")
                 ret = add_attribute(self._graph, "VERTEX", "BOOL", anchor_attribute, to_change, global_change=global_schema_change)
                 print(ret)
@@ -4152,7 +4154,7 @@ class NodePieceLoader(BaseLoader):
                 if anchor_cache_attr not in self._v_schema[v_type].keys():
                     # add anchor cache attribute
                     to_change.append(v_type)
-            if to_change != []:
+            if to_change:
                 print("Adding anchor cache attribute")
                 ret = add_attribute(self._graph, "VERTEX", "MAP<INT, INT>", anchor_cache_attr, to_change, global_change=global_schema_change)
                 print(ret)
@@ -4234,34 +4236,49 @@ class NodePieceLoader(BaseLoader):
 
         if isinstance(self.attributes, dict):
             # Multiple vertex types
+            print_query_kafka = ""
+            print_query_http = ""
             print_query = ""
             for idx, vtype in enumerate(self._seed_types):
                 v_attr_names = self.attributes.get(vtype, [])
                 query_suffix.extend(v_attr_names)
                 v_attr_types = self._v_schema[vtype]
-                if v_attr_names:
-                    print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + s.@rel_context_set + delimiter + s.@ancs + delimiter + {} + "\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", vtype, print_attr)
-                else:
-                    print_query += '{} s.type == "{}" THEN \n @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + s.@rel_context_set + delimiter + s.@ancs + "\\n")\n'.format(
-                            "IF" if idx==0 else "ELSE IF", vtype)
-            print_query += "END"
-            query_replace["{VERTEXATTRS}"] = print_query
+                print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
+                print_query_http += """
+                    {} s.type == "{}" THEN
+                        @@v_batch += (s.type + delimiter + stringify(getvid(s)) + delimiter + s.@rel_context_set + delimiter + s.@ancs {}+ "\\n")"""\
+                    .format("IF" if idx==0 else "ELSE IF", vtype, 
+                            "+ delimiter + " + print_attr if v_attr_names else "")
+                print_query_kafka += """
+                    {} s.type == "{}" THEN 
+                        STRING msg = (s.type + delimiter + stringify(getvid(s)) + delimiter + s.@rel_context_set + delimiter + s.@ancs {}+ "\\n"),
+                        INT kafka_errcode = write_to_kafka(producer, kafka_topic, getvid(s)%kafka_topic_partitions, "vertex_" + stringify(getvid(s)), msg),
+                        IF kafka_errcode!=0 THEN 
+                            @@kafka_error += ("Error sending data for vertex " + stringify(getvid(s)) + ": "+ stringify(kafka_errcode) + "\\n")
+                        END""".format("IF" if idx==0 else "ELSE IF", vtype, 
+                                      "+ delimiter + " + print_attr if v_attr_names else "")
+            print_query_http += """
+                    END"""
+            print_query_kafka += """
+                    END"""
             query_suffix = list(dict.fromkeys(query_suffix))
         else:
             # Ignore vertex types
             v_attr_names = self.attributes
             query_suffix.extend(v_attr_names)
             v_attr_types = next(iter(self._v_schema.values()))
-            if v_attr_names:
-                print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
-                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + s.@rel_context_set + delimiter + s.@ancs + delimiter + {} + "\\n")'.format(
-                    print_attr
-                )
-            else:
-                print_query = '@@v_batch += (stringify(getvid(s)) + delimiter + s.@rel_context_set + delimiter + s.@ancs + "\\n")'
-            query_replace["{VERTEXATTRS}"] = print_query
+            print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
+            print_query_http = '@@v_batch += (stringify(getvid(s)) + delimiter + s.@rel_context_set + delimiter + s.@ancs {}+ "\\n")'.format(
+                "+ delimiter + " + print_attr if v_attr_names else ""
+            )
+            print_query_kafka = """
+                STRING msg = (stringify(getvid(s)) + delimiter + s.@rel_context_set + delimiter + s.@ancs {}+ "\\n"),
+                INT kafka_errcode = write_to_kafka(producer, kafka_topic, getvid(s)%kafka_topic_partitions, "vertex_" + stringify(getvid(s)), msg),
+                IF kafka_errcode!=0 THEN 
+                    @@kafka_error += ("Error sending data for vertex " + stringify(getvid(s)) + ": "+ stringify(kafka_errcode) + "\\n")
+                END""".format("+ delimiter + " + print_attr if v_attr_names else "")
+        query_replace["{VERTEXATTRSHTTP}"] = print_query_http
+        query_replace["{VERTEXATTRSKAFKA}"] = print_query_kafka
         md5 = hashlib.md5()
         query_suffix.extend([self.distributed_query])
         md5.update(json.dumps(query_suffix).encode())
@@ -4305,6 +4322,7 @@ class NodePieceLoader(BaseLoader):
             context = [self.idToIdx[str(x)] for x in context][:self._payload["max_rel_context"]]
             context = context + [self.idToIdx["PAD"] for x in range(len(context), self._payload["max_rel_context"])]
             return context
+        
         def processAnchors(row):
             try:
                 ancs = row.split(" ")[:-1]
@@ -4319,6 +4337,7 @@ class NodePieceLoader(BaseLoader):
             dists += [self.idToIdx["PAD"] for x in range(len(dists), self._payload["max_anchors"])]
             toks += [self.idToIdx["PAD"] for x in range(len(toks), self._payload["max_anchors"])]
             return {"ancs":toks, "dists": dists}
+        
         if self.is_hetero:
             for v_type in data.keys():
                 data[v_type]["relational_context"] = data[v_type]["relational_context"].apply(lambda x: processRelContext(x))
@@ -4341,11 +4360,11 @@ class NodePieceLoader(BaseLoader):
 
     def _start(self) -> None:
         # Create task and result queues
-        self._read_task_q = Queue(self.buffer_size * 2)
+        self._read_task_q = Queue(self.buffer_size)
         self._data_q = Queue(self.buffer_size)
         self._exit_event = Event()
 
-        self._start_request(False, "vertex")
+        self._start_request(False)
             
         # Start reading thread.
         if not self.is_hetero:
@@ -4353,26 +4372,19 @@ class NodePieceLoader(BaseLoader):
         else:
             v_attr_types = self._v_schema
         self._reader = Thread(
-            target=self._read_data,
-            args=(
-                self._exit_event,
-                self._read_task_q,
-                self._data_q,
-                "vertex",
-                self.output_format,
-                self.attributes,
-                {} if self.is_hetero else [],
-                {} if self.is_hetero else [],
-                v_attr_types,
-                [],
-                [],
-                [],
-                {},
-                False,
-                self.delimiter,
-                False,
-                self.is_hetero,
-                self.nodepiece_process
+            target=self._read_vertex_data,
+            kwargs=dict(
+                exit_event = self._exit_event,
+                in_q = self._read_task_q,
+                out_q = self._data_q,
+                batch_size = self.batch_size,
+                v_in_feats = self.attributes,
+                v_out_labels = {} if self.is_hetero else [],
+                v_extra_feats = {} if self.is_hetero else [],
+                v_attr_types = v_attr_types,
+                delimiter = self.delimiter,
+                is_hetero = self.is_hetero,
+                callback_fn = self.nodepiece_process
             ),
         )
         self._reader.start()
@@ -4426,28 +4438,28 @@ class NodePieceLoader(BaseLoader):
             v_attr_types = next(iter(self._v_schema.values()))
         else:
             v_attr_types = self._v_schema
-        if self.is_hetero:
-            data = self._parse_data(resp[0]["vertex_batch"], 
-                                    v_in_feats=attributes, 
-                                    v_out_labels = {},
-                                    v_extra_feats = {},
-                                    v_attr_types=v_attr_types,
-                                    reindex=False,
-                                    delimiter = self.delimiter, 
-                                    is_hetero=self.is_hetero, 
-                                    primary_id=resp[0]["pids"],
-                                    callback_fn=self.nodepiece_process)
+        vertex_batch = set()
+        for i in resp:
+            if "pids" in i:
+                break
+            vertex_batch.add(i["data_batch"])
+        data = BaseLoader._parse_vertex_data(
+            raw = vertex_batch,
+            v_in_feats = attributes,
+            v_out_labels = {} if self.is_hetero else [],
+            v_extra_feats = {} if self.is_hetero else [],
+            v_attr_types = v_attr_types,
+            delimiter = self.delimiter,
+            is_hetero = self.is_hetero
+        )
+        if not self.is_hetero:
+            for column in data.columns:
+                data[column] = pd.to_numeric(data[column], errors="ignore")
         else:
-            data = self._parse_data(resp[0]["vertex_batch"], 
-                                    v_in_feats=attributes, 
-                                    v_out_labels = [],
-                                    v_extra_feats = [],
-                                    v_attr_types=v_attr_types,
-                                    reindex=False,
-                                    delimiter = self.delimiter, 
-                                    is_hetero=self.is_hetero, 
-                                    primary_id=resp[0]["pids"],
-                                    callback_fn=self.nodepiece_process)
+            for key in data:
+                for column in data[key].columns:
+                    data[key][column] = pd.to_numeric(data[key][column], errors="ignore")
+        data = self.nodepiece_process(data)
         return data
 
     def precompute(self) -> None:
@@ -4902,6 +4914,7 @@ class HGTLoader(BaseLoader):
                 break
             vertex_batch.update(i["vertex_batch"].splitlines())
             edge_batch.update(i["edge_batch"].splitlines())
+        print(len(vertex_batch), len(edge_batch))
         data = self._parse_graph_data_to_df(
             raw = (vertex_batch, edge_batch),
             v_in_feats = self.v_in_feats,
@@ -4916,6 +4929,8 @@ class HGTLoader(BaseLoader):
             primary_id = i["pids"],
             is_hetero = self.is_hetero,
         )
+        print(data[0])
+        print(data[1])
         if self.output_format == "dataframe" or self.output_format== "df":
             vertices, edges = data
             if not self.is_hetero:
