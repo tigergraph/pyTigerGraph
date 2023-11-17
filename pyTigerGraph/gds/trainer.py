@@ -210,7 +210,7 @@ class DefaultCallback(BaseCallback):
                     self.epoch_bar = self.tqdm(desc="Epochs", total=trainer.num_epochs)
                 else:
                     self.epoch_bar = self.tqdm(desc="Training Steps", total=trainer.max_num_steps)
-            if not(self.batch_bar):
+            if self.batch_bar is None:
                 self.batch_bar = self.tqdm(desc="Training Batches", total=trainer.train_loader.num_batches)
 
     def on_train_step_end(self, trainer):
@@ -218,20 +218,20 @@ class DefaultCallback(BaseCallback):
         logger = logging.getLogger(__name__)
         logger.info("train_step:"+str(trainer.get_train_step_metrics()))
         if self.tqdm:
-            if self.batch_bar:
+            if self.batch_bar is not None:
                 self.batch_bar.update(1)
 
     def on_eval_start(self, trainer):
         """NO DOC"""
         trainer.reset_eval_metrics()
         if self.tqdm:
-            if not(self.valid_bar):
+            if self.valid_bar is None:
                 self.valid_bar = self.tqdm(desc="Eval Batches", total=trainer.eval_loader.num_batches)
 
     def on_eval_step_end(self, trainer):
         """NO DOC"""
         if self.tqdm:
-            if self.valid_bar:
+            if self.valid_bar is not None:
                 self.valid_bar.update(1)
 
     def on_eval_end(self, trainer):
@@ -240,7 +240,7 @@ class DefaultCallback(BaseCallback):
         logger.info("evaluation:"+str(trainer.get_eval_metrics()))
         trainer.model.train()
         if self.tqdm:
-            if self.valid_bar:
+            if self.valid_bar is not None:
                 self.valid_bar.close()
                 self.valid_bar = None
 
@@ -249,7 +249,7 @@ class DefaultCallback(BaseCallback):
         if self.tqdm:
             if self.epoch_bar:
                 self.epoch_bar.update(1)
-            if self.batch_bar:
+            if self.batch_bar is not None:
                 self.batch_bar.close()
                 self.batch_bar = None
         trainer.eval()
