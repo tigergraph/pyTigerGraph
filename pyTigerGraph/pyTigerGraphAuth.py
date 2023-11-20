@@ -177,7 +177,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
         return res
 
-    def getToken(self, secret: str, setToken: bool = True, lifetime: int = None) -> tuple:
+    def getToken(self, secret: str = None, setToken: bool = True, lifetime: int = None) -> tuple:
         """Requests an authorization token.
 
         This function returns a token only if REST++ authentication is enabled. If not, an exception
@@ -185,17 +185,17 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
         See https://docs.tigergraph.com/admin/admin-guide/user-access-management/user-privileges-and-authentication#rest-authentication
 
         Args:
-            secret:
+            secret (str, Optional):
                 The secret (string) generated in GSQL using `CREATE SECRET`.
                 See https://docs.tigergraph.com/tigergraph-server/current/user-access/managing-credentials#_create_a_secret
-            setToken:
+            setToken (bool, Optional):
                 Set the connection's API token to the new value (default: `True`).
-            lifetime:
+            lifetime (int, Optional):
                 Duration of token validity (in seconds, default 30 days = 2,592,000 seconds).
 
         Returns:
             A tuple of `(<token>, <expiration_timestamp_unixtime>, <expiration_timestamp_ISO8601>)`.
-            The return value can be ignored. /
+            The return value can be ignored, as the token is automatically set for the connection after this call.
 
             [NOTE]
             The expiration timestamp's time zone might be different from your computer's local time
@@ -219,7 +219,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             s, m, i = self.version.split(".")
         success = False
 
-        if int(s) < 3 or (int(s) == 3 and int(m) < 5):
+        if secret and (int(s) < 3 or (int(s) == 3 and int(m) < 5)):
             try:
                 res = json.loads(requests.request("GET", self.restppUrl +
                     "/requesttoken?secret=" + secret +
@@ -228,6 +228,12 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                     success = True
             except Exception as e:
                 raise e
+        elif not(success) and not(secret):
+            res = self._post(self.restppUrl+"/requesttoken", authMode="pwd", data=str({"graph": self.graphname}), resKey="results")
+            success = True
+        else:
+            raise TigerGraphException("Cannot request a token with username/password for versions < 3.5.")
+
 
         if not success:
             try:
@@ -241,16 +247,21 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             except Exception as e:
                 raise e
 
-        if not res["error"]:
+        
+        if not res.get("error"):
+            print(res)
             if setToken:
                 self.apiToken = res["token"]
                 self.authHeader = {'Authorization': "Bearer " + self.apiToken}
             else:
                 self.apiToken = None
                 self.authHeader = {'Authorization': 'Basic {0}'.format(self.base64_credential)}
-
-            ret = res["token"], res["expiration"], \
-                datetime.utcfromtimestamp(float(res["expiration"])).strftime('%Y-%m-%d %H:%M:%S')
+            
+            if res.get("expiration"):
+                ret = res["token"], res.get("expiration"), \
+                    datetime.utcfromtimestamp(float(res.get("expiration"))).strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                ret = res["token"]
 
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(ret))
