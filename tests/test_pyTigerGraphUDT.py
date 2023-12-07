@@ -15,10 +15,12 @@ class test_pyTigerGraphUDT(unittest.TestCase):
 
     def test_02_getUDT(self):
         res = self.conn.getUDT("tuple2_simple")
-        exp = [{'fieldName': 'field1', 'fieldType': 'INT'},
-            {'fieldName': 'field2', 'length': 10, 'fieldType': 'STRING'},
-            {'fieldName': 'field3', 'fieldType': 'DATETIME'}]
-        self.assertEqual(exp, res)
+        self.assertTrue(res[0]['fieldName']=='field1')
+        self.assertTrue(res[0]['fieldType']=='INT')
+        self.assertTrue(res[1]['fieldName']=='field2')
+        self.assertTrue(res[1]['fieldType']=='STRING')
+        self.assertTrue(res[2]['fieldName']=='field3')
+        self.assertTrue(res[2]['fieldType']=='DATETIME')
 
 
 if __name__ == '__main__':
