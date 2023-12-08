@@ -413,7 +413,7 @@ class Graph():
                                     [(attr["AttributeName"], _get_type(_parse_type(attr)), None) for attr in v_type["Attributes"]] + 
                                     [(v_type["PrimaryId"]["AttributeName"], _get_type(_parse_type(v_type["PrimaryId"])), None),
                                      ("primary_id", str, v_type["PrimaryId"]["AttributeName"]),
-                                     ("primary_id_as_attribute", bool, v_type["PrimaryId"]["PrimaryIdAsAttribute"])],
+                                     ("primary_id_as_attribute", bool, v_type["PrimaryId"].get("PrimaryIdAsAttribute", False))],
                                     bases=(Vertex,), repr=False)
                 self._vertex_types[v_type["Name"]] = vert
 
