@@ -526,7 +526,7 @@ class Graph():
       
         if not(reverse_edge) and is_directed:
             raise TigerGraphException("Reverse edge definition not set. Set the reverse_edge variable to a boolean or string.")
-        if not(is_directed):
+        if is_directed is None:
             raise TigerGraphConnection("is_directed variable not defined. Define is_directed as a class variable to the desired setting.")
         
         if not(edge.attributes.get("from_vertex", None)):
