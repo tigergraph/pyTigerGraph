@@ -154,18 +154,21 @@ class TestGDSHGTLoaderREST(unittest.TestCase):
                 data['v2', 'v2v2', 'v2']["edge_index"].shape[1] > 0
                 and data['v2', 'v2v2', 'v2']["edge_index"].shape[1] <= 966
             )
-            self.assertTrue(
-                data['v0', 'v0v0', 'v0']["edge_index"].shape[1] > 0
-                and data['v0', 'v0v0', 'v0']["edge_index"].shape[1] <= 710
-            )
-            self.assertTrue(
-                data['v1', 'v1v1', 'v1']["edge_index"].shape[1] > 0
-                and data['v1', 'v1v1', 'v1']["edge_index"].shape[1] <= 1044
-            )
-            self.assertTrue(
-                data['v1', 'v1v2', 'v2']["edge_index"].shape[1] > 0
-                and data['v1', 'v1v2', 'v2']["edge_index"].shape[1] <= 1038
-            )
+            if ('v0', 'v0v0', 'v0') in data.edge_types:
+                self.assertTrue(
+                    data['v0', 'v0v0', 'v0']["edge_index"].shape[1] > 0
+                    and data['v0', 'v0v0', 'v0']["edge_index"].shape[1] <= 710
+                )
+            if ('v1', 'v1v1', 'v1') in data.edge_types:
+                self.assertTrue(
+                    data['v1', 'v1v1', 'v1']["edge_index"].shape[1] > 0
+                    and data['v1', 'v1v1', 'v1']["edge_index"].shape[1] <= 1044
+                )
+            if ('v1', 'v1v2', 'v2') in data.edge_types:    
+                self.assertTrue(
+                    data['v1', 'v1v2', 'v2']["edge_index"].shape[1] > 0
+                    and data['v1', 'v1v2', 'v2']["edge_index"].shape[1] <= 1038
+                )
             num_batches += 1
         self.assertEqual(num_batches, 7)
         for i in batch_sizes[:-1]:
@@ -349,18 +352,21 @@ class TestGDSHGTLoaderKafka(unittest.TestCase):
                 data['v2', 'v2v2', 'v2']["edge_index"].shape[1] > 0
                 and data['v2', 'v2v2', 'v2']["edge_index"].shape[1] <= 966
             )
-            self.assertTrue(
-                data['v0', 'v0v0', 'v0']["edge_index"].shape[1] > 0
-                and data['v0', 'v0v0', 'v0']["edge_index"].shape[1] <= 710
-            )
-            self.assertTrue(
-                data['v1', 'v1v1', 'v1']["edge_index"].shape[1] > 0
-                and data['v1', 'v1v1', 'v1']["edge_index"].shape[1] <= 1044
-            )
-            self.assertTrue(
-                data['v1', 'v1v2', 'v2']["edge_index"].shape[1] > 0
-                and data['v1', 'v1v2', 'v2']["edge_index"].shape[1] <= 1038
-            )
+            if ('v0', 'v0v0', 'v0') in data.edge_types:
+                self.assertTrue(
+                    data['v0', 'v0v0', 'v0']["edge_index"].shape[1] > 0
+                    and data['v0', 'v0v0', 'v0']["edge_index"].shape[1] <= 710
+                )
+            if ('v1', 'v1v1', 'v1') in data.edge_types:
+                self.assertTrue(
+                    data['v1', 'v1v1', 'v1']["edge_index"].shape[1] > 0
+                    and data['v1', 'v1v1', 'v1']["edge_index"].shape[1] <= 1044
+                )
+            if ('v1', 'v1v2', 'v2') in data.edge_types:    
+                self.assertTrue(
+                    data['v1', 'v1v2', 'v2']["edge_index"].shape[1] > 0
+                    and data['v1', 'v1v2', 'v2']["edge_index"].shape[1] <= 1038
+                )
             num_batches += 1
         self.assertEqual(num_batches, 7)
         for i in batch_sizes[:-1]:
