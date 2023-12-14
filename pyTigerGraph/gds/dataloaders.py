@@ -2670,6 +2670,8 @@ class EdgeLoader(BaseLoader):
                         num_edges += tmp
                     else:
                         num_edges += 2*tmp
+            if num_edges==0:
+                raise ValueError("Cannot find any edge as seed. Please check your configuration and data. If they all look good, please use batch_size instead of num_batches or refresh metadata following https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_parameters_15")
             self.batch_size = math.ceil(num_edges / num_batches)
             self.num_batches = num_batches
         # Initialize the exporter
@@ -3736,6 +3738,8 @@ class EdgeNeighborLoader(BaseLoader):
                         num_edges += tmp
                     else:
                         num_edges += 2*tmp
+            if num_edges==0:
+                raise ValueError("Cannot find any edge as seed. Please check the configuration and the data. If they all look right, please use batch_size instead of num_batches or refresh metadata following https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_parameters_15")
             self.batch_size = math.ceil(num_edges / num_batches)
             self.num_batches = num_batches          
         # Initialize parameters for the query
