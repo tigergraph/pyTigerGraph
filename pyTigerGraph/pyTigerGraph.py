@@ -36,6 +36,7 @@ class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT
             gsPort, gsqlVersion, version, apiToken, useCert, certPath, debug, sslPort, gcp)
 
         self.gds = None
+        self.ai = None
 
     def __getattribute__(self, name):
         if name == "gds":
@@ -48,6 +49,18 @@ class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT
                     raise Exception(
                         "Please install the GDS package requirements to use the GDS functionality."
                         "Check the https://docs.tigergraph.com/pytigergraph/current/getting-started/install#_install_pytigergraphgds for more details.")
+            else:
+                return super().__getattribute__(name)
+        elif name == "ai":
+            if super().__getattribute__(name) is None:
+                try:
+                    from .ai import ai
+                    self.ai = ai.AI(self)
+                    return super().__getattribute__(name)
+                except:
+                    raise Exception(
+                        "Error importing AI submodule."
+                    )
             else:
                 return super().__getattribute__(name)
         else:
