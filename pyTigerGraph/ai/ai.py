@@ -2,7 +2,7 @@ import json
 
 class AI:
     def __init__(self, conn: "TigerGraphConnection") -> None: 
-        """NO DOC: Initiate an AI object.
+        """NO DOC: Initiate an AI object. Currently in beta testing.
             Args:
                 conn (TigerGraphConnection):
                     Accept a TigerGraphConnection to run queries with
