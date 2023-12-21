@@ -559,7 +559,7 @@ class BaseLoader:
         )
         # Put raw data into reading queue. 
         for i in resp:
-            read_task_q.put((i["vertex_batch"], i["edge_batch"]))
+            read_task_q.put((i["vertex_batch"], i["edge_batch"], i["seed"]))
         read_task_q.put(None)
 
     @staticmethod
@@ -598,12 +598,13 @@ class BaseLoader:
                     if key == "STOP":
                         read_task_q.put(None)
                         empty = True
-                        continue
+                        break
                     if key.startswith("vertex"):
                         companion_key = key.replace("vertex", "edge")
                         if companion_key in buffer:
                             read_task_q.put((message.value.decode("utf-8"), 
-                                             buffer[companion_key]))
+                                             buffer[companion_key],
+                                             key.split("_", 2)[-1]))
                             del buffer[companion_key]
                         else:
                             buffer[key] = message.value.decode("utf-8")
@@ -611,7 +612,8 @@ class BaseLoader:
                         companion_key = key.replace("edge", "vertex")
                         if companion_key in buffer:
                             read_task_q.put((buffer[companion_key], 
-                                             message.value.decode("utf-8")))
+                                             message.value.decode("utf-8"),
+                                             key.split("_", 2)[-1]))
                             del buffer[companion_key]
                         else:
                             buffer[key] = message.value.decode("utf-8")
@@ -619,6 +621,8 @@ class BaseLoader:
                         warnings.warn(
                             "Unrecognized key {} for messages in kafka".format(key)
                         )
+                if empty:
+                    break
 
     @staticmethod
     def _download_unimode_kafka(
@@ -658,7 +662,8 @@ class BaseLoader:
         add_self_loop: bool = False,
         delimiter: str = "|",
         is_hetero: bool = False,
-        callback_fn: Callable = None
+        callback_fn: Callable = None,
+        seed_type: str = ""
     ) -> NoReturn:
         # Import the right libraries based on output format
         out_format = out_format.lower()
@@ -706,6 +711,7 @@ class BaseLoader:
         vertex_buffer = []
         edge_buffer = []
         buffer_size = 0
+        seeds = set()
         is_empty = False
         last_batch = False
         while (not exit_event.is_set()) and (not is_empty):
@@ -718,16 +724,21 @@ class BaseLoader:
                 if buffer_size > 0:
                     last_batch = True
             else:          
-                vertex_buffer.extend(raw[0].splitlines())
-                edge_buffer.extend(raw[1].splitlines())
+                vertex_buffer.extend(raw[0].strip().split("\n "))
+                edge_buffer.extend(raw[1].strip().split("\n "))
+                seeds.add(raw[2])
                 buffer_size += 1
             if (buffer_size < batch_size) and (not last_batch):
                 continue
             try:
                 vertex_buffer_d = dict.fromkeys(vertex_buffer)
                 edge_buffer_d = dict.fromkeys(edge_buffer)
+                if seed_type:
+                    raw_data = (vertex_buffer_d.keys(), edge_buffer_d.keys(), seeds)
+                else:
+                    raw_data = (vertex_buffer_d.keys(), edge_buffer_d.keys())
                 data = BaseLoader._parse_graph_data_to_df(
-                    raw = (vertex_buffer_d.keys(), edge_buffer_d.keys()),
+                    raw = raw_data,
                     v_in_feats = v_in_feats,
                     v_out_labels = v_out_labels,
                     v_extra_feats = v_extra_feats,
@@ -739,6 +750,7 @@ class BaseLoader:
                     delimiter = delimiter,
                     primary_id = {},
                     is_hetero = is_hetero,
+                    seed_type = seed_type
                 )
                 if out_format == "dataframe" or out_format == "df":
                     vertices, edges = data
@@ -816,6 +828,7 @@ class BaseLoader:
                     out_format, v_in_feats, v_out_labels, v_extra_feats, v_attr_types, e_in_feats, e_out_labels, e_extra_feats, e_attr_types, delimiter))
             vertex_buffer.clear()
             edge_buffer.clear()
+            seeds.clear()
             buffer_size = 0
         out_q.put(None)
             
@@ -945,22 +958,37 @@ class BaseLoader:
         v_extra_feats: Union[list, dict] = [],
         v_attr_types: dict = {},
         delimiter: str = "|",
-        is_hetero: bool = False
+        is_hetero: bool = False,
+        seeds: list = []
     ) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
         """Parse raw vertex data into dataframes.
         """    
         # Read in vertex CSVs as dataframes
         # Each row is in format vid,v_in_feats,v_out_labels,v_extra_feats
-        # or vtype,vid,v_in_feats,v_out_labels,v_extra_feats           
-        v_file = (line.strip().split(delimiter) for line in raw)
+        # or vtype,vid,v_in_feats,v_out_labels,v_extra_feats
+        v_file = (line.strip().split(delimiter) for line in raw if line)
+        # If seeds are given, create the is_seed column
+        if seeds:
+            seed_df = pd.DataFrame({
+                "vid": list(seeds),
+                "is_seed": True
+            })
         if not is_hetero:
             # String of vertices in format vid,v_in_feats,v_out_labels,v_extra_feats
             v_attributes = ["vid"] + v_in_feats + v_out_labels + v_extra_feats
+            if seeds:
+                try:
+                    v_attributes.remove("is_seed")
+                except ValueError:
+                    pass
             data = pd.DataFrame(v_file, columns=v_attributes, dtype="object")
             for v_attr in v_extra_feats:
                 if v_attr_types.get(v_attr, "") == "MAP":
                     # I am sorry that this is this ugly...
                     data[v_attr] = data[v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
+            if seeds:
+                data = data.merge(seed_df, on="vid", how="left")
+                data.fillna({"is_seed": False}, inplace=True)
         else:
             v_file_dict = defaultdict(list)
             for line in v_file:
@@ -971,11 +999,19 @@ class BaseLoader:
                                 v_in_feats.get(vtype, []) + \
                                 v_out_labels.get(vtype, []) + \
                                 v_extra_feats.get(vtype, [])
+                if seeds:
+                    try:
+                        v_attributes.remove("is_seed")
+                    except ValueError:
+                        pass
                 data[vtype] = pd.DataFrame(v_file_dict[vtype], columns=v_attributes, dtype="object")
                 for v_attr in v_extra_feats.get(vtype, []):
                     if v_attr_types[vtype][v_attr] == "MAP":
                         # I am sorry that this is this ugly...
                         data[vtype][v_attr] = data[vtype][v_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
+                if seeds:
+                    data[vtype] = data[vtype].merge(seed_df, on="vid", how="left")
+                    data[vtype].fillna({"is_seed": False}, inplace=True)
         return data
 
     @staticmethod
@@ -986,36 +1022,68 @@ class BaseLoader:
         e_extra_feats: Union[list, dict] = [],
         e_attr_types: dict = {},
         delimiter: str = "|",
-        is_hetero: bool = False
+        is_hetero: bool = False,
+        seeds: list = []
     ) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
         """Parse raw edge data into dataframes.
         """    
         # Read in edge CSVs as dataframes
         # Each row is in format source_vid,target_vid,e_in_feats,e_out_labels,e_extra_feats
         # or etype,source_vid,target_vid,e_in_feats,e_out_labels,e_extra_feats             
-        e_file = (line.strip().split(delimiter) for line in raw)
+        e_file = (line.strip().split(delimiter) for line in raw if line)
         if not is_hetero:
             e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
+            if seeds:
+                try:
+                    e_attributes.remove("is_seed")
+                except ValueError:
+                    pass
             data = pd.DataFrame(e_file, columns=e_attributes, dtype="object")
             for e_attr in e_extra_feats:
                 if e_attr_types.get(e_attr, "") == "MAP":
                     # I am sorry that this is this ugly...
                     data[e_attr] = data[e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
+            # If seeds are given, create the is_seed column
+            if seeds:
+                seed_df = pd.DataFrame.from_records(
+                    [i.split("_") for i in seeds], 
+                    columns=["source", "etype", "target"])
+                seed_df["is_seed"] = True
+                del seed_df["etype"]
+                data = data.merge(seed_df, on=["source", "target"], how="left")
+                data.fillna({"is_seed": False}, inplace=True)
         else:
             e_file_dict = defaultdict(list)
             for line in e_file:
                 e_file_dict[line[0]].append(line[1:])
             data = {}
+            # If seeds are given, create the is_seed column
+            if seeds:
+                seed_df = pd.DataFrame.from_records(
+                    [i.split("_") for i in seeds], 
+                    columns=["source", "etype", "target"])
+                seed_df["is_seed"] = True
             for etype in e_file_dict:
                 e_attributes = ["source", "target"] + \
                                 e_in_feats.get(etype, []) + \
                                 e_out_labels.get(etype, [])  + \
                                 e_extra_feats.get(etype, [])
+                if seeds:
+                    try:
+                        e_attributes.remove("is_seed")
+                    except ValueError:
+                        pass
                 data[etype] = pd.DataFrame(e_file_dict[etype], columns=e_attributes, dtype="object")
                 for e_attr in e_extra_feats.get(etype, []):
                     if e_attr_types[etype][e_attr] == "MAP":
                         # I am sorry that this is this ugly...
                         data[etype][e_attr] = data[etype][e_attr].apply(lambda x: {y.split(",")[0].strip("("): y.split(",")[1].strip(")") for y in x.strip("[").strip("]").split(" ")[:-1]} if x != "[]" else {})
+                if seeds:
+                    tmp_df = seed_df[seed_df["etype"]==etype]
+                    if len(tmp_df)>0:
+                        data[etype] = data[etype].merge(
+                            tmp_df[["source", "target", "is_seed"]], on=["source", "target"], how="left")
+                        data[etype].fillna({"is_seed": False}, inplace=True)
         return data
 
     @staticmethod
@@ -1031,13 +1099,18 @@ class BaseLoader:
         e_attr_types: dict = {},
         delimiter: str = "|",
         primary_id: dict = {},
-        is_hetero: bool = False
+        is_hetero: bool = False,
+        seed_type: str = ""
     ) -> Union[Tuple[pd.DataFrame, pd.DataFrame], Tuple[Dict[str, pd.DataFrame], Dict[str, pd.DataFrame]]]:
         """Parse raw data into dataframes.
         """    
         # Read in vertex and edge CSVs as dataframes              
         # A pair of in-memory CSVs (vertex, edge)
-        v_file, e_file = raw
+        if len(raw) == 3:
+            v_file, e_file, seed_file = raw
+        else:
+            v_file, e_file = raw
+            seed_file = []
         vertices = BaseLoader._parse_vertex_data(
             raw = v_file,
             v_in_feats = v_in_feats,
@@ -1045,7 +1118,9 @@ class BaseLoader:
             v_extra_feats = v_extra_feats,
             v_attr_types = v_attr_types,
             delimiter = delimiter,
-            is_hetero = is_hetero)
+            is_hetero = is_hetero,
+            seeds = seed_file if seed_type=="vertex" else []
+        )
         if primary_id:
             id_map = pd.DataFrame({"vid": primary_id.keys(), "primary_id": primary_id.values()}, 
                                   dtype="object")
@@ -1063,7 +1138,8 @@ class BaseLoader:
             e_extra_feats = e_extra_feats,
             e_attr_types = e_attr_types,
             delimiter = delimiter,
-            is_hetero = is_hetero
+            is_hetero = is_hetero,
+            seeds = seed_file if seed_type=="edge" else []
         )
         return (vertices, edges)
 
@@ -1224,19 +1300,6 @@ class BaseLoader:
         # Reformat as a graph.
         # Need to have a pair of tables for edges and vertices.
         vertices, edges = raw
-        # Dedupe vertices if there is is_seed column as the same vertex might be seed and non-seed at the same time
-        if not is_hetero:
-            if "is_seed" in vertices.columns:
-                seeds = set(vertices[vertices.is_seed.astype(int).astype(bool)]["vid"])
-                vertices.loc[vertices.vid.isin(seeds), "is_seed"] = True
-                vertices.drop_duplicates(subset="vid", inplace=True, ignore_index=True)
-        else:
-            for vtype in vertices:
-                df = vertices[vtype]
-                if "is_seed" in df.columns:
-                    seeds = set(df[df.is_seed.astype(int).astype(bool)]["vid"])
-                    df.loc[df.vid.isin(seeds), "is_seed"] = True
-                    df.drop_duplicates(subset="vid", inplace=True, ignore_index=True)
         edgelist = BaseLoader._get_edgelist(vertices, edges, is_hetero, e_attr_types)
         if not is_hetero:
             # Deal with edgelist first
@@ -1438,19 +1501,6 @@ class BaseLoader:
         # Reformat as a graph.
         # Need to have a pair of tables for edges and vertices.
         vertices, edges = raw
-        # Dedupe vertices if there is is_seed column as the same vertex might be seed and non-seed at the same time
-        if not is_hetero:
-            if "is_seed" in vertices.columns:
-                seeds = set(vertices[vertices.is_seed.astype(int).astype(bool)]["vid"])
-                vertices.loc[vertices.vid.isin(seeds), "is_seed"] = True
-                vertices.drop_duplicates(subset="vid", inplace=True, ignore_index=True)
-        else:
-            for vtype in vertices:
-                df = vertices[vtype]
-                if "is_seed" in df.columns:
-                    seeds = set(df[df.is_seed.astype(int).astype(bool)]["vid"])
-                    df.loc[df.vid.isin(seeds), "is_seed"] = True
-                    df.drop_duplicates(subset="vid", inplace=True, ignore_index=True)
         edgelist = BaseLoader._get_edgelist(vertices, edges, is_hetero, e_attr_types)
         if not is_hetero:
             # Deal with edgelist first
@@ -1597,19 +1647,6 @@ class BaseLoader:
         # Reformat as a graph.
         # Need to have a pair of tables for edges and vertices.
         vertices, edges = raw
-        # Dedupe vertices if there is is_seed column as the same vertex might be seed and non-seed at the same time
-        if not is_hetero:
-            if "is_seed" in vertices.columns:
-                seeds = set(vertices[vertices.is_seed.astype(int).astype(bool)]["vid"])
-                vertices.loc[vertices.vid.isin(seeds), "is_seed"] = True
-                vertices.drop_duplicates(subset="vid", inplace=True, ignore_index=True)
-        else:
-            for vtype in vertices:
-                df = vertices[vtype]
-                if "is_seed" in df.columns:
-                    seeds = set(df[df.is_seed.astype(int).astype(bool)]["vid"])
-                    df.loc[df.vid.isin(seeds), "is_seed"] = True
-                    df.drop_duplicates(subset="vid", inplace=True, ignore_index=True)
         edgelist = BaseLoader._get_edgelist(vertices, edges, is_hetero, e_attr_types)
         if not is_hetero:
             # Deal with edgelist first

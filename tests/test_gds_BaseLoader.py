@@ -270,8 +270,9 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "99|1 0 0 1 |1|0|1\n8|1 0 0 1 |1|1|1\n",
-            "1|2|0.1|2021|1|0\n2|1|1.5|2020|0|1\n",
+            "99|1 0 0 1 |1|0\n 8|1 0 0 1 |1|1\n ",
+            "1|2|0.1|2021|1|0\n 2|1|1.5|2020|0|1\n ",
+            "99"
         )
         read_task_q.put(raw)
         thread = Thread(
@@ -289,7 +290,8 @@ class TestGDSBaseLoader(unittest.TestCase):
                 e_out_labels = ["y"],
                 e_extra_feats = ["is_train"],
                 e_attr_types = {"x": "FLOAT", "time": "INT", "y": "INT", "is_train": "BOOL"},
-                delimiter = "|"
+                delimiter = "|",
+                seed_type = "vertex"
             )
         )
         thread.start()
@@ -299,9 +301,10 @@ class TestGDSBaseLoader(unittest.TestCase):
         vertices = pd.read_csv(
             io.StringIO(raw[0]),
             header=None,
-            names=["vid", "x", "y", "train_mask", "is_seed"],
+            names=["vid", "x", "y", "train_mask"],
             sep=self.loader.delimiter
         )
+        vertices["is_seed"] = [True, False]
         edges = pd.read_csv(
             io.StringIO(raw[1]),
             header=None,
@@ -316,8 +319,9 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "99|1 0 0 1 |1|0|1\n8|1 0 0 1 |1|1|1\n",
-            "1|2|0.1|2021|1|0\n2|1|1.5|2020|0|1\n",
+            "99|1 0 0 1 |1|0|1\n 8|1 0 0 1 |1|1|1\n ",
+            "1|2|0.1|2021|1|0\n 2|1|1.5|2020|0|1\n ",
+            ""
         )
         read_task_q.put(raw)
         thread = Thread(
@@ -351,8 +355,9 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "99|1 0 0 1 |1|0|Alex|1\n8|1 0 0 1 |1|1|Bill|0\n",
-            "99|8|0.1|2021|1|0|a b \n8|99|1.5|2020|0|1|c d \n",
+            "99|1 0 0 1 |1|0|Alex\n 8|1 0 0 1 |1|1|Bill\n ",
+            "99|8|0.1|2021|1|0|a b \n 8|99|1.5|2020|0|1|c d \n ",
+            "99"
         )
         read_task_q.put(raw)
         thread = Thread(
@@ -378,7 +383,8 @@ class TestGDSBaseLoader(unittest.TestCase):
                 e_out_labels = ["y"],
                 e_extra_feats = ["is_train", "category"],
                 e_attr_types = {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL", "category": "LIST:STRING"},
-                delimiter = "|"
+                delimiter = "|",
+                seed_type = "vertex"
             )
         )
         thread.start()
@@ -405,8 +411,9 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "99|1 0 0 1 |1|0|Alex|1\n8|1 0 0 1 |1|1|Bill|0\n",
-            "99|8|0.1|2021|1|0|a b \n8|99|1.5|2020|0|1|c d \n",
+            "99|1 0 0 1 |1|0|Alex\n 8|1 0 0 1 |1|1|Bill\n ",
+            "99|8|0.1|2021|1|0|a b \n 8|99|1.5|2020|0|1|c d \n ",
+            "99"
         )
         read_task_q.put(raw)
         thread = Thread(
@@ -432,7 +439,8 @@ class TestGDSBaseLoader(unittest.TestCase):
                 e_out_labels = ["y"],
                 e_extra_feats = ["is_train", "category"],
                 e_attr_types = {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL", "category": "LIST:STRING"},
-                delimiter = "|"
+                delimiter = "|",
+                seed_type = "vertex"
             )
         )
         thread.start()
@@ -499,7 +507,7 @@ class TestGDSBaseLoader(unittest.TestCase):
         read_task_q = Queue()
         data_q = Queue(4)
         exit_event = Event()
-        raw = ("99|1\n8|0\n", "99|8\n8|99\n")
+        raw = ("99\n 8\n ", "99|8\n 8|99\n ", "99")
         read_task_q.put(raw)
         thread = Thread(
             target=self.loader._read_graph_data,
@@ -518,7 +526,8 @@ class TestGDSBaseLoader(unittest.TestCase):
                         "name": "STRING",
                         "is_seed": "BOOL",
                     },
-                delimiter = "|"
+                delimiter = "|",
+                seed_type = "vertex"
             )
         )
         thread.start()
@@ -534,8 +543,9 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "99|1 0 0 1 |1|0|Alex|1\n8|1 0 0 1 |1|1|Bill|0\n",
+            "99|1 0 0 1 |1|0|Alex\n 8|1 0 0 1 |1|1|Bill\n ",
             "",
+            "99"
         )
         read_task_q.put(raw)
         thread = Thread(
@@ -561,7 +571,8 @@ class TestGDSBaseLoader(unittest.TestCase):
                 e_out_labels = ["y"],
                 e_extra_feats = ["is_train"],
                 e_attr_types = {"x": "DOUBLE", "time": "INT", "y": "INT", "is_train": "BOOL"},
-                delimiter = "|"
+                delimiter = "|",
+                seed_type = "vertex"
             )
         )
         thread.start()
@@ -584,8 +595,9 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "People|99|1 0 0 1 |1|0|Alex|1\nPeople|8|1 0 0 1 |1|1|Bill|0\nCompany|2|0.3|0\n",
-            "Colleague|99|8|0.1|2021|1|0\nColleague|8|99|1.5|2020|0|1\nWork|99|2\nWork|2|8\n",
+            "People|99|1 0 0 1 |1|0|Alex\n People|8|1 0 0 1 |1|1|Bill\n Company|2|0.3\n ",
+            "Colleague|99|8|0.1|2021|1|0\n Colleague|8|99|1.5|2020|0|1\n Work|99|2\n Work|2|8\n ",
+            "99"
         )
         read_task_q.put(raw)
         thread = Thread(
@@ -628,7 +640,8 @@ class TestGDSBaseLoader(unittest.TestCase):
                         "IsDirected": False}
                 },
                 delimiter = "|",
-                is_hetero = True
+                is_hetero = True,
+                seed_type = "vertex"
             )
         )
         thread.start()
@@ -665,8 +678,9 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "People|99|1\nPeople|8|0\nCompany|2|0\n",
-            "Colleague|99|8\nColleague|8|99\nWork|99|2\nWork|2|8\n",
+            "People|99\n People|8\n Company|2\n ",
+            "Colleague|99|8\n Colleague|8|99\n Work|99|2\n Work|2|8\n ",
+            "99"
         )
         read_task_q.put(raw)
         thread = Thread(
@@ -709,7 +723,8 @@ class TestGDSBaseLoader(unittest.TestCase):
                         "IsDirected": False}
                 },
                 delimiter = "|",
-                is_hetero = True
+                is_hetero = True,
+                seed_type = "vertex"
             )
         )
         thread.start()
@@ -731,8 +746,9 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "People|99|1 0 0 1 |1|0|Alex|1\nPeople|8|1 0 0 1 |1|1|Bill|0\nCompany|2|0.3|0\n",
+            "People|99|1 0 0 1 |1|0|Alex\n People|8|1 0 0 1 |1|1|Bill\n Company|2|0.3\n ",
             "",
+            "99"
         )
         read_task_q.put(raw)
         thread = Thread(
@@ -775,7 +791,8 @@ class TestGDSBaseLoader(unittest.TestCase):
                         "IsDirected": False}
                 },
                 delimiter = "|",
-                is_hetero = True
+                is_hetero = True,
+                seed_type = "vertex"
             )
         )
         thread.start()
@@ -802,8 +819,9 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "People|99|1 0 0 1 |1|0|Alex|1\nPeople|8|1 0 0 1 |1|1|Bill|0\nCompany|2|0.3|0\n",
-            "Colleague|99|8|0.1|2021|1|0\nColleague|8|99|1.5|2020|0|1\nWork|99|2|a b \nWork|2|8|c d \n",
+            "People|99|1 0 0 1 |1|0|Alex\n People|8|1 0 0 1 |1|1|Bill\n Company|2|0.3\n ",
+            "Colleague|99|8|0.1|2021|1|0\n Colleague|8|99|1.5|2020|0|1\n Work|99|2|a b \n Work|2|8|c d \n ",
+            "99"
         )
         read_task_q.put(raw)
         thread = Thread(
@@ -847,7 +865,8 @@ class TestGDSBaseLoader(unittest.TestCase):
                         "category": "LIST:STRING"}
                 },
                 delimiter = "|",
-                is_hetero = True
+                is_hetero = True,
+                seed_type = "vertex"
             )
         )
         thread.start()
@@ -885,8 +904,9 @@ class TestGDSBaseLoader(unittest.TestCase):
         data_q = Queue(4)
         exit_event = Event()
         raw = (
-            "99|1 0 0 1 |1|0|Alex|1\n8|1 0 0 1 |1|1|Bill|0\n",
-            "99|8|0.1|2021|1|0\n8|99|1.5|2020|0|1\n",
+            "99|1 0 0 1 |1|0|Alex\n 8|1 0 0 1 |1|1|Bill\n ",
+            "99|8|0.1|2021|1|0\n 8|99|1.5|2020|0|1\n ",
+            "99"
         )
         read_task_q.put(raw)
         thread = Thread(
@@ -912,7 +932,8 @@ class TestGDSBaseLoader(unittest.TestCase):
                 e_out_labels = ["y"],
                 e_extra_feats = ["is_train"],
                 e_attr_types = {"x": "DOUBLE", "time": "INT", "y": "BOOL", "is_train": "BOOL"},
-                delimiter = "|"
+                delimiter = "|",
+                seed_type = "vertex"
             )
         )
         thread.start()
