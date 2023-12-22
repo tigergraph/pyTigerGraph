@@ -708,8 +708,8 @@ class BaseLoader:
                     "Spektral is not installed. Please install it to use spektral output."
                 )
         # Get raw data from queue and parse 
-        vertex_buffer = []
-        edge_buffer = []
+        vertex_buffer = dict()
+        edge_buffer = dict()
         buffer_size = 0
         seeds = set()
         is_empty = False
@@ -724,19 +724,17 @@ class BaseLoader:
                 if buffer_size > 0:
                     last_batch = True
             else:          
-                vertex_buffer.extend(raw[0].strip().split("\n "))
-                edge_buffer.extend(raw[1].strip().split("\n "))
+                vertex_buffer.update({i.strip():"" for i in raw[0].strip().splitlines()})
+                edge_buffer.update({i.strip():"" for i in raw[1].strip().splitlines()})
                 seeds.add(raw[2])
                 buffer_size += 1
             if (buffer_size < batch_size) and (not last_batch):
                 continue
             try:
-                vertex_buffer_d = dict.fromkeys(vertex_buffer)
-                edge_buffer_d = dict.fromkeys(edge_buffer)
                 if seed_type:
-                    raw_data = (vertex_buffer_d.keys(), edge_buffer_d.keys(), seeds)
+                    raw_data = (vertex_buffer.keys(), edge_buffer.keys(), seeds)
                 else:
-                    raw_data = (vertex_buffer_d.keys(), edge_buffer_d.keys())
+                    raw_data = (vertex_buffer.keys(), edge_buffer.keys())
                 data = BaseLoader._parse_graph_data_to_df(
                     raw = raw_data,
                     v_in_feats = v_in_feats,
@@ -966,7 +964,7 @@ class BaseLoader:
         # Read in vertex CSVs as dataframes
         # Each row is in format vid,v_in_feats,v_out_labels,v_extra_feats
         # or vtype,vid,v_in_feats,v_out_labels,v_extra_feats
-        v_file = (line.strip().split(delimiter) for line in raw if line)
+        v_file = (line.split(delimiter) for line in raw)
         # If seeds are given, create the is_seed column
         if seeds:
             seed_df = pd.DataFrame({
@@ -1030,7 +1028,7 @@ class BaseLoader:
         # Read in edge CSVs as dataframes
         # Each row is in format source_vid,target_vid,e_in_feats,e_out_labels,e_extra_feats
         # or etype,source_vid,target_vid,e_in_feats,e_out_labels,e_extra_feats             
-        e_file = (line.strip().split(delimiter) for line in raw if line)
+        e_file = (line.split(delimiter) for line in raw)
         if not is_hetero:
             e_attributes = ["source", "target"] + e_in_feats + e_out_labels + e_extra_feats
             if seeds:
@@ -1084,6 +1082,8 @@ class BaseLoader:
                         data[etype] = data[etype].merge(
                             tmp_df[["source", "target", "is_seed"]], on=["source", "target"], how="left")
                         data[etype].fillna({"is_seed": False}, inplace=True)
+                    else:
+                        data[etype]["is_seed"] = False
         return data
 
     @staticmethod
@@ -3817,7 +3817,8 @@ class EdgeNeighborLoader(BaseLoader):
 
         if self.is_hetero:
             # Multiple vertex types
-            print_query = ""
+            print_query_seed = ""
+            print_query_other = ""
             for idx, vtype in enumerate(self._vtypes):
                 v_attr_names = (
                     self.v_in_feats.get(vtype, [])
@@ -3826,17 +3827,25 @@ class EdgeNeighborLoader(BaseLoader):
                 )
                 v_attr_types = self._v_schema[vtype]
                 print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
-                print_query += """
+                print_query_seed += """
                     {} s.type == "{}" THEN
-                        @@v_batch += (s.type + delimiter + stringify(getvid(s)) {}+ "\\n")"""\
+                        @@v_batch += (s->(s.type + delimiter + stringify(getvid(s)) {}+ "\\n"))"""\
                     .format("IF" if idx==0 else "ELSE IF", vtype, 
                             "+ delimiter + " + print_attr if v_attr_names else "")
-            print_query += """
+                print_query_other += """
+                    {} s.type == "{}" THEN
+                        @@v_batch += (tmp_seed->(s.type + delimiter + stringify(getvid(s)) {}+ "\\n"))"""\
+                    .format("IF" if idx==0 else "ELSE IF", vtype, 
+                            "+ delimiter + " + print_attr if v_attr_names else "")
+            print_query_seed += """
                     END"""
-            query_replace["{VERTEXATTRS}"] = print_query
+            print_query_other += """
+                    END"""
+            query_replace["{SEEDVERTEXATTRS}"] = print_query_seed
+            query_replace["{OTHERVERTEXATTRS}"] = print_query_other
             # Multiple edge types
-            print_query_seed = ""
-            print_query_other = ""
+            print_query = ""
+            print_query_kafka = ""
             for idx, etype in enumerate(self._etypes):
                 e_attr_names = (
                     self.e_in_feats.get(etype, [])
@@ -3845,43 +3854,49 @@ class EdgeNeighborLoader(BaseLoader):
                 )
                 e_attr_types = self._e_schema[etype]
                 print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
-                print_query_seed += """
+                print_query += """
                     {} e.type == "{}" THEN
-                        @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) {}+ delimiter + "1\\n")"""\
+                        @@e_batch += (tmp_seed->(e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) {}+ "\\n"))"""\
                     .format("IF" if idx==0 else "ELSE IF", etype, 
                             "+ delimiter + " + print_attr if e_attr_names else "")
-                print_query_other += """
+                print_query_kafka += """
                     {} e.type == "{}" THEN
-                        @@e_batch += (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) {}+ delimiter + "0\\n")"""\
+                        SET<STRING> tmp_e = (e.type + delimiter + stringify(getvid(s)) + delimiter + stringify(getvid(t)) {}+ "\\n", ""),
+                        tmp_e_batch = tmp_e_batch UNION tmp_e"""\
                     .format("IF" if idx==0 else "ELSE IF", etype, 
-                            "+ delimiter + "+ print_attr if e_attr_names else "")
-            print_query_seed += """
+                            "+ delimiter + " + print_attr if e_attr_names else "")
+            print_query += """
                     END"""
-            print_query_other += """
+            print_query_kafka += """
                     END"""
-            query_replace["{SEEDEDGEATTRS}"] = print_query_seed
-            query_replace["{OTHEREDGEATTRS}"] = print_query_other
+            query_replace["{EDGEATTRS}"] = print_query
+            query_replace["{EDGEATTRSKAFKA}"] = print_query_kafka
         else:
             # Ignore vertex types
             v_attr_names = self.v_in_feats + self.v_out_labels + self.v_extra_feats
             v_attr_types = next(iter(self._v_schema.values()))
             print_attr = self._generate_attribute_string("vertex", v_attr_names, v_attr_types)
-            print_query = '@@v_batch += (stringify(getvid(s)) {}+ "\\n")'.format(
+            print_query_seed = '@@v_batch += (s->(stringify(getvid(s)) {}+ "\\n"))'.format(
                 "+ delimiter + " + print_attr if v_attr_names else ""
             )
-            query_replace["{VERTEXATTRS}"] = print_query
+            print_query_other = '@@v_batch += (tmp_seed->(stringify(getvid(s)) {}+ "\\n"))'.format(
+                "+ delimiter + " + print_attr if v_attr_names else ""
+            )
+            query_replace["{SEEDVERTEXATTRS}"] = print_query_seed
+            query_replace["{OTHERVERTEXATTRS}"] = print_query_other
             # Ignore edge types
             e_attr_names = self.e_in_feats + self.e_out_labels + self.e_extra_feats
             e_attr_types = next(iter(self._e_schema.values()))
             print_attr = self._generate_attribute_string("edge", e_attr_names, e_attr_types)
-            print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) {}+ delimiter + "1\\n")'.format(
+            print_query = '@@e_batch += (tmp_seed->(stringify(getvid(s)) + delimiter + stringify(getvid(t)) {} + "\\n"))'.format(
                 "+ delimiter + " + print_attr if e_attr_names else ""
             )
-            query_replace["{SEEDEDGEATTRS}"] = print_query
-            print_query = '@@e_batch += (stringify(getvid(s)) + delimiter + stringify(getvid(t)) {}+ delimiter + "0\\n")'.format(
+            query_replace["{EDGEATTRS}"] = print_query
+            print_query = """SET<STRING> tmp_e = (stringify(getvid(s)) + delimiter + stringify(getvid(t)) {} + "\\n", ""),
+                             tmp_e_batch = tmp_e_batch UNION tmp_e""".format(
                 "+ delimiter + " + print_attr if e_attr_names else ""
             )
-            query_replace["{OTHEREDGEATTRS}"] = print_query
+            query_replace["{EDGEATTRSKAFKA}"] = print_query
         # Install query
         query_path = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
@@ -3889,13 +3904,7 @@ class EdgeNeighborLoader(BaseLoader):
                 "dataloaders",
                 "edge_nei_loader.gsql",
         )
-        sub_query_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "gsql",
-            "dataloaders",
-            "edge_nei_loader_sub.gsql",
-        )
-        return install_query_files(self._graph, [sub_query_path, query_path], query_replace, force=force, distributed=[False, self.distributed_query])
+        return install_query_file(self._graph, query_path, query_replace, force=force, distributed=self.distributed_query)
 
     def _start(self) -> None:
         # Create task and result queues
@@ -3938,7 +3947,8 @@ class EdgeNeighborLoader(BaseLoader):
                 add_self_loop = self.add_self_loop,
                 delimiter = self.delimiter,
                 is_hetero = self.is_hetero,
-                callback_fn = self.callback_fn
+                callback_fn = self.callback_fn,
+                seed_type = "edge"
             ),
         )
         self._reader.start()

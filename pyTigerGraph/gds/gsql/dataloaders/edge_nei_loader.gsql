@@ -49,61 +49,123 @@ CREATE QUERY edge_nei_loader_{QUERYSUFFIX}(
       ssl_ca_location: Path to CA certificate for verifying the Kafka broker key.
     */
     SumAccum<INT> @tmp_id;
+    SumAccum<STRING> @@kafka_error;
+    UINT producer;
+    SetAccum<VERTEX> @seeds;
 
     start = {v_types};
     # Filter seeds if needed
-    seeds = SELECT s
+    start = SELECT s
         FROM start:s -(seed_types:e)- v_types:t
         WHERE filter_by is NULL OR e.getAttr(filter_by, "BOOL")
         POST-ACCUM s.@tmp_id = getvid(s)
         POST-ACCUM t.@tmp_id = getvid(t);
     # Shuffle vertex ID if needed
     IF shuffle THEN
-        INT num_vertices = seeds.size();
+        INT num_vertices = start.size();
         res = SELECT s 
-            FROM seeds:s
+            FROM start:s
             POST-ACCUM s.@tmp_id = floor(rand()*num_vertices)
             LIMIT 1;
     END;
 
-    # Generate batches
     # If using kafka to export 
     IF kafka_address != "" THEN
-        SumAccum<STRING> @@kafka_error;
-
         # Initialize Kafka producer
-        UINT producer = init_kafka_producer(
+        producer = init_kafka_producer(
             kafka_address, kafka_max_size, security_protocol, 
             sasl_mechanism, sasl_username, sasl_password, ssl_ca_location,
             ssl_certificate_location, ssl_key_location, ssl_key_password,
             ssl_endpoint_identification_algorithm, sasl_kerberos_service_name,
             sasl_kerberos_keytab, sasl_kerberos_principal);
+    END;
+    
+    FOREACH chunk IN RANGE[0, num_chunks-1] DO
+        MapAccum<VERTEX, SetAccum<STRING>> @@v_batch;
+        MapAccum<VERTEX, SetAccum<STRING>> @@e_batch;
         
-        FOREACH chunk IN RANGE[0, num_chunks-1] DO
+        # Collect neighborhood data for each vertex
+        seed1 = SELECT s 
+            FROM start:s -(seed_types:e)- v_types:t
+            WHERE (filter_by IS NULL OR e.getAttr(filter_by, "BOOL")) and ((s.@tmp_id + t.@tmp_id) % num_chunks == chunk)
+            ;
+        seed2 = SELECT t
+            FROM start:s -(seed_types:e)- v_types:t
+            WHERE (filter_by IS NULL OR e.getAttr(filter_by, "BOOL")) and ((s.@tmp_id + t.@tmp_id) % num_chunks == chunk)
+            ;
+        seeds = seed1 UNION seed2;
+        seeds = SELECT s
+            FROM seeds:s
+            POST-ACCUM
+                s.@seeds += s,
+                {SEEDVERTEXATTRS};
+        FOREACH hop IN RANGE[1, num_hops] DO
+            seeds = SELECT t
+                FROM seeds:s -(e_types:e)- v_types:t 
+                SAMPLE num_neighbors EDGE WHEN s.outdegree() >= 1
+                ACCUM
+                    t.@seeds += s.@seeds,
+                    FOREACH tmp_seed in s.@seeds DO 
+                        {EDGEATTRS}
+                    END;
+            seeds = SELECT s
+                FROM seeds:s
+                POST-ACCUM 
+                    FOREACH tmp_seed in s.@seeds DO 
+                        {OTHERVERTEXATTRS}
+                    END;
+        END;
+        # Clear all accums
+        all_v = {v_types};
+        res = SELECT s
+            FROM all_v:s
+            POST-ACCUM s.@seeds.clear()
+            LIMIT 1;
+
+        # Generate output for each edge
+        # If use kafka to export
+        IF kafka_address != "" THEN 
             res = SELECT s 
-                FROM seeds:s -(seed_types:e)- v_types:t
+                FROM seed1:s -(seed_types:e)- v_types:t
                 WHERE (filter_by is NULL OR e.getAttr(filter_by, "BOOL")) and ((s.@tmp_id + t.@tmp_id) % num_chunks == chunk)
                 ACCUM
-                    STRING e_type = e.type,
-                    LIST<STRING> msg = edge_nei_loader_sub_{QUERYSUFFIX}(s, t, delimiter, num_hops, num_neighbors, e_types, v_types, e_type),
-                    BOOL is_first=True,
-                    FOREACH i in msg DO
-                        IF is_first THEN
-                            INT kafka_errcode = write_to_kafka(producer, kafka_topic, (getvid(s)+getvid(t))%kafka_topic_partitions, "vertex_batch_" + stringify(getvid(s))+e.type+stringify(getvid(t)), i),
-                            IF kafka_errcode!=0 THEN 
-                                @@kafka_error += ("Error sending vertex batch for " + stringify(getvid(s))+e.type+stringify(getvid(t)) + ": "+ stringify(kafka_errcode) + "\\n")
-                            END,
-                            is_first = False
-                        ELSE 
-                            INT kafka_errcode = write_to_kafka(producer, kafka_topic, (getvid(s)+getvid(t))%kafka_topic_partitions, "edge_batch_" + stringify(getvid(s))+e.type+stringify(getvid(t)), i),
-                            IF kafka_errcode!=0 THEN 
-                                @@kafka_error += ("Error sending edge batch for " + stringify(getvid(s))+e.type+stringify(getvid(t)) + ": "+ stringify(kafka_errcode) + "\\n")
-                            END
-                        END
+                    INT part_num = (getvid(s)+getvid(t))%kafka_topic_partitions,
+                    STRING batch_id = stringify(getvid(s))+"_"+e.type+"_"+stringify(getvid(t)),
+                    SET<STRING> tmp_v_batch = @@v_batch.get(s) + @@v_batch.get(t),
+                    INT kafka_errcode = write_to_kafka(producer, kafka_topic, part_num, "vertex_batch_"+batch_id, stringify(tmp_v_batch)),
+                    IF kafka_errcode!=0 THEN 
+                        @@kafka_error += ("Error sending vertex batch for "+batch_id+": "+stringify(kafka_errcode) + "\n")
+                    END,
+                    SET<STRING> tmp_e_batch = @@e_batch.get(s) + @@e_batch.get(t),
+                    {EDGEATTRSKAFKA},
+                    kafka_errcode = write_to_kafka(producer, kafka_topic, part_num, "edge_batch_"+batch_id, stringify(tmp_e_batch)),
+                    IF kafka_errcode!=0 THEN 
+                        @@kafka_error += ("Error sending edge batch for "+batch_id+ ": "+ stringify(kafka_errcode) + "\n")
                     END
                 LIMIT 1;
+        # Else return as http response
+        ELSE
+            MapAccum<STRING, STRING> @@v_data;
+            MapAccum<STRING, STRING> @@e_data;
+            res = SELECT s 
+                FROM seed1:s -(seed_types:e)- v_types:t
+                WHERE (filter_by is NULL OR e.getAttr(filter_by, "BOOL")) and ((s.@tmp_id + t.@tmp_id) % num_chunks == chunk)
+                ACCUM
+                    STRING batch_id = stringify(getvid(s))+"_"+e.type+"_"+stringify(getvid(t)),
+                    SET<STRING> tmp_v_batch = @@v_batch.get(s) + @@v_batch.get(t),
+                    @@v_data += (batch_id -> stringify(tmp_v_batch)),
+                    SET<STRING> tmp_e_batch = @@e_batch.get(s) + @@e_batch.get(t),
+                    {EDGEATTRSKAFKA},
+                    @@e_data += (batch_id -> stringify(tmp_e_batch))
+                LIMIT 1;
+
+            FOREACH (k,v) IN @@v_data DO
+                PRINT v as vertex_batch, @@e_data.get(k) as edge_batch, k AS seed;
+            END;
         END;
-        
+    END;
+    
+    IF kafka_address != "" THEN 
         FOREACH i IN RANGE[0, kafka_topic_partitions-1] DO
             INT kafka_errcode = write_to_kafka(producer, kafka_topic, i, "STOP", "");
             IF kafka_errcode!=0 THEN 
@@ -116,32 +178,5 @@ CREATE QUERY edge_nei_loader_{QUERYSUFFIX}(
             @@kafka_error += ("Error shutting down Kafka producer: " + stringify(kafka_errcode) + "\n");
         END;
         PRINT @@kafka_error as kafkaError;
-    # Else return as http response
-    ELSE
-        FOREACH chunk IN RANGE[0, num_chunks-1] DO
-            MapAccum<STRING, STRING> @@v_batch;
-            MapAccum<STRING, STRING> @@e_batch;
-
-            res = SELECT s 
-                FROM seeds:s -(seed_types:e)- v_types:t
-                WHERE (filter_by is NULL OR e.getAttr(filter_by, "BOOL")) and ((s.@tmp_id + t.@tmp_id) % num_chunks == chunk)
-                ACCUM 
-                    STRING e_type = e.type,
-                    LIST<STRING> msg = edge_nei_loader_sub_{QUERYSUFFIX}(s, t, delimiter, num_hops, num_neighbors, e_types, v_types, e_type),
-                    BOOL is_first=True,
-                    FOREACH i in msg DO
-                        IF is_first THEN
-                            @@v_batch += (stringify(getvid(s))+e.type+stringify(getvid(t)) -> i),
-                            is_first = False
-                        ELSE 
-                            @@e_batch += (stringify(getvid(s))+e.type+stringify(getvid(t)) -> i)
-                        END
-                    END
-                LIMIT 1;
-
-            FOREACH (k,v) IN @@v_batch DO
-                PRINT v as vertex_batch, @@e_batch.get(k) as edge_batch;
-            END;
-        END;
     END;
 }
