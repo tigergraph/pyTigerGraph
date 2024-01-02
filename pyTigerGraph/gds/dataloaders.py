@@ -1044,10 +1044,9 @@ class BaseLoader:
             # If seeds are given, create the is_seed column
             if seeds:
                 seed_df = pd.DataFrame.from_records(
-                    [i.split("_") for i in seeds], 
-                    columns=["source", "etype", "target"])
+                    [(i.split("_", 1)[0], i.rsplit("_", 1)[-1]) for i in seeds], 
+                    columns=["source", "target"])
                 seed_df["is_seed"] = True
-                del seed_df["etype"]
                 data = data.merge(seed_df, on=["source", "target"], how="left")
                 data.fillna({"is_seed": False}, inplace=True)
         else:
@@ -1058,7 +1057,7 @@ class BaseLoader:
             # If seeds are given, create the is_seed column
             if seeds:
                 seed_df = pd.DataFrame.from_records(
-                    [i.split("_") for i in seeds], 
+                    [(i.split("_", 1)[0], i.split("_", 1)[1].rsplit("_", 1)[0], i.rsplit("_", 1)[-1]) for i in seeds], 
                     columns=["source", "etype", "target"])
                 seed_df["is_seed"] = True
             for etype in e_file_dict:
