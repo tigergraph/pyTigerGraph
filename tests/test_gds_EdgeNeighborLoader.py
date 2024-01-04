@@ -59,6 +59,37 @@ class TestGDSEdgeNeighborLoaderKafka(unittest.TestCase):
             self.assertEqual(i, 1024)
         self.assertLessEqual(batch_sizes[-1], 1024)
 
+    def test_iterate_pyg_distributed(self):
+        loader = EdgeNeighborLoader(
+            graph=self.conn,
+            v_in_feats=["x"],
+            e_extra_feats=["is_train"],
+            batch_size=1024,
+            num_neighbors=10,
+            num_hops=2,
+            shuffle=True,
+            filter_by=None,
+            output_format="PyG",
+            kafka_address="kafka:9092",
+            distributed_query=True
+        )
+        num_batches = 0
+        batch_sizes = []
+        for data in loader:
+            # print(num_batches, data)
+            self.assertIsInstance(data, pygData)
+            self.assertIn("x", data)
+            self.assertIn("is_seed", data)
+            self.assertIn("is_train", data)
+            self.assertGreater(data["x"].shape[0], 0)
+            self.assertGreater(data["edge_index"].shape[1], 0)
+            num_batches += 1
+            batch_sizes.append(int(data["is_seed"].sum()))
+        self.assertEqual(num_batches, 11)
+        for i in batch_sizes[:-1]:
+            self.assertEqual(i, 1024)
+        self.assertLessEqual(batch_sizes[-1], 1024)
+
     def test_sasl_ssl(self):
         loader = EdgeNeighborLoader(
             graph=self.conn,
@@ -312,6 +343,7 @@ if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(TestGDSEdgeNeighborLoaderKafka("test_init"))
     suite.addTest(TestGDSEdgeNeighborLoaderKafka("test_iterate_pyg"))
+    suite.addTest(TestGDSEdgeNeighborLoaderKafka("test_iterate_pyg_distributed"))
     # suite.addTest(TestGDSEdgeNeighborLoaderKafka("test_sasl_ssl"))
     suite.addTest(TestGDSEdgeNeighborLoaderREST("test_init"))
     suite.addTest(TestGDSEdgeNeighborLoaderREST("test_iterate_pyg"))

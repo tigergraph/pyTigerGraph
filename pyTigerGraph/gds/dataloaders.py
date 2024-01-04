@@ -90,7 +90,9 @@ class BaseLoader:
         kafka_add_topic_per_epoch: bool = False,
         callback_fn: Callable = None,
         kafka_group_id: str = None,
-        kafka_topic: str = None
+        kafka_topic: str = None,
+        num_machines: int = 1,
+        num_segments: int = 20,
     ) -> None:
         """Base Class for data loaders.
 
@@ -291,6 +293,8 @@ class BaseLoader:
                 )
         # Initialize parameters for the query
         self._payload = {}
+        self._payload["num_machines"] = num_machines
+        self._payload["num_segments"] = num_segments
         if self.kafka_address_producer:
             self._payload["kafka_address"] = self.kafka_address_producer
             self._payload["kafka_topic_partitions"] = kafka_num_partitions
@@ -3659,7 +3663,9 @@ class EdgeNeighborLoader(BaseLoader):
         kafka_add_topic_per_epoch: bool = False,
         callback_fn: Callable = None,
         kafka_group_id: str = None,
-        kafka_topic: str = None
+        kafka_topic: str = None, 
+        num_machines: int = 1,
+        num_segments: int = 20
     ) -> None:
         """NO DOC"""
 
@@ -3704,7 +3710,9 @@ class EdgeNeighborLoader(BaseLoader):
             kafka_add_topic_per_epoch,
             callback_fn,
             kafka_group_id,
-            kafka_topic
+            kafka_topic,
+            num_machines,
+            num_segments
         )
         # Resolve attributes
         is_hetero = any(map(lambda x: isinstance(x, dict), 

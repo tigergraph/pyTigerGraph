@@ -8,6 +8,8 @@ CREATE QUERY edge_nei_loader_{QUERYSUFFIX}(
     SET<STRING> seed_types,
     STRING delimiter,
     INT num_chunks=2,
+    INT num_machines=1,
+    INT num_segments=20,
     STRING kafka_address="",
     STRING kafka_topic="",
     INT kafka_topic_partitions=1,
@@ -50,8 +52,10 @@ CREATE QUERY edge_nei_loader_{QUERYSUFFIX}(
     */
     SumAccum<INT> @tmp_id;
     SumAccum<STRING> @@kafka_error;
-    UINT producer;
     SetAccum<VERTEX> @seeds;
+    MapAccum<INT, MinAccum<UINT>> @@mid_to_vid; # This tmp accumulator maps machine ID to the smallest vertex ID on the machine.
+    MapAccum<INT, UINT> @@mid_to_producer;
+    SumAccum<UINT> @kafka_producer_id;
 
     start = {v_types};
     # Filter seeds if needed
@@ -71,13 +75,32 @@ CREATE QUERY edge_nei_loader_{QUERYSUFFIX}(
 
     # If using kafka to export 
     IF kafka_address != "" THEN
-        # Initialize Kafka producer
-        producer = init_kafka_producer(
-            kafka_address, kafka_max_size, security_protocol, 
-            sasl_mechanism, sasl_username, sasl_password, ssl_ca_location,
-            ssl_certificate_location, ssl_key_location, ssl_key_password,
-            ssl_endpoint_identification_algorithm, sasl_kerberos_service_name,
-            sasl_kerberos_keytab, sasl_kerberos_principal);
+        # We generate a vertex set that contains exactly one vertex per machine.
+        machine_set = 
+            SELECT s
+            FROM start:s
+            ACCUM 
+                INT mid = (getvid(s) >> num_segments & 31) % num_machines,
+                @@mid_to_vid += (mid -> getvid(s))
+            HAVING @@mid_to_vid.get((getvid(s) >> num_segments & 31) % num_machines) == getvid(s);
+        @@mid_to_vid.clear();
+        # Initialize Kafka producer per machine
+        res = SELECT s
+            FROM machine_set:s
+            ACCUM
+                INT mid = (getvid(s) >> num_segments & 31) % num_machines, 
+                UINT producer = init_kafka_producer(
+                    kafka_address, kafka_max_size, security_protocol, 
+                    sasl_mechanism, sasl_username, sasl_password, ssl_ca_location,
+                    ssl_certificate_location, ssl_key_location, ssl_key_password,
+                    ssl_endpoint_identification_algorithm, sasl_kerberos_service_name,
+                    sasl_kerberos_keytab, sasl_kerberos_principal),
+                @@mid_to_producer += (mid -> producer);
+        res = SELECT s
+            FROM start:s
+            ACCUM
+                INT mid = (getvid(s) >> num_segments & 31) % num_machines,
+                s.@kafka_producer_id += @@mid_to_producer.get(mid);
     END;
     
     FOREACH chunk IN RANGE[0, num_chunks-1] DO
@@ -132,13 +155,13 @@ CREATE QUERY edge_nei_loader_{QUERYSUFFIX}(
                     INT part_num = (getvid(s)+getvid(t))%kafka_topic_partitions,
                     STRING batch_id = stringify(getvid(s))+"_"+e.type+"_"+stringify(getvid(t)),
                     SET<STRING> tmp_v_batch = @@v_batch.get(s) + @@v_batch.get(t),
-                    INT kafka_errcode = write_to_kafka(producer, kafka_topic, part_num, "vertex_batch_"+batch_id, stringify(tmp_v_batch)),
+                    INT kafka_errcode = write_to_kafka(s.@kafka_producer_id, kafka_topic, part_num, "vertex_batch_"+batch_id, stringify(tmp_v_batch)),
                     IF kafka_errcode!=0 THEN 
                         @@kafka_error += ("Error sending vertex batch for "+batch_id+": "+stringify(kafka_errcode) + "\n")
                     END,
                     SET<STRING> tmp_e_batch = @@e_batch.get(s) + @@e_batch.get(t),
                     {EDGEATTRSKAFKA},
-                    kafka_errcode = write_to_kafka(producer, kafka_topic, part_num, "edge_batch_"+batch_id, stringify(tmp_e_batch)),
+                    kafka_errcode = write_to_kafka(s.@kafka_producer_id, kafka_topic, part_num, "edge_batch_"+batch_id, stringify(tmp_e_batch)),
                     IF kafka_errcode!=0 THEN 
                         @@kafka_error += ("Error sending edge batch for "+batch_id+ ": "+ stringify(kafka_errcode) + "\n")
                     END
@@ -166,17 +189,24 @@ CREATE QUERY edge_nei_loader_{QUERYSUFFIX}(
     END;
     
     IF kafka_address != "" THEN 
-        FOREACH i IN RANGE[0, kafka_topic_partitions-1] DO
-            INT kafka_errcode = write_to_kafka(producer, kafka_topic, i, "STOP", "");
-            IF kafka_errcode!=0 THEN 
-                @@kafka_error += ("Error sending STOP signal to topic partition " + stringify(i) + ": " + stringify(kafka_errcode) + "\n");
-            END;
-        END;
+        res = SELECT s
+            FROM machine_set:s
+            WHERE (getvid(s) >> num_segments & 31) % num_machines == 0
+            ACCUM
+                FOREACH i IN RANGE[0, kafka_topic_partitions-1] DO
+                    INT kafka_errcode = write_to_kafka(s.@kafka_producer_id, kafka_topic, i, "STOP", ""),
+                    IF kafka_errcode!=0 THEN 
+                        @@kafka_error += ("Error sending STOP signal to topic partition " + stringify(i) + ": " + stringify(kafka_errcode) + "\n")
+                    END
+                END;
 
-        INT kafka_errcode = close_kafka_producer(producer, kafka_timeout);
-        IF kafka_errcode!=0 THEN 
-            @@kafka_error += ("Error shutting down Kafka producer: " + stringify(kafka_errcode) + "\n");
-        END;
+        res = SELECT s
+            FROM machine_set:s
+            ACCUM
+                INT kafka_errcode = close_kafka_producer(s.@kafka_producer_id, kafka_timeout),
+                IF kafka_errcode!=0 THEN 
+                    @@kafka_error += ("Error shutting down Kafka producer: " + stringify(kafka_errcode) + "\n")
+                END;
         PRINT @@kafka_error as kafkaError;
     END;
 }
