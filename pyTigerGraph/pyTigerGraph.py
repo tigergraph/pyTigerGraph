@@ -57,9 +57,9 @@ class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT
                     from .ai import ai
                     self.ai = ai.AI(self)
                     return super().__getattribute__(name)
-                except:
+                except Exception as e:
                     raise Exception(
-                        "Error importing AI submodule."
+                        "Error importing AI submodule. "+str(e)
                     )
             else:
                 return super().__getattribute__(name)
