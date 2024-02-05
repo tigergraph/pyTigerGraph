@@ -607,11 +607,11 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                             for v3 in v2:
                                 if c3 > 0:
                                     ret += ","
-                                ret += '"' + k2 + '":' + json.dumps(v3)
+                                ret += '"' + json.dumps(k2) + '":' + json.dumps(v3)
                                 c3 += 1
                             c2 += 1
                     else:
-                        ret += '"' + k1 + '":' + _dumps(data[k1])
+                        ret += '"' + json.dumps(k1) + '":' + _dumps(data[k1])
                     c1 += 1
             return "{" + ret + "}"
 
