@@ -1,0 +1,11 @@
+CREATE QUERY graph_loader_sub_{QUERYSUFFIX} (VERTEX v, STRING delimiter)
+RETURNS (STRING) 
+{
+    STRING ret;
+    start = {v};
+    res = SELECT s
+        FROM start:s
+        POST-ACCUM
+            {VERTEXATTRS};
+    RETURN ret;
+}
