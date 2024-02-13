@@ -231,7 +231,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
         elif not(success) and not(secret):
             res = self._post(self.restppUrl+"/requesttoken", authMode="pwd", data=str({"graph": self.graphname}), resKey="results")
             success = True
-        else:
+        elif not(success) and (int(s) < 3 or (int(s) == 3 and int(m) < 5)):
             raise TigerGraphException("Cannot request a token with username/password for versions < 3.5.")
 
 
