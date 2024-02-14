@@ -177,7 +177,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
         return res
 
-    def getToken(self, secret: str = None, setToken: bool = True, lifetime: int = None) -> tuple:
+    def getToken(self, secret: str = None, setToken: bool = True, lifetime: int = None) -> Union[tuple, str]:
         """Requests an authorization token.
 
         This function returns a token only if REST++ authentication is enabled. If not, an exception
@@ -194,8 +194,11 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                 Duration of token validity (in seconds, default 30 days = 2,592,000 seconds).
 
         Returns:
-            A tuple of `(<token>, <expiration_timestamp_unixtime>, <expiration_timestamp_ISO8601>)`.
+            If your TigerGraph instance is running version 3.5 or before, the return value is 
+            a tuple of `(<token>, <expiration_timestamp_unixtime>, <expiration_timestamp_ISO8601>)`.
             The return value can be ignored, as the token is automatically set for the connection after this call.
+
+            If your TigerGraph instance is running version 3.6 or later, the return value is just the token.
 
             [NOTE]
             The expiration timestamp's time zone might be different from your computer's local time
