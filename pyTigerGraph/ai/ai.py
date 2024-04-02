@@ -41,7 +41,7 @@ class AI:
             "docstring": docstring,
             "param_types": param_types
         }
-        url = self.nlqs_host+"/"+self.conn.graphname+"/registercustomquery"
+        url = self.nlqs_host+"/"+self.conn.graphname+"/register_docs"
         return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
 
     def retrieveDocs(self, query:str, top_k:int = 3):
@@ -58,7 +58,7 @@ class AI:
             "query": query
         }
 
-        url = self.nlqs_host+"/"+self.conn.graphname+"/retrievedocs?top_k="+str(top_k)
+        url = self.nlqs_host+"/"+self.conn.graphname+"/retrieve_docs?top_k="+str(top_k)
         return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None, skipCheck=True) 
 
     def query(self, query):
