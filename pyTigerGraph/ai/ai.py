@@ -101,7 +101,7 @@ class AI:
             Returns:
                 JSON response from the SupportAI service.
         """
-        url = self.nlqs_host+"/"+self.conn.graphname+"/initialize"
+        url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/initialize"
         return self.conn._req("POST", url, authMode="pwd", resKey=None)
     
     def createDocumentIngest(self, data_source, data_source_config, loader_config, file_format):
@@ -161,9 +161,9 @@ class AI:
                 JSON response from the document search.
         """
         data = {
-            "query": query,
+            "question": query,
             "method": method,
-            "method_parameters": method_parameters
+            "method_params": method_parameters
         }
         url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/search"
         return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
@@ -181,9 +181,17 @@ class AI:
                 JSON response from the question answer.
         """
         data = {
-            "query": query,
+            "question": query,
             "method": method,
-            "method_parameters": method_parameters
+            "method_params": method_parameters
         }
         url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/answerquestion"
         return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
+    
+    def forceConsistencyUpdate(self):
+        """ Force a consistency update for SupportAI embeddings.
+            Returns:
+                JSON response from the consistency update.
+        """
+        url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/forceupdate"
+        return self.conn._req("GET", url, authMode="pwd", resKey=None)
