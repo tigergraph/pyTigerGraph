@@ -1,4 +1,5 @@
 import json
+import warnings
 
 class AI:
     def __init__(self, conn: "TigerGraphConnection") -> None: 
@@ -14,10 +15,21 @@ class AI:
         self.nlqs_host = None
 
     def configureInquiryAIHost(self, hostname: str):
-        """ Configure the hostname of the InquiryAI service.
+        """ DEPRECATED: Configure the hostname of the InquiryAI service.
             Args:
                 hostname (str):
                     The hostname (and port number) of the InquiryAI serivce.
+        """
+        warnings.warn(
+                "The `configureInquiryAIHost()` function is deprecated; use `configureCoPilotHost()` function instead.",
+                DeprecationWarning)
+        self.nlqs_host = hostname
+
+    def configureCoPilotHost(self, hostname: str):
+        """ Configure the hostname of the CoPilot service.
+            Args:
+                hostname (str):
+                    The hostname (and port number) of the CoPilot serivce.
         """
         self.nlqs_host = hostname
 
@@ -75,3 +87,111 @@ class AI:
 
         url = self.nlqs_host+"/"+self.conn.graphname+"/query"
         return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
+    
+    def coPilotHealth(self):
+        """ Check the health of the CoPilot service.
+            Returns:
+                JSON response from the CoPilot service.
+        """
+        url = self.nlqs_host+"/health"
+        return self.conn._req("GET", url, authMode="pwd", resKey=None)
+    
+    def initializeSupportAI(self):
+        """ Initialize the SupportAI service.
+            Returns:
+                JSON response from the SupportAI service.
+        """
+        url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/initialize"
+        return self.conn._req("POST", url, authMode="pwd", resKey=None)
+    
+    def createDocumentIngest(self, data_source, data_source_config, loader_config, file_format):
+        """ Create a document ingest.
+            Args:
+                data_source (str):
+                    The data source of the document ingest.
+                data_source_config (dict):
+                    The configuration of the data source.
+                loader_config (dict):
+                    The configuration of the loader.
+                file_format (str):
+                    The file format of the document ingest.
+            Returns:
+                JSON response that contains the load_job_id and data_source_id of the document ingest.
+        """
+        data = {
+            "data_source": data_source,
+            "data_source_config": data_source_config,
+            "loader_config": loader_config,
+            "file_format": file_format
+        }
+
+        url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/create_ingest"
+        return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
+    
+    def runDocumentIngest(self, load_job_id, data_source_id, data_path):
+        """ Run a document ingest.
+            Args:
+                load_job_id (str):
+                    The load job ID of the document ingest.
+                data_source_id (str):
+                    The data source ID of the document ingest.
+                data_path (str):
+                    The data path of the document ingest.
+            Returns:
+                JSON response from the document ingest.
+        """
+        data = {
+            "load_job_id": load_job_id,
+            "data_source_id": data_source_id,
+            "file_path": data_path
+        }
+        url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/ingest"
+        return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
+    
+    def searchDocuments(self, query, method = "hnswoverlap", method_parameters: dict = {"indices": ["Document", "DocumentChunk", "Entity", "Relationship"], "top_k": 2, "num_hops": 2, "num_seen_min": 2}):
+        """ Search documents.
+            Args:
+                query (str):
+                    The query to search documents with.
+                method (str):
+                    The method to search documents with.
+                method_parameters (dict):
+                    The parameters of the method.
+            Returns:
+                JSON response from the document search.
+        """
+        data = {
+            "question": query,
+            "method": method,
+            "method_params": method_parameters
+        }
+        url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/search"
+        return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
+    
+    def answerQuestion(self, query, method = "hnswoverlap", method_parameters: dict = {"indices": ["Document", "DocumentChunk", "Entity", "Relationship"], "top_k": 2, "num_hops": 2, "num_seen_min": 2}):
+        """ Answer a question.
+            Args:
+                query (str):
+                    The query to answer the question with.
+                method (str):
+                    The method to answer the question with.
+                method_parameters (dict):
+                    The parameters of the method.
+            Returns:
+                JSON response from the question answer.
+        """
+        data = {
+            "question": query,
+            "method": method,
+            "method_params": method_parameters
+        }
+        url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/answerquestion"
+        return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
+    
+    def forceConsistencyUpdate(self):
+        """ Force a consistency update for SupportAI embeddings.
+            Returns:
+                JSON response from the consistency update.
+        """
+        url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/forceupdate"
+        return self.conn._req("GET", url, authMode="pwd", resKey=None)
