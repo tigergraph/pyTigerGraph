@@ -55,6 +55,43 @@ class AI:
         }
         url = self.nlqs_host+"/"+self.conn.graphname+"/register_docs"
         return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
+    
+    def updateCustomQuery(self, function_header: str, description: str, docstring: str, param_types: dict = {}):
+        """ Update a custom query with the InquiryAI service.
+            Args:
+                function_header (str):
+                    The name of the query being updated.
+                description (str):
+                    The high-level description of the query being updated.
+                docstring (str):
+                    The docstring of the query being updated. Includes information about each parameter.
+                param_types (Dict[str, str]):
+                    The types of the parameters. In the format {"param_name": "param_type"}
+            Returns:
+                Hash of query that was updated.
+        """
+        data = {
+            "function_header": function_header,
+            "description": description,
+            "docstring": docstring,
+            "param_types": param_types
+        }
+
+        json_payload = {"query_info": data}
+        url = self.nlqs_host+"/"+self.conn.graphname+"/upsert_docs"
+        return self.conn._req("POST", url, authMode="pwd", data = json_payload, jsonData=True, resKey=None)
+    
+    def deleteCustomQuery(self, function_header: str):
+        """ Delete a custom query with the InquiryAI service.
+            Args:
+                function_header (str):
+                    The name of the query being deleted.
+            Returns:
+                Hash of query that was deleted.
+        """
+        data = {"ids": [], "expr": "function_header == '"+function_header+"'"}
+        url = self.nlqs_host+"/"+self.conn.graphname+"/delete_docs"
+        return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
 
     def retrieveDocs(self, query:str, top_k:int = 3):
         """ Retrieve docs from the vector store.
