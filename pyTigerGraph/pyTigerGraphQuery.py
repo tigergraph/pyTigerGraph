@@ -7,7 +7,7 @@ import json
 import logging
 from datetime import datetime
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union, Optional
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -591,3 +591,96 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         logger.info("exit: getStatistics")
 
         return ret
+
+    def describeQuery(self, queryName: str, queryDescription: str, parameterDescriptions: dict = {}):
+        """Add a query description and parameter descriptions.
+        
+        Args:
+            queryName:
+                The name of the query to describe.
+            queryDescription:
+                A description of the query.
+            parameterDescriptions (optional):
+                A dictionary of parameter descriptions. The keys are the parameter names and the values are the descriptions.
+        
+        Returns:
+            The response from the database.
+        """
+        logger.info("entry: describeQuery")
+        
+        if parameterDescriptions:
+            params = {"queries": [
+                {"queryName": queryName,
+                "description": queryDescription,
+                "parameters": [{"paramName": k, "description": v} for k, v in parameterDescriptions.items()]}
+            ]}
+        else:
+            params = {"queries": [
+                {"queryName": queryName,
+                "description": queryDescription}
+            ]}
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + params)
+        res = self._put(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname, data=params, authMode="pwd", jsonData=True)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.info("exit: describeQuery")
+
+        return res
+    
+    def getQueryDescription(self, queryName: Optional[Union[str, list]] = "all"):
+        """Get the description of a query.
+        
+        Args:
+            queryName:
+                The name of the query to get the description of. 
+                If multiple query descriptions are desired, pass a list of query names.
+                If set to "all", returns the description of all queries.
+        
+        Returns:
+            The description of the query(ies).
+        """
+        logger.info("entry: getQueryDescription")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+        
+        if isinstance(queryName, list):
+            queryName = ",".join(queryName)
+
+        res = self._get(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname+"&query="+queryName, authMode="pwd", resKey=None)
+        if not res["error"]:
+            if logger.level == logging.DEBUG:
+                logger.debug("exit: getQueryDescription")
+            return res["queries"]
+        else:
+            raise TigerGraphException(res["message"], res["code"])
+        
+    def dropQueryDescription(self, queryName: str, dropParamDescriptions: bool = True):
+        """Drop the description of a query.
+        
+        Args:
+            queryName:
+                The name of the query to drop the description of.
+                If set to "*", drops the description of all queries.
+            dropParamDescriptions:
+                Whether to drop the parameter descriptions as well. Defaults to True.
+        
+        Returns:
+            The response from the database.
+        """
+        logger.info("entry: dropQueryDescription")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+        if dropParamDescriptions:
+            params = {"queries": [queryName], "queryParameters": [queryName+".*"]}
+        else:
+            params = {"queries": [queryName]}
+        print(params)
+        res = self._delete(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname, authMode="pwd", data=params, jsonData=True)
+        
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.info("exit: dropQueryDescription")
+        
+        return res

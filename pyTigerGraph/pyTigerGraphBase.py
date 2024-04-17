@@ -278,7 +278,7 @@ class pyTigerGraphBase(object):
                 _headers.update(self.awsIamHeaders)
         if self.responseConfigHeader:
             _headers.update(self.responseConfigHeader)
-        if method == "POST" or method == "PUT":
+        if method == "POST" or method == "PUT" or method == "DELETE":
             _data = data
         else:
             _data = None
@@ -387,8 +387,32 @@ class pyTigerGraphBase(object):
         logger.info("exit: _post")
 
         return res
+    
+    def _put(self, url: str, authMode: str = "token", data = None, resKey=None, jsonData=False) -> Union[dict, list]:
+        """Generic PUT method.
 
-    def _delete(self, url: str, authMode: str = "token") -> Union[dict, list]:
+        Args:
+            url:
+                Complete REST++ API URL including path and parameters.
+            authMode:
+                Authentication mode, either `"token"` (default) or `"pwd"`.
+
+        Returns:
+            The response from the request (as a dictionary).
+        """
+        logger.info("entry: _put")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        res = self._req("PUT", url, authMode, data=data, resKey=resKey, jsonData=jsonData)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.info("exit: _put")
+
+        return res
+
+    def _delete(self, url: str, authMode: str = "token", data: dict = None, resKey=None, jsonData=False) -> Union[dict, list]:
         """Generic DELETE method.
 
         Args:
@@ -404,7 +428,7 @@ class pyTigerGraphBase(object):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        res = self._req("DELETE", url, authMode)
+        res = self._req("DELETE", url, authMode, data=data, resKey=resKey, jsonData=jsonData)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
