@@ -593,7 +593,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         return ret
 
     def describeQuery(self, queryName: str, queryDescription: str, parameterDescriptions: dict = {}):
-        """Add a query description and parameter descriptions.
+        """Add a query description and parameter descriptions. Only supported on versions of TigerGraph >= 4.0.0.
         
         Args:
             queryName:
@@ -607,6 +607,11 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
             The response from the database.
         """
         logger.info("entry: describeQuery")
+        self.ver =self.conn.getVer()
+        major_ver, minor_ver, patch_ver = self.ver.split(".")
+        if int(major_ver) < 4:
+            logger.info("exit: describeQuery")
+            raise TigerGraphException("This function is only supported on versions of TigerGraph >= 4.0.0.", 0)
         
         if parameterDescriptions:
             params = {"queries": [
@@ -630,7 +635,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         return res
     
     def getQueryDescription(self, queryName: Optional[Union[str, list]] = "all"):
-        """Get the description of a query.
+        """Get the description of a query. Only supported on versions of TigerGraph >= 4.0.0.
         
         Args:
             queryName:
@@ -642,6 +647,12 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
             The description of the query(ies).
         """
         logger.info("entry: getQueryDescription")
+        self.ver =self.conn.getVer()
+        major_ver, minor_ver, patch_ver = self.ver.split(".")
+        if int(major_ver) < 4:
+            logger.info("exit: getQueryDescription")
+            raise TigerGraphException("This function is only supported on versions of TigerGraph >= 4.0.0.", 0)
+        
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
         
@@ -657,7 +668,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
             raise TigerGraphException(res["message"], res["code"])
         
     def dropQueryDescription(self, queryName: str, dropParamDescriptions: bool = True):
-        """Drop the description of a query.
+        """Drop the description of a query. Only supported on versions of TigerGraph >= 4.0.0.
         
         Args:
             queryName:
@@ -670,6 +681,12 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
             The response from the database.
         """
         logger.info("entry: dropQueryDescription")
+        self.ver =self.conn.getVer()
+        major_ver, minor_ver, patch_ver = self.ver.split(".")
+        if int(major_ver) < 4:
+            logger.info("exit: describeQuery")
+            raise TigerGraphException("This function is only supported on versions of TigerGraph >= 4.0.0.", 0)
+        
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
         if dropParamDescriptions:
