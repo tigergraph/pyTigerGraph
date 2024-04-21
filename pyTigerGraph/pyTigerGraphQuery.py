@@ -607,7 +607,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
             The response from the database.
         """
         logger.info("entry: describeQuery")
-        self.ver =self.conn.getVer()
+        self.ver = self.getVer()
         major_ver, minor_ver, patch_ver = self.ver.split(".")
         if int(major_ver) < 4:
             logger.info("exit: describeQuery")
@@ -647,7 +647,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
             The description of the query(ies).
         """
         logger.info("entry: getQueryDescription")
-        self.ver =self.conn.getVer()
+        self.ver = self.getVer()
         major_ver, minor_ver, patch_ver = self.ver.split(".")
         if int(major_ver) < 4:
             logger.info("exit: getQueryDescription")
@@ -681,7 +681,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
             The response from the database.
         """
         logger.info("entry: dropQueryDescription")
-        self.ver =self.conn.getVer()
+        self.ver = self.getVer()
         major_ver, minor_ver, patch_ver = self.ver.split(".")
         if int(major_ver) < 4:
             logger.info("exit: describeQuery")
