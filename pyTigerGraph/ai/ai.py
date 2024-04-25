@@ -1,8 +1,9 @@
 import json
 import warnings
+from pyTigerGraph import TigerGraphConnection
 
 class AI:
-    def __init__(self, conn: "TigerGraphConnection") -> None: 
+    def __init__(self, conn: TigerGraphConnection) -> None: 
         """NO DOC: Initiate an AI object. Currently in beta testing.
             Args:
                 conn (TigerGraphConnection):
@@ -13,9 +14,14 @@ class AI:
         """
         self.conn = conn
         self.nlqs_host = None
-
+        if conn.tgCloud:
+            # split scheme and host
+            scheme, host = conn.host.split("://")
+            self.nlqs_host = scheme + "://copilot-" + host
+        
     def configureInquiryAIHost(self, hostname: str):
         """ DEPRECATED: Configure the hostname of the InquiryAI service.
+            Not recommended to use. Use configureCoPilotHost() instead.
             Args:
                 hostname (str):
                     The hostname (and port number) of the InquiryAI serivce.
@@ -27,6 +33,7 @@ class AI:
 
     def configureCoPilotHost(self, hostname: str):
         """ Configure the hostname of the CoPilot service.
+            Not necessary if using TigerGraph CoPilot on TigerGraph Cloud.
             Args:
                 hostname (str):
                     The hostname (and port number) of the CoPilot serivce.
@@ -231,4 +238,12 @@ class AI:
                 JSON response from the consistency update.
         """
         url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/forceupdate"
+        return self.conn._req("GET", url, authMode="pwd", resKey=None)
+    
+    def checkConsistencyProgress(self):
+        """ Check the progress of the consistency update.
+            Returns:
+                JSON response from the consistency update progress.
+        """
+        url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/consistency_status"
         return self.conn._req("GET", url, authMode="pwd", resKey=None)
