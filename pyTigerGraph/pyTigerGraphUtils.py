@@ -92,7 +92,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        response = self._get(self.restppUrl+"/version/"+self.graphname, strictJson=False, resKey="message")
+        response = self._get(self.restppUrl+"/version", strictJson=False, resKey="message")
        
         if raw:
             return response
