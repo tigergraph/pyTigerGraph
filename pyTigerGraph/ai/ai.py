@@ -79,7 +79,8 @@ class AI:
                 "function_header": query_name,
                 "description": description,
                 "docstring": docstring,
-                "param_types": param_types
+                "param_types": param_types,
+                "graphname": self.conn.graphname
             }
             url = self.nlqs_host+"/"+self.conn.graphname+"/register_docs"
             return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
@@ -123,10 +124,11 @@ class AI:
                 "function_header": query_name,
                 "description": description,
                 "docstring": docstring,
-                "param_types": param_types
+                "param_types": param_types,
+                "graphname": self.conn.graphname
             }
 
-            json_payload = {"query_info": data}
+            json_payload = {"id": "", "query_info": data}
             url = self.nlqs_host+"/"+self.conn.graphname+"/upsert_docs"
             return self.conn._req("POST", url, authMode="pwd", data = json_payload, jsonData=True, resKey=None)
     
