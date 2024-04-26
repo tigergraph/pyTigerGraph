@@ -607,6 +607,13 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
             The response from the database.
         """
         logger.info("entry: describeQuery")
+        '''
+        self.ver = self.getVer()
+        major_ver, minor_ver, patch_ver = self.ver.split(".")
+        if int(major_ver) < 4:
+            logger.info("exit: describeQuery")
+            raise TigerGraphException("This function is only supported on versions of TigerGraph >= 4.0.0.", 0)
+        '''
         
         if parameterDescriptions:
             params = {"queries": [
@@ -642,6 +649,13 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
             The description of the query(ies).
         """
         logger.info("entry: getQueryDescription")
+        '''
+        self.ver = self.getVer()
+        major_ver, minor_ver, patch_ver = self.ver.split(".")
+        if int(major_ver) < 4:
+            logger.info("exit: getQueryDescription")
+            raise TigerGraphException("This function is only supported on versions of TigerGraph >= 4.0.0.", 0)
+        '''
         
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
@@ -671,14 +685,19 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
             The response from the database.
         """
         logger.info("entry: dropQueryDescription")
-        
+        '''
+        self.ver = self.getVer()
+        major_ver, minor_ver, patch_ver = self.ver.split(".")
+        if int(major_ver) < 4:
+            logger.info("exit: describeQuery")
+            raise TigerGraphException("This function is only supported on versions of TigerGraph >= 4.0.0.", 0)
+        '''
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
         if dropParamDescriptions:
             params = {"queries": [queryName], "queryParameters": [queryName+".*"]}
         else:
             params = {"queries": [queryName]}
-        print(params)
         res = self._delete(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname, authMode="pwd", data=params, jsonData=True)
         
         if logger.level == logging.DEBUG:
