@@ -667,7 +667,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         if not res["error"]:
             if logger.level == logging.DEBUG:
                 logger.debug("exit: getQueryDescription")
-            return res
+            return res["queries"]
         else:
             raise TigerGraphException(res["message"], res["code"])
         
@@ -698,6 +698,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
             params = {"queries": [queryName], "queryParameters": [queryName+".*"]}
         else:
             params = {"queries": [queryName]}
+
         res = self._delete(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname, authMode="pwd", data=params, jsonData=True)
         
         if logger.level == logging.DEBUG:
