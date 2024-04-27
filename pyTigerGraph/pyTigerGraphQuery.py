@@ -667,7 +667,16 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         if not res["error"]:
             if logger.level == logging.DEBUG:
                 logger.debug("exit: getQueryDescription")
-            return res["queries"]
+
+            #TODO: normally this is just res["queries"], but the GUI layer moves "queries" into "results". Need a more robust solution in the future.
+            if res.get("queries"):
+                res = res["queries"]
+            elif res.get("results"):
+                try:
+                    res = res["results"]["queries"]
+                except:
+                    raise TigerGraphException("Error parsing response from server.", 0)
+            return res
         else:
             raise TigerGraphException(res["message"], res["code"])
         
