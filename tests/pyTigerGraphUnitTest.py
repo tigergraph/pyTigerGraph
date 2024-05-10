@@ -20,6 +20,8 @@ def make_connection(graphname: str = None):
         "sslPort": "443",
         "tgCloud": False,
         "gcp": False,
+        "jwtToken": "",
+        "dbVersion": ""
     }
 
     path = os.path.dirname(os.path.realpath(__file__))
@@ -42,6 +44,8 @@ def make_connection(graphname: str = None):
         certPath=server_config["certPath"],
         sslPort=server_config["sslPort"],
         gcp=server_config["gcp"],
+        jwtToken=server_config["jwtToken"],
+        dbVersion=server_config["dbVersion"]
     )
     if server_config.get("getToken", False):
         conn.getToken(conn.createSecret())

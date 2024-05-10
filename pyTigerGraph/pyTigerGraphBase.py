@@ -11,7 +11,7 @@ import sys
 import warnings
 from typing import Union
 from urllib.parse import urlparse
-
+from distutils.version import StrictVersion
 import requests
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
@@ -36,7 +36,7 @@ class pyTigerGraphBase(object):
             tgCloud: bool = False, restppPort: Union[int, str] = "9000",
             gsPort: Union[int, str] = "14240", gsqlVersion: str = "", version: str = "",
             apiToken: str = "", useCert: bool = None, certPath: str = None, debug: bool = None,
-            sslPort: Union[int, str] = "443", gcp: bool = False, jwtToken: str = ""):
+            sslPort: Union[int, str] = "443", gcp: bool = False, jwtToken: str = "", dbVersion: str = ""):
         """Initiate a connection object.
 
         Args:
@@ -78,6 +78,8 @@ class pyTigerGraphBase(object):
                 DEPRECATED. Previously used for connecting to databases provisioned on GCP in TigerGraph Cloud.
             jwtToken:
                 The JWT token generated from customer side for authentication
+            dbVersion:
+                The TigerGraph database version being connected to.
 
         Raises:
             TigerGraphException: In case on invalid URL scheme.
@@ -126,9 +128,10 @@ class pyTigerGraphBase(object):
         else:
             self.authHeader = {"Authorization": "Basic {0}".format(self.base64_credential)}
 
-        # If JWT token is provided, set authMode to "token", and overwrite authMode = "pwd" for GSQL authentication as well
+        # If JWT token is provided, set authMode to "token", and overwrite authMode = "pwd" for GSQL authentication as well if version is newer than 4.1.0
         if jwtToken:
-            self.authMode = "token"
+            if dbVersion and StrictVersion(dbVersion) >= StrictVersion("4.1.0"):
+                self.authMode = "token"
             self.jwtToken = jwtToken
             self.authHeader = {"Authorization": "Bearer " + self.jwtToken}
 

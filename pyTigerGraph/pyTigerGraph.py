@@ -31,9 +31,9 @@ class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT
             tgCloud: bool = False, restppPort: Union[int, str] = "9000",
             gsPort: Union[int, str] = "14240", gsqlVersion: str = "", version: str = "",
             apiToken: str = "", useCert: bool = None, certPath: str = None, debug: bool = None,
-            sslPort: Union[int, str] = "443", gcp: bool = False, jwtToken: str = ""):
+            sslPort: Union[int, str] = "443", gcp: bool = False, jwtToken: str = "", dbVersion: str = ""):
         super().__init__(host, graphname, gsqlSecret, username, password, tgCloud, restppPort,
-            gsPort, gsqlVersion, version, apiToken, useCert, certPath, debug, sslPort, gcp, jwtToken)
+            gsPort, gsqlVersion, version, apiToken, useCert, certPath, debug, sslPort, gcp, jwtToken, dbVersion)
 
         self.gds = None
         self.ai = None
