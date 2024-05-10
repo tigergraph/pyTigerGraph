@@ -36,7 +36,7 @@ class pyTigerGraphBase(object):
             tgCloud: bool = False, restppPort: Union[int, str] = "9000",
             gsPort: Union[int, str] = "14240", gsqlVersion: str = "", version: str = "",
             apiToken: str = "", useCert: bool = None, certPath: str = None, debug: bool = None,
-            sslPort: Union[int, str] = "443", gcp: bool = False):
+            sslPort: Union[int, str] = "443", gcp: bool = False, jwtToken: str = ""):
         """Initiate a connection object.
 
         Args:
@@ -76,6 +76,8 @@ class pyTigerGraphBase(object):
                 Port for fetching SSL certificate in case of firewall.
             gcp:
                 DEPRECATED. Previously used for connecting to databases provisioned on GCP in TigerGraph Cloud.
+            jwtToken:
+                The JWT token generated from customer side for authentication
 
         Raises:
             TigerGraphException: In case on invalid URL scheme.
@@ -123,6 +125,12 @@ class pyTigerGraphBase(object):
             self.authHeader = {"Authorization": "Bearer " + self.apiToken}
         else:
             self.authHeader = {"Authorization": "Basic {0}".format(self.base64_credential)}
+
+        # If JWT token is provided, set authMode to "token", and overwrite authMode = "pwd" for GSQL authentication as well
+        if jwtToken:
+            self.authMode = "token"
+            self.jwtToken = jwtToken
+            self.authHeader = {"Authorization": "Bearer " + self.jwtToken}
 
         if debug is not None:
             warnings.warn(
@@ -257,15 +265,23 @@ class pyTigerGraphBase(object):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        if authMode == "token" and str(self.apiToken) != "":
-            if isinstance(self.apiToken, tuple):
-                self.apiToken = self.apiToken[0]
-            self.authHeader = {'Authorization': "Bearer " + self.apiToken}
-            _headers = self.authHeader
-        else:
-            self.authHeader = {'Authorization': 'Basic {0}'.format(self.base64_credential)}
-            _headers = self.authHeader
-            authMode = 'pwd'
+        if authMode == "token":
+            if isinstance(self.jwtToken, str) and self.jwtToken.strip() != "":
+                token = self.jwtToken
+            elif isinstance(self.apiToken, tuple):
+                token = self.apiToken[0]
+            elif isinstance(self.apiToken, str) and self.apiToken.strip() != "":
+                token = self.apiToken
+            else:
+                token = None
+
+            if token is not None:
+                self.authHeader = {'Authorization': "Bearer " + token}
+                _headers = self.authHeader
+            else:
+                self.authHeader = {'Authorization': 'Basic {0}'.format(self.base64_credential)}
+                _headers = self.authHeader
+                authMode = 'pwd'
 
         if authMode == "pwd":
             _auth = (self.username, self.password)
