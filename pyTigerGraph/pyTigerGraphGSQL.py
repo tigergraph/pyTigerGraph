@@ -58,7 +58,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                 if "Successfully created loading jobs" not in resp:
                     raise TigerGraphException(resp)
             if "RUN LOADING JOB" in query.upper():
-                if "LOAD SUCCESSFUL to TigerGraph" or "LOAD SUCCESSFUL for loading jobid" not in resp:
+                if any(s not in res for s in ("LOAD SUCCESSFUL to TigerGraph", "LOAD SUCCESSFUL for loading jobid")):
                     raise TigerGraphException(resp)
                 
         def clean_res(resp: list) -> str:
