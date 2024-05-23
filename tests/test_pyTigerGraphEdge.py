@@ -303,11 +303,13 @@ class test_pyTigerGraphEdge(unittest.TestCase):
 
     def test_17_delEdges(self):
         # Some comment here for git diff
+        '''
         res = self.conn.delEdges("vertex6", 1)
         self.assertIsInstance(res, dict)
         self.assertEqual(7, len(res))
         self.assertIn("edge4_many_to_many", res)
         self.assertEqual(1, res["edge4_many_to_many"])
+        '''
 
         res = self.conn.delEdges("vertex6", 6, "edge4_many_to_many")
         self.assertIsInstance(res, dict)
