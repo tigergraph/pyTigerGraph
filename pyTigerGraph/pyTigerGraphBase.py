@@ -412,7 +412,7 @@ class pyTigerGraphBase(object):
 
         return res
 
-    def _delete(self, url: str, authMode: str = "token", data: dict = None, resKey=None, jsonData=False) -> Union[dict, list]:
+    def _delete(self, url: str, authMode: str = "token", data: dict = None, resKey="results", jsonData=False) -> Union[dict, list]:
         """Generic DELETE method.
 
         Args:
