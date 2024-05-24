@@ -118,15 +118,15 @@ class pyTigerGraphBase(object):
         # self.apiToken = apiToken
 
         # TODO Eliminate version and use gsqlVersion only, meaning TigerGraph server version
-        # if gsqlVersion:
-        #     self.version = gsqlVersion
-        # elif version:
-        #     warnings.warn(
-        #         "The `version` parameter is deprecated; use the `gsqlVersion` parameter instead.",
-        #         DeprecationWarning)
-        #     self.version = version
-        # else:
-        #     self.version = ""
+        if gsqlVersion:
+            self.version = gsqlVersion
+        elif version:
+            warnings.warn(
+                "The `version` parameter is deprecated; use the `gsqlVersion` parameter instead.",
+                DeprecationWarning)
+            self.version = version
+        else:
+            self.version = ""
         
         
         # if self.apiToken:
@@ -236,13 +236,13 @@ class pyTigerGraphBase(object):
             self.getVer()
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 403:
-                logger.error(f"Unauthorized error in getVer: {e}. The JWT token might be invalid or expired.")
+                logger.error(f"Unauthorized error: {e}. The JWT token might be invalid or expired.")
             else:
-                logger.error(f"HTTP error occurred in getVer: {e}")
+                logger.error(f"HTTP error occurred: {e}")
             # logger.error("The DB version using doesn't support JWT token for RestPP. Please switch to API token or username/password.")
                 raise
         except Exception as e:
-            logger.error(f"Error occurred in getVer: {e}. The DB version using doesn't support JWT token for RestPP.")
+            logger.error(f"Error occurred: {e}. The DB version using doesn't support JWT token for RestPP.")
             logger.error("Please switch to API token or username/password.")
             raise
 
