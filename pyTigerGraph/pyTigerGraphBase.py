@@ -8,10 +8,10 @@ import base64
 import json
 import logging
 import sys
+import re
 import warnings
 from typing import Union
 from urllib.parse import urlparse
-from distutils.version import StrictVersion
 import requests
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
@@ -102,37 +102,43 @@ class pyTigerGraphBase(object):
         self.graphname = graphname
         self.responseConfigHeader = {}
         self.awsIamHeaders={}
-        # TODO Remove apiToken parameter
-        if apiToken:
-            warnings.warn(
-                "The `apiToken` parameter is deprecated; use `getToken()` function instead.",
-                DeprecationWarning)
+
+        self.jwtToken = jwtToken
         self.apiToken = apiToken
+        self.base64_credential = base64.b64encode(
+                    "{0}:{1}".format(self.username, self.password).encode("utf-8")).decode("utf-8")
+        
+        self.authHeader = self._set_auth_header()
+
+        # TODO Remove apiToken parameter
+        # if apiToken:
+        #     warnings.warn(
+        #         "The `apiToken` parameter is deprecated; use `getToken()` function instead.",
+        #         DeprecationWarning)
+        # self.apiToken = apiToken
 
         # TODO Eliminate version and use gsqlVersion only, meaning TigerGraph server version
-        if gsqlVersion:
-            self.version = gsqlVersion
-        elif version:
-            warnings.warn(
-                "The `version` parameter is deprecated; use the `gsqlVersion` parameter instead.",
-                DeprecationWarning)
-            self.version = version
-        else:
-            self.version = ""
-        self.base64_credential = base64.b64encode(
-            "{0}:{1}".format(self.username, self.password).encode("utf-8")).decode("utf-8")
-        if self.apiToken:
-            self.authHeader = {"Authorization": "Bearer " + self.apiToken}
-        else:
-            self.authHeader = {"Authorization": "Basic {0}".format(self.base64_credential)}
+        # if gsqlVersion:
+        #     self.version = gsqlVersion
+        # elif version:
+        #     warnings.warn(
+        #         "The `version` parameter is deprecated; use the `gsqlVersion` parameter instead.",
+        #         DeprecationWarning)
+        #     self.version = version
+        # else:
+        #     self.version = ""
+        
+        
+        # if self.apiToken:
+        #     self.authHeader = {"Authorization": "Bearer " + self.apiToken}
+        # else:
+        #     self.authHeader = {"Authorization": "Basic {0}".format(self.base64_credential)}
 
-        # If JWT token is provided, set authMode to "token", and overwrite authMode = "pwd" for GSQL authentication as well if version is newer than 4.1.0
-        if jwtToken:
-            dbVersion = self.getVer()
-            if StrictVersion(dbVersion) >= StrictVersion("4.1.0"):
-                self.authMode = "token"
-            self.jwtToken = jwtToken
-            self.authHeader = {"Authorization": "Bearer " + self.jwtToken}
+        # self.jwtToken = jwtToken
+        # if self.jwtToken:
+        #     self.authHeader = {"Authorization": "Bearer " + self.jwtToken}
+        # else:
+        #     self.authHeader = {"Authorization": "Basic {0}".format(self.base64_credential)}
 
         if debug is not None:
             warnings.warn(
@@ -210,7 +216,51 @@ class pyTigerGraphBase(object):
             self.awsIamHeaders["X-Amz-Security-Token"] = request.headers["X-Amz-Security-Token"]
             self.awsIamHeaders["Authorization"] = request.headers["Authorization"]
 
+        if self.jwtToken:
+            self._verify_jwt_token_support()
+
         logger.info("exit: __init__")
+
+    def _set_auth_header(self):
+        """Set the authentication header based on available tokens or credentials."""
+        if self.jwtToken:
+            return {"Authorization": "Bearer " + self.jwtToken}
+        elif self.apiToken:
+            return {"Authorization": "Bearer " + self.apiToken}
+        else:
+            return {"Authorization": "Basic {0}".format(self.base64_credential)}
+
+    def _verify_jwt_token_support(self):
+        try:
+            logger.debug("Attempting to verify JWT token support with getVer() on RestPP server.")
+            self.getVer()
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 403:
+                logger.error(f"Unauthorized error in getVer: {e}. The JWT token might be invalid or expired.")
+            else:
+                logger.error(f"HTTP error occurred in getVer: {e}")
+            # logger.error("The DB version using doesn't support JWT token for RestPP. Please switch to API token or username/password.")
+                raise
+        except Exception as e:
+            logger.error(f"Error occurred in getVer: {e}. The DB version using doesn't support JWT token for RestPP.")
+            logger.error("Please switch to API token or username/password.")
+            raise
+
+        # Check JWT support for GSQL server
+        try:
+            logger.debug(f"Attempting to get schema with URL: {self.gsUrl + '/gsqlserver/gsql/schema?graph=' + self.graphname}")
+            logger.debug(f"Using auth header: {self.authHeader}") 
+            self._get(self.gsUrl + "/gsqlserver/gsql/schema?graph=" + self.graphname, authMode="token")
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 401:
+                logger.error(f"Unauthorized error: {e}. The JWT token might be invalid or expired.")
+            else:
+                logger.error("The DB version using doesn't support JWT token for GSQL. Please switch to API token or username/password.")
+                raise
+        except Exception as e:
+            logger.error(f"Error occurred in _get request: {e}. The DB version using doesn't support JWT token for GSQL.")
+            logger.error("Please switch to API token or username/password.")
+            raise
 
     def _locals(self, _locals: dict) -> str:
         del _locals["self"]
@@ -267,6 +317,7 @@ class pyTigerGraphBase(object):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
+        # If JWT token is provided, always use jwtToken as token
         if authMode == "token":
             if isinstance(self.jwtToken, str) and self.jwtToken.strip() != "":
                 token = self.jwtToken
@@ -277,7 +328,7 @@ class pyTigerGraphBase(object):
             else:
                 token = None
 
-            if token is not None:
+            if token:
                 self.authHeader = {'Authorization': "Bearer " + token}
                 _headers = self.authHeader
             else:
@@ -286,9 +337,7 @@ class pyTigerGraphBase(object):
                 authMode = 'pwd'
 
         if authMode == "pwd":
-            _auth = (self.username, self.password)
-        else:
-            _auth = None
+            _headers = {'Authorization': 'Basic {0}'.format(self.base64_credential)}
         if headers:
             _headers.update(headers)
         if self.awsIamHeaders:
@@ -467,3 +516,81 @@ class pyTigerGraphBase(object):
             Nothing. Sets `responseConfigHeader` class attribute.
         """
         self.responseConfigHeader = {"GSQL-TIMEOUT": str(timeout), "RESPONSE-LIMIT": str(responseSize)}
+
+    def getVersion(self, raw: bool = False) -> Union[str, list]:
+        """Retrieves the git versions of all components of the system.
+
+        Args:
+            raw:
+                Return unprocessed version info string, or extract version info for each component
+                into a list.
+
+        Returns:
+            Either an unprocessed string containing the version info details, or a list with version
+            info for each component.
+
+        Endpoint:
+            - `GET /version`
+                See xref:tigergraph-server:API:built-in-endpoints.adoc#_show_component_versions[Show component versions]
+        """
+        logger.info("entry: getVersion")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        response = self._get(self.restppUrl+"/version", strictJson=False, resKey="message")
+       
+        if raw:
+            return response
+        res = response.split("\n")
+        components = []
+        for i in range(len(res)):
+            if 2 < i < len(res) - 1:
+                m = res[i].split()
+                component = {"name": m[0], "version": m[1], "hash": m[2],
+                    "datetime": m[3] + " " + m[4] + " " + m[5]}
+                components.append(component)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(components))
+        logger.info("exit: getVersion")
+
+        return components
+
+    def getVer(self, component: str = "product", full: bool = False) -> str:
+        """Gets the version information of a specific component.
+
+        Get the full list of components using `getVersion()`.
+
+        Args:
+            component:
+                One of TigerGraph's components (e.g. product, gpe, gse).
+            full:
+                Return the full version string (with timestamp, etc.) or just X.Y.Z.
+
+        Returns:
+            Version info for specified component.
+
+        Raises:
+            `TigerGraphException` if invalid/non-existent component is specified.
+        """
+        logger.info("entry: getVer")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        ret = ""
+        for v in self.getVersion():
+            if v["name"] == component.lower():
+                ret = v["version"]
+        if ret != "":
+            if full:
+                return ret
+            ret = re.search("_.+_", ret)
+            ret = ret.group().strip("_")
+
+            if logger.level == logging.DEBUG:
+                logger.debug("return: " + str(ret))
+            logger.info("exit: getVer")
+
+            return ret
+        else:
+            raise TigerGraphException("\"" + component + "\" is not a valid component.", None)
