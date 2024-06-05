@@ -663,7 +663,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         if not res["error"]:
             if logger.level == logging.DEBUG:
                 logger.debug("exit: getQueryDescription")
-            return res["queries"]
+            return res["results"]["queries"]
         else:
             raise TigerGraphException(res["message"], res["code"])
         
