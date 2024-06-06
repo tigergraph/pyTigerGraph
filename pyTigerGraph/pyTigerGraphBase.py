@@ -111,11 +111,10 @@ class pyTigerGraphBase(object):
         self.authHeader = self._set_auth_header()
 
         # TODO Remove apiToken parameter
-        # if apiToken:
-        #     warnings.warn(
-        #         "The `apiToken` parameter is deprecated; use `getToken()` function instead.",
-        #         DeprecationWarning)
-        # self.apiToken = apiToken
+        if apiToken:
+            warnings.warn(
+                "The `apiToken` parameter is deprecated; use `getToken()` function instead.",
+                DeprecationWarning)
 
         # TODO Eliminate version and use gsqlVersion only, meaning TigerGraph server version
         if gsqlVersion:
@@ -127,18 +126,6 @@ class pyTigerGraphBase(object):
             self.version = version
         else:
             self.version = ""
-        
-        
-        # if self.apiToken:
-        #     self.authHeader = {"Authorization": "Bearer " + self.apiToken}
-        # else:
-        #     self.authHeader = {"Authorization": "Basic {0}".format(self.base64_credential)}
-
-        # self.jwtToken = jwtToken
-        # if self.jwtToken:
-        #     self.authHeader = {"Authorization": "Bearer " + self.jwtToken}
-        # else:
-        #     self.authHeader = {"Authorization": "Basic {0}".format(self.base64_credential)}
 
         if debug is not None:
             warnings.warn(
@@ -233,30 +220,30 @@ class pyTigerGraphBase(object):
     def _verify_jwt_token_support(self):
         try:
             logger.debug("Attempting to verify JWT token support with getVer() on RestPP server.")
-            self.getVer()
+            version = self.getVer()
+            logger.info(f"Database version: {version}")
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 403:
                 logger.error(f"Unauthorized error: {e}. The JWT token might be invalid or expired.")
             else:
                 logger.error(f"HTTP error occurred: {e}")
-            # logger.error("The DB version using doesn't support JWT token for RestPP. Please switch to API token or username/password.")
-                raise
+            raise
         except Exception as e:
             logger.error(f"Error occurred: {e}. The DB version using doesn't support JWT token for RestPP.")
             logger.error("Please switch to API token or username/password.")
-            raise
+            raise RuntimeError("The DB version using doesn't support JWT token for RestPP. Please switch to API token or username/password.") from e
 
         # Check JWT support for GSQL server
         try:
-            logger.debug(f"Attempting to get schema with URL: {self.gsUrl + '/gsqlserver/gsql/schema?graph=' + self.graphname}")
+            logger.debug(f"Attempting to get schema with URL: {self.gsUrl + '/gsqlserver/gsql/simpleauth'}")
             logger.debug(f"Using auth header: {self.authHeader}") 
-            self._get(self.gsUrl + "/gsqlserver/gsql/schema?graph=" + self.graphname, authMode="token")
+            self._get(self.gsUrl + "/gsqlserver/gsql/simpleauth", authMode="token", resKey=None)
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 401:
                 logger.error(f"Unauthorized error: {e}. The JWT token might be invalid or expired.")
             else:
                 logger.error("The DB version using doesn't support JWT token for GSQL. Please switch to API token or username/password.")
-                raise
+            raise
         except Exception as e:
             logger.error(f"Error occurred in _get request: {e}. The DB version using doesn't support JWT token for GSQL.")
             logger.error("Please switch to API token or username/password.")
@@ -337,7 +324,10 @@ class pyTigerGraphBase(object):
                 authMode = 'pwd'
 
         if authMode == "pwd":
-            _headers = {'Authorization': 'Basic {0}'.format(self.base64_credential)}
+            if self.jwtToken:
+                _headers = {'Authorization': "Bearer " + self.jwtToken}
+            else:
+                _headers = {'Authorization': 'Basic {0}'.format(self.base64_credential)}
         if headers:
             _headers.update(headers)
         if self.awsIamHeaders:
