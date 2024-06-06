@@ -180,7 +180,7 @@ class Featurizer:
     def _get_algo_dict(self, manifest_file: str) -> dict:
         # Get algo dict from manifest
         if manifest_file.startswith("http"):
-            resp = requests.get(manifest_file)
+            resp = requests.get(manifest_file, allow_redirects=False, timeout=10)
             resp.raise_for_status()
             algo_dict = resp.json()
         else:
@@ -259,7 +259,7 @@ class Featurizer:
         """
         # Read in the query
         if query_path.startswith("http"):
-            resp = requests.get(query_path)
+            resp = requests.get(query_path, allow_redirects=False, timeout=10)
             resp.raise_for_status()
             query = resp.text
         else:
@@ -404,7 +404,7 @@ class Featurizer:
             raise ValueError("Cannot find {} in the library.".format(query_name))
         query_path = self.algo_paths[query_name][-1]
         if query_path.startswith("http"):
-            resp = requests.get(query_path)
+            resp = requests.get(query_path, allow_redirects=False, timeout=10)
             resp.raise_for_status()
             query = resp.text
         else:
