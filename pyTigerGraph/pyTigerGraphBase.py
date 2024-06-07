@@ -219,35 +219,22 @@ class pyTigerGraphBase(object):
 
     def _verify_jwt_token_support(self):
         try:
+            # Check JWT support for RestPP server
             logger.debug("Attempting to verify JWT token support with getVer() on RestPP server.")
+            logger.debug(f"Using auth header: {self.authHeader}") 
             version = self.getVer()
             logger.info(f"Database version: {version}")
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 403:
-                logger.error(f"Unauthorized error: {e}. The JWT token might be invalid or expired.")
-            else:
-                logger.error(f"HTTP error occurred: {e}")
-            raise
-        except Exception as e:
-            logger.error(f"Error occurred: {e}. The DB version using doesn't support JWT token for RestPP.")
-            logger.error("Please switch to API token or username/password.")
-            raise RuntimeError("The DB version using doesn't support JWT token for RestPP. Please switch to API token or username/password.") from e
 
-        # Check JWT support for GSQL server
-        try:
-            logger.debug(f"Attempting to get schema with URL: {self.gsUrl + '/gsqlserver/gsql/simpleauth'}")
-            logger.debug(f"Using auth header: {self.authHeader}") 
-            self._get(self.gsUrl + "/gsqlserver/gsql/simpleauth", authMode="token", resKey=None)
+            # Check JWT support for GSQL server
+            logger.debug(f"Attempting to get auth info with URL: {self.gsUrl + '/gsqlserver/gsql/simpleauth'}")
+            self._get(f"{self.gsUrl}/gsqlserver/gsql/simpleauth", authMode="token", resKey=None)
         except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 401:
-                logger.error(f"Unauthorized error: {e}. The JWT token might be invalid or expired.")
-            else:
-                logger.error("The DB version using doesn't support JWT token for GSQL. Please switch to API token or username/password.")
-            raise
+            logger.error(f"HTTP error: {e}. The JWT token might be invalid or expired.")
+            raise RuntimeError(f"HTTP error: {e}, The JWT token might be invalid or expired.") from e
         except Exception as e:
-            logger.error(f"Error occurred in _get request: {e}. The DB version using doesn't support JWT token for GSQL.")
-            logger.error("Please switch to API token or username/password.")
-            raise
+            message = "The DB version using doesn't support JWT token. Please switch to API token or username/password."
+            logger.error(f"Error occurred: {e}. {message}")
+            raise RuntimeError(message) from e
 
     def _locals(self, _locals: dict) -> str:
         del _locals["self"]
