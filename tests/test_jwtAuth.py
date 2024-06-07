@@ -33,16 +33,18 @@ class TestJWTTokenAuth(unittest.TestCase):
         elif "4.1" in dbversion:
             self.test_jwtauth_4_1_success()
             self.test_jwtauth_4_1_fail()
+        else:
+            pass
 
     def test_jwtauth_3_9(self):
         with self.assertRaises(RuntimeError) as context:
-            conn = TigerGraphConnection(
+            TigerGraphConnection(
                 host=self.conn.host,
                 jwtToken="fake.JWT.Token"
             )
 
         # Verify the exception message
-        self.assertIn("HTTP error", str(context.exception))
+        self.assertIn("Please generate new JWT token or switch to API token or username/password.", str(context.exception))
 
     def test_jwtauth_4_1_success(self):
         jwt_token = self.requestJWTToken()
@@ -61,23 +63,28 @@ class TestJWTTokenAuth(unittest.TestCase):
         self.assertIn("privileges", res)
 
     def test_jwtauth_4_1_fail(self):
-        jwt_token = self.requestJWTToken()
+        # jwt_token = self.requestJWTToken()
 
         with self.assertRaises(RuntimeError) as context:
             conn = TigerGraphConnection(
                 host=self.conn.host,
-                jwtToken=jwt_token
+                jwtToken="invalid.JWT.Token"
             )
 
             # restpp on port 9000
             conn.getVer()
 
             # gsql on port 14240
-            conn._get(f"http://{self.conn.host}:{self.conn.gsPort}/gsqlserver/gsql/simpleauth", authMode="token", resKey=None)
+            # conn._get(f"http://{self.conn.host}:{self.conn.gsPort}/gsqlserver/gsql/simpleauth", authMode="token", resKey=None)
 
         # Verify the exception message
-        self.assertIn("The JWT token might be invalid or expired", str(context.exception))
+        self.assertIn("The JWT token might be invalid or expired or DB version doesn't support JWT token.", str(context.exception))
 
 
 if __name__ == '__main__':
-    unittest.main()
+    # unittest.main()
+    suite = unittest.TestSuite()
+    suite.addTest(TestJWTTokenAuth("test_jwtauth"))
+
+    runner = unittest.TextTestRunner(verbosity=2, failfast=True)
+    runner.run(suite)

@@ -228,11 +228,11 @@ class pyTigerGraphBase(object):
             # Check JWT support for GSQL server
             logger.debug(f"Attempting to get auth info with URL: {self.gsUrl + '/gsqlserver/gsql/simpleauth'}")
             self._get(f"{self.gsUrl}/gsqlserver/gsql/simpleauth", authMode="token", resKey=None)
-        except requests.exceptions.HTTPError as e:
-            logger.error(f"HTTP error: {e}. The JWT token might be invalid or expired.")
-            raise RuntimeError(f"HTTP error: {e}, The JWT token might be invalid or expired.") from e
+        # except requests.exceptions.ConnectionError as e:
+        #     logger.error(f"Connection error: {e}. The JWT token might be invalid or expired.")
+        #     raise RuntimeError(f"Connection error: {e}, The JWT token might be invalid or expired.") from e
         except Exception as e:
-            message = "The DB version using doesn't support JWT token. Please switch to API token or username/password."
+            message = "The JWT token might be invalid or expired or DB version doesn't support JWT token. Please generate new JWT token or switch to API token or username/password."
             logger.error(f"Error occurred: {e}. {message}")
             raise RuntimeError(message) from e
 
