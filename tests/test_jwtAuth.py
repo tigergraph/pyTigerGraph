@@ -12,6 +12,7 @@ class TestJWTTokenAuth(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.conn = make_connection()
+
    
     def requestJWTToken(self):
         # Define the URL
@@ -28,59 +29,58 @@ class TestJWTTokenAuth(unittest.TestCase):
     
     def test_jwtauth(self):
         dbversion = self.conn.getVer()
-        if "3.9" in dbversion:
+        print (f"dbversion from init conn: {dbversion}")
+        authheader = self.conn.authHeader
+        print (f"authheader from init conn: {authheader}")
+
+        if "3.9" in str(dbversion):
             self.test_jwtauth_3_9()
-        elif "4.1" in dbversion:
+        elif "4.1" in str(dbversion):
             self.test_jwtauth_4_1_success()
             self.test_jwtauth_4_1_fail()
         else:
             pass
 
     def test_jwtauth_3_9(self):
-        # with self.assertRaises(RuntimeError) as context:
-        with self.assertRaises(requests.exceptions.ConnectionError):
+        with self.assertRaises(RuntimeError) as context:
             TigerGraphConnection(
                 host=self.conn.host,
                 jwtToken="fake.JWT.Token"
             )
 
         # Verify the exception message
-        # self.assertIn("Connection error:", str(context.exception))
+        self.assertIn("switch to API token or username/password.", str(context.exception))
 
     def test_jwtauth_4_1_success(self):
         jwt_token = self.requestJWTToken()
 
-        conn = TigerGraphConnection(
+        newconn = TigerGraphConnection(
             host=self.conn.host,
             jwtToken=jwt_token
         )
 
+        authheader = newconn.authHeader
+        print (f"authheader from new conn: {authheader}")
+
         # restpp on port 9000
-        dbversion = conn.getVer()
-        self.assertIn("4.1", dbversion)
+        dbversion = newconn.getVer()
+        print (f"dbversion from new conn: {dbversion}")
+        self.assertIn("4.1", str(dbversion))
 
         # gsql on port 14240
-        res = conn._get(f"http://{self.conn.host}:{self.conn.gsPort}/gsqlserver/gsql/simpleauth", authMode="token", resKey=None)
+        res = newconn._get(f"{self.conn.host}:{self.conn.gsPort}/gsqlserver/gsql/simpleauth", authMode="token", resKey=None)
         self.assertIn("privileges", res)
 
-    def test_jwtauth_4_1_fail(self):
-        # jwt_token = self.requestJWTToken()
 
-        # with self.assertRaises(RuntimeError) as context:
-        with self.assertRaises(requests.exceptions.ConnectionError):
+    def test_jwtauth_4_1_fail(self):
+        with self.assertRaises(RuntimeError) as context:
             TigerGraphConnection(
                 host=self.conn.host,
                 jwtToken="invalid.JWT.Token"
             )
 
-            # restpp on port 9000
-            # conn.getVer()
-
-            # gsql on port 14240
-            # conn._get(f"http://{self.conn.host}:{self.conn.gsPort}/gsqlserver/gsql/simpleauth", authMode="token", resKey=None)
-
         # Verify the exception message
-        # self.assertIn("Connection error:", str(context.exception))
+        self.assertIn("Please generate new JWT token", str(context.exception))
 
 
 if __name__ == '__main__':
@@ -88,5 +88,5 @@ if __name__ == '__main__':
     suite = unittest.TestSuite()
     suite.addTest(TestJWTTokenAuth("test_jwtauth"))
 
-    runner = unittest.TextTestRunner(verbosity=2, failfast=True)
+    runner = unittest.TextTestRunner(verbosity=2, failfast=True) 
     runner.run(suite)
