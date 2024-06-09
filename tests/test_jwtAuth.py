@@ -13,7 +13,7 @@ class TestJWTTokenAuth(unittest.TestCase):
     def setUpClass(cls):
         cls.conn = make_connection()
 
-   
+        
     def requestJWTToken(self):
         # Define the URL
         url = f"{self.conn.host}:{self.conn.gsPort}/gsqlserver/requestjwttoken"
@@ -27,11 +27,12 @@ class TestJWTTokenAuth(unittest.TestCase):
         response = requests.post(url, data=payload, headers=headers, auth=(self.conn.username, self.conn.password))
         return response.json()['token']
     
+
     def test_jwtauth(self):
-        dbversion = self.conn.getVer()
-        print (f"dbversion from init conn: {dbversion}")
         authheader = self.conn.authHeader
         print (f"authheader from init conn: {authheader}")
+        dbversion = self.conn.getVer()
+        print (f"dbversion from init conn: {dbversion}")
 
         if "3.9" in str(dbversion):
             self.test_jwtauth_3_9()
@@ -40,6 +41,7 @@ class TestJWTTokenAuth(unittest.TestCase):
             self.test_jwtauth_4_1_fail()
         else:
             pass
+
 
     def test_jwtauth_3_9(self):
         with self.assertRaises(RuntimeError) as context:
@@ -50,6 +52,7 @@ class TestJWTTokenAuth(unittest.TestCase):
 
         # Verify the exception message
         self.assertIn("switch to API token or username/password.", str(context.exception))
+
 
     def test_jwtauth_4_1_success(self):
         jwt_token = self.requestJWTToken()
