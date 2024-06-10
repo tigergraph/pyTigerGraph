@@ -1,5 +1,6 @@
 import requests
 import json
+import os
 from requests.auth import HTTPBasicAuth
 
 import unittest
@@ -13,8 +14,22 @@ class TestJWTTokenAuth(unittest.TestCase):
     def setUpClass(cls):
         cls.conn = make_connection()
 
+
+    def test_jwtauth(self):
+        authheader = self.conn.authHeader
+        print (f"authheader from init conn: {authheader}")
+        dbversion = self.conn.getVer()
+        print (f"dbversion from init conn: {dbversion}")
+
+        if "3.9" in str(dbversion):
+            self._test_jwtauth_3_9()
+        elif "4.1" in str(dbversion):
+            self._test_jwtauth_4_1_success()
+            self._test_jwtauth_4_1_fail()
+        else:
+            pass
         
-    def requestJWTToken(self):
+    def _requestJWTToken(self):
         # Define the URL
         url = f"{self.conn.host}:{self.conn.gsPort}/gsqlserver/requestjwttoken"
         # Define the data payload
@@ -28,22 +43,7 @@ class TestJWTTokenAuth(unittest.TestCase):
         return response.json()['token']
     
 
-    def test_jwtauth(self):
-        authheader = self.conn.authHeader
-        print (f"authheader from init conn: {authheader}")
-        dbversion = self.conn.getVer()
-        print (f"dbversion from init conn: {dbversion}")
-
-        if "3.9" in str(dbversion):
-            self.test_jwtauth_3_9()
-        elif "4.1" in str(dbversion):
-            self.test_jwtauth_4_1_success()
-            self.test_jwtauth_4_1_fail()
-        else:
-            pass
-
-
-    def test_jwtauth_3_9(self):
+    def _test_jwtauth_3_9(self):
         with self.assertRaises(RuntimeError) as context:
             TigerGraphConnection(
                 host=self.conn.host,
@@ -54,8 +54,8 @@ class TestJWTTokenAuth(unittest.TestCase):
         self.assertIn("switch to API token or username/password.", str(context.exception))
 
 
-    def test_jwtauth_4_1_success(self):
-        jwt_token = self.requestJWTToken()
+    def _test_jwtauth_4_1_success(self):
+        jwt_token = self._requestJWTToken()
 
         newconn = TigerGraphConnection(
             host=self.conn.host,
@@ -75,7 +75,7 @@ class TestJWTTokenAuth(unittest.TestCase):
         self.assertIn("privileges", res)
 
 
-    def test_jwtauth_4_1_fail(self):
+    def _test_jwtauth_4_1_fail(self):
         with self.assertRaises(RuntimeError) as context:
             TigerGraphConnection(
                 host=self.conn.host,

@@ -46,6 +46,7 @@ def make_connection(graphname: str = None):
         jwtToken=server_config["jwtToken"]
     )
     if server_config.get("getToken", False):
+        conn.gsql("CREATE GRAPH tests()")
         conn.getToken(conn.createSecret())
 
     return conn
