@@ -29,6 +29,7 @@ class TestJWTTokenAuth(unittest.TestCase):
         else:
             pass
         
+        
     def _requestJWTToken(self):
         # Define the URL
         url = f"{self.conn.host}:{self.conn.gsPort}/gsqlserver/requestjwttoken"
