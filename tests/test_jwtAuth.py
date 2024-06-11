@@ -68,7 +68,8 @@ class TestJWTTokenAuth(unittest.TestCase):
         # print (token)
 
         authheader = {'Authorization': "Bearer " + token[0]}
-        print (f"authheader from init conn: {authheader}")
+        self.conn.authHeader = authheader
+        print (f"authheader from init conn: {self.conn.authHeader}")
         dbversion = self.conn.getVer()
         print (f"dbversion from init conn: {dbversion}")
 
