@@ -223,7 +223,7 @@ class pyTigerGraphBase(object):
             logger.debug("Attempting to verify JWT token support with getVer() on RestPP server.")
             logger.debug(f"Using auth header: {self.authHeader}") 
             version = self.getVer()
-            # logger.info(f"Database version: {version}")
+            logger.info(f"Database version: {version}")
 
             # Check JWT support for GSQL server
             logger.debug(f"Attempting to get auth info with URL: {self.gsUrl + '/gsqlserver/gsql/simpleauth'}")
@@ -315,6 +315,7 @@ class pyTigerGraphBase(object):
                 _headers = {'Authorization': "Bearer " + self.jwtToken}
             else:
                 _headers = {'Authorization': 'Basic {0}'.format(self.base64_credential)}
+
         if headers:
             _headers.update(headers)
         if self.awsIamHeaders:

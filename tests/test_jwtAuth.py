@@ -63,9 +63,11 @@ class TestJWTTokenAuth(unittest.TestCase):
         # self.conn.gsql("CREATE GRAPH tests()")
         # print (self.conn.graphname)
         # self.conn.gsql("USE GRAPH mygraph")
-        # self.conn.getToken(self.conn.createSecret())
+        token = self.conn.getToken(self.conn.createSecret())
 
-        authheader = self.conn.authHeader
+        # print (token)
+
+        authheader = {'Authorization': "Bearer " + token[0]}
         print (f"authheader from init conn: {authheader}")
         dbversion = self.conn.getVer()
         print (f"dbversion from init conn: {dbversion}")
