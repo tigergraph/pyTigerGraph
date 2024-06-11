@@ -55,7 +55,7 @@ class TestJWTTokenAuth(unittest.TestCase):
     #     )
     @classmethod
     def setUpClass(cls):
-        cls.conn = make_connection()
+        cls.conn = make_connection(graphname="Cora")
 
 
     def test_jwtauth(self):
