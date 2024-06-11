@@ -46,6 +46,6 @@ def make_connection(graphname: str = None):
         jwtToken=server_config["jwtToken"]
     )
     if server_config.get("getToken", False):
-        conn.getToken(conn.createSecret())
+        conn.getToken(conn.createSecret(), setToken=True)
 
     return conn

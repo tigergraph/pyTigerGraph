@@ -62,7 +62,7 @@ class TestJWTTokenAuth(unittest.TestCase):
         # self.conn.gsql("DROP GRAPH jwttoken")
         # self.conn.gsql("CREATE GRAPH tests()")
         # print (self.conn.graphname)
-        # self.conn.gsql("USE GRAPH jwttoken")
+        # self.conn.gsql("USE GRAPH mygraph")
         # self.conn.getToken(self.conn.createSecret())
 
         authheader = self.conn.authHeader
