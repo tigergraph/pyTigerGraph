@@ -5,7 +5,6 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 """
 import json
 import logging
-import re
 import urllib
 from typing import Any, Union
 from urllib.parse import urlparse
@@ -71,84 +70,6 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         logger.info("exit: echo (GET)")
 
         return ret
-
-    def getVersion(self, raw: bool = False) -> Union[str, list]:
-        """Retrieves the git versions of all components of the system.
-
-        Args:
-            raw:
-                Return unprocessed version info string, or extract version info for each component
-                into a list.
-
-        Returns:
-            Either an unprocessed string containing the version info details, or a list with version
-            info for each component.
-
-        Endpoint:
-            - `GET /version`
-                See xref:tigergraph-server:API:built-in-endpoints.adoc#_show_component_versions[Show component versions]
-        """
-        logger.info("entry: getVersion")
-        if logger.level == logging.DEBUG:
-            logger.debug("params: " + self._locals(locals()))
-
-        response = self._get(self.restppUrl+"/version", strictJson=False, resKey="message")
-       
-        if raw:
-            return response
-        res = response.split("\n")
-        components = []
-        for i in range(len(res)):
-            if 2 < i < len(res) - 1:
-                m = res[i].split()
-                component = {"name": m[0], "version": m[1], "hash": m[2],
-                    "datetime": m[3] + " " + m[4] + " " + m[5]}
-                components.append(component)
-
-        if logger.level == logging.DEBUG:
-            logger.debug("return: " + str(components))
-        logger.info("exit: getVersion")
-
-        return components
-
-    def getVer(self, component: str = "product", full: bool = False) -> str:
-        """Gets the version information of a specific component.
-
-        Get the full list of components using `getVersion()`.
-
-        Args:
-            component:
-                One of TigerGraph's components (e.g. product, gpe, gse).
-            full:
-                Return the full version string (with timestamp, etc.) or just X.Y.Z.
-
-        Returns:
-            Version info for specified component.
-
-        Raises:
-            `TigerGraphException` if invalid/non-existent component is specified.
-        """
-        logger.info("entry: getVer")
-        if logger.level == logging.DEBUG:
-            logger.debug("params: " + self._locals(locals()))
-
-        ret = ""
-        for v in self.getVersion():
-            if v["name"] == component.lower():
-                ret = v["version"]
-        if ret != "":
-            if full:
-                return ret
-            ret = re.search("_.+_", ret)
-            ret = ret.group().strip("_")
-
-            if logger.level == logging.DEBUG:
-                logger.debug("return: " + str(ret))
-            logger.info("exit: getVer")
-
-            return ret
-        else:
-            raise TigerGraphException("\"" + component + "\" is not a valid component.", None)
 
     def getLicenseInfo(self) -> dict:
         """Returns the expiration date and remaining days of the license.
