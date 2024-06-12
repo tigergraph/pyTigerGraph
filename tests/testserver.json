@@ -1,5 +1,5 @@
 {
-    "host": "http://127.0.0.1",
+    "host": "http://tigergraph",
     "username": "tigergraph",
     "password": "tigergraph",
     "restppPort": "9000",
