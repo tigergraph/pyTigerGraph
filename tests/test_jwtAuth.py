@@ -13,9 +13,7 @@ class TestJWTTokenAuth(unittest.TestCase):
 
 
     def test_jwtauth(self):
-        print (self.conn.authHeader)
         dbversion = self.conn.getVer()
-        print (f"dbversion from init conn: {dbversion}")
 
         if "3.9" in str(dbversion):
             self._test_jwtauth_3_9()
