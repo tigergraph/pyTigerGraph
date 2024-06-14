@@ -8,7 +8,7 @@ from pyTigerGraph.gds.dataloaders import NodePieceLoader
 from pyTigerGraph.gds.utilities import is_query_installed
 
 
-class TestGDSNodePieceLoader(unittest.TestCase):
+class TestGDSNodePieceLoaderKafka(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.conn = make_connection(graphname="Cora")
@@ -18,16 +18,14 @@ class TestGDSNodePieceLoader(unittest.TestCase):
             graph=self.conn,
             v_feats=["x", "y", "train_mask", "val_mask", "test_mask"],
             compute_anchors=True,
-            anchor_percentage=0.5,
             batch_size=16,
             shuffle=True,
             filter_by="train_mask",
-            loader_id=None,
-            buffer_size=4,
-            kafka_address="kafka:9092",
+            anchor_percentage=0.5,
+            kafka_address="kafka:9092"
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
-        self.assertEqual(loader.num_batches, 9)
+        self.assertIsNone(loader.num_batches)
 
     def test_iterate(self):
         loader = NodePieceLoader(
@@ -38,13 +36,12 @@ class TestGDSNodePieceLoader(unittest.TestCase):
             shuffle=True,
             filter_by="train_mask",
             anchor_percentage=0.5,
-            loader_id=None,
-            buffer_size=4,
             kafka_address="kafka:9092",
         )
         num_batches = 0
+        batch_sizes = []
         for data in loader:
-            # print(num_batches, data.head())
+            # print(num_batches, data.shape, data.head())
             self.assertIsInstance(data, DataFrame)
             self.assertIn("x", data.columns)
             self.assertIn("y", data.columns)
@@ -53,8 +50,12 @@ class TestGDSNodePieceLoader(unittest.TestCase):
             self.assertIn("train_mask", data.columns)
             self.assertIn("val_mask", data.columns)
             self.assertIn("test_mask", data.columns)
+            batch_sizes.append(data.shape[0])
             num_batches += 1
         self.assertEqual(num_batches, 9)
+        for i in batch_sizes[:-1]:
+            self.assertEqual(i, 16)
+        self.assertLessEqual(batch_sizes[-1], 16)
 
     def test_all_vertices(self):
         loader = NodePieceLoader(
@@ -64,8 +65,6 @@ class TestGDSNodePieceLoader(unittest.TestCase):
             shuffle=True,
             filter_by="train_mask",
             anchor_percentage=0.5,
-            loader_id=None,
-            buffer_size=4,
             kafka_address="kafka:9092",
         )
         data = loader.data
@@ -78,6 +77,7 @@ class TestGDSNodePieceLoader(unittest.TestCase):
         self.assertIn("train_mask", data.columns)
         self.assertIn("val_mask", data.columns)
         self.assertIn("test_mask", data.columns)
+        self.assertEqual(data.shape[0], 140)
 
     def test_sasl_plaintext(self):
         loader = NodePieceLoader(
@@ -158,11 +158,9 @@ class TestGDSNodePieceLoaderREST(unittest.TestCase):
             shuffle=True,
             filter_by="train_mask",
             anchor_percentage=0.5,
-            loader_id=None,
-            buffer_size=4
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
-        self.assertEqual(loader.num_batches, 9)
+        self.assertIsNone(loader.num_batches)
 
     def test_iterate(self):
         loader = NodePieceLoader(
@@ -173,12 +171,11 @@ class TestGDSNodePieceLoaderREST(unittest.TestCase):
             shuffle=True,
             filter_by="train_mask",
             anchor_percentage=0.5,
-            loader_id=None,
-            buffer_size=4
         )
         num_batches = 0
+        batch_sizes = []
         for data in loader:
-            # print(num_batches, data.head())
+            # print(num_batches, data.shape, data.head())
             self.assertIsInstance(data, DataFrame)
             self.assertIn("x", data.columns)
             self.assertIn("y", data.columns)
@@ -187,8 +184,12 @@ class TestGDSNodePieceLoaderREST(unittest.TestCase):
             self.assertIn("train_mask", data.columns)
             self.assertIn("val_mask", data.columns)
             self.assertIn("test_mask", data.columns)
+            batch_sizes.append(data.shape[0])
             num_batches += 1
         self.assertEqual(num_batches, 9)
+        for i in batch_sizes[:-1]:
+            self.assertEqual(i, 16)
+        self.assertLessEqual(batch_sizes[-1], 16)
 
     def test_all_vertices(self):
         loader = NodePieceLoader(
@@ -198,8 +199,6 @@ class TestGDSNodePieceLoaderREST(unittest.TestCase):
             shuffle=True,
             filter_by="train_mask",
             anchor_percentage=0.5,
-            loader_id=None,
-            buffer_size=4
         )
         data = loader.data
         # print(data)
@@ -211,6 +210,7 @@ class TestGDSNodePieceLoaderREST(unittest.TestCase):
         self.assertIn("train_mask", data.columns)
         self.assertIn("val_mask", data.columns)
         self.assertIn("test_mask", data.columns)
+        self.assertEqual(data.shape[0], 140)
 
 
 class TestGDSHeteroNodePieceLoaderREST(unittest.TestCase):
@@ -228,11 +228,9 @@ class TestGDSHeteroNodePieceLoaderREST(unittest.TestCase):
             batch_size=20,
             shuffle=True,
             filter_by=None,
-            loader_id=None,
-            buffer_size=4,
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
-        self.assertEqual(loader.num_batches, 10)
+        self.assertIsNone(loader.num_batches)
 
     def test_iterate(self):
         loader = NodePieceLoader(
@@ -244,23 +242,32 @@ class TestGDSHeteroNodePieceLoaderREST(unittest.TestCase):
             batch_size=20,
             shuffle=True,
             filter_by=None,
-            loader_id=None,
-            buffer_size=4,
         )
         num_batches = 0
+        batch_sizes = []
         for data in loader:
             # print(num_batches, data)
-            self.assertIsInstance(data["v0"], DataFrame)
-            self.assertIsInstance(data["v1"], DataFrame)
-            self.assertIn("x", data["v0"].columns)
-            self.assertIn("relational_context", data["v0"].columns)
-            self.assertIn("anchors", data["v0"].columns)
-            self.assertIn("y", data["v0"].columns)
-            self.assertIn("x", data["v1"].columns)
-            self.assertIn("relational_context", data["v1"].columns)
-            self.assertIn("anchors", data["v1"].columns)
+            batchsize = 0
+            self.assertTrue(("v0" in data) or ("v1" in data))
+            if "v0" in data:
+                self.assertIsInstance(data["v0"], DataFrame)
+                self.assertIn("x", data["v0"].columns)
+                self.assertIn("relational_context", data["v0"].columns)
+                self.assertIn("anchors", data["v0"].columns)
+                self.assertIn("y", data["v0"].columns)
+                batchsize += data["v0"].shape[0]
+            if "v1" in data:
+                self.assertIsInstance(data["v1"], DataFrame)
+                self.assertIn("x", data["v1"].columns)
+                self.assertIn("relational_context", data["v1"].columns)
+                self.assertIn("anchors", data["v1"].columns)
+                batchsize += data["v1"].shape[0]
             num_batches += 1
+            batch_sizes.append(batchsize)
         self.assertEqual(num_batches, 10)
+        for i in batch_sizes[:-1]:
+            self.assertEqual(i, 20)
+        self.assertLessEqual(batch_sizes[-1], 20)
 
     def test_all_vertices(self):
         loader = NodePieceLoader(
@@ -272,8 +279,89 @@ class TestGDSHeteroNodePieceLoaderREST(unittest.TestCase):
             num_batches=1,
             shuffle=False,
             filter_by=None,
-            loader_id=None,
-            buffer_size=4,
+        )
+        data = loader.data
+        # print(data)
+        self.assertIsInstance(data["v0"], DataFrame)
+        self.assertTupleEqual(data["v0"].shape, (76, 6))
+        self.assertIsInstance(data["v1"], DataFrame)
+        self.assertIn("x", data["v0"].columns)
+        self.assertIn("y", data["v0"].columns)
+        self.assertIn("x", data["v1"].columns)
+        self.assertIn("anchors", data["v0"].columns)
+        self.assertIn("relational_context", data["v0"].columns)
+        self.assertIn("anchors", data["v1"].columns)
+
+
+class TestGDSHeteroNodePieceLoaderKafka(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.conn = make_connection(graphname="hetero")
+
+    def test_init(self):
+        loader = NodePieceLoader(
+            graph=self.conn,
+            compute_anchors=True,
+            anchor_percentage=0.5,
+            v_feats={"v0": ["x", "y"],
+                        "v1": ["x"]},
+            batch_size=20,
+            shuffle=True,
+            filter_by=None,
+            kafka_address="kafka:9092",
+        )
+        self.assertTrue(is_query_installed(self.conn, loader.query_name))
+        self.assertIsNone(loader.num_batches)
+
+    def test_iterate(self):
+        loader = NodePieceLoader(
+            compute_anchors=True,
+            anchor_percentage=0.5,
+            graph=self.conn,
+            v_feats={"v0": ["x", "y"],
+                        "v1": ["x"]},
+            batch_size=20,
+            shuffle=True,
+            filter_by=None,
+            kafka_address="kafka:9092",
+        )
+        num_batches = 0
+        batch_sizes = []
+        for data in loader:
+            # print(num_batches, data)
+            batchsize = 0
+            self.assertTrue(("v0" in data) or ("v1" in data))
+            if "v0" in data:
+                self.assertIsInstance(data["v0"], DataFrame)
+                self.assertIn("x", data["v0"].columns)
+                self.assertIn("relational_context", data["v0"].columns)
+                self.assertIn("anchors", data["v0"].columns)
+                self.assertIn("y", data["v0"].columns)
+                batchsize += data["v0"].shape[0]
+            if "v1" in data:
+                self.assertIsInstance(data["v1"], DataFrame)
+                self.assertIn("x", data["v1"].columns)
+                self.assertIn("relational_context", data["v1"].columns)
+                self.assertIn("anchors", data["v1"].columns)
+                batchsize += data["v1"].shape[0]
+            num_batches += 1
+            batch_sizes.append(batchsize)
+        self.assertEqual(num_batches, 10)
+        for i in batch_sizes[:-1]:
+            self.assertEqual(i, 20)
+        self.assertLessEqual(batch_sizes[-1], 20)
+
+    def test_all_vertices(self):
+        loader = NodePieceLoader(
+            graph=self.conn,
+            compute_anchors=True,
+            anchor_percentage=0.5,
+            v_feats={"v0": ["x", "y"],
+                        "v1": ["x"]},
+            num_batches=1,
+            shuffle=False,
+            filter_by=None,
+            kafka_address="kafka:9092",
         )
         data = loader.data
         # print(data)
@@ -290,17 +378,20 @@ class TestGDSHeteroNodePieceLoaderREST(unittest.TestCase):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
-    suite.addTest(TestGDSNodePieceLoader("test_init"))
-    suite.addTest(TestGDSNodePieceLoader("test_iterate"))
-    suite.addTest(TestGDSNodePieceLoader("test_all_vertices"))
-    #suite.addTest(TestGDSNodePieceLoader("test_sasl_plaintext"))
-    # suite.addTest(TestGDSNodePieceLoader("test_sasl_ssl"))
+    suite.addTest(TestGDSNodePieceLoaderKafka("test_init"))
+    suite.addTest(TestGDSNodePieceLoaderKafka("test_iterate"))
+    suite.addTest(TestGDSNodePieceLoaderKafka("test_all_vertices"))
+    #suite.addTest(TestGDSNodePieceLoaderKafka("test_sasl_plaintext"))
+    #suite.addTest(TestGDSNodePieceLoaderKafka("test_sasl_ssl"))
     suite.addTest(TestGDSNodePieceLoaderREST("test_init"))
     suite.addTest(TestGDSNodePieceLoaderREST("test_iterate"))
     suite.addTest(TestGDSNodePieceLoaderREST("test_all_vertices"))
     suite.addTest(TestGDSHeteroNodePieceLoaderREST("test_init"))
     suite.addTest(TestGDSHeteroNodePieceLoaderREST("test_iterate"))
     suite.addTest(TestGDSHeteroNodePieceLoaderREST("test_all_vertices"))
+    suite.addTest(TestGDSHeteroNodePieceLoaderKafka("test_init"))
+    suite.addTest(TestGDSHeteroNodePieceLoaderKafka("test_iterate"))
+    suite.addTest(TestGDSHeteroNodePieceLoaderKafka("test_all_vertices"))
 
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)

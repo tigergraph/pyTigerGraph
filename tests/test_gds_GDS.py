@@ -26,7 +26,7 @@ class TestGDSDataLoaders(unittest.TestCase):
             buffer_size=4,
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
-        self.assertEqual(loader.num_batches, 9)
+        self.assertEqual(loader.batch_size, 16)
 
     def test_neighborLoader_multiple_filters(self):
         loaders = self.conn.gds.neighborLoader(
@@ -60,7 +60,7 @@ class TestGDSDataLoaders(unittest.TestCase):
             buffer_size=4,
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
-        self.assertEqual(loader.num_batches, 11)
+        self.assertEqual(loader.batch_size, 1024)
 
     def test_vertexLoader(self):
         loader = self.conn.gds.vertexLoader(
@@ -72,7 +72,7 @@ class TestGDSDataLoaders(unittest.TestCase):
             buffer_size=4,
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
-        self.assertEqual(loader.num_batches, 9)
+        self.assertEqual(loader.batch_size, 16)
 
     def test_edgeLoader(self):
         loader = self.conn.gds.edgeLoader(
@@ -83,7 +83,7 @@ class TestGDSDataLoaders(unittest.TestCase):
             buffer_size=4,
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
-        self.assertEqual(loader.num_batches, 11)
+        self.assertEqual(loader.batch_size, 1024)
 
     def test_edgeNeighborLoader(self):
         loader = self.conn.gds.edgeNeighborLoader(
@@ -100,7 +100,7 @@ class TestGDSDataLoaders(unittest.TestCase):
             buffer_size=4,
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
-        self.assertEqual(loader.num_batches, 11)
+        self.assertEqual(loader.batch_size, 1024)
 
     def test_configureKafka(self):
         self.conn.gds.configureKafka(kafka_address="kafka:9092")

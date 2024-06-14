@@ -16,6 +16,7 @@ import logging
 import time
 import os
 import warnings
+import math
 
 class BaseCallback():
     """Base class for training callbacks.
@@ -145,7 +146,7 @@ class MetricsCallback(BaseCallback):
             trainer.update_train_step_metrics(metric.get_metrics())
             metric.reset_metrics()
         trainer.update_train_step_metrics({"global_step": trainer.cur_step})
-        trainer.update_train_step_metrics({"epoch": int(trainer.cur_step/trainer.train_loader.num_batches)})
+        trainer.update_train_step_metrics({"epoch": trainer.cur_epoch})
     
     def on_eval_start(self, trainer):
         """NO DOC"""
@@ -209,7 +210,7 @@ class DefaultCallback(BaseCallback):
                     self.epoch_bar = self.tqdm(desc="Epochs", total=trainer.num_epochs)
                 else:
                     self.epoch_bar = self.tqdm(desc="Training Steps", total=trainer.max_num_steps)
-            if not(self.batch_bar):
+            if self.batch_bar is None:
                 self.batch_bar = self.tqdm(desc="Training Batches", total=trainer.train_loader.num_batches)
 
     def on_train_step_end(self, trainer):
@@ -217,20 +218,20 @@ class DefaultCallback(BaseCallback):
         logger = logging.getLogger(__name__)
         logger.info("train_step:"+str(trainer.get_train_step_metrics()))
         if self.tqdm:
-            if self.batch_bar:
+            if self.batch_bar is not None:
                 self.batch_bar.update(1)
 
     def on_eval_start(self, trainer):
         """NO DOC"""
         trainer.reset_eval_metrics()
         if self.tqdm:
-            if not(self.valid_bar):
+            if self.valid_bar is None:
                 self.valid_bar = self.tqdm(desc="Eval Batches", total=trainer.eval_loader.num_batches)
 
     def on_eval_step_end(self, trainer):
         """NO DOC"""
         if self.tqdm:
-            if self.valid_bar:
+            if self.valid_bar is not None:
                 self.valid_bar.update(1)
 
     def on_eval_end(self, trainer):
@@ -239,7 +240,7 @@ class DefaultCallback(BaseCallback):
         logger.info("evaluation:"+str(trainer.get_eval_metrics()))
         trainer.model.train()
         if self.tqdm:
-            if self.valid_bar:
+            if self.valid_bar is not None:
                 self.valid_bar.close()
                 self.valid_bar = None
 
@@ -248,7 +249,7 @@ class DefaultCallback(BaseCallback):
         if self.tqdm:
             if self.epoch_bar:
                 self.epoch_bar.update(1)
-            if self.batch_bar:
+            if self.batch_bar is not None:
                 self.batch_bar.close()
                 self.batch_bar = None
         trainer.eval()
@@ -407,12 +408,17 @@ class Trainer():
                 Defaults to the length of the `training_dataloader`
         """
         if num_epochs:
-            self.max_num_steps = self.train_loader.num_batches * num_epochs
-        else:
+            self.max_num_steps = math.inf
+            self.num_epochs = num_epochs
+        elif max_num_steps:
             self.max_num_steps = max_num_steps
-        self.num_epochs = num_epochs
+            self.num_epochs = math.inf
+        else:
+            self.max_num_steps = math.inf
+            self.num_epochs = 1
         self.cur_step = 0
-        while self.cur_step < self.max_num_steps:
+        self.cur_epoch = 0
+        while self.cur_step < self.max_num_steps and self.cur_epoch < self.num_epochs:
             for callback in self.callbacks:
                 callback.on_epoch_start(trainer=self)
             for batch in self.train_loader:
@@ -432,7 +438,7 @@ class Trainer():
                 self.cur_step += 1
                 for callback in self.callbacks:
                     callback.on_train_step_end(trainer=self)
-
+            self.cur_epoch += 1
             for callback in self.callbacks:
                 callback.on_epoch_end(trainer=self)             
 
