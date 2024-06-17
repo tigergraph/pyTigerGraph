@@ -226,8 +226,12 @@ class pyTigerGraphBase(object):
             logger.info(f"Database version: {version}")
 
             # Check JWT support for GSQL server
-            logger.debug(f"Attempting to get auth info with URL: {self.gsUrl + '/gsqlserver/gsql/simpleauth'}")
-            self._get(f"{self.gsUrl}/gsqlserver/gsql/simpleauth", authMode="token", resKey=None)
+            if self._versionGreaterThan4_0():
+                logger.debug(f"Attempting to get auth info with URL: {self.gsUrl + '/gsqlserver/gsql/simpleauth'}")
+                self._get(f"{self.gsUrl}/gsqlserver/gsql/v1/auth/simple", authMode="token", resKey=None)    
+            else:
+                logger.debug(f"Attempting to get auth info with URL: {self.gsUrl + '/gsqlserver/gsql/simpleauth'}")
+                self._get(f"{self.gsUrl}/gsqlserver/gsql/simpleauth", authMode="token", resKey=None)
         except requests.exceptions.ConnectionError as e:
             logger.error(f"Connection error: {e}.")
             raise RuntimeError(f"Connection error: {e}.") from e
@@ -572,3 +576,9 @@ class pyTigerGraphBase(object):
             return ret
         else:
             raise TigerGraphException("\"" + component + "\" is not a valid component.", None)
+        
+    def _versionGreaterThan4_0(self):
+        version = self.getVer().split('.')
+        if version[0]>="4" and version[1]>"0":
+            return True
+        return False

@@ -73,11 +73,18 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
         if str(graphname).upper() == "GLOBAL" or str(graphname).upper() == "":
             graphname = ""
 
-        res = self._req("POST",
-                        self.gsUrl + "/gsqlserver/gsql/file",
+        if self._versionGreaterThan4_0():
+            res = self._req("POST",
+                        self.gsUrl + "/gsqlserver/gsql/v1/statements",
                         data=quote_plus(query.encode("utf-8")),
                         authMode="pwd", resKey=None, skipCheck=True,
                         jsonResponse=False)
+        else:            
+            res = self._req("POST",
+                            self.gsUrl + "/gsqlserver/gsql/file",
+                            data=quote_plus(query.encode("utf-8")),
+                            authMode="pwd", resKey=None, skipCheck=True,
+                            jsonResponse=False)
 
 
         if isinstance(res, list):
@@ -120,9 +127,15 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                 # A local file: read from disk.
                 with open(ExprFunctions) as infile:
                     data = infile.read()
-            res = self._req("PUT",
-                url="{}/gsqlserver/gsql/userdefinedfunction?filename=ExprFunctions".format(
-                    self.gsUrl), authMode="pwd", data=data, resKey="")
+            
+            if self._versionGreaterThan4_0():
+                res = self._req("PUT",
+                    url="{}/gsqlserver/gsql/v1/udt/files/ExprFunctions".format(
+                        self.gsUrl), authMode="pwd", data=data, resKey="")
+            else:    
+                res = self._req("PUT",
+                    url="{}/gsqlserver/gsql/userdefinedfunction?filename=ExprFunctions".format(
+                        self.gsUrl), authMode="pwd", data=data, resKey="")
             if not res["error"]:
                 logger.info("ExprFunctions installed successfully")
             else:
@@ -137,9 +150,14 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                 # A local file: read from disk.
                 with open(ExprUtil) as infile:
                     data = infile.read()
-            res = self._req("PUT",
-                url="{}/gsqlserver/gsql/userdefinedfunction?filename=ExprUtil".format(self.gsUrl),
-                    authMode="pwd", data=data, resKey="")
+            if self._versionGreaterThan4_0():
+                res = self._req("PUT",
+                    url="{}/gsqlserver/gsql/v1/udt/files/ExprUtil".format(self.gsUrl),
+                        authMode="pwd", data=data, resKey="")
+            else:
+                res = self._req("PUT",
+                    url="{}/gsqlserver/gsql/userdefinedfunction?filename=ExprUtil".format(self.gsUrl),
+                        authMode="pwd", data=data, resKey="")
             if not res["error"]:
                 logger.info("ExprUtil installed successfully")
             else:
@@ -172,9 +190,14 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
 
         functions_ret = None
         if ExprFunctions:
-            resp = self._get(
-                "{}/gsqlserver/gsql/userdefinedfunction".format(self.gsUrl),
-                params={"filename": "ExprFunctions"}, resKey="")
+            if self._versionGreaterThan4_0():
+                resp = self._get(
+                    "{}/gsqlserver/gsql/v1/udt/files/ExprFunctions".format(self.gsUrl),
+                    resKey="")
+            else:
+                resp = self._get(
+                    "{}/gsqlserver/gsql/userdefinedfunction".format(self.gsUrl),
+                    params={"filename": "ExprFunctions"}, resKey="")
             if not resp["error"]:
                 logger.info("ExprFunctions get successfully")
                 functions_ret = resp["results"]
@@ -184,9 +207,14 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
         
         util_ret = None
         if ExprUtil:
-            resp = self._get(
-                "{}/gsqlserver/gsql/userdefinedfunction".format(self.gsUrl),
-                params={"filename": "ExprUtil"}, resKey="")
+            if self._versionGreaterThan4_0():
+                resp = self._get(
+                    "{}/gsqlserver/gsql/v1/udt/files/ExprUtil".format(self.gsUrl),
+                    resKey="")
+            else:
+                resp = self._get(
+                    "{}/gsqlserver/gsql/userdefinedfunction".format(self.gsUrl),
+                    params={"filename": "ExprUtil"}, resKey="")
             if not resp["error"]:
                 logger.info("ExprUtil get successfully")
                 util_ret = resp["results"]
