@@ -47,7 +47,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         if logger.level == logging.DEBUG:
             logger.debug("entry: getQueryMetadata")
         params = {"graph": self.graphname, "query": queryName}
-        res = self._get(self.gsUrl+"/gsqlserver/gsql/queryinfo", params=params, authMode="pwd", resKey="")
+        if self._versionGreaterThan4_0():
+            res = self._get(self.gsUrl+"/gsqlserver/gsql/v1/queries/info", params=params, authMode="pwd", resKey="")
+        else:    
+            res = self._get(self.gsUrl+"/gsqlserver/gsql/queryinfo", params=params, authMode="pwd", resKey="")
         if not res["error"]: 
             if logger.level == logging.DEBUG:
                 logger.debug("exit: getQueryMetadata")
@@ -345,8 +348,12 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         if isinstance(params, dict):
             params = self._parseQueryParameters(params)
 
-        ret = self._post(self.gsUrl + "/gsqlserver/interpreted_query", data=queryText,
-            params=params, authMode="pwd")
+        if self._versionGreaterThan4_0():
+            ret = self._post(self.gsUrl + "/gsqlserver/gsql/v1/queries/interpret", data=queryText,
+                params=params, authMode="pwd")
+        else:
+            ret = self._post(self.gsUrl + "/gsqlserver/interpreted_query", data=queryText,
+                params=params, authMode="pwd")
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -626,7 +633,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
             ]}
         if logger.level == logging.DEBUG:
             logger.debug("params: " + params)
-        res = self._put(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname, data=params, authMode="pwd", jsonData=True)
+        if self._versionGreaterThan4_0():
+            res = self._put(self.gsUrl+"/gsqlserver/gsql/v1/description?graph="+self.graphname, data=params, authMode="pwd", jsonData=True)
+        else:
+            res = self._put(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname, data=params, authMode="pwd", jsonData=True)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -659,7 +669,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         if isinstance(queryName, list):
             queryName = ",".join(queryName)
 
-        res = self._get(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname+"&query="+queryName, authMode="pwd", resKey=None)
+        if self._versionGreaterThan4_0():
+            res = self._get(self.gsUrl+"/gsqlserver/gsql/v1/description?graph="+self.graphname+"&query="+queryName, authMode="pwd", resKey=None)
+        else:    
+            res = self._get(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname+"&query="+queryName, authMode="pwd", resKey=None)
         if not res["error"]:
             if logger.level == logging.DEBUG:
                 logger.debug("exit: getQueryDescription")
@@ -694,7 +707,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         else:
             params = {"queries": [queryName]}
         print(params)
-        res = self._delete(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname, authMode="pwd", data=params, jsonData=True, resKey=None)
+        if self._versionGreaterThan4_0():
+            res = self._delete(self.gsUrl+"/gsqlserver/gsql/v1/description?graph="+self.graphname, authMode="pwd", data=params, jsonData=True, resKey=None)
+        else:
+            res = self._delete(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname, authMode="pwd", data=params, jsonData=True, resKey=None)
         
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
