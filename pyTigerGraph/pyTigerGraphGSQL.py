@@ -76,6 +76,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
         # Can't use self._isVersionGreaterThan4_0 since you need a token to call /version url
         # but you need a secret to get a token and you need this function to get a secret
         try:
+            print(f'data for v1 GSQL: {quote_plus(query.encode("utf-8"))}')
             res = self._req("POST",
                         self.gsUrl + "/gsqlserver/gsql/v1/statements",
                         data=quote_plus(query.encode("utf-8")),
