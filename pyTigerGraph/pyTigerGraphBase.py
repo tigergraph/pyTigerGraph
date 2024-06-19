@@ -525,7 +525,7 @@ class pyTigerGraphBase(object):
             response = self._get(self.restppUrl+"/version", strictJson=False, resKey="message")
         except requests.exceptions.HTTPError:
             response = self._get(self.restppUrl+"/v1/version", strictJson=False, resKey="message")
-
+            self.restppUrl += '/v1'
         if raw:
             return response
         res = response.split("\n")
