@@ -519,8 +519,13 @@ class pyTigerGraphBase(object):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        response = self._get(self.restppUrl+"/version", strictJson=False, resKey="message")
-       
+        # Checking if the databse version is above 4.0
+        # todo: save the error if it fails on first url 
+        try:
+            response = self._get(self.restppUrl+"/version", strictJson=False, resKey="message")
+        except requests.exceptions.HTTPError:
+            response = self._get(self.restppUrl+"/v1/version", strictJson=False, resKey="message")
+
         if raw:
             return response
         res = response.split("\n")
