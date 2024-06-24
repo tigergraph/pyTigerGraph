@@ -224,9 +224,18 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
         if secret and (int(s) < 3 or (int(s) == 3 and int(m) < 5)):
             try:
-                res = json.loads(requests.request("GET", self.restppUrl +
-                    "/requesttoken?secret=" + secret +
-                    ("&lifetime=" + str(lifetime) if lifetime else ""), verify=False).text)
+                _json = {"secret": secret, "graph": self.graphname}
+                if lifetime:
+                    _json["lifetime"] = str(lifetime)
+                res = requests.request("POST", self.gsUrl +
+                    "/gsqlserver/gsql/v1/tokens", verify=False, json=_json, headers={"X-User-Agent": "pyTigerGraph"})
+                
+                if res.status_code == 404:
+                    res = requests.request("GET", self.restppUrl +
+                        "/requesttoken?secret=" + secret +
+                        ("&lifetime=" + str(lifetime) if lifetime else ""), verify=False)
+                res = json.loads(res.text)
+                
                 if not res["error"]:
                     success = True
             except Exception as e:

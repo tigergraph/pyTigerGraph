@@ -76,19 +76,20 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
         # Can't use self._isVersionGreaterThan4_0 since you need a token to call /version url
         # but you need a secret to get a token and you need this function to get a secret
         try:
-            query = "ls" # just testing if can enter same payload as testing doc
             res = self._req("POST",
                         self.gsUrl + "/gsqlserver/gsql/v1/statements",
                         data=quote_plus(query.encode("utf-8")),
                         authMode="pwd", resKey=None, skipCheck=True,
-                        jsonResponse=False)
-            print("TEST RESPONSE WITH LS:" + res, flush=True)
-        except requests.exceptions.HTTPError:            
-            res = self._req("POST",
-                            self.gsUrl + "/gsqlserver/gsql/file",
-                            data=quote_plus(query.encode("utf-8")),
-                            authMode="pwd", resKey=None, skipCheck=True,
-                            jsonResponse=False)
+                        jsonResponse=False,
+                        headers={"Content-Type": "text/plain", "X-User-Agent": "pyTigerGraph"})
+
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:            
+                res = self._req("POST",
+                                self.gsUrl + "/gsqlserver/gsql/file",
+                                data=quote_plus(query.encode("utf-8")),
+                                authMode="pwd", resKey=None, skipCheck=True,
+                                jsonResponse=False)
 
 
         if isinstance(res, list):
