@@ -175,7 +175,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
 
         return 0
 
-    def getUDF(self, ExprFunctions: bool = True, ExprUtil: bool = True) -> Union[str, Tuple[str, str]]:       
+    def getUDF(self, ExprFunctions: bool = True, ExprUtil: bool = True, json=False) -> Union[str, Tuple[str, str]]:       
         """Get user defined functions (UDF) installed in the database.
         See https://docs.tigergraph.com/gsql-ref/current/querying/func/query-user-defined-functions for details on UDFs.
 
@@ -206,6 +206,8 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             if not resp["error"]:
                 logger.info("ExprFunctions get successfully")
                 functions_ret = resp["results"]
+                if type(functions_ret) == dict and not json: #Endpoint returns a dict when above 4.0
+                    functions_ret = functions_ret['ExprFunctions']
             else:
                 logger.error("Failed to get ExprFunctions")
                 raise TigerGraphException(resp["message"])
@@ -223,11 +225,16 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             if not resp["error"]:
                 logger.info("ExprUtil get successfully")
                 util_ret = resp["results"]
+                if type(util_ret) == dict and not json: #Endpoint returns a dict when above 4.0
+                    util_ret = util_ret['ExprUtil']
             else:
                 logger.error("Failed to get ExprUtil")
                 raise TigerGraphException(resp["message"])
 
         if (functions_ret is not None) and (util_ret is not None):
+            if json:
+                functions_ret.update(util_ret)
+                return functions_ret
             return (functions_ret, util_ret)
         elif functions_ret is not None:
             return functions_ret
