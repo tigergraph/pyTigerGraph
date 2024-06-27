@@ -73,18 +73,23 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
         if str(graphname).upper() == "GLOBAL" or str(graphname).upper() == "":
             graphname = ""
 
-        if self._versionGreaterThan4_0():
+        # Can't use self._isVersionGreaterThan4_0 since you need a token to call /version url
+        # but you need a secret to get a token and you need this function to get a secret
+        try:
             res = self._req("POST",
                         self.gsUrl + "/gsqlserver/gsql/v1/statements",
                         data=quote_plus(query.encode("utf-8")),
                         authMode="pwd", resKey=None, skipCheck=True,
-                        jsonResponse=False)
-        else:            
-            res = self._req("POST",
-                            self.gsUrl + "/gsqlserver/gsql/file",
-                            data=quote_plus(query.encode("utf-8")),
-                            authMode="pwd", resKey=None, skipCheck=True,
-                            jsonResponse=False)
+                        jsonResponse=False,
+                        headers={"Content-Type": "text/plain", "X-User-Agent": "pyTigerGraph"})
+
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:            
+                res = self._req("POST",
+                                self.gsUrl + "/gsqlserver/gsql/file",
+                                data=quote_plus(query.encode("utf-8")),
+                                authMode="pwd", resKey=None, skipCheck=True,
+                                jsonResponse=False)
 
 
         if isinstance(res, list):
@@ -170,7 +175,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
 
         return 0
 
-    def getUDF(self, ExprFunctions: bool = True, ExprUtil: bool = True) -> Union[str, Tuple[str, str]]:       
+    def getUDF(self, ExprFunctions: bool = True, ExprUtil: bool = True, json=False) -> Union[str, Tuple[str, str]]:       
         """Get user defined functions (UDF) installed in the database.
         See https://docs.tigergraph.com/gsql-ref/current/querying/func/query-user-defined-functions for details on UDFs.
 
@@ -201,6 +206,8 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             if not resp["error"]:
                 logger.info("ExprFunctions get successfully")
                 functions_ret = resp["results"]
+                if type(functions_ret) == dict and not json: #Endpoint returns a dict when above 4.0
+                    functions_ret = functions_ret['ExprFunctions']
             else:
                 logger.error("Failed to get ExprFunctions")
                 raise TigerGraphException(resp["message"])
@@ -218,11 +225,16 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             if not resp["error"]:
                 logger.info("ExprUtil get successfully")
                 util_ret = resp["results"]
+                if type(util_ret) == dict and not json: #Endpoint returns a dict when above 4.0
+                    util_ret = util_ret['ExprUtil']
             else:
                 logger.error("Failed to get ExprUtil")
                 raise TigerGraphException(resp["message"])
 
         if (functions_ret is not None) and (util_ret is not None):
+            if json:
+                functions_ret.update(util_ret)
+                return functions_ret
             return (functions_ret, util_ret)
         elif functions_ret is not None:
             return functions_ret
