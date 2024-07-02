@@ -2,13 +2,13 @@ import json
 import os
 from os.path import exists
 
-from pyTigerGraph import TigerGraphConnection
+from pyTigerGraph.pyTigerGraph import TigerGraphConnection
 
 
 def make_connection(graphname: str = None):
     server_config = {
         "host": "http://127.0.0.1",
-        "graphname": "tests",
+        "graphname": "testSchema",
         "username": "tigergraph",
         "password": "tigergraph",
         "gsqlSecret": "",

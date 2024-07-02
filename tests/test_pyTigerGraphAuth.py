@@ -1,6 +1,6 @@
 import unittest
 
-from pyTigerGraphUnitTest import make_connection
+from .pyTigerGraphUnitTest import make_connection
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
@@ -71,11 +71,11 @@ class test_pyTigerGraphPath(unittest.TestCase):
     #     self.assertIsInstance(refreshed, tuple)
     #     self.conn.dropSecret("secret6")
 
-    # def test_07_deleteToken(self):
-    #     res = self.conn.createSecret("secret7", True)
-    #     token = self.conn.getToken(res["secret7"])
-    #     self.assertTrue(self.conn.deleteToken(res["secret7"], token[0]))
-    #     self.conn.dropSecret("secret7")
+    def test_07_deleteToken(self):
+        res = self.conn.createSecret("secret7", True)
+        token = self.conn.getToken(res["secret7"])
+        self.assertTrue(self.conn.deleteToken(res["secret7"], token[0]))
+        self.conn.dropSecret("secret7")
 
 if __name__ == '__main__':
     unittest.main()

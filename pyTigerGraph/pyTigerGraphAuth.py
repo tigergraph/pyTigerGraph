@@ -224,18 +224,20 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
         if secret and (int(s) < 3 or (int(s) == 3 and int(m) < 5)):
             try:
+                # /gsql/v1/tokens endpoint only supported on version >=4.1 and replaced /requesttoken
                 _json = {"secret": secret, "graph": self.graphname}
                 if lifetime:
                     _json["lifetime"] = str(lifetime)
                 res = requests.request("POST", self.gsUrl +
-                    "/gsqlserver/gsql/v1/tokens", verify=False, json=_json, headers={"X-User-Agent": "pyTigerGraph"})
+                    "/gsql/v1/tokens", verify=False, json=_json, headers={"X-User-Agent": "pyTigerGraph"})
                 
+                # if /gsql/v1/tokens endpoint doesn't exist then try old endpoint
                 if res.status_code == 404:
                     res = requests.request("GET", self.restppUrl +
                         "/requesttoken?secret=" + secret +
                         ("&lifetime=" + str(lifetime) if lifetime else ""), verify=False)
                 res = json.loads(res.text)
-                
+
                 if not res["error"]:
                     success = True
             except Exception as e:
@@ -269,8 +271,15 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                 self.authHeader = {'Authorization': 'Basic {0}'.format(self.base64_credential)}
             
             if res.get("expiration"):
-                ret = res["token"], res.get("expiration"), \
-                    datetime.utcfromtimestamp(float(res.get("expiration"))).strftime('%Y-%m-%d %H:%M:%S')
+                # On >=4.1 the format for the date of expiration changed. Convert back to old format
+                if self._versionGreaterThan4_0():
+                    new_format = "%a %b %d %H:%M:%S %Z %Y"
+                    dt = datetime.strptime(res.get("expiration"), new_format)
+                    old_format = "%Y-%m-%d %H:%M:%S"
+                    ret = res["token"], int(dt.timestamp()), dt.strftime(old_format)
+                else:
+                    ret = res["token"], res.get("expiration"), \
+                        datetime.utcfromtimestamp(float(res.get("expiration"))).strftime('%Y-%m-%d %H:%M:%S')
             else:
                 ret = res["token"]
 
@@ -425,14 +434,26 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
         if int(s) < 3 or (int(s) == 3 and int(m) < 5):
             if self.useCert is True and self.certPath is not None:
-                res = json.loads(
-                    requests.request("DELETE",
+                if self._versionGreaterThan4_0():
+                    res = requests.request("DELETE", self.gsUrl +
+                    "/gsql/v1/tokens", verify=False, json={"secret": secret, "token": token},
+                      headers={"X-User-Agent": "pyTigerGraph"})
+                    res = json.loads(res.text)
+                else:
+                    res = json.loads(
+                        requests.request("DELETE",
                         self.restppUrl + "/requesttoken?secret=" + secret + "&token=" + token,
                         verify=False).text)
             else:
-                res = json.loads(
-                    requests.request("DELETE",
-                        self.restppUrl + "/requesttoken?secret=" + secret + "&token=" + token).text)
+                if self._versionGreaterThan4_0():
+                    res = requests.request("DELETE", self.gsUrl +
+                    "/gsql/v1/tokens", verify=False, json={"tokens": token},
+                      headers={"X-User-Agent": "pyTigerGraph"})
+                    res = json.loads(res.text)
+                else:
+                    res = json.loads(
+                        requests.request("DELETE",
+                            self.restppUrl + "/requesttoken?secret=" + secret + "&token=" + token).text)
             if not res["error"]:
                 success = True
 
@@ -442,8 +463,14 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                 res = json.loads(requests.delete(self.restppUrl + "/requesttoken",
                     data=json.dumps(data)).text)
             else:
-                res = json.loads(requests.delete(self.restppUrl + "/requesttoken",
-                    data=json.dumps(data), verify=False).text)
+                if self._versionGreaterThan4_0():
+                    res = requests.request("DELETE", self.gsUrl +
+                    "/gsql/v1/tokens", verify=False, data=json.dumps(data),
+                      headers={"X-User-Agent": "pyTigerGraph"})
+                    res = json.loads(res.text)
+                else:
+                    res = json.loads(requests.delete(self.restppUrl + "/requesttoken",
+                        data=json.dumps(data), verify=False).text)
 
         if "Endpoint is not found from url = /requesttoken" in res["message"]:
             raise TigerGraphException("REST++ authentication is not enabled, can't delete token.",

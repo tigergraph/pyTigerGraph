@@ -227,8 +227,8 @@ class pyTigerGraphBase(object):
 
             # Check JWT support for GSQL server
             if self._versionGreaterThan4_0():
-                logger.debug(f"Attempting to get auth info with URL: {self.gsUrl + '/gsqlserver/gsql/simpleauth'}")
-                self._get(f"{self.gsUrl}/gsqlserver/gsql/v1/auth/simple", authMode="token", resKey=None)    
+                logger.debug(f"Attempting to get auth info with URL: {self.gsUrl + '/gsql/v1/auth/simple'}")
+                self._get(f"{self.gsUrl}/gsql/v1/auth/simple", authMode="token", resKey=None, headers={"X-User-Agent": "pyTigerGraph"})    
             else:
                 logger.debug(f"Attempting to get auth info with URL: {self.gsUrl + '/gsqlserver/gsql/simpleauth'}")
                 self._get(f"{self.gsUrl}/gsqlserver/gsql/simpleauth", authMode="token", resKey=None)

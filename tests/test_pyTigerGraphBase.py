@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from pyTigerGraphUnitTest import make_connection
+from .pyTigerGraphUnitTest import make_connection
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
@@ -74,12 +74,12 @@ class test_pyTigerGraphBase(unittest.TestCase):
 
     def test_02_get(self):
         exp = {'error': False, 'message': 'Hello GSQL'}
-        res = self.conn._get(self.conn.restppUrl + "/echo/" + self.conn.graphname, resKey=None)
+        res = self.conn._get(self.conn.restppUrl + "/echo/", resKey=None)
         self.assertEqual(exp, res)
 
     def test_03_post(self):
         exp = {'error': False, 'message': 'Hello GSQL'}
-        res = self.conn._post(self.conn.restppUrl + "/echo/" + self.conn.graphname, resKey=None)
+        res = self.conn._post(self.conn.restppUrl + "/echo/", resKey=None)
         self.assertEqual(exp, res)
 
         data = json.dumps({"function": "stat_vertex_attr", "type": "vertex4"})

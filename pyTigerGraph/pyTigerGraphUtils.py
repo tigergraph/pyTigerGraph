@@ -55,7 +55,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
             logger.debug("params: " + self._locals(locals()))
 
         if usePost:
-            ret = str(self._post(self.restppUrl + "/echo/" + self.graphname, resKey="message"))
+            ret = str(self._post(self.restppUrl + "/echo/", resKey="message"))
 
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(ret))
@@ -63,7 +63,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
 
             return ret
 
-        ret = str(self._get(self.restppUrl + "/echo/" + self.graphname, resKey="message"))
+        ret = str(self._get(self.restppUrl + "/echo/", resKey="message"))
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -163,12 +163,13 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         return res
 
 
-    def getQueryPerformance(self, seconds:int = None):
+    def getQueryPerformance(self, seconds:int = 10):
         """Returns real-time query performance statistics over the given time period, as specified by the seconds parameter. 
         
         Args:
             seconds (int, optional):
                 Seconds are measured up to 60, so the seconds parameter must be a positive integer less than or equal to 60.
+                Defaults to 10.
         """
         if logger.level == logging.DEBUG:
             logger.debug("entry: getQueryPerformance")
