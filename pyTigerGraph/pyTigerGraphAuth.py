@@ -275,6 +275,11 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                 if self._versionGreaterThan4_0():
                     new_format = "%a %b %d %H:%M:%S %Z %Y"
                     dt = datetime.strptime(res.get("expiration"), new_format)
+                    # Get the timezone information
+                    if dt.tzinfo is None:
+                        # Handle known timezones
+                        if "PDT" in res.get("expiration"):
+                            dt = dt.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=-7)))
                     old_format = "%Y-%m-%d %H:%M:%S"
                     ret = res["token"], int(dt.timestamp()), dt.strftime(old_format)
                 else:
