@@ -337,8 +337,7 @@ class pyTigerGraphBase(object):
         else:
             verify = True
 
-        if self._versionGreaterThan4_0():
-            _headers.update({"X-User-Agent": "pyTigerGraph"})
+        _headers.update({"X-User-Agent": "pyTigerGraph"})
 
         if jsonData:
             res = requests.request(method, url, headers=_headers, json=_data, params=params, verify=verify)
