@@ -275,16 +275,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             if res.get("expiration"):
                 # On >=4.1 the format for the date of expiration changed. Convert back to old format
                 if self._versionGreaterThan4_0():
-                    new_format = "%a %b %d %H:%M:%S %z %Y"
-                    # Manually changing time zone -- CHANGE THIS MY GOD
-                    date_str = res.get("expiration")
-                    if "PDT" in date_str:
-                        date_str = date_str.replace("PDT", "-0700")
-                    elif "UTC" in date_str:
-                         date_str = date_str.replace("UTC", "+0000")
-                    dt = datetime.strptime(date_str, new_format)
-                    old_format = "%Y-%m-%d %H:%M:%S"
-                    ret = res["token"], int(dt.timestamp()), dt.strftime(old_format)
+                    ret = res["token"], res.get("expiration")
                 else:
                     ret = res["token"], res.get("expiration"), \
                         datetime.utcfromtimestamp(float(res.get("expiration"))).strftime('%Y-%m-%d %H:%M:%S')

@@ -28,7 +28,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
 
         if self._versionGreaterThan4_0():
             res = self._get(self.gsUrl + "/gsql/v1/udt/tuples?graph=" + self.graphname,
-            authMode="pwd", headers={"X-User-Agent": "pyTigerGraph"})
+            authMode="pwd")
         else:    
             res = self._get(self.gsUrl + "/gsqlserver/gsql/udtlist?graph=" + self.graphname,
                 authMode="pwd")
@@ -124,7 +124,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         if not self.schema or force:
             if self._versionGreaterThan4_0():
                 self.schema = self._get(self.gsUrl + "/gsql/v1/schema/graphs/" + self.graphname,
-                    authMode="pwd", headers={"X-User-Agent": "pyTigerGraph"})
+                    authMode="pwd")
             else:
                 self.schema = self._get(self.gsUrl + "/gsqlserver/gsql/schema?graph=" + self.graphname,
                     authMode="pwd")

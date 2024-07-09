@@ -81,7 +81,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                         data=query.encode("utf-8"), # quote_plus would not work with it
                         authMode="pwd", resKey=None, skipCheck=True,
                         jsonResponse=False,
-                        headers={"Content-Type": "text/plain", "X-User-Agent": "pyTigerGraph"})
+                        headers={"Content-Type": "text/plain"})
 
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:            
@@ -136,7 +136,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             if self._versionGreaterThan4_0():
                 res = self._req("PUT",
                     url="{}/gsql/v1/udt/files/ExprFunctions".format(
-                        self.gsUrl), authMode="pwd", data=data, resKey="", headers={"X-User-Agent": "pyTigerGraph"})
+                        self.gsUrl), authMode="pwd", data=data, resKey="")
             else:    
                 res = self._req("PUT",
                     url="{}/gsqlserver/gsql/userdefinedfunction?filename=ExprFunctions".format(
@@ -158,7 +158,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             if self._versionGreaterThan4_0():
                 res = self._req("PUT",
                     url="{}/gsql/v1/udt/files/ExprUtil".format(self.gsUrl),
-                        authMode="pwd", data=data, resKey="", headers={"X-User-Agent": "pyTigerGraph"})
+                        authMode="pwd", data=data, resKey="")
             else:
                 res = self._req("PUT",
                     url="{}/gsqlserver/gsql/userdefinedfunction?filename=ExprUtil".format(self.gsUrl),
@@ -201,7 +201,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             if self._versionGreaterThan4_0():
                 resp = self._get(
                     "{}/gsql/v1/udt/files/ExprFunctions".format(self.gsUrl),
-                    resKey="", headers={"X-User-Agent": "pyTigerGraph"})
+                    resKey="")
             else:
                 resp = self._get(
                     "{}/gsqlserver/gsql/userdefinedfunction".format(self.gsUrl),
@@ -220,7 +220,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             if self._versionGreaterThan4_0():
                 resp = self._get(
                     "{}/gsql/v1/udt/files/ExprUtil".format(self.gsUrl),
-                    resKey="", headers={"X-User-Agent": "pyTigerGraph"})
+                    resKey="")
             else:
                 resp = self._get(
                     "{}/gsqlserver/gsql/userdefinedfunction".format(self.gsUrl),

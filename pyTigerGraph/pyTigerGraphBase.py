@@ -228,7 +228,7 @@ class pyTigerGraphBase(object):
             # Check JWT support for GSQL server
             if self._versionGreaterThan4_0():
                 logger.debug(f"Attempting to get auth info with URL: {self.gsUrl + '/gsql/v1/auth/simple'}")
-                self._get(f"{self.gsUrl}/gsql/v1/auth/simple", authMode="token", resKey=None, headers={"X-User-Agent": "pyTigerGraph"})    
+                self._get(f"{self.gsUrl}/gsql/v1/auth/simple", authMode="token", resKey=None)    
             else:
                 logger.debug(f"Attempting to get auth info with URL: {self.gsUrl + '/gsqlserver/gsql/simpleauth'}")
                 self._get(f"{self.gsUrl}/gsqlserver/gsql/simpleauth", authMode="token", resKey=None)
@@ -323,7 +323,7 @@ class pyTigerGraphBase(object):
         if headers:
             _headers.update(headers)
         if self.awsIamHeaders:
-            if url.startswith(self.gsUrl + "/gsqlserver/"):
+            if url.startswith(self.gsUrl + "/gsqlserver/") or (self._versionGreaterThan4_0() and url.startswith(self.gsUrl)): # version >=4.1 has removed /gsqlserver/
                 _headers.update(self.awsIamHeaders)
         if self.responseConfigHeader:
             _headers.update(self.responseConfigHeader)
@@ -336,6 +336,9 @@ class pyTigerGraphBase(object):
             verify = False
         else:
             verify = True
+
+        if self._versionGreaterThan4_0():
+            _headers.update({"X-User-Agent": "pyTigerGraph"})
 
         if jsonData:
             res = requests.request(method, url, headers=_headers, json=_data, params=params, verify=verify)
