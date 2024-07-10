@@ -141,6 +141,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
 
         Returns:
             JSON object of datapoints collected.
+            Note: Output format differs between 3.x and 4.x versions of TigerGraph.
         """
         if logger.level == logging.DEBUG:
             logger.debug("entry: getSystemMetrics")

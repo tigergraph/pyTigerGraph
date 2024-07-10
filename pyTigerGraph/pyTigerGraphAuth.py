@@ -230,8 +230,6 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                     _json["lifetime"] = str(lifetime)
                 res = requests.request("POST", self.gsUrl +
                     "/gsql/v1/tokens", verify=False, json=_json, headers={"X-User-Agent": "pyTigerGraph"})
-                logger.debug(res.text)
-                res.raise_for_status()
                 
                 # if /gsql/v1/tokens endpoint doesn't exist then try old endpoint
                 if res.status_code == 404:

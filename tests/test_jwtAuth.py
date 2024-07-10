@@ -71,7 +71,7 @@ class TestJWTTokenAuth(unittest.TestCase):
 
         # gsql on port 14240
         if self.conn._versionGreaterThan4_0():
-            res = newconn._get(f"{newconn.gsUrl}/gsql/v1/auth/simple", authMode="token", resKey=None, headers={"X-User-Agent": "pyTigerGraph"})
+            res = newconn._get(f"{newconn.gsUrl}/gsql/v1/auth/simple", authMode="token", resKey=None)
             res = res['results']
         else:
             res = newconn._get(f"{self.conn.host}:{self.conn.gsPort}/gsqlserver/gsql/simpleauth", authMode="token", resKey=None)  

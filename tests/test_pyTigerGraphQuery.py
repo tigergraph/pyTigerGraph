@@ -117,6 +117,23 @@ class test_pyTigerGraphQuery(unittest.TestCase):
     def test_10_abortQuery(self):
         abort_ret = self.conn.abortQuery("all")
         self.assertEqual(abort_ret["results"], [{'aborted_queries': []}])
+
+    def test_11_queryDescriptions(self):
+        self.conn.dropQueryDescription('query1')
+        desc = self.conn.getQueryDescription('query1')
+        self.assertEqual(desc, [{'queryName': 'query1', 'parameters': []}])
+        self.conn.describeQuery('query1', 'This is a description')
+        desc = self.conn.getQueryDescription('query1')
+        self.assertEqual(desc[0]['description'], 'This is a description')
+
+        self.conn.dropQueryDescription('query4_all_param_types')
+        self.conn.describeQuery('query4_all_param_types', 'this is a query description', 
+                   {'p01_int':'this is a parameter description', 
+                    'p02_uint':'this is a second param desc'})
+        desc = self.conn.getQueryDescription('query4_all_param_types')
+        self.assertEqual(desc[0]['description'], 'this is a query description')
+        self.assertEqual(desc[0]['parameters'][0]['description'], 'this is a parameter description')
+        self.assertEqual(desc[0]['parameters'][1]['description'], 'this is a second param desc')
         
 if __name__ == '__main__':
     unittest.main()
