@@ -4,6 +4,8 @@ from time import sleep
 
 from pyTigerGraphUnitTest import make_connection
 
+from pyTigerGraph.pyTigerGraphException import TigerGraphException
+
 
 class test_pyTigerGraphQuery(unittest.TestCase):
     @classmethod
@@ -119,21 +121,34 @@ class test_pyTigerGraphQuery(unittest.TestCase):
         self.assertEqual(abort_ret["results"], [{'aborted_queries': []}])
 
     def test_11_queryDescriptions(self):
-        self.conn.dropQueryDescription('query1')
-        desc = self.conn.getQueryDescription('query1')
-        self.assertEqual(desc, [{'queryName': 'query1', 'parameters': []}])
-        self.conn.describeQuery('query1', 'This is a description')
-        desc = self.conn.getQueryDescription('query1')
-        self.assertEqual(desc[0]['description'], 'This is a description')
+        version = self.conn.getVer().split('.')
+        if version[0]>="4": # Query descriptions only supported in Tigergraph versions >= 4.x
+            self.conn.dropQueryDescription('query1')
+            desc = self.conn.getQueryDescription('query1')
+            self.assertEqual(desc, [{'queryName': 'query1', 'parameters': []}])
+            self.conn.describeQuery('query1', 'This is a description')
+            desc = self.conn.getQueryDescription('query1')
+            self.assertEqual(desc[0]['description'], 'This is a description')
 
-        self.conn.dropQueryDescription('query4_all_param_types')
-        self.conn.describeQuery('query4_all_param_types', 'this is a query description', 
-                   {'p01_int':'this is a parameter description', 
-                    'p02_uint':'this is a second param desc'})
-        desc = self.conn.getQueryDescription('query4_all_param_types')
-        self.assertEqual(desc[0]['description'], 'this is a query description')
-        self.assertEqual(desc[0]['parameters'][0]['description'], 'this is a parameter description')
-        self.assertEqual(desc[0]['parameters'][1]['description'], 'this is a second param desc')
+            self.conn.dropQueryDescription('query4_all_param_types')
+            self.conn.describeQuery('query4_all_param_types', 'this is a query description', 
+                    {'p01_int':'this is a parameter description', 
+                        'p02_uint':'this is a second param desc'})
+            desc = self.conn.getQueryDescription('query4_all_param_types')
+            self.assertEqual(desc[0]['description'], 'this is a query description')
+            self.assertEqual(desc[0]['parameters'][0]['description'], 'this is a parameter description')
+            self.assertEqual(desc[0]['parameters'][1]['description'], 'this is a second param desc')
+
+        else:
+            with self.assertRaises(TigerGraphException) as tge:
+                res = self.conn.dropQueryDescription('query1')
+            self.assertEqual("This function is only supported on versions of TigerGraph >= 4.0.0.", tge.exception.message)
+            with self.assertRaises(TigerGraphException) as tge:
+                res = self.conn.describeQuery('query1')
+            self.assertEqual("This function is only supported on versions of TigerGraph >= 4.0.0.", tge.exception.message)
+            with self.assertRaises(TigerGraphException) as tge:
+                res = self.conn.getQueryDescription('query1')
+            self.assertEqual("This function is only supported on versions of TigerGraph >= 4.0.0.", tge.exception.message)
         
 if __name__ == '__main__':
     unittest.main()
