@@ -144,7 +144,7 @@ class test_pyTigerGraphQuery(unittest.TestCase):
                 res = self.conn.dropQueryDescription('query1')
             self.assertEqual("This function is only supported on versions of TigerGraph >= 4.0.0.", tge.exception.message)
             with self.assertRaises(TigerGraphException) as tge:
-                res = self.conn.describeQuery('query1')
+                res = self.conn.describeQuery('query1', 'test')
             self.assertEqual("This function is only supported on versions of TigerGraph >= 4.0.0.", tge.exception.message)
             with self.assertRaises(TigerGraphException) as tge:
                 res = self.conn.getQueryDescription('query1')
