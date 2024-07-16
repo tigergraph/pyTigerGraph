@@ -367,7 +367,7 @@ class pyTigerGraphBase(object):
         logger.info("exit: _req (resKey)")
 
         return res[resKey]
-
+    
     def _get(self, url: str, authMode: str = "token", headers: dict = None, resKey: str = "results",
             skipCheck: bool = False, params: Union[dict, list, str] = None, strictJson: bool = True) -> Union[dict, list]:
         """Generic GET method.
@@ -577,7 +577,12 @@ class pyTigerGraphBase(object):
         else:
             raise TigerGraphException("\"" + component + "\" is not a valid component.", None)
         
-    def _versionGreaterThan4_0(self):
+    def _versionGreaterThan4_0(self) -> bool:
+        """Gets if the TigerGraph database version is greater than 4.0 using gerVer().
+
+        Returns:
+            Boolean of whether databse version is greater than 4.0.
+        """
         version = self.getVer().split('.')
         if version[0]>="4" and version[1]>"0":
             return True

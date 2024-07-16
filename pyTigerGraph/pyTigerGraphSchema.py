@@ -22,7 +22,8 @@ class pyTigerGraphSchema(pyTigerGraphBase):
             The list of names of UDTs (defined in the global scope, i.e. not in queries).
 
         Endpoint:
-            GET /gsqlserver/gsql/udtlist
+            GET /gsqlserver/gsql/udtlist (In TigerGraph versions 3.x)
+            GET /gsql/v1/udt/tuples (In TigerGraph versions 4.x)
         """
         logger.info("entry: _getUDTs")
 
@@ -116,6 +117,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         Endpoint:
             - `GET /gsqlserver/gsql/schema`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_show_graph_schema_metadata[Show graph schema metadata]
+            - `GET /gsql/v1/schema/graphs/{graph_name}`
         """
         logger.info("entry: getSchema")
         if logger.level == logging.DEBUG:

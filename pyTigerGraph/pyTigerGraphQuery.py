@@ -43,6 +43,11 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         Args:
             queryName (str):
                 Name of the query to get metadata of.
+
+        Endpoints:
+            - `POST /gsqlserver/gsql/queryinfo` (In TigerGraph versions 3.x)
+                See xref:tigergraph-server:API:built-in-endpoints.adoc_get_query_metadata
+            - `POST /gsql/v1/queries/signature` (In TigerGraph versions 4.x)
         """
         if logger.level == logging.DEBUG:
             logger.debug("entry: getQueryMetadata")
@@ -333,9 +338,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
                 `"key": [(primary_id1, "vertex_type1"), (primary_id2, "vertex_type2"), ...]`
 
 
-        Endpoint:
-            - `POST /gsqlserver/interpreted_query`
+        Endpoints:
+            - `POST /gsqlserver/interpreted_query` (In TigerGraph versions 3.x)
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_an_interpreted_query[Run an interpreted query]
+            - `POST /gsql/v1/queries/interpret` (In TigerGraph versions 4.x)
 
         TODO Add "GSQL-TIMEOUT: <timeout value in ms>" and "RESPONSE-LIMIT: <size limit in byte>"
             plus parameters if applicable to interpreted queries (see runInstalledQuery() above)
@@ -614,6 +620,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         
         Returns:
             The response from the database.
+
+        Endpoints:
+            - `PUT /gsqlserver/gsql/description?graph={graph_name}` (In TigerGraph version 4.0)
+            - `PUT /gsql/v1/description?graph={graph_name}` (In TigerGraph versions >4.0)
         """
         logger.info("entry: describeQuery")
         self.ver = self.getVer()
@@ -657,6 +667,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         
         Returns:
             The description of the query(ies).
+        
+        Endpoints:
+            - `GET /gsqlserver/gsql/description?graph={graph_name}` (In TigerGraph version 4.0)
+            - `GET /gsql/v1/description?graph={graph_name}` (In TigerGraph versions >4.0)
         """
         logger.info("entry: getQueryDescription")
         self.ver = self.getVer()
@@ -694,6 +708,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         
         Returns:
             The response from the database.
+        
+        Endpoints:
+            - `DELETE /gsqlserver/gsql/description?graph={graph_name}` (In TigerGraph version 4.0)
+            - `DELETE /gsql/v1/description?graph={graph_name}` (In TigerGraph versions >4.0)
         """
         logger.info("entry: dropQueryDescription")
         self.ver = self.getVer()

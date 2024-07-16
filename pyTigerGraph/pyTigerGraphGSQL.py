@@ -6,7 +6,7 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 import logging
 import os
 import sys
-from typing import Union, Tuple
+from typing import Union, Tuple, Dict
 from urllib.parse import urlparse, quote_plus
 import re
 
@@ -36,6 +36,10 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
 
         Returns:
             The output of the statement(s) executed.
+
+        Endpoint:
+            - `POST /gsqlserver/gsql/file` (In TigerGraph versions 3.x)
+            - `POST /gsql/v1/statements` (In TigerGraph versions 4.x)
         """
         logger.info("entry: gsql")
         if logger.level == logging.DEBUG:
@@ -78,7 +82,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
         try:
             res = self._req("POST",
                         self.gsUrl + "/gsql/v1/statements",
-                        data=query.encode("utf-8"), # quote_plus would not work with it
+                        data=query.encode("utf-8"), # quote_plus would not work with the new endpoint
                         authMode="pwd", resKey=None, skipCheck=True,
                         jsonResponse=False,
                         headers={"Content-Type": "text/plain"})
@@ -119,6 +123,10 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
 
         Returns:
             Status of the installation.
+
+        Endpoints:
+            - `PUT /gsqlserver/gsql/userdefinedfunction?filename={ExprFunctions or ExprUtil}"` (In TigerGraph versions 3.x)
+            - `PUT /gsql/v1/udt/files/{ExprFunctions or ExprUtil}` (In TigerGraph versions 4.x)
         """
         logger.info("entry: installUDF")
         if logger.level == logging.DEBUG:
@@ -175,7 +183,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
 
         return 0
 
-    def getUDF(self, ExprFunctions: bool = True, ExprUtil: bool = True, json_out=False) -> Union[str, Tuple[str, str]]:       
+    def getUDF(self, ExprFunctions: bool = True, ExprUtil: bool = True, json_out=False) -> Union[str, Tuple[str, str], Dict[str,str]]:       
         """Get user defined functions (UDF) installed in the database.
         See https://docs.tigergraph.com/gsql-ref/current/querying/func/query-user-defined-functions for details on UDFs.
 
@@ -191,6 +199,10 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
         Returns:
             str: If only one of `ExprFunctions` or `ExprUtil` is True, return of the content of that file.
             Tuple[str, str]: content of ExprFunctions and content of ExprUtil.
+
+        Endpoints:
+            - `GET /gsqlserver/gsql/userdefinedfunction?filename={ExprFunctions or ExprUtil}` (In TigerGraph versions 3.x)
+            - `GET /gsql/v1/udt/files/{ExprFunctions or ExprUtil}` (In TigerGraph versions 4.x)
         """
         logger.info("entry: getUDF")
         if logger.level == logging.DEBUG:

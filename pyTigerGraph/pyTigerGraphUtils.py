@@ -142,6 +142,13 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         Returns:
             JSON object of datapoints collected.
             Note: Output format differs between 3.x and 4.x versions of TigerGraph.
+
+        Endpoints:
+                See xref:tigergraph-server:API:built-in-endpoints.adoc#_show_component_versions[Show component versions]
+            - `GET /ts3/api/datapoints` (In TigerGraph versions 3.x)
+                See xref:tigergraph-server:API:built-in-endpoints.adoc#_monitor_system_metrics_ts3_deprecated
+            - `POST /informant/metrics/get/{metrics_category}` (In TigerGraph versions 4.x)
+                ee xref:tigergraph-server:API:built-in-endpoints.adoc#_monitor_system_metrics_by_category
         """
         if logger.level == logging.DEBUG:
             logger.debug("entry: getSystemMetrics")
