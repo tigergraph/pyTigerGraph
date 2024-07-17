@@ -194,11 +194,11 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                 Duration of token validity (in seconds, default 30 days = 2,592,000 seconds).
 
         Returns:
-            If your TigerGraph instance is running version 3.5 or before, the return value is 
+            If your TigerGraph instance is running version 3.10, the return value is 
             a tuple of `(<token>, <expiration_timestamp_unixtime>, <expiration_timestamp_ISO8601>)`.
             The return value can be ignored, as the token is automatically set for the connection after this call.
 
-            If your TigerGraph instance is running version 3.6 or later, the return value is just the token.
+            If your TigerGraph instance is running version 4.0, the return value is a tuple of `(<token>, <expiration_timestamp_with_local_time>).
 
             [NOTE]
             The expiration timestamp's time zone might be different from your computer's local time
@@ -271,9 +271,13 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                 self.apiToken = None
                 self.authHeader = {'Authorization': 'Basic {0}'.format(self.base64_credential)}
             
-            if res.get("expiration") and not self._versionGreaterThan4_0(): # should only return token on TigerGraph versions above 3.5
-                ret = res["token"], res.get("expiration"), \
-                    datetime.utcfromtimestamp(float(res.get("expiration"))).strftime('%Y-%m-%d %H:%M:%S')
+            if res.get("expiration"):
+                # On >=4.1 the format for the date of expiration changed. Convert back to old format
+                if self._versionGreaterThan4_0():
+                    ret = res["token"], res.get("expiration")
+                else:
+                    ret = res["token"], res.get("expiration"), \
+                        datetime.utcfromtimestamp(float(res.get("expiration"))).strftime('%Y-%m-%d %H:%M:%S')
             else:
                 ret = res["token"]
 
@@ -343,7 +347,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
         if self._versionGreaterThan4_0():
             logger.info("exit: refreshToken")
-            raise TigerGraphException("This function is only supported on versions of TigerGraph >= 4.0.0.", 0)
+            raise TigerGraphException("This function is only supported on versions of TigerGraph <= 4.0.0.", 0)
 
         if int(s) < 3 or (int(s) == 3 and int(m) < 5):
             if self.useCert and self.certPath:
