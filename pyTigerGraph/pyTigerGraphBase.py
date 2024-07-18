@@ -343,17 +343,6 @@ class pyTigerGraphBase(object):
             res = requests.request(method, url, headers=_headers, json=_data, params=params, verify=verify)
         else:
             res = requests.request(method, url, headers=_headers, data=_data, params=params, verify=verify)
-
-        if res.status_code == 403:
-            warnings.warn(f'method: {method}, url: {url}, headers:{_headers}, data:{_data}, params:{params}, verify:{verify}', DeprecationWarning)
-            res = res.text
-            if isinstance(res, str):
-                warnings.warn(f'RESPONSE {res}')
-            else:
-                try:
-                    warnings.warn(f'RESPONSEE MESSAGE {res["message"]}')
-                except:
-                    warnings.warn(res['results'])
         res.raise_for_status()
 
         if jsonResponse:

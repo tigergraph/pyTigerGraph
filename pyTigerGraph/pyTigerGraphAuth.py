@@ -264,9 +264,6 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
         
         if not res.get("error"):
-
-            warnings.warn(f"GETTING THE TOKEN {res['token']}")
-
             if setToken:
                 self.apiToken = res["token"]
                 self.authHeader = {'Authorization': "Bearer " + self.apiToken}
@@ -350,7 +347,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
         if self._versionGreaterThan4_0():
             logger.info("exit: refreshToken")
-            raise TigerGraphException("This function is only supported on versions of TigerGraph <= 4.0.0.", 0)
+            raise TigerGraphException("Refreshing tokens is only supported on versions of TigerGraph <= 4.0.0.", 0)
 
         if int(s) < 3 or (int(s) == 3 and int(m) < 5):
             if self.useCert and self.certPath:
@@ -438,8 +435,6 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
         if not token:
             token = self.apiToken
-
-        warnings.warn(f"DELETING THE TOKEN {token}")
 
         if int(s) < 3 or (int(s) == 3 and int(m) < 5):
             if self.useCert is True and self.certPath is not None:
