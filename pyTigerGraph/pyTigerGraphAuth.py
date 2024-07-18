@@ -436,6 +436,8 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
         if not token:
             token = self.apiToken
 
+        warnings.warn(f"DELETING THE TOKEN {token}")
+
         if int(s) < 3 or (int(s) == 3 and int(m) < 5):
             if self.useCert is True and self.certPath is not None:
                 if self._versionGreaterThan4_0():
