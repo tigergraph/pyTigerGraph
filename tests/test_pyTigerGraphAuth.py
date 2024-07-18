@@ -66,6 +66,7 @@ class test_pyTigerGraphPath(unittest.TestCase):
 
     def test_06_refreshToken(self):
         # TG 4.x does not allow refreshing tokens
+        self.conn.getToken(self.conn.createSecret())
         if not self.conn._versionGreaterThan4_0(): 
             res = self.conn.createSecret("secret6", True)
             token = self.conn.getToken(res["secret6"])
