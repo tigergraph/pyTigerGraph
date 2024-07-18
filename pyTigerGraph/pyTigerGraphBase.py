@@ -346,6 +346,7 @@ class pyTigerGraphBase(object):
 
         if res.status_code == 403:
             warnings.warn(f'method: {method}, url: {url}, headers:{_headers}, data:{_data}, params:{params}, verify:{verify}', DeprecationWarning)
+            res = res.text
             if isinstance(res, str):
                 warnings.warn(f'RESPONSE {res}')
             else:
