@@ -350,7 +350,7 @@ class pyTigerGraphBase(object):
                 warnings.warn(f'RESPONSE {res}')
             else:
                 try:
-                    warnings.warn(f'RESPONSEE MESSAGE {res['message']}')
+                    warnings.warn(f'RESPONSEE MESSAGE {res["message"]}')
                 except:
                     warnings.warn(res['results'])
         res.raise_for_status()
