@@ -172,7 +172,7 @@ class pyTigerGraphBase(object):
         sslPort = str(sslPort)
         if self.tgCloud and (restppPort == "9000" or restppPort == "443"):
             self.restppPort = sslPort
-            self.restppUrl = self.host + ":"+sslPort + "/restpp"
+            self.restppUrl = self.host + ":"+ sslPort + "/restpp"
         else:
             self.restppPort = restppPort
             self.restppUrl = self.host + ":" + self.restppPort
@@ -343,7 +343,29 @@ class pyTigerGraphBase(object):
             res = requests.request(method, url, headers=_headers, json=_data, params=params, verify=verify)
         else:
             res = requests.request(method, url, headers=_headers, data=_data, params=params, verify=verify)
-        res.raise_for_status()
+
+        try:
+            res.raise_for_status()
+        except Exception as e:
+            # In TG 4.x the port for restpp has changed from 9000 to 14240. 
+            # This block should only be called once when checking if using 4.x, if so self.restppurl will change to host:14240/restpp
+            # Changes port to 14240, adds /restpp to end to url, tries again, saves changes if successful
+            if self.restppPort == "9000" and "9000" in url:
+                newRestppUrl = self.host + ":14240/restpp"
+                # In tgcloud /restpp can already be in the restpp url. We want to extract everything after the port or restpp
+                if '/restpp' in url:
+                    url = newRestppUrl + '/' + ''.join(url.split(':')[2].split('/')[2:])
+                else:
+                    url = newRestppUrl + '/' + ''.join(url.split(':')[2].split('/')[1:])
+                if jsonData:
+                    res = requests.request(method, url, headers=_headers, json=_data, params=params, verify=verify)
+                else:
+                    res = requests.request(method, url, headers=_headers, data=_data, params=params, verify=verify)
+                res.raise_for_status()
+                self.restppUrl = newRestppUrl
+                self.restppPort = "14240"
+            else:
+                raise e
 
         if jsonResponse:
             try:
