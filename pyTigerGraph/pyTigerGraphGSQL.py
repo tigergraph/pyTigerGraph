@@ -94,6 +94,8 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                                 data=quote_plus(query.encode("utf-8")),
                                 authMode="pwd", resKey=None, skipCheck=True,
                                 jsonResponse=False)
+            else:
+                raise e
 
 
         if isinstance(res, list):
