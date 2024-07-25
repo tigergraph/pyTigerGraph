@@ -348,11 +348,12 @@ class pyTigerGraphBase(object):
             res.raise_for_status()
         except Exception as e:
             # In TG 4.x the port for restpp has changed from 9000 to 14240. 
-            # This block should only be called once when checking if using 4.x, if so self.restppurl will change to host:14240/restpp
+            # This block should only be called once. When using 4.x, using port 9000 should fail so self.restppurl will change to host:14240/restpp
+            # ----
             # Changes port to 14240, adds /restpp to end to url, tries again, saves changes if successful
             if self.restppPort == "9000" and "9000" in url:
                 newRestppUrl = self.host + ":14240/restpp"
-                # In tgcloud /restpp can already be in the restpp url. We want to extract everything after the port or restpp
+                # In tgcloud /restpp can already be in the restpp url. We want to extract everything after the port or /restpp
                 if '/restpp' in url:
                     url = newRestppUrl + '/' + ''.join(url.split(':')[2].split('/')[2:])
                 else:
