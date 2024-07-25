@@ -348,10 +348,10 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             if lifetime:
                 data["lifetime"] = str(lifetime)
             if self.useCert is True and self.certPath is not None:
-                res = json.loads(requests.post(self.restppUrl + "/requesttoken",
+                res = json.loads(requests.put(self.restppUrl + "/requesttoken",
                     data=json.dumps(data), verify=False).text)
             else:
-                res = json.loads(requests.post(self.restppUrl + "/requesttoken",
+                res = json.loads(requests.put(self.restppUrl + "/requesttoken",
                     data=json.dumps(data)).text)
             if not res["error"]:
                 success = True
