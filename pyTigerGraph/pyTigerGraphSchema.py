@@ -115,9 +115,9 @@ class pyTigerGraphSchema(pyTigerGraphBase):
             The schema metadata.
 
         Endpoint:
-            - `GET /gsqlserver/gsql/schema`
+            - `GET /gsqlserver/gsql/schema` (In TigerGraph version 3.x)
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_show_graph_schema_metadata[Show graph schema metadata]
-            - `GET /gsql/v1/schema/graphs/{graph_name}`
+            - `GET /gsql/v1/schema/graphs/{graph_name}` (In TigerGraph version 4.x)
         """
         logger.info("entry: getSchema")
         if logger.level == logging.DEBUG:

@@ -194,7 +194,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                 Duration of token validity (in seconds, default 30 days = 2,592,000 seconds).
 
         Returns:
-            If your TigerGraph instance is running version 3.10, the return value is 
+            If your TigerGraph instance is running version <=3.10, the return value is 
             a tuple of `(<token>, <expiration_timestamp_unixtime>, <expiration_timestamp_ISO8601>)`.
             The return value can be ignored, as the token is automatically set for the connection after this call.
 
