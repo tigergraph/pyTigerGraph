@@ -7,7 +7,7 @@ import random
 import re
 import string
 from os.path import join as pjoin
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union, List
 from urllib.parse import urlparse
 
 if TYPE_CHECKING:
@@ -164,6 +164,75 @@ def install_query_file(
     else:
         print("Query installation finished.")
     return query_name
+
+
+def install_query_files(
+    conn: "TigerGraphConnection",
+    file_paths: List[str],
+    replace: dict = None,
+    distributed: List[bool] = [],
+    force: bool = False,
+) -> str:
+    queries_to_install = []
+    last_query = ""
+    for idx, file_path in enumerate(file_paths):
+        # Read the first line of the file to get query name. The first line should be
+        # something like CREATE QUERY query_name (...
+        with open(file_path) as infile:
+            firstline = infile.readline()
+        try:
+            query_name = re.search(r"QUERY (.+?)\(", firstline).group(1).strip()
+        except:
+            raise ValueError(
+                "Cannot parse the query file. It should start with CREATE QUERY ... "
+            )
+        # If a suffix is to be added to query name
+        if replace and ("{QUERYSUFFIX}" in replace):
+            query_name = query_name.replace("{QUERYSUFFIX}", replace["{QUERYSUFFIX}"])
+        last_query = query_name
+        # If query is already installed, skip unless force install.
+        is_installed, is_enabled = is_query_installed(conn, query_name, return_status=True)
+        if is_installed:
+            if force or (not is_enabled):
+                query = "USE GRAPH {}\nDROP QUERY {}\n".format(conn.graphname, query_name)
+                resp = conn.gsql(query)
+                if "Successfully dropped queries" not in resp:
+                    raise ConnectionError(resp)
+            else:
+                continue
+        # Otherwise, install the query from file
+        with open(file_path) as infile:
+            query = infile.read()
+        # Replace placeholders with actual content if given
+        if replace:
+            for placeholder in replace:
+                query = query.replace(placeholder, replace[placeholder])
+        if distributed and distributed[idx]:
+            query = query.replace("CREATE QUERY", "CREATE DISTRIBUTED QUERY")
+        logger.debug(query)
+        query = (
+            "USE GRAPH {}\n".format(conn.graphname)
+            + query
+            + "\n"
+        )
+        resp = conn.gsql(query)
+        if "Successfully created queries" not in resp:
+            raise ConnectionError(resp)
+        queries_to_install.append(query_name)
+    if queries_to_install:
+        query = (
+            "USE GRAPH {}\n".format(conn.graphname)
+            + "Install Query {}\n".format(",".join(queries_to_install))
+        )
+        print(
+            "Installing and optimizing queries. It might take a minute or two."
+        )
+        resp = conn.gsql(query)
+        if "Query installation finished" not in resp:
+            raise ConnectionError(resp)
+        else:
+            print("Query installation finished.")
+    return last_query
 
 
 def add_attribute(conn: "TigerGraphConnection", schema_type:str, attr_type:str = None, attr_name:Union[str, dict] = None, schema_name:list = None, global_change:bool = False):

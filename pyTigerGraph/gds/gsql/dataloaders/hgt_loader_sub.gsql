@@ -1,0 +1,32 @@
+CREATE QUERY hgt_loader_sub_{QUERYSUFFIX} (VERTEX v, STRING delimiter, INT num_hops, SET<STRING> e_types, SET<STRING> v_types)
+RETURNS (ListAccum<STRING>) 
+SYNTAX V1
+{
+    SumAccum<STRING> @@v_batch;
+    SumAccum<STRING> @@e_batch;
+    SetAccum<VERTEX> @@printed_vertices;
+    SetAccum<EDGE> @@printed_edges;
+    ListAccum<STRING> @@ret;
+
+    seeds = {v};
+    res = SELECT s
+        FROM seeds:s
+        POST-ACCUM
+            @@printed_vertices += s,
+            {SEEDVERTEXATTRS};
+
+    FOREACH i IN RANGE[1, num_hops] DO
+        {SELECTNEIGHBORS}
+
+        seeds = SELECT s
+            FROM seeds:s 
+            POST-ACCUM 
+                IF NOT @@printed_vertices.contains(s) THEN
+                    @@printed_vertices += s,
+                    {OTHERVERTEXATTRS}
+                END;
+    END;
+    @@ret += @@v_batch;
+    @@ret += @@e_batch;
+    RETURN @@ret;
+}

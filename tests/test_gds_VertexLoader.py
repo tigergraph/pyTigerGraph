@@ -7,7 +7,7 @@ from pyTigerGraph.gds.dataloaders import VertexLoader
 from pyTigerGraph.gds.utilities import is_query_installed
 
 
-class TestGDSVertexLoader(unittest.TestCase):
+class TestGDSVertexLoaderKafka(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.conn = make_connection(graphname="Cora")
@@ -19,12 +19,10 @@ class TestGDSVertexLoader(unittest.TestCase):
             batch_size=16,
             shuffle=True,
             filter_by="train_mask",
-            loader_id=None,
-            buffer_size=4,
             kafka_address="kafka:9092",
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
-        self.assertEqual(loader.num_batches, 9)
+        self.assertIsNone(loader.num_batches)
 
     def test_iterate(self):
         loader = VertexLoader(
@@ -33,21 +31,25 @@ class TestGDSVertexLoader(unittest.TestCase):
             batch_size=16,
             shuffle=True,
             filter_by="train_mask",
-            loader_id=None,
-            buffer_size=4,
             kafka_address="kafka:9092",
         )
         num_batches = 0
+        batch_sizes = []
         for data in loader:
-            # print(num_batches, data.head())
+            # print(num_batches, data.shape, data.head())
             self.assertIsInstance(data, DataFrame)
             self.assertIn("x", data.columns)
             self.assertIn("y", data.columns)
             self.assertIn("train_mask", data.columns)
             self.assertIn("val_mask", data.columns)
             self.assertIn("test_mask", data.columns)
+            self.assertEqual(data.shape[1], 6)
+            batch_sizes.append(data.shape[0])
             num_batches += 1
         self.assertEqual(num_batches, 9)
+        for i in batch_sizes[:-1]:
+            self.assertEqual(i, 16)
+        self.assertLessEqual(batch_sizes[-1], 16)
 
     def test_all_vertices(self):
         loader = VertexLoader(
@@ -56,8 +58,6 @@ class TestGDSVertexLoader(unittest.TestCase):
             num_batches=1,
             shuffle=False,
             filter_by="train_mask",
-            loader_id=None,
-            buffer_size=4,
             kafka_address="kafka:9092",
         )
         data = loader.data
@@ -68,6 +68,29 @@ class TestGDSVertexLoader(unittest.TestCase):
         self.assertIn("train_mask", data.columns)
         self.assertIn("val_mask", data.columns)
         self.assertIn("test_mask", data.columns)
+        self.assertEqual(data.shape[0], 140)
+        self.assertEqual(data.shape[1], 6)
+
+    def test_all_vertices_multichar_delimiter(self):
+        loader = VertexLoader(
+            graph=self.conn,
+            attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
+            num_batches=1,
+            shuffle=False,
+            filter_by="train_mask",
+            delimiter="$|",
+            kafka_address="kafka:9092",
+        )
+        data = loader.data
+        # print(data)
+        self.assertIsInstance(data, DataFrame)
+        self.assertIn("x", data.columns)
+        self.assertIn("y", data.columns)
+        self.assertIn("train_mask", data.columns)
+        self.assertIn("val_mask", data.columns)
+        self.assertIn("test_mask", data.columns)
+        self.assertEqual(data.shape[0], 140)
+        self.assertEqual(data.shape[1], 6)
 
     def test_sasl_plaintext(self):
         loader = VertexLoader(
@@ -126,6 +149,97 @@ class TestGDSVertexLoader(unittest.TestCase):
             num_batches += 1
         self.assertEqual(num_batches, 9)
 
+
+class TestGDSHeteroVertexLoaderKafka(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.conn = make_connection(graphname="hetero")
+
+    def test_init(self):
+        loader = VertexLoader(
+            graph=self.conn,
+            attributes={"v0": ["x", "y"],
+                        "v1": ["x"]},
+            batch_size=20,
+            shuffle=True,
+            kafka_address="kafka:9092"
+        )
+        self.assertTrue(is_query_installed(self.conn, loader.query_name))
+        self.assertIsNone(loader.num_batches)
+
+    def test_iterate(self):
+        loader = VertexLoader(
+            graph=self.conn,
+            attributes={"v0": ["x", "y"],
+                        "v1": ["x"]},
+            batch_size=20,
+            shuffle=True,
+            kafka_address="kafka:9092"
+        )
+        num_batches = 0
+        batch_sizes = []
+        for data in loader:
+            # print(num_batches, data)
+            batchsize = 0
+            if "v0" in data:
+                self.assertIsInstance(data["v0"], DataFrame)
+                self.assertIn("x", data["v0"].columns)
+                self.assertIn("y", data["v0"].columns)
+                batchsize += data["v0"].shape[0]
+                self.assertEqual(data["v0"].shape[1], 3)
+            if "v1" in data:
+                self.assertIsInstance(data["v1"], DataFrame)
+                self.assertIn("x", data["v1"].columns)
+                batchsize += data["v1"].shape[0]
+                self.assertEqual(data["v1"].shape[1], 2)
+            self.assertGreater(len(data), 0)
+            num_batches += 1
+            batch_sizes.append(batchsize)
+        self.assertEqual(num_batches, 10)
+        for i in batch_sizes[:-1]:
+            self.assertEqual(i, 20)
+        self.assertLessEqual(batch_sizes[-1], 20)
+
+    def test_all_vertices(self):
+        loader = VertexLoader(
+            graph=self.conn,
+            attributes={"v0": ["x", "y"],
+                        "v1": ["x"]},
+            num_batches=1,
+            shuffle=False,
+            kafka_address="kafka:9092"
+        )
+        data = loader.data
+        # print(data)
+        self.assertIsInstance(data["v0"], DataFrame)
+        self.assertTupleEqual(data["v0"].shape, (76, 3))
+        self.assertIsInstance(data["v1"], DataFrame)
+        self.assertTupleEqual(data["v1"].shape, (110, 2))
+        self.assertIn("x", data["v0"].columns)
+        self.assertIn("y", data["v0"].columns)
+        self.assertIn("x", data["v1"].columns)
+
+    def test_all_vertices_multichar_delimiter(self):
+        loader = VertexLoader(
+            graph=self.conn,
+            attributes={"v0": ["x", "y"],
+                        "v1": ["x"]},
+            num_batches=1,
+            shuffle=False,
+            delimiter="|$",
+            kafka_address="kafka:9092"
+        )
+        data = loader.data
+        # print(data)
+        self.assertIsInstance(data["v0"], DataFrame)
+        self.assertTupleEqual(data["v0"].shape, (76, 3))
+        self.assertIsInstance(data["v1"], DataFrame)
+        self.assertTupleEqual(data["v1"].shape, (110, 2))
+        self.assertIn("x", data["v0"].columns)
+        self.assertIn("y", data["v0"].columns)
+        self.assertIn("x", data["v1"].columns)
+
+
 class TestGDSVertexLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -137,12 +251,10 @@ class TestGDSVertexLoaderREST(unittest.TestCase):
             attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
             batch_size=16,
             shuffle=True,
-            filter_by="train_mask",
-            loader_id=None,
-            buffer_size=4,
+            filter_by="train_mask"
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
-        self.assertEqual(loader.num_batches, 9)
+        self.assertIsNone(loader.num_batches)
 
     def test_iterate(self):
         loader = VertexLoader(
@@ -150,21 +262,25 @@ class TestGDSVertexLoaderREST(unittest.TestCase):
             attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
             batch_size=16,
             shuffle=True,
-            filter_by="train_mask",
-            loader_id=None,
-            buffer_size=4,
+            filter_by="train_mask"
         )
         num_batches = 0
+        batch_sizes = []
         for data in loader:
-            # print(num_batches, data.head())
+            # print(num_batches, data.shape, data.head())
             self.assertIsInstance(data, DataFrame)
             self.assertIn("x", data.columns)
             self.assertIn("y", data.columns)
             self.assertIn("train_mask", data.columns)
             self.assertIn("val_mask", data.columns)
             self.assertIn("test_mask", data.columns)
+            self.assertEqual(data.shape[1], 6)
+            batch_sizes.append(data.shape[0])
             num_batches += 1
         self.assertEqual(num_batches, 9)
+        for i in batch_sizes[:-1]:
+            self.assertEqual(i, 16)
+        self.assertLessEqual(batch_sizes[-1], 16)
 
     def test_all_vertices(self):
         loader = VertexLoader(
@@ -172,9 +288,7 @@ class TestGDSVertexLoaderREST(unittest.TestCase):
             attributes=["x", "y", "train_mask", "val_mask", "test_mask"],
             num_batches=1,
             shuffle=False,
-            filter_by="train_mask",
-            loader_id=None,
-            buffer_size=4,
+            filter_by="train_mask"
         )
         data = loader.data
         # print(data)
@@ -184,6 +298,8 @@ class TestGDSVertexLoaderREST(unittest.TestCase):
         self.assertIn("train_mask", data.columns)
         self.assertIn("val_mask", data.columns)
         self.assertIn("test_mask", data.columns)
+        self.assertEqual(data.shape[0], 140)
+        self.assertEqual(data.shape[1], 6)
 
     def test_all_vertices_multichar_delimiter(self):
         loader = VertexLoader(
@@ -192,8 +308,6 @@ class TestGDSVertexLoaderREST(unittest.TestCase):
             num_batches=1,
             shuffle=False,
             filter_by="train_mask",
-            loader_id=None,
-            buffer_size=4,
             delimiter="$|"
         )
         data = loader.data
@@ -204,6 +318,8 @@ class TestGDSVertexLoaderREST(unittest.TestCase):
         self.assertIn("train_mask", data.columns)
         self.assertIn("val_mask", data.columns)
         self.assertIn("test_mask", data.columns)
+        self.assertEqual(data.shape[0], 140)
+        self.assertEqual(data.shape[1], 6)
 
     def test_string_attr(self):
         conn = make_connection(graphname="Social")
@@ -212,14 +328,13 @@ class TestGDSVertexLoaderREST(unittest.TestCase):
             graph=conn,
             attributes=["age", "state"],
             num_batches=1,
-            shuffle=False,
-            loader_id=None,
-            buffer_size=4,
+            shuffle=False
         )
         data = loader.data
         # print(data)
         self.assertIsInstance(data, DataFrame)
         self.assertEqual(data.shape[0], 7)
+        self.assertEqual(data.shape[1], 3)
         self.assertIn("age", data.columns)
         self.assertIn("state", data.columns)
 
@@ -235,13 +350,10 @@ class TestGDSHeteroVertexLoaderREST(unittest.TestCase):
             attributes={"v0": ["x", "y"],
                         "v1": ["x"]},
             batch_size=20,
-            shuffle=True,
-            filter_by=None,
-            loader_id=None,
-            buffer_size=4,
+            shuffle=True
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
-        self.assertEqual(loader.num_batches, 10)
+        self.assertIsNone(loader.num_batches)
 
     def test_iterate(self):
         loader = VertexLoader(
@@ -249,21 +361,31 @@ class TestGDSHeteroVertexLoaderREST(unittest.TestCase):
             attributes={"v0": ["x", "y"],
                         "v1": ["x"]},
             batch_size=20,
-            shuffle=True,
-            filter_by=None,
-            loader_id=None,
-            buffer_size=4,
+            shuffle=True
         )
         num_batches = 0
+        batch_sizes = []
         for data in loader:
             # print(num_batches, data)
-            self.assertIsInstance(data["v0"], DataFrame)
-            self.assertIsInstance(data["v1"], DataFrame)
-            self.assertIn("x", data["v0"].columns)
-            self.assertIn("y", data["v0"].columns)
-            self.assertIn("x", data["v1"].columns)
+            batchsize = 0
+            if "v0" in data:
+                self.assertIsInstance(data["v0"], DataFrame)
+                self.assertIn("x", data["v0"].columns)
+                self.assertIn("y", data["v0"].columns)
+                batchsize += data["v0"].shape[0]
+                self.assertEqual(data["v0"].shape[1], 3)
+            if "v1" in data:
+                self.assertIsInstance(data["v1"], DataFrame)
+                self.assertIn("x", data["v1"].columns)
+                batchsize += data["v1"].shape[0]
+                self.assertEqual(data["v1"].shape[1], 2)
+            self.assertGreater(len(data), 0)
             num_batches += 1
+            batch_sizes.append(batchsize)
         self.assertEqual(num_batches, 10)
+        for i in batch_sizes[:-1]:
+            self.assertEqual(i, 20)
+        self.assertLessEqual(batch_sizes[-1], 20)
 
     def test_all_vertices(self):
         loader = VertexLoader(
@@ -271,10 +393,7 @@ class TestGDSHeteroVertexLoaderREST(unittest.TestCase):
             attributes={"v0": ["x", "y"],
                         "v1": ["x"]},
             num_batches=1,
-            shuffle=False,
-            filter_by=None,
-            loader_id=None,
-            buffer_size=4,
+            shuffle=False
         )
         data = loader.data
         # print(data)
@@ -293,9 +412,6 @@ class TestGDSHeteroVertexLoaderREST(unittest.TestCase):
                         "v1": ["x"]},
             num_batches=1,
             shuffle=False,
-            filter_by=None,
-            loader_id=None,
-            buffer_size=4,
             delimiter="|$"
         )
         data = loader.data
@@ -311,11 +427,6 @@ class TestGDSHeteroVertexLoaderREST(unittest.TestCase):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
-    suite.addTest(TestGDSVertexLoader("test_init"))
-    suite.addTest(TestGDSVertexLoader("test_iterate"))
-    suite.addTest(TestGDSVertexLoader("test_all_vertices"))
-    # suite.addTest(TestGDSVertexLoader("test_sasl_plaintext"))
-    # suite.addTest(TestGDSVertexLoader("test_sasl_ssl"))
     suite.addTest(TestGDSVertexLoaderREST("test_init"))
     suite.addTest(TestGDSVertexLoaderREST("test_iterate"))
     suite.addTest(TestGDSVertexLoaderREST("test_all_vertices"))
@@ -325,6 +436,15 @@ if __name__ == "__main__":
     suite.addTest(TestGDSHeteroVertexLoaderREST("test_iterate"))
     suite.addTest(TestGDSHeteroVertexLoaderREST("test_all_vertices"))
     suite.addTest(TestGDSHeteroVertexLoaderREST("test_all_vertices_multichar_delimiter"))
-
+    suite.addTest(TestGDSVertexLoaderKafka("test_init"))
+    suite.addTest(TestGDSVertexLoaderKafka("test_iterate"))
+    suite.addTest(TestGDSVertexLoaderKafka("test_all_vertices"))
+    suite.addTest(TestGDSVertexLoaderKafka("test_all_vertices_multichar_delimiter"))
+    # suite.addTest(TestGDSVertexLoaderKafka("test_sasl_plaintext"))
+    # suite.addTest(TestGDSVertexLoaderKafka("test_sasl_ssl"))
+    suite.addTest(TestGDSHeteroVertexLoaderKafka("test_init"))
+    suite.addTest(TestGDSHeteroVertexLoaderKafka("test_iterate"))
+    suite.addTest(TestGDSHeteroVertexLoaderKafka("test_all_vertices"))
+    suite.addTest(TestGDSHeteroVertexLoaderKafka("test_all_vertices_multichar_delimiter"))
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)

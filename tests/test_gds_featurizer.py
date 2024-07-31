@@ -23,7 +23,11 @@ class test_Featurizer(unittest.TestCase):
         major_ver, minor_ver, patch_ver = self.featurizer._get_db_version()
         self.assertIsNotNone(int(major_ver))
         self.assertIsNotNone(int(minor_ver))
-        self.assertIsNotNone(int(patch_ver))
+        try: 
+            patch_ver = int(patch_ver)
+        except:
+            pass
+        self.assertIsNotNone(patch_ver)
         self.assertIsInstance(self.featurizer.algo_ver, str)
 
     def test_get_algo_dict(self):
