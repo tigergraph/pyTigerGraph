@@ -14,7 +14,6 @@ class AI:
         """
         self.conn = conn
         self.nlqs_host = None
-        self.if4 = conn.getVer().split(".")[0] >= "4"
         if conn.tgCloud:
             # split scheme and host
             scheme, host = conn.host.split("://")
@@ -57,7 +56,8 @@ class AI:
             Returns:
                 Hash of query that was registered.
         """
-        if self.if4:
+        if4 = self.conn.getVer().split(".")[0] >= "4"
+        if if4:
             if description or docstring or param_types:
                 warnings.warn(
                     """When using TigerGraph 4.x, query descriptions, docstrings, and parameter types are not required parameters.
@@ -102,7 +102,8 @@ class AI:
             Returns:
                 Hash of query that was updated.
         """
-        if self.if4:
+        if4 = self.conn.getVer().split(".")[0] >= "4"
+        if if4:
             if description or docstring or param_types:
                 warnings.warn(
                     """When using TigerGraph 4.x, query descriptions, docstrings, and parameter types are not required parameters.
