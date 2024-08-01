@@ -431,7 +431,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             data = {"secret": secret, "token": token}
             if self.useCert is True and self.certPath is not None:
                 res = json.loads(requests.delete(self.restppUrl + "/requesttoken",
-                    data=json.dumps(data)).text)
+                    data=json.dumps(data), verify=False).text)
             else:
                 res = json.loads(requests.delete(self.restppUrl + "/requesttoken",
                     data=json.dumps(data), verify=False).text)
