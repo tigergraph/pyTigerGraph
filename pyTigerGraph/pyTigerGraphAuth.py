@@ -237,20 +237,23 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                     res = requests.request("GET", self.restppUrl +
                         "/requesttoken?secret=" + secret +
                         ("&lifetime=" + str(lifetime) if lifetime else ""), verify=False)
+                    mainVer = 3 # Can't use _verGreaterThan4_0 to check version since you need to set a token for that
+                else:
+                    mainVer = 4
                 res = json.loads(res.text)
 
                 if not res["error"]:
                     success = True
             except Exception as e:
                 raise e
-        elif not(success) and not(secret):
+        elif not(success) and not(secret) and mainVer == 3:
             res = self._post(self.restppUrl+"/requesttoken", authMode="pwd", data=str({"graph": self.graphname}), resKey="results")
             success = True
         elif not(success) and (int(s) < 3 or (int(s) == 3 and int(m) < 5)):
             raise TigerGraphException("Cannot request a token with username/password for versions < 3.5.")
 
 
-        if not success:
+        if not success and mainVer == 3:
             try:
                 data = {"secret": secret}
 
@@ -272,8 +275,8 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                 self.authHeader = {'Authorization': 'Basic {0}'.format(self.base64_credential)}
             
             if res.get("expiration"):
-                # On >=4.1 the format for the date of expiration changed. Convert back to old format
-                if self._versionGreaterThan4_0():
+                # On >=4.1 the format for the date of expiration changed, can't get utc time stamp from it
+                if mainVer == 4:
                     ret = res["token"], res.get("expiration")
                 else:
                     ret = res["token"], res.get("expiration"), \
