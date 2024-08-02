@@ -355,9 +355,9 @@ class pyTigerGraphBase(object):
                 newRestppUrl = self.host + ":14240/restpp"
                 # In tgcloud /restpp can already be in the restpp url. We want to extract everything after the port or /restpp
                 if '/restpp' in url:
-                    url = newRestppUrl + '/' + ''.join(url.split(':')[2].split('/')[2:])
+                    url = newRestppUrl + '/' + '/'.join(url.split(':')[2].split('/')[2:])
                 else:
-                    url = newRestppUrl + '/' + ''.join(url.split(':')[2].split('/')[1:])
+                    url = newRestppUrl + '/' + '/'.join(url.split(':')[2].split('/')[1:])
                 if jsonData:
                     res = requests.request(method, url, headers=_headers, json=_data, params=params, verify=verify)
                 else:
