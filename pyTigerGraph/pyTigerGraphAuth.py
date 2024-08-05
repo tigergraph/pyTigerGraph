@@ -335,8 +335,8 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                     verify=False).text)
             else:
                 res = json.loads(requests.request("PUT", self.restppUrl + "/requesttoken?secret=" +
-                    secret + "&token=" + token + ("&lifetime=" + str(lifetime) if lifetime else "")
-                    ).text)
+                    secret + "&token=" + token + ("&lifetime=" + str(lifetime) if lifetime else ""),
+                    verify=False).text)
             if not res["error"]:
                 success = True
             if "Endpoint is not found from url = /requesttoken" in res["message"]:
@@ -352,7 +352,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                     data=json.dumps(data), verify=False).text)
             else:
                 res = json.loads(requests.put(self.restppUrl + "/requesttoken",
-                    data=json.dumps(data)).text)
+                    data=json.dumps(data), verify=False).text)
             if not res["error"]:
                 success = True
             if "Endpoint is not found from url = /requesttoken" in res["message"]:
@@ -423,7 +423,8 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             else:
                 res = json.loads(
                     requests.request("DELETE",
-                        self.restppUrl + "/requesttoken?secret=" + secret + "&token=" + token).text)
+                        self.restppUrl + "/requesttoken?secret=" + secret + "&token=" + token,
+                        verify=False).text)
             if not res["error"]:
                 success = True
 
