@@ -101,14 +101,10 @@ class test_pyTigerGraphEdge(unittest.TestCase):
     def test_06_getReverseEdge(self):
         res = self.conn.getReverseEdge("edge1_undirected")
         self.assertIsInstance(res, str)
-        self.assertEqual(
-            "", res
-        )  # TODO Change this to None or something in getReverseEdge()?
+        self.assertEqual("", res)  # TODO Change this to None or something in getReverseEdge()?
         res = self.conn.getReverseEdge("edge2_directed")
         self.assertIsInstance(res, str)
-        self.assertEqual(
-            "", res
-        )  # TODO Change this to None or something in getReverseEdge()?
+        self.assertEqual("", res)  # TODO Change this to None or something in getReverseEdge()?
         res = self.conn.getReverseEdge("edge3_directed_with_reverse")
         self.assertIsInstance(res, str)
         self.assertEqual("edge3_directed_with_reverse_reverse_edge", res)

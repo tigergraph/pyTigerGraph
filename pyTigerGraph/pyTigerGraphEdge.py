@@ -550,7 +550,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         edgeType: str,
         targetVertexType: str,
         edges: list,
-        vertexMustExist=True,
+        vertexMustExist=False,
     ) -> int:
         """Upserts multiple edges (of the same type).
 
@@ -653,9 +653,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             else:
                 vals = {}
             # sourceVertexId
-            sourceVertexId = str(
-                e[0]
-            )  # Converted to string as the key in the JSON payload must be a string
+            sourceVertexId = str(e[0])  # Converted to string as the key in the JSON payload must be a string
             if sourceVertexId not in l1:
                 l1[sourceVertexId] = {}
             l2 = l1[sourceVertexId]
@@ -671,9 +669,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                 l4[self.___trgvtxids] = {}
             l4 = l4[self.___trgvtxids]
             # targetVertexId
-            targetVertexId = str(
-                e[1]
-            )  # Converted to string as the key in the JSON payload must be a string
+            targetVertexId = str(e[1])  # Converted to string as the key in the JSON payload must be a string
             if targetVertexId not in l4:
                 l4[targetVertexId] = []
             l4[targetVertexId].append(vals)
