@@ -7,7 +7,7 @@ import json
 import logging
 import time
 import warnings
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Union
 
 import requests
@@ -261,7 +261,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             
             if res.get("expiration"):
                 ret = res["token"], res.get("expiration"), \
-                    datetime.utcfromtimestamp(float(res.get("expiration"))).strftime('%Y-%m-%d %H:%M:%S')
+                    datetime.fromtimestamp(float(res.get("expiration")), timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
             else:
                 ret = res["token"]
 
@@ -276,7 +276,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                 None)
         raise TigerGraphException(res["message"], (res["code"] if "code" in res else None))
 
-    def refreshToken(self, secret: str, token: str = "", lifetime: int = None) -> tuple:
+    def refreshToken(self, secret: str, token: str = "", setToken: bool = True, lifetime: int = None) -> tuple:
         """Extends a token's lifetime.
 
         This function works only if REST++ authentication is enabled. If not, an exception will be
@@ -362,7 +362,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
         if success:
             exp = time.time() + res["expiration"]
             ret = res["token"], int(exp), \
-                datetime.utcfromtimestamp(exp).strftime('%Y-%m-%d %H:%M:%S')
+                datetime.fromtimestamp(exp, timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
 
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(ret))
