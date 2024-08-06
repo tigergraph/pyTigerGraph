@@ -62,10 +62,10 @@ class pyTigerGraphBase(object):
             gsqlVersion:
                 The version of the GSQL client to be used. Effectively the version of the database
                 being connected to.
+            apiToken (Optional):
+                Paremeter for specifying a RESTPP service token. Use `getToken()` to get a token.
             version:
                 DEPRECATED; use `gsqlVersion`.
-            apiToken:
-                DEPRECATED; use `getToken()` with a secret to get a session token.
             useCert:
                 DEPRECATED; the need for a CA certificate is now determined by URL scheme.
             certPath:
@@ -109,12 +109,6 @@ class pyTigerGraphBase(object):
                     "{0}:{1}".format(self.username, self.password).encode("utf-8")).decode("utf-8")
         
         self.authHeader = self._set_auth_header()
-
-        # TODO Remove apiToken parameter
-        if apiToken:
-            warnings.warn(
-                "The `apiToken` parameter is deprecated; use `getToken()` function instead.",
-                DeprecationWarning)
 
         # TODO Eliminate version and use gsqlVersion only, meaning TigerGraph server version
         if gsqlVersion:
