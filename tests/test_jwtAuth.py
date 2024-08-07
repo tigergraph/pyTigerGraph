@@ -25,6 +25,10 @@ class TestJWTTokenAuth(unittest.TestCase):
         
 
     def _requestJWTToken(self):
+        # in >=4.1 API all tokens are JWT tokens
+        if self.conn._versionGreaterThan4_0():
+            return self.conn.getToken(self.conn.createSecret())[0]
+
         # Define the URL
         url = f"{self.conn.host}:{self.conn.gsPort}/gsqlserver/requestjwttoken"
         # Define the data payload
@@ -66,7 +70,11 @@ class TestJWTTokenAuth(unittest.TestCase):
         self.assertIn("4.1", str(dbversion))
 
         # gsql on port 14240
-        res = newconn._get(f"{self.conn.host}:{self.conn.gsPort}/gsqlserver/gsql/simpleauth", authMode="token", resKey=None)
+        if self.conn._versionGreaterThan4_0():
+            res = newconn._get(f"{newconn.gsUrl}/gsql/v1/auth/simple", authMode="token", resKey=None)
+            res = res['results']
+        else:
+            res = newconn._get(f"{self.conn.host}:{self.conn.gsPort}/gsqlserver/gsql/simpleauth", authMode="token", resKey=None)  
         self.assertIn("privileges", res)
 
 

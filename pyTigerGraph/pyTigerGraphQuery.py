@@ -43,11 +43,20 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         Args:
             queryName (str):
                 Name of the query to get metadata of.
+
+        Endpoints:
+            - `POST /gsqlserver/gsql/queryinfo` (In TigerGraph versions 3.x)
+                See xref:tigergraph-server:API:built-in-endpoints.adoc_get_query_metadata
+            - `POST /gsql/v1/queries/signature` (In TigerGraph versions 4.x)
         """
         if logger.level == logging.DEBUG:
             logger.debug("entry: getQueryMetadata")
-        params = {"graph": self.graphname, "query": queryName}
-        res = self._get(self.gsUrl+"/gsqlserver/gsql/queryinfo", params=params, authMode="pwd", resKey="")
+        if self._versionGreaterThan4_0():
+            params = {"graph": self.graphname, "queryName": queryName}
+            res = self._post(self.gsUrl+"/gsql/v1/queries/signature", params=params, authMode="pwd", resKey="")
+        else:    
+            params = {"graph": self.graphname, "query": queryName}
+            res = self._get(self.gsUrl+"/gsqlserver/gsql/queryinfo", params=params, authMode="pwd", resKey="")
         if not res["error"]: 
             if logger.level == logging.DEBUG:
                 logger.debug("exit: getQueryMetadata")
@@ -329,9 +338,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
                 `"key": [(primary_id1, "vertex_type1"), (primary_id2, "vertex_type2"), ...]`
 
 
-        Endpoint:
-            - `POST /gsqlserver/interpreted_query`
+        Endpoints:
+            - `POST /gsqlserver/interpreted_query` (In TigerGraph versions 3.x)
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_an_interpreted_query[Run an interpreted query]
+            - `POST /gsql/v1/queries/interpret` (In TigerGraph versions 4.x)
 
         TODO Add "GSQL-TIMEOUT: <timeout value in ms>" and "RESPONSE-LIMIT: <size limit in byte>"
             plus parameters if applicable to interpreted queries (see runInstalledQuery() above)
@@ -345,8 +355,13 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         if isinstance(params, dict):
             params = self._parseQueryParameters(params)
 
-        ret = self._post(self.gsUrl + "/gsqlserver/interpreted_query", data=queryText,
-            params=params, authMode="pwd")
+        if self._versionGreaterThan4_0():
+            ret = self._post(self.gsUrl + "/gsql/v1/queries/interpret",
+                             params=params, data=queryText, authMode="pwd",
+                             headers={'Content-Type': 'text/plain'})
+        else:
+            ret = self._post(self.gsUrl + "/gsqlserver/interpreted_query", data=queryText,
+                params=params, authMode="pwd")
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -605,6 +620,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         
         Returns:
             The response from the database.
+
+        Endpoints:
+            - `PUT /gsqlserver/gsql/description?graph={graph_name}` (In TigerGraph version 4.0)
+            - `PUT /gsql/v1/description?graph={graph_name}` (In TigerGraph versions >4.0)
         """
         logger.info("entry: describeQuery")
         self.ver = self.getVer()
@@ -626,7 +645,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
             ]}
         if logger.level == logging.DEBUG:
             logger.debug("params: " + params)
-        res = self._put(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname, data=params, authMode="pwd", jsonData=True)
+        if self._versionGreaterThan4_0():
+            res = self._put(self.gsUrl+"/gsql/v1/description?graph="+self.graphname, data=params, authMode="pwd", jsonData=True)
+        else:
+            res = self._put(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname, data=params, authMode="pwd", jsonData=True)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -645,6 +667,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         
         Returns:
             The description of the query(ies).
+        
+        Endpoints:
+            - `GET /gsqlserver/gsql/description?graph={graph_name}` (In TigerGraph version 4.0)
+            - `GET /gsql/v1/description?graph={graph_name}` (In TigerGraph versions >4.0)
         """
         logger.info("entry: getQueryDescription")
         self.ver = self.getVer()
@@ -659,7 +685,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         if isinstance(queryName, list):
             queryName = ",".join(queryName)
 
-        res = self._get(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname+"&query="+queryName, authMode="pwd", resKey=None)
+        if self._versionGreaterThan4_0():
+            res = self._get(self.gsUrl+"/gsql/v1/description?graph="+self.graphname+"&query="+queryName, authMode="pwd", resKey=None)
+        else:    
+            res = self._get(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname+"&query="+queryName, authMode="pwd", resKey=None)
         if not res["error"]:
             if logger.level == logging.DEBUG:
                 logger.debug("exit: getQueryDescription")
@@ -679,6 +708,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         
         Returns:
             The response from the database.
+        
+        Endpoints:
+            - `DELETE /gsqlserver/gsql/description?graph={graph_name}` (In TigerGraph version 4.0)
+            - `DELETE /gsql/v1/description?graph={graph_name}` (In TigerGraph versions >4.0)
         """
         logger.info("entry: dropQueryDescription")
         self.ver = self.getVer()
@@ -694,7 +727,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         else:
             params = {"queries": [queryName]}
         print(params)
-        res = self._delete(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname, authMode="pwd", data=params, jsonData=True, resKey=None)
+        if self._versionGreaterThan4_0():
+            res = self._delete(self.gsUrl+"/gsql/v1/description?graph="+self.graphname, authMode="pwd", data=params, jsonData=True, resKey=None)
+        else:
+            res = self._delete(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname, authMode="pwd", data=params, jsonData=True, resKey=None)
         
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))

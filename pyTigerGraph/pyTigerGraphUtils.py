@@ -55,7 +55,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
             logger.debug("params: " + self._locals(locals()))
 
         if usePost:
-            ret = str(self._post(self.restppUrl + "/echo/" + self.graphname, resKey="message"))
+            ret = str(self._post(self.restppUrl + "/echo/", resKey="message"))
 
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(ret))
@@ -63,7 +63,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
 
             return ret
 
-        ret = str(self._get(self.restppUrl + "/echo/" + self.graphname, resKey="message"))
+        ret = str(self._get(self.restppUrl + "/echo/", resKey="message"))
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -132,43 +132,67 @@ class pyTigerGraphUtils(pyTigerGraphBase):
                 - "diskspace": Disk usage in megabytes by directory
                 - "network": Network traffic in bytes since the service started
                 - "qps": Number of requests per second by endpoint
-                - "servicestate": The state of the service, either online 1 or offline 0
-                - "connection": Number of open TCP connections
+                - "servicestate": The state of the service, either online 1 or offline 0  (Only avaliable in version <4.1)
+                - "connection": Number of open TCP connections (Only avaliable in version <4.1)
             who (str, optional):
-                Name of the component that reported the datapoint.
+                Name of the component that reported the datapoint. (Only avaliable in version <4.1)
             where (str, optional):
                 Name of the node that reported the datapoint.
 
         Returns:
             JSON object of datapoints collected.
+            Note: Output format differs between 3.x and 4.x versions of TigerGraph.
+
+        Endpoints:
+            - `GET /ts3/api/datapoints` (In TigerGraph versions 3.x)
+                See xref:tigergraph-server:API:built-in-endpoints.adoc#_monitor_system_metrics_ts3_deprecated
+            - `POST /informant/metrics/get/{metrics_category}` (In TigerGraph versions 4.x)
+                See xref:tigergraph-server:API:built-in-endpoints.adoc#_monitor_system_metrics_by_category
         """
         if logger.level == logging.DEBUG:
             logger.debug("entry: getSystemMetrics")
         params = {}
+        _json = {} # in >=4.1 we need a json request of different parameter names
+        if from_ts or to_ts:
+            _json["TimeRange"] = {}
         if from_ts:
             params["from"] = from_ts
+            _json['TimeRange']['StartTimestampNS'] = str(from_ts)
         if to_ts:
             params["to"] = to_ts
+            _json['TimeRange']['EndTimestampNS'] = str(from_ts)
         if latest:
             params["latest"] = latest
+            _json["LatestNum"] = str(latest)
         if what:
+            if self._versionGreaterThan4_0():
+                if what == "servicestate" or what == "connection":
+                    raise TigerGraphException("This 'what' parameter is only supported on versions of TigerGraph < 4.1.0.", 0)
+                if what == "cpu" or what == "mem":
+                        what = "cpu-memory" # in >=4.1 cpu and mem have been conjoined into one category
             params["what"] = what
         if who:
             params["who"] = who
         if where:
             params["where"] = where
-        res = self._get(self.gsUrl+"/ts3/api/datapoints", authMode="pwd", params=params, resKey="")
+            _json["HostID"] = where
+        # in >=4.1 the datapoints endpoint has been removed and replaced
+        if self._versionGreaterThan4_0():
+            res = self._post(self.gsUrl+"/informant/metrics/get/"+what, data=_json, jsonData=True, resKey="")
+        else:
+            res = self._get(self.gsUrl+"/ts3/api/datapoints", authMode="pwd", params=params, resKey="")
         if logger.level == logging.DEBUG:
             logger.debug("exit: getSystemMetrics")
         return res
 
 
-    def getQueryPerformance(self, seconds:int = None):
+    def getQueryPerformance(self, seconds:int = 10):
         """Returns real-time query performance statistics over the given time period, as specified by the seconds parameter. 
         
         Args:
             seconds (int, optional):
                 Seconds are measured up to 60, so the seconds parameter must be a positive integer less than or equal to 60.
+                Defaults to 10.
         """
         if logger.level == logging.DEBUG:
             logger.debug("entry: getQueryPerformance")

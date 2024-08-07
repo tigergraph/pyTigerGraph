@@ -4,6 +4,7 @@ from datetime import datetime
 
 from pyTigerGraphUnitTest import make_connection
 
+from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
 class test_pyTigerGraphUtils(unittest.TestCase):
     @classmethod
@@ -53,8 +54,26 @@ class test_pyTigerGraphUtils(unittest.TestCase):
         self.assertEqual(res["message"], "pong")
 
     def test_06_getSystemMetrics(self):
-        res = self.conn.getSystemMetrics(what="mem", latest=10)
-        self.assertEqual(len(res), 10)
+        if self.conn._versionGreaterThan4_0():
+            res = self.conn.getSystemMetrics(what="cpu-memory")
+            self.assertIn("CPUMemoryMetrics", res)
+            res = self.conn.getSystemMetrics(what="diskspace")
+            self.assertIn("DiskMetrics", res)
+            res = self.conn.getSystemMetrics(what="network")
+            self.assertIn("NetworkMetrics", res)
+            res = self.conn.getSystemMetrics(what="qps")
+            self.assertIn("QPSMetrics", res)
+            
+            with self.assertRaises(TigerGraphException) as tge:
+                res = self.conn.getSystemMetrics(what="servicestate")
+            self.assertEqual("This 'what' parameter is only supported on versions of TigerGraph < 4.1.0.", tge.exception.message)
+            
+            with self.assertRaises(TigerGraphException) as tge:
+                res = self.conn.getSystemMetrics(what="connection")
+            self.assertEqual("This 'what' parameter is only supported on versions of TigerGraph < 4.1.0.", tge.exception.message)
+        else:    
+            res = self.conn.getSystemMetrics(what="mem", latest=10)
+            self.assertEqual(len(res), 10)
 
     def test_07_getQueryPerformance(self):
         res = self.conn.getQueryPerformance()

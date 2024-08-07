@@ -6,7 +6,7 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 import logging
 import os
 import sys
-from typing import Union, Tuple
+from typing import Union, Tuple, Dict
 from urllib.parse import urlparse, quote_plus
 import re
 
@@ -36,6 +36,10 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
 
         Returns:
             The output of the statement(s) executed.
+
+        Endpoint:
+            - `POST /gsqlserver/gsql/file` (In TigerGraph versions 3.x)
+            - `POST /gsql/v1/statements` (In TigerGraph versions 4.x)
         """
         logger.info("entry: gsql")
         if logger.level == logging.DEBUG:
@@ -73,11 +77,25 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
         if str(graphname).upper() == "GLOBAL" or str(graphname).upper() == "":
             graphname = ""
 
-        res = self._req("POST",
-                        self.gsUrl + "/gsqlserver/gsql/file",
-                        data=quote_plus(query.encode("utf-8")),
+        # Can't use self._isVersionGreaterThan4_0 since you need a token to call /version url
+        # but you need a secret to get a token and you need this function to get a secret
+        try:
+            res = self._req("POST",
+                        self.gsUrl + "/gsql/v1/statements",
+                        data=query.encode("utf-8"), # quote_plus would not work with the new endpoint
                         authMode="pwd", resKey=None, skipCheck=True,
-                        jsonResponse=False)
+                        jsonResponse=False,
+                        headers={"Content-Type": "text/plain"})
+
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:            
+                res = self._req("POST",
+                                self.gsUrl + "/gsqlserver/gsql/file",
+                                data=quote_plus(query.encode("utf-8")),
+                                authMode="pwd", resKey=None, skipCheck=True,
+                                jsonResponse=False)
+            else:
+                raise e
 
 
         if isinstance(res, list):
@@ -107,6 +125,9 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
 
         Returns:
             Status of the installation.
+
+        Endpoints:
+            - `PUT /gsqlserver/gsql/userdefinedfunction?filename={ExprFunctions or ExprUtil}"` (In TigerGraph versions 3.x)
         """
         logger.info("entry: installUDF")
         if logger.level == logging.DEBUG:
@@ -120,9 +141,15 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                 # A local file: read from disk.
                 with open(ExprFunctions) as infile:
                     data = infile.read()
-            res = self._req("PUT",
-                url="{}/gsqlserver/gsql/userdefinedfunction?filename=ExprFunctions".format(
-                    self.gsUrl), authMode="pwd", data=data, resKey="")
+            
+            if self._versionGreaterThan4_0():
+                res = self._req("PUT",
+                    url="{}/gsql/v1/udt/files/ExprFunctions".format(
+                        self.gsUrl), authMode="pwd", data=data, resKey="")
+            else:    
+                res = self._req("PUT",
+                    url="{}/gsqlserver/gsql/userdefinedfunction?filename=ExprFunctions".format(
+                        self.gsUrl), authMode="pwd", data=data, resKey="")
             if not res["error"]:
                 logger.info("ExprFunctions installed successfully")
             else:
@@ -137,9 +164,14 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                 # A local file: read from disk.
                 with open(ExprUtil) as infile:
                     data = infile.read()
-            res = self._req("PUT",
-                url="{}/gsqlserver/gsql/userdefinedfunction?filename=ExprUtil".format(self.gsUrl),
-                    authMode="pwd", data=data, resKey="")
+            if self._versionGreaterThan4_0():
+                res = self._req("PUT",
+                    url="{}/gsql/v1/udt/files/ExprUtil".format(self.gsUrl),
+                        authMode="pwd", data=data, resKey="")
+            else:
+                res = self._req("PUT",
+                    url="{}/gsqlserver/gsql/userdefinedfunction?filename=ExprUtil".format(self.gsUrl),
+                        authMode="pwd", data=data, resKey="")
             if not res["error"]:
                 logger.info("ExprUtil installed successfully")
             else:
@@ -152,7 +184,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
 
         return 0
 
-    def getUDF(self, ExprFunctions: bool = True, ExprUtil: bool = True) -> Union[str, Tuple[str, str]]:       
+    def getUDF(self, ExprFunctions: bool = True, ExprUtil: bool = True, json_out=False) -> Union[str, Tuple[str, str], Dict[str,str]]:       
         """Get user defined functions (UDF) installed in the database.
         See https://docs.tigergraph.com/gsql-ref/current/querying/func/query-user-defined-functions for details on UDFs.
 
@@ -161,10 +193,18 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                 Whether to get ExprFunctions. Defaults to True.
             ExprUtil (bool, optional):
                 Whether to get ExprUtil. Defaults to True.
+            json_out (bool, optional):
+                Whether to output as JSON. Defaults to False.
+                Only supported on version >=4.1
 
         Returns:
-            str: If only one of `ExprFunctions` or `ExprUtil` is True, return of the content of that file.
-            Tuple[str, str]: content of ExprFunctions and content of ExprUtil.
+            - `str`: If only one of `ExprFunctions` or `ExprUtil` is True and json_out is False, return of the content of that file.
+            - `Tuple[str, str]`: If both `ExprFunctions` and `ExprUtil` are True and json_out is False, return content of ExprFunctions and content of ExprUtil.
+            - `Dict[str, str]`: If json_out is True, return dict with `ExprFunctions` and/or `ExprUtil` as keys and content of file as value.
+
+        Endpoints:
+            - `GET /gsqlserver/gsql/userdefinedfunction?filename={ExprFunctions or ExprUtil}` (In TigerGraph versions 3.x)
+            - `GET /gsql/v1/udt/files/{ExprFunctions or ExprUtil}` (In TigerGraph versions 4.x)
         """
         logger.info("entry: getUDF")
         if logger.level == logging.DEBUG:
@@ -172,29 +212,46 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
 
         functions_ret = None
         if ExprFunctions:
-            resp = self._get(
-                "{}/gsqlserver/gsql/userdefinedfunction".format(self.gsUrl),
-                params={"filename": "ExprFunctions"}, resKey="")
+            if self._versionGreaterThan4_0():
+                resp = self._get(
+                    "{}/gsql/v1/udt/files/ExprFunctions".format(self.gsUrl),
+                    resKey="")
+            else:
+                resp = self._get(
+                    "{}/gsqlserver/gsql/userdefinedfunction".format(self.gsUrl),
+                    params={"filename": "ExprFunctions"}, resKey="")
             if not resp["error"]:
                 logger.info("ExprFunctions get successfully")
                 functions_ret = resp["results"]
+                if type(functions_ret) == dict and not json_out: #Endpoint returns a dict when above 4.0
+                    functions_ret = functions_ret['ExprFunctions']
             else:
                 logger.error("Failed to get ExprFunctions")
                 raise TigerGraphException(resp["message"])
         
         util_ret = None
         if ExprUtil:
-            resp = self._get(
-                "{}/gsqlserver/gsql/userdefinedfunction".format(self.gsUrl),
-                params={"filename": "ExprUtil"}, resKey="")
+            if self._versionGreaterThan4_0():
+                resp = self._get(
+                    "{}/gsql/v1/udt/files/ExprUtil".format(self.gsUrl),
+                    resKey="")
+            else:
+                resp = self._get(
+                    "{}/gsqlserver/gsql/userdefinedfunction".format(self.gsUrl),
+                    params={"filename": "ExprUtil"}, resKey="")
             if not resp["error"]:
                 logger.info("ExprUtil get successfully")
                 util_ret = resp["results"]
+                if type(util_ret) == dict and not json_out: #Endpoint returns a dict when above 4.0
+                    util_ret = util_ret['ExprUtil']
             else:
                 logger.error("Failed to get ExprUtil")
                 raise TigerGraphException(resp["message"])
 
         if (functions_ret is not None) and (util_ret is not None):
+            if json_out:
+                functions_ret.update(util_ret)
+                return functions_ret
             return (functions_ret, util_ret)
         elif functions_ret is not None:
             return functions_ret

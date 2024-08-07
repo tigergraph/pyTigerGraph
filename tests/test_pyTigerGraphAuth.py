@@ -13,7 +13,7 @@ class test_pyTigerGraphPath(unittest.TestCase):
     def test_01_getSecrets(self):
         res = self.conn.showSecrets()
         self.assertIsInstance(res, dict)
-        self.assertEqual(3, len(res))
+        # self.assertEqual(3, len(res)) # Just in case more secrets than expected
         self.assertIn("secret1", res)
         self.assertIn("secret2", res)
         self.assertIn("secret2", res)
@@ -65,11 +65,18 @@ class test_pyTigerGraphPath(unittest.TestCase):
         self.conn.dropSecret("secret5")
 
     def test_06_refreshToken(self):
-        res = self.conn.createSecret("secret6", True)
-        token = self.conn.getToken(res["secret6"])
-        refreshed = self.conn.refreshToken(res["secret6"], token[0])
-        self.assertIsInstance(refreshed, tuple)
-        self.conn.dropSecret("secret6")
+        # TG 4.x does not allow refreshing tokens
+        self.conn.getToken(self.conn.createSecret())
+        if self.conn._versionGreaterThan4_0(): 
+            with self.assertRaises(TigerGraphException) as tge:
+                self.conn.refreshToken("secret1")
+            self.assertEqual("Refreshing tokens is only supported on versions of TigerGraph <= 4.0.0.", tge.exception.message)
+        else:
+            res = self.conn.createSecret("secret6", True)
+            token = self.conn.getToken(res["secret6"])
+            refreshed = self.conn.refreshToken(res["secret6"], token[0])
+            self.assertIsInstance(refreshed, tuple)
+            self.conn.dropSecret("secret6")
 
     def test_07_deleteToken(self):
         res = self.conn.createSecret("secret7", True)

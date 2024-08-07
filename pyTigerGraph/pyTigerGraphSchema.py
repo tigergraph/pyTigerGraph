@@ -22,12 +22,17 @@ class pyTigerGraphSchema(pyTigerGraphBase):
             The list of names of UDTs (defined in the global scope, i.e. not in queries).
 
         Endpoint:
-            GET /gsqlserver/gsql/udtlist
+            GET /gsqlserver/gsql/udtlist (In TigerGraph versions 3.x)
+            GET /gsql/v1/udt/tuples (In TigerGraph versions 4.x)
         """
         logger.info("entry: _getUDTs")
 
-        res = self._get(self.gsUrl + "/gsqlserver/gsql/udtlist?graph=" + self.graphname,
+        if self._versionGreaterThan4_0():
+            res = self._get(self.gsUrl + "/gsql/v1/udt/tuples?graph=" + self.graphname,
             authMode="pwd")
+        else:    
+            res = self._get(self.gsUrl + "/gsqlserver/gsql/udtlist?graph=" + self.graphname,
+                authMode="pwd")
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -110,16 +115,21 @@ class pyTigerGraphSchema(pyTigerGraphBase):
             The schema metadata.
 
         Endpoint:
-            - `GET /gsqlserver/gsql/schema`
+            - `GET /gsqlserver/gsql/schema` (In TigerGraph version 3.x)
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_show_graph_schema_metadata[Show graph schema metadata]
+            - `GET /gsql/v1/schema/graphs/{graph_name}` (In TigerGraph version 4.x)
         """
         logger.info("entry: getSchema")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
         if not self.schema or force:
-            self.schema = self._get(self.gsUrl + "/gsqlserver/gsql/schema?graph=" + self.graphname,
-                authMode="pwd")
+            if self._versionGreaterThan4_0():
+                self.schema = self._get(self.gsUrl + "/gsql/v1/schema/graphs/" + self.graphname,
+                    authMode="pwd")
+            else:
+                self.schema = self._get(self.gsUrl + "/gsqlserver/gsql/schema?graph=" + self.graphname,
+                    authMode="pwd")
         if udts and ("UDTs" not in self.schema or force):
             self.schema["UDTs"] = self._getUDTs()
 

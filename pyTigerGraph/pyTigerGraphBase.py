@@ -166,7 +166,7 @@ class pyTigerGraphBase(object):
         sslPort = str(sslPort)
         if self.tgCloud and (restppPort == "9000" or restppPort == "443"):
             self.restppPort = sslPort
-            self.restppUrl = self.host + ":"+sslPort + "/restpp"
+            self.restppUrl = self.host + ":"+ sslPort + "/restpp"
         else:
             self.restppPort = restppPort
             self.restppUrl = self.host + ":" + self.restppPort
@@ -220,8 +220,12 @@ class pyTigerGraphBase(object):
             logger.info(f"Database version: {version}")
 
             # Check JWT support for GSQL server
-            logger.debug(f"Attempting to get auth info with URL: {self.gsUrl + '/gsqlserver/gsql/simpleauth'}")
-            self._get(f"{self.gsUrl}/gsqlserver/gsql/simpleauth", authMode="token", resKey=None)
+            if self._versionGreaterThan4_0():
+                logger.debug(f"Attempting to get auth info with URL: {self.gsUrl + '/gsql/v1/auth/simple'}")
+                self._get(f"{self.gsUrl}/gsql/v1/auth/simple", authMode="token", resKey=None)    
+            else:
+                logger.debug(f"Attempting to get auth info with URL: {self.gsUrl + '/gsqlserver/gsql/simpleauth'}")
+                self._get(f"{self.gsUrl}/gsqlserver/gsql/simpleauth", authMode="token", resKey=None)
         except requests.exceptions.ConnectionError as e:
             logger.error(f"Connection error: {e}.")
             raise RuntimeError(f"Connection error: {e}.") from e
@@ -313,7 +317,7 @@ class pyTigerGraphBase(object):
         if headers:
             _headers.update(headers)
         if self.awsIamHeaders:
-            if url.startswith(self.gsUrl + "/gsqlserver/"):
+            if url.startswith(self.gsUrl + "/gsqlserver/") or (self._versionGreaterThan4_0() and url.startswith(self.gsUrl)): # version >=4.1 has removed /gsqlserver/
                 _headers.update(self.awsIamHeaders)
         if self.responseConfigHeader:
             _headers.update(self.responseConfigHeader)
@@ -327,11 +331,36 @@ class pyTigerGraphBase(object):
         else:
             verify = True
 
+        _headers.update({"X-User-Agent": "pyTigerGraph"})
+
         if jsonData:
             res = requests.request(method, url, headers=_headers, json=_data, params=params, verify=verify)
         else:
             res = requests.request(method, url, headers=_headers, data=_data, params=params, verify=verify)
-        res.raise_for_status()
+
+        try:
+            res.raise_for_status()
+        except Exception as e:
+            # In TG 4.x the port for restpp has changed from 9000 to 14240. 
+            # This block should only be called once. When using 4.x, using port 9000 should fail so self.restppurl will change to host:14240/restpp
+            # ----
+            # Changes port to 14240, adds /restpp to end to url, tries again, saves changes if successful
+            if self.restppPort == "9000" and "9000" in url:
+                newRestppUrl = self.host + ":14240/restpp"
+                # In tgcloud /restpp can already be in the restpp url. We want to extract everything after the port or /restpp
+                if '/restpp' in url:
+                    url = newRestppUrl + '/' + '/'.join(url.split(':')[2].split('/')[2:])
+                else:
+                    url = newRestppUrl + '/' + '/'.join(url.split(':')[2].split('/')[1:])
+                if jsonData:
+                    res = requests.request(method, url, headers=_headers, json=_data, params=params, verify=verify)
+                else:
+                    res = requests.request(method, url, headers=_headers, data=_data, params=params, verify=verify)
+                res.raise_for_status()
+                self.restppUrl = newRestppUrl
+                self.restppPort = "14240"
+            else:
+                raise e
 
         if jsonResponse:
             try:
@@ -355,7 +384,7 @@ class pyTigerGraphBase(object):
         logger.info("exit: _req (resKey)")
 
         return res[resKey]
-
+    
     def _get(self, url: str, authMode: str = "token", headers: dict = None, resKey: str = "results",
             skipCheck: bool = False, params: Union[dict, list, str] = None, strictJson: bool = True) -> Union[dict, list]:
         """Generic GET method.
@@ -508,9 +537,7 @@ class pyTigerGraphBase(object):
         logger.info("entry: getVersion")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
-
         response = self._get(self.restppUrl+"/version", strictJson=False, resKey="message")
-       
         if raw:
             return response
         res = response.split("\n")
@@ -566,3 +593,14 @@ class pyTigerGraphBase(object):
             return ret
         else:
             raise TigerGraphException("\"" + component + "\" is not a valid component.", None)
+        
+    def _versionGreaterThan4_0(self) -> bool:
+        """Gets if the TigerGraph database version is greater than 4.0 using gerVer().
+
+        Returns:
+            Boolean of whether databse version is greater than 4.0.
+        """
+        version = self.getVer().split('.')
+        if version[0]>="4" and version[1]>"0":
+            return True
+        return False
