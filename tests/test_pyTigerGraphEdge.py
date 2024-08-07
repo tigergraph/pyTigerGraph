@@ -1,7 +1,7 @@
 import json
 import unittest
 
-import pandas
+import pandas as pd
 from pyTigerGraphUnitTest import make_connection
 
 
@@ -13,8 +13,14 @@ class test_pyTigerGraphEdge(unittest.TestCase):
     def test_01_getEdgeTypes(self):
         res = sorted(self.conn.getEdgeTypes())
         self.assertEqual(6, len(res))
-        exp = ["edge1_undirected", "edge2_directed", "edge3_directed_with_reverse",
-            "edge4_many_to_many", "edge5_all_to_all", "edge6_loop"]
+        exp = [
+            "edge1_undirected",
+            "edge2_directed",
+            "edge3_directed_with_reverse",
+            "edge4_many_to_many",
+            "edge5_all_to_all",
+            "edge6_loop",
+        ]
         self.assertEqual(exp, res)
 
     def test_02_getEdgeType(self):
@@ -44,7 +50,9 @@ class test_pyTigerGraphEdge(unittest.TestCase):
         self.assertTrue(res["IsDirected"])
         self.assertIn("Config", res)
         self.assertIn("REVERSE_EDGE", res["Config"])
-        self.assertEqual("edge3_directed_with_reverse_reverse_edge", res["Config"]["REVERSE_EDGE"])
+        self.assertEqual(
+            "edge3_directed_with_reverse_reverse_edge", res["Config"]["REVERSE_EDGE"]
+        )
 
         res = self.conn.getEdgeType("edge4_many_to_many")
         self.assertIsNotNone(res)
@@ -113,8 +121,11 @@ class test_pyTigerGraphEdge(unittest.TestCase):
         self.assertIsInstance(res, int)
         self.assertEqual(8, res)
 
-        res = self.conn.getEdgeCountFrom(sourceVertexType="vertex4", edgeType="edge4_many_to_many",
-            targetVertexType="vertex5")
+        res = self.conn.getEdgeCountFrom(
+            sourceVertexType="vertex4",
+            edgeType="edge4_many_to_many",
+            targetVertexType="vertex5",
+        )
         self.assertIsInstance(res, int)
         self.assertEqual(3, res)
 
@@ -125,25 +136,39 @@ class test_pyTigerGraphEdge(unittest.TestCase):
         self.assertIn("edge2_directed", res)
         self.assertEqual(0, res["edge2_directed"])
         self.assertIn("edge4_many_to_many", res)
-        self.assertEqual(3, res["edge1_undirected"])
+        self.assertEqual(3, res["edge4_many_to_many"])
 
-        res = self.conn.getEdgeCountFrom(sourceVertexType="vertex4", sourceVertexId=1,
-            edgeType="edge1_undirected")
+        res = self.conn.getEdgeCountFrom(
+            sourceVertexType="vertex4", sourceVertexId=1, edgeType="edge1_undirected"
+        )
         self.assertIsInstance(res, int)
         self.assertEqual(3, res)
 
-        res = self.conn.getEdgeCountFrom(sourceVertexType="vertex4", sourceVertexId=1,
-            edgeType="edge1_undirected", where="a01=2")
+        res = self.conn.getEdgeCountFrom(
+            sourceVertexType="vertex4",
+            sourceVertexId=1,
+            edgeType="edge1_undirected",
+            where="a01=2",
+        )
         self.assertIsInstance(res, int)
         self.assertEqual(2, res)
 
-        res = self.conn.getEdgeCountFrom(sourceVertexType="vertex4", sourceVertexId=1,
-            edgeType="edge1_undirected", targetVertexType="vertex5")
+        res = self.conn.getEdgeCountFrom(
+            sourceVertexType="vertex4",
+            sourceVertexId=1,
+            edgeType="edge1_undirected",
+            targetVertexType="vertex5",
+        )
         self.assertIsInstance(res, int)
         self.assertEqual(3, res)
 
-        res = self.conn.getEdgeCountFrom(sourceVertexType="vertex4", sourceVertexId=1,
-            edgeType="edge1_undirected", targetVertexType="vertex5", targetVertexId=3)
+        res = self.conn.getEdgeCountFrom(
+            sourceVertexType="vertex4",
+            sourceVertexId=1,
+            edgeType="edge1_undirected",
+            targetVertexType="vertex5",
+            targetVertexId=3,
+        )
         self.assertIsInstance(res, int)
         self.assertEqual(1, res)
 
@@ -202,13 +227,35 @@ class test_pyTigerGraphEdge(unittest.TestCase):
         #   atomic_level parameters; when they will be added to pyTigerGraphEdge.upsertEdge()
         # TODO Add MultiEdge edge to schema and add test cases
 
+    def test_09_upsertEdge_mustExist(self):
+        res = self.conn.upsertEdge(
+            "vertex6",
+            int(1e6),
+            "edge4_many_to_many",
+            "vertex7",
+            1,
+            vertexMustExist=True,
+        )
+        self.assertIsInstance(res, int)
+        self.assertEqual(0, res)
+
+        res = self.conn.upsertEdge(
+            "vertex6",
+            6,
+            "edge4_many_to_many",
+            "vertex7",
+            int(2e6),
+            vertexMustExist=True,
+        )
+        self.assertIsInstance(res, int)
+        self.assertEqual(0, res)
+
+        # TODO Tests with ack, new_vertex_only, vertex_must_exist, update_vertex_only and
+        #   atomic_level parameters; when they will be added to pyTigerGraphEdge.upsertEdge()
+        # TODO Add MultiEdge edge to schema and add test cases
+
     def test_10_upsertEdges(self):
-        es = [
-            (2, 1),
-            (2, 2),
-            (2, 3),
-            (2, 4)
-        ]
+        es = [(2, 1), (2, 2), (2, 3), (2, 4)]
         res = self.conn.upsertEdges("vertex6", "edge4_many_to_many", "vertex7", es)
         self.assertIsInstance(res, int)
         self.assertEqual(4, res)
@@ -217,28 +264,104 @@ class test_pyTigerGraphEdge(unittest.TestCase):
         self.assertIsInstance(res, int)
         self.assertEqual(14, res)
 
+    def test_10_upsertEdges_mustExist(self):
+        es = [(2, int(1e6)), (int(1e6), 2)]
+        res = self.conn.upsertEdges(
+            "vertex6", "edge4_many_to_many", "vertex7", es, vertexMustExist=True
+        )
+        self.assertIsInstance(res, int)
+        self.assertEqual(0, res)
+
     def test_11_upsertEdgeDataFrame(self):
-        # TODO Implement
-        pass
+        edges = [
+            {
+                "e_type": "edge1_undirected",
+                "directed": False,
+                "from_id": 1,
+                "from_type": "vertex4",
+                "to_id": 4,
+                "to_type": "vertex5",
+                "attributes": {"a01": -100},
+            },
+            {
+                "e_type": "edge1_undirected",
+                "directed": False,
+                "from_id": 1,
+                "from_type": "vertex4",
+                "to_id": 5,
+                "to_type": "vertex5",
+                "attributes": {"a01": -100},
+            },
+        ]
+        df = self.conn.edgeSetToDataFrame(edges)
+        res = self.conn.upsertEdgeDataFrame(
+            df=df,
+            sourceVertexType="vertex4",
+            edgeType="edge1_undirected",
+            targetVertexType="vertex5",
+            from_id="from_id",
+            to_id="to_id",
+            attributes={"a01": "a01"},
+            vertexMustExist=True,
+        )
+        self.assertIsInstance(res, int)
+        self.assertEqual(2, res)
+
+    def test_11_upsertEdgeDataFrame_vertexMustExist(self):
+        edges = [
+            {
+                "e_type": "edge1_undirected",
+                "directed": False,
+                "from_id": -1,
+                "from_type": "vertex4",
+                "to_id": 4,
+                "to_type": "vertex5",
+                "attributes": {"a01": -100},
+            },
+            {
+                "e_type": "edge1_undirected",
+                "directed": False,
+                "from_id": 1,
+                "from_type": "vertex4",
+                "to_id": -5,
+                "to_type": "vertex5",
+                "attributes": {"a01": -100},
+            },
+        ]
+        df = self.conn.edgeSetToDataFrame(edges)
+        res = self.conn.upsertEdgeDataFrame(
+            df=df,
+            sourceVertexType="vertex4",
+            edgeType="edge1_undirected",
+            targetVertexType="vertex5",
+            from_id="from_id",
+            to_id="to_id",
+            attributes={"a01": "a01"},
+            vertexMustExist=True,
+        )
+        self.assertIsInstance(res, int)
+        self.assertEqual(0, res)
 
     def test_12_getEdges(self):
         res = self.conn.getEdges("vertex4", 1)
         self.assertIsInstance(res, list)
-        self.assertEqual(6, len(res))
+        self.assertEqual(8, len(res))
 
         res = self.conn.getEdges("vertex4", 1, "edge1_undirected")
         self.assertIsInstance(res, list)
-        self.assertEqual(3, len(res))
+        self.assertEqual(5, len(res))
 
         res = self.conn.getEdges("vertex4", 1, "edge1_undirected", "vertex5")
         self.assertIsInstance(res, list)
-        self.assertEqual(3, len(res))
+        self.assertEqual(5, len(res))
 
         res = self.conn.getEdges("vertex4", 1, "edge1_undirected", "vertex5", 2)
         self.assertIsInstance(res, list)
         self.assertEqual(1, len(res))
 
-        res = self.conn.getEdges("vertex4", 1, "edge1_undirected", select="a01", where="a01>1")
+        res = self.conn.getEdges(
+            "vertex4", 1, "edge1_undirected", select="a01", where="a01>1"
+        )
         self.assertIsInstance(res, list)
         self.assertEqual(2, len(res))
 
@@ -246,25 +369,27 @@ class test_pyTigerGraphEdge(unittest.TestCase):
         self.assertIsInstance(res, list)
         self.assertEqual(2, len(res))
 
-        res = self.conn.getEdges("vertex4", 1, "edge1_undirected", "vertex5", fmt="json")
+        res = self.conn.getEdges(
+            "vertex4", 1, "edge1_undirected", "vertex5", fmt="json"
+        )
         self.assertIsInstance(res, str)
         res = json.loads(res)
         self.assertIsInstance(res, list)
-        self.assertEqual(3, len(res))
+        self.assertEqual(5, len(res))
 
         res = self.conn.getEdges("vertex4", 1, "edge1_undirected", "vertex5", fmt="df")
-        self.assertIsInstance(res, pandas.DataFrame)
-        self.assertEqual(3, len(res.index))
+        self.assertIsInstance(res, pd.DataFrame)
+        self.assertEqual(5, len(res.index))
 
     def test_13_getEdgesDataFrame(self):
         res = self.conn.getEdgesDataFrame("vertex4", 1, "edge1_undirected", "vertex5")
-        self.assertIsInstance(res, pandas.DataFrame)
-        self.assertEqual(3, len(res.index))
+        self.assertIsInstance(res, pd.DataFrame)
+        self.assertEqual(5, len(res.index))
 
     def test_14_getEdgesByType(self):
         res = self.conn.getEdgesByType("edge1_undirected")
         self.assertIsInstance(res, list)
-        self.assertEqual(8, len(res))
+        self.assertEqual(10, len(res))
 
     def test_15_getEdgesDataFrameByType(self):
         pass
@@ -275,9 +400,11 @@ class test_pyTigerGraphEdge(unittest.TestCase):
         self.assertEqual(1, len(res))
         self.assertIn("edge1_undirected", res)
         self.assertEqual(2, res["edge1_undirected"]["a01"]["MAX"])
-        self.assertEqual(1.875, res["edge1_undirected"]["a01"]["AVG"])
+        self.assertEqual(-18.5, res["edge1_undirected"]["a01"]["AVG"])
 
-        res = self.conn.getEdgeStats(["edge1_undirected", "edge2_directed", "edge6_loop"])
+        res = self.conn.getEdgeStats(
+            ["edge1_undirected", "edge2_directed", "edge6_loop"]
+        )
         self.assertIsInstance(res, dict)
         self.assertEqual(3, len(res))
         self.assertIn("edge1_undirected", res)
@@ -287,8 +414,9 @@ class test_pyTigerGraphEdge(unittest.TestCase):
         self.assertIn("edge6_loop", res)
         self.assertEqual({}, res["edge6_loop"])
 
-        res = self.conn.getEdgeStats(["edge1_undirected", "edge2_directed", "edge6_loop"],
-            skipNA=True)
+        res = self.conn.getEdgeStats(
+            ["edge1_undirected", "edge2_directed", "edge6_loop"], skipNA=True
+        )
         self.assertIsInstance(res, dict)
         self.assertEqual(2, len(res))
         self.assertIn("edge1_undirected", res)
@@ -336,5 +464,5 @@ class test_pyTigerGraphEdge(unittest.TestCase):
         pass
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -459,15 +459,23 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
 
         return ret
 
-    def upsertEdge(self, sourceVertexType: str, sourceVertexId: str, edgeType: str,
-            targetVertexType: str, targetVertexId: str, attributes: dict = None) -> int:
+    def upsertEdge(
+        self,
+        sourceVertexType: str,
+        sourceVertexId: str,
+        edgeType: str,
+        targetVertexType: str,
+        targetVertexId: str,
+        attributes: dict = None,
+        vertexMustExist: bool = False,
+    ) -> int:
         """Upserts an edge.
 
         Data is upserted:
 
         - If edge is not yet present in graph, it will be created (see special case below).
         - If it's already in the graph, it is updated with the values specified in the request.
-        - If `vertex_must_exist` is True then edge will only be created if both vertex exists
+        - If `vertex_must_exist` is True then edge will only be created if both vertices exists
             in graph. Otherwise missing vertices are created with the new edge; the newly created
             vertices' attributes (if any) will be created with default values.
 
@@ -511,22 +519,24 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             attributes = {}
 
         vals = self._upsertAttrs(attributes)
-        data = json.dumps({
-            "edges": {
-                sourceVertexType: {
-                    sourceVertexId: {
-                        edgeType: {
-                            targetVertexType: {
-                                targetVertexId: vals
-                            }
+        data = json.dumps(
+            {
+                "edges": {
+                    sourceVertexType: {
+                        sourceVertexId: {
+                            edgeType: {targetVertexType: {targetVertexId: vals}}
                         }
                     }
                 }
             }
-        })
+        )
 
-        ret = self._post(self.restppUrl + "/graph/" + self.graphname, data=data)[0][
-            "accepted_edges"]
+        params = {"vertex_must_exist": vertexMustExist}
+        ret = self._post(
+            self.restppUrl + "/graph/" + self.graphname,
+            data=data,
+            params=params,
+        )[0]["accepted_edges"]
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -534,8 +544,14 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
 
         return ret
 
-    def upsertEdges(self, sourceVertexType: str, edgeType: str, targetVertexType: str,
-            edges: list) -> int:
+    def upsertEdges(
+        self,
+        sourceVertexType: str,
+        edgeType: str,
+        targetVertexType: str,
+        edges: list,
+        vertexMustExist=False,
+    ) -> int:
         """Upserts multiple edges (of the same type).
 
         Args:
@@ -607,11 +623,11 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                             for v3 in v2:
                                 if c3 > 0:
                                     ret += ","
-                                ret += json.dumps(k2) + ':' + json.dumps(v3)
+                                ret += json.dumps(k2) + ":" + json.dumps(v3)
                                 c3 += 1
                             c2 += 1
                     else:
-                        ret += json.dumps(k1) + ':' + _dumps(data[k1])
+                        ret += json.dumps(k1) + ":" + _dumps(data[k1])
                     c1 += 1
             return "{" + ret + "}"
 
@@ -660,8 +676,10 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
 
         data = _dumps({"edges": data})
 
-        ret = self._post(self.restppUrl + "/graph/" + self.graphname, data=data)[0][
-            "accepted_edges"]
+        params = {"vertex_must_exist": vertexMustExist}
+        ret = self._post(
+            self.restppUrl + "/graph/" + self.graphname, data=data, params=params
+        )[0]["accepted_edges"]
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -669,9 +687,17 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
 
         return ret
 
-    def upsertEdgeDataFrame(self, df: 'pd.DataFrame', sourceVertexType: str, edgeType: str,
-            targetVertexType: str, from_id: str = "", to_id: str = "",
-            attributes: dict = None) -> int:
+    def upsertEdgeDataFrame(
+        self,
+        df: "pd.DataFrame",
+        sourceVertexType: str,
+        edgeType: str,
+        targetVertexType: str,
+        from_id: str = "",
+        to_id: str = "",
+        attributes: dict = None,
+        vertexMustExist: bool = False,
+    ) -> int:
         """Upserts edges from a Pandas DataFrame.
 
         Args:
@@ -709,11 +735,20 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             json_up[-1] = (
                 index if from_id is None else json_up[-1][from_id],
                 index if to_id is None else json_up[-1][to_id],
-                json_up[-1] if attributes is None
-                else {target: json_up[-1][source] for target, source in attributes.items()}
+                json_up[-1]
+                if attributes is None
+                else {
+                    target: json_up[-1][source] for target, source in attributes.items()
+                },
             )
 
-        ret = self.upsertEdges(sourceVertexType, edgeType, targetVertexType, json_up)
+        ret = self.upsertEdges(
+            sourceVertexType,
+            edgeType,
+            targetVertexType,
+            json_up,
+            vertexMustExist=vertexMustExist,
+        )
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
