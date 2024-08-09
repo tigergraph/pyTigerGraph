@@ -1,31 +1,31 @@
 import unittest
 from multiprocessing import Pool
 
-from .pyTigerGraphUnitTest import make_connection
-from pyTigerGraph.schema import Graph, Vertex, Edge
+from .pyTigerGraphUnitTestAsync import make_connection
+from pyTigerGraph.async_ver2.schema import AsyncGraph, Vertex, Edge
 from typing import List, Dict, Union
 from datetime import datetime
 from dataclasses import dataclass
 
 
 
-class TestHomogeneousOGM(unittest.TestCase):
+class TestHomogeneousOGM(unittest.IsolatedAsyncioTestCase):
     @classmethod
-    def setUpClass(cls):
-        cls.conn = make_connection(graphname="Cora")
+    async def asyncSetUp(self):
+        self.conn = await make_connection(graphname="Cora")
 
-    def test_init(self):
-        g = Graph(self.conn)
+    async def test_init(self):
+        g = await AsyncGraph.create(self.conn)
         attrs = g.vertex_types["Paper"].attributes
         self.assertIn("x", attrs.keys())
 
-    def test_type(self):
-        g = Graph(self.conn)
+    async def test_type(self):
+        g = await AsyncGraph.create(self.conn)
         attrs = g.vertex_types["Paper"].attributes
         self.assertEqual(str(attrs["y"]), "<class 'int'>")
 
-    def test_add_vertex_type(self):
-        g = Graph(self.conn)
+    async def test_add_vertex_type(self):
+        g = await AsyncGraph.create(self.conn)
         @dataclass
         class AccountHolder(Vertex):
             name: str
@@ -39,12 +39,12 @@ class TestHomogeneousOGM(unittest.TestCase):
 
         g.add_vertex_type(AccountHolder)
 
-        g.commit_changes()
+        await g.commit_changes()
 
         self.assertIn("name", g.vertex_types["AccountHolder"].attributes.keys())
 
-    def test_add_edge_type(self):
-        g = Graph(self.conn)
+    async def test_add_edge_type(self):
+        g = await AsyncGraph.create(self.conn)
 
         @dataclass
         class AccountHolder(Vertex):
@@ -65,13 +65,13 @@ class TestHomogeneousOGM(unittest.TestCase):
 
         g.add_edge_type(HOLDS_ACCOUNT)
 
-        g.commit_changes()
+        await g.commit_changes()
 
         self.assertIn("opened_on", g.edge_types["HOLDS_ACCOUNT"].attributes.keys())
 
 
-    def test_add_multi_target_edge_type(self):
-        g = Graph(self.conn)
+    async def test_add_multi_target_edge_type(self):
+        g = await AsyncGraph.create(self.conn)
 
         @dataclass
         class AccountHolder(Vertex):
@@ -92,93 +92,94 @@ class TestHomogeneousOGM(unittest.TestCase):
 
         g.add_edge_type(SOME_EDGE_NAME)
 
-        g.commit_changes()
+        await g.commit_changes()
 
         self.assertIn("some_attr", g.edge_types["SOME_EDGE_NAME"].attributes.keys())
     
-    def test_drop_edge_type(self):
-        g = Graph(self.conn)
+    async def test_drop_edge_type(self):
+        g = await AsyncGraph.create(self.conn)
 
         g.remove_edge_type(g.edge_types["HOLDS_ACCOUNT"])
 
-        g.commit_changes()
+        await g.commit_changes()
         
         self.assertNotIn("HOLDS_ACOUNT", g.edge_types)
 
-    def test_drop_multi_target_edge_type(self):
-        g = Graph(self.conn)
+    async def test_drop_multi_target_edge_type(self):
+        g = await AsyncGraph.create(self.conn)
 
         g.remove_edge_type(g.edge_types["SOME_EDGE_NAME"])
 
-        g.commit_changes()
+        await g.commit_changes()
         
         self.assertNotIn("SOME_EDGE_NAME", g.edge_types)
 
-    def test_drop_vertex_type(self):
-        g = Graph(self.conn)
+    async def test_drop_vertex_type(self):
+        g = await AsyncGraph.create(self.conn)
 
         g.remove_vertex_type(g.vertex_types["AccountHolder"])
 
-        g.commit_changes()
+        await g.commit_changes()
 
         self.assertNotIn("AccountHolder", g.vertex_types)
 
-    def test_add_vertex_attribute_default_value(self):
-        g = Graph(self.conn)
+    async def test_add_vertex_attribute_default_value(self):
+        g = await AsyncGraph.create(self.conn)
 
         g.vertex_types["Paper"].add_attribute("ThisIsATest", str, "test_default")
 
-        g.commit_changes()
+        await g.commit_changes()
 
         self.assertIn("ThisIsATest", g.vertex_types["Paper"].attributes.keys())
-        sample = self.conn.getVertices("Paper", limit=1)[0]["attributes"]["ThisIsATest"]
+        sample = await self.conn.getVertices("Paper", limit=1)
+        sample = sample[0]["attributes"]["ThisIsATest"]
 
         self.assertEqual("'test_default'", sample)
 
-    def test_drop_vertex_attribute(self):
-        g = Graph(self.conn)
+    async def test_drop_vertex_attribute(self):
+        g = await AsyncGraph.create(self.conn)
 
         g.vertex_types["Paper"].remove_attribute("ThisIsATest")
 
-        g.commit_changes()
+        await g.commit_changes()
 
         self.assertNotIn("ThisIsATest", g.vertex_types["Paper"].attributes.keys())
 
 
-class TestHeterogeneousOGM(unittest.TestCase):
+class TestHeterogeneousOGM(unittest.IsolatedAsyncioTestCase):
     @classmethod
-    def setUpClass(cls):
-        cls.conn = make_connection(graphname="hetero")
+    async def asyncSetUp(self):
+        self.conn = await make_connection(graphname="hetero")
 
-    def test_init(self):
-        g = Graph(self.conn)
+    async def test_init(self):
+        g = await AsyncGraph.create(self.conn)
         self.assertEqual(len(g.vertex_types.keys()), 3)
     
-    def test_type(self):
-        g = Graph(self.conn)
+    async def test_type(self):
+        g = await AsyncGraph.create(self.conn)
         attrs = g.vertex_types["v0"].attributes
         self.assertEqual(str(attrs["train_mask"]), "<class 'bool'>")
 
-    def test_outgoing_edge_types(self):
-        g = Graph(self.conn)
+    async def test_outgoing_edge_types(self):
+        g = await AsyncGraph.create(self.conn)
         outgoing_edge_types = g.vertex_types["v0"].outgoing_edge_types
         self.assertEqual(outgoing_edge_types, {"v0v0": g.edge_types["v0v0"]})
 
-    def test_incoming_edge_types(self):
-        g = Graph(self.conn)
+    async def test_incoming_edge_types(self):
+        g = await AsyncGraph.create(self.conn)
         incoming_edge_types = g.vertex_types["v0"].incoming_edge_types
         self.assertEqual(incoming_edge_types, {"v0v0": g.edge_types["v0v0"],
                                                "v2v0": g.edge_types["v2v0"]})
 
 
-class TestCreateGraph(unittest.TestCase):
+class TestCreateGraph(unittest.IsolatedAsyncioTestCase):
     @classmethod
-    def setUpClass(cls):
-        cls.conn = make_connection()
+    async def asyncSetUp(self):
+        self.conn = await make_connection()
 
-    def test_create(self):
+    async def test_create(self):
         self.conn.graphname = "Cora2"
-        g = Graph()
+        g = await AsyncGraph.create()
 
         @dataclass
         class Paper(Vertex):
@@ -198,11 +199,11 @@ class TestCreateGraph(unittest.TestCase):
         g.add_vertex_type(Paper)
         g.add_edge_type(CITES)
 
-        g.commit_changes(self.conn)
+        await g.commit_changes(self.conn)
 
         self.assertIn("id", g.vertex_types["Paper"].attributes.keys())
 
-        self.conn.gsql("DROP GRAPH Cora2")
+        await self.conn.gsql("DROP GRAPH Cora2")
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()

@@ -2,14 +2,15 @@ import re
 import unittest
 from datetime import datetime
 
-from .pyTigerGraphUnitTest import make_connection
+from .pyTigerGraphUnitTestAsync import make_connection
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
-class test_pyTigerGraphUtils(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.conn = make_connection(graphname="tests")
+import asyncio
+
+class test_pyTigerGraphUtils(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        self.conn = await make_connection()
 
     def test_01_safeChar(self):
         res = self.conn._safeChar(" _space")
@@ -29,63 +30,63 @@ class test_pyTigerGraphUtils(unittest.TestCase):
         res = self.conn._safeChar(True)
         self.assertEqual("True", res)
 
-    def test_02_echo(self):
-        res = self.conn.echo()
+    async def test_02_echo(self):
+        res = await self.conn.echo()
         self.assertIsInstance(res, str)
         self.assertEqual("Hello GSQL", res)
-        res = self.conn.echo(True)
+        res = await self.conn.echo(True)
         self.assertIsInstance(res, str)
         self.assertEqual("Hello GSQL", res)
 
-    def test_03_getVersion(self):
-        res = self.conn.getVersion()
+    async def test_03_getVersion(self):
+        res = await self.conn.getVersion()
         self.assertIsInstance(res, list)
         self.assertGreater(len(res), 0)
 
-    def test_04_getVer(self):
-        res = self.conn.getVer()
+    async def test_04_getVer(self):
+        res = await self.conn.getVer()
         self.assertIsInstance(res, str)
         m = re.match(r"[0-9]+\.[0-9]+\.[0-9]", res)
         self.assertIsNotNone(m)
 
-    def test_05_ping(self):
-        res = self.conn.ping()
+    async def test_05_ping(self):
+        res = await self.conn.ping()
         self.assertIsInstance(res, dict)
         self.assertEqual(res["message"], "pong")
 
-    def test_06_getSystemMetrics(self):
-        if self.conn._versionGreaterThan4_0():
-            res = self.conn.getSystemMetrics(what="cpu-memory")
+    async def test_06_getSystemMetrics(self):
+        if await self.conn._versionGreaterThan4_0():
+            res = await self.conn.getSystemMetrics(what="cpu-memory")
             self.assertIn("CPUMemoryMetrics", res)
-            res = self.conn.getSystemMetrics(what="diskspace")
+            res = await self.conn.getSystemMetrics(what="diskspace")
             self.assertIn("DiskMetrics", res)
-            res = self.conn.getSystemMetrics(what="network")
+            res = await self.conn.getSystemMetrics(what="network")
             self.assertIn("NetworkMetrics", res)
-            res = self.conn.getSystemMetrics(what="qps")
+            res = await self.conn.getSystemMetrics(what="qps")
             self.assertIn("QPSMetrics", res)
             
             with self.assertRaises(TigerGraphException) as tge:
-                res = self.conn.getSystemMetrics(what="servicestate")
+                res = await self.conn.getSystemMetrics(what="servicestate")
             self.assertEqual("This 'what' parameter is only supported on versions of TigerGraph < 4.1.0.", tge.exception.message)
             
             with self.assertRaises(TigerGraphException) as tge:
-                res = self.conn.getSystemMetrics(what="connection")
+                res = await self.conn.getSystemMetrics(what="connection")
             self.assertEqual("This 'what' parameter is only supported on versions of TigerGraph < 4.1.0.", tge.exception.message)
         else:    
-            res = self.conn.getSystemMetrics(what="mem", latest=10)
+            res = await self.conn.getSystemMetrics(what="mem", latest=10)
             self.assertEqual(len(res), 10)
 
-    def test_07_getQueryPerformance(self):
-        res = self.conn.getQueryPerformance()
+    async def test_07_getQueryPerformance(self):
+        res = await self.conn.getQueryPerformance()
         self.assertIn("CompletedRequests", str(res))
 
-    def test_08_getServiceStatus(self):
+    async def test_08_getServiceStatus(self):
         req = {"ServiceDescriptors":[{"ServiceName": "GSQL"}]}
-        res = self.conn.getServiceStatus(req)
+        res = await self.conn.getServiceStatus(req)
         self.assertEqual(res["ServiceStatusEvents"][0]["ServiceStatus"], "Online")
 
-    def test_09_rebuildGraph(self):
-        res = self.conn.rebuildGraph()
+    async def test_09_rebuildGraph(self):
+        res = await self.conn.rebuildGraph()
         self.assertEqual(res["message"], "RebuildNow finished, please check details in the folder: /tmp/rebuildnow")
 
 if __name__ == '__main__':

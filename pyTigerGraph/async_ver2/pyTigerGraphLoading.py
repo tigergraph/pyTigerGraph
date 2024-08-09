@@ -6,34 +6,15 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 import logging
 import warnings
 from typing import Union
-from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
+from pyTigerGraph.async_ver2.pyTigerGraphBase import AsyncPyTigerGraphBase
+from pyTigerGraph.pyTigerGraphLoading import pyTigerGraphLoading
 
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphLoading(pyTigerGraphBase):
+class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
 
-    def _prepRunLoadingJobWithFile(self, filePath, jobName, fileTag, sep, eol):
-        '''read file contents for runLoadingJobWithFile()'''
-        try:
-            data = open(filePath, 'rb').read()
-            params = {
-                "tag": jobName,
-                "filename": fileTag,
-            }
-            if sep is not None:
-                params["sep"] = sep
-            if eol is not None:
-                params["eol"] = eol
-            return data, params
-        except OSError as ose:
-            logger.error(ose.strerror)
-            logger.info("exit: runLoadingJobWithFile")
-
-            return None, None
-            # TODO Should throw exception instead?
-
-    def runLoadingJobWithFile(self, filePath: str, fileTag: str, jobName: str, sep: str = None,
+    async def runLoadingJobWithFile(self, filePath: str, fileTag: str, jobName: str, sep: str = None,
             eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000) -> Union[dict, None]:
         """Execute a loading job with the referenced file.
 
@@ -75,7 +56,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             # failed to read file
             return None
 
-        res = self._req("POST", self.restppUrl + "/ddl/" + self.graphname, params=params, data=data,
+        res = await self._req("POST", self.restppUrl + "/ddl/" + self.graphname, params=params, data=data,
             headers={"RESPONSE-LIMIT": str(sizeLimit), "GSQL-TIMEOUT": str(timeout)})
 
         if logger.level == logging.DEBUG:
@@ -84,7 +65,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
 
         return res
 
-    def uploadFile(self, filePath, fileTag, jobName="", sep=None, eol=None, timeout=16000,
+    async def uploadFile(self, filePath, fileTag, jobName="", sep=None, eol=None, timeout=16000,
             sizeLimit=128000000) -> dict:
         """DEPRECATED
 
@@ -94,6 +75,6 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             "The `uploadFile()` function is deprecated; use `runLoadingJobWithFile()` instead.",
             DeprecationWarning)
 
-        return self.runLoadingJobWithFile(filePath, fileTag, jobName, sep, eol, timeout, sizeLimit)
+        return await self.runLoadingJobWithFile(filePath, fileTag, jobName, sep, eol, timeout, sizeLimit)
 
     # TODO POST /restpploader/{graph_name}

@@ -1,11 +1,11 @@
 import unittest
 
-from pyTigerGraphUnitTest import make_connection
+from .pyTigerGraphUnitTest import make_connection
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
 
-class test_pyTigerGraphPath(unittest.TestCase):
+class test_pyTigerGraphAuth(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.conn = make_connection()
@@ -60,28 +60,30 @@ class test_pyTigerGraphPath(unittest.TestCase):
 
     def test_05_getToken(self):
         res = self.conn.createSecret("secret5", True)
-        token = self.conn.getToken(res["secret5"])
+        token = self.conn.newGetToken(res["secret5"])
         self.assertIsInstance(token, tuple)
         self.conn.dropSecret("secret5")
 
     def test_06_refreshToken(self):
         # TG 4.x does not allow refreshing tokens
-        self.conn.getToken(self.conn.createSecret())
+        self.conn.newGetToken(self.conn.createSecret())
         if self.conn._versionGreaterThan4_0(): 
             with self.assertRaises(TigerGraphException) as tge:
-                self.conn.refreshToken("secret1")
+                self.conn.newRefreshToken("secret1")
             self.assertEqual("Refreshing tokens is only supported on versions of TigerGraph <= 4.0.0.", tge.exception.message)
         else:
+            self.conn.dropSecret("secret6", ignoreErrors=True)
             res = self.conn.createSecret("secret6", True)
-            token = self.conn.getToken(res["secret6"])
-            refreshed = self.conn.refreshToken(res["secret6"], token[0])
+            token = self.conn.newGetToken(res["secret6"])
+            refreshed = self.conn.newRefreshToken(res["secret6"], token[0])
             self.assertIsInstance(refreshed, tuple)
             self.conn.dropSecret("secret6")
 
     def test_07_deleteToken(self):
+        self.conn.dropSecret("secret7", ignoreErrors=True)
         res = self.conn.createSecret("secret7", True)
-        token = self.conn.getToken(res["secret7"])
-        self.assertTrue(self.conn.deleteToken(res["secret7"], token[0]))
+        token = self.conn.newGetToken(res["secret7"])
+        self.assertTrue(self.conn.newDeleteToken(res["secret7"], token[0]))
         self.conn.dropSecret("secret7")
 
 if __name__ == '__main__':

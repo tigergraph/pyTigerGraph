@@ -4,16 +4,16 @@ The Object-Oriented Schema functionality allows users to manipulate schema eleme
 To add an AccountHolder vertex and a HOLDS_ACCOUNT edge to the Ethereum dataset, simply:
 
 ```
-from pyTigerGraph import TigerGraphConnection
+from pyTigerGraph import AsyncTigerGraphConnection
 from pyTigerGraph.schema import Graph, Vertex, Edge
 
 from datetime import datetime
 from typing import List, Dict, Optional, Union
 from dataclasses import dataclass, fields
 
-conn = TigerGraphConnection(host="http://YOUR_HOSTNAME_HERE", graphname="Ethereum")
+conn = AsyncTigerGraphConnection(host="http://YOUR_HOSTNAME_HERE", graphname="Ethereum")
 
-g = Graph(conn)
+g = await AsyncGraph.create(conn)
 
 
 @dataclass
@@ -36,22 +36,22 @@ class HOLDS_ACCOUNT(Edge):
     reverse_edge: str = "ACCOUNT_HELD_BY"
     discriminator: str = "opened_on"
 
-g.add_vertex_type(AccountHolder)
+await g.add_vertex_type(AccountHolder)
 
-g.add_edge_type(HOLDS_ACCOUNT)
+await g.add_edge_type(HOLDS_ACCOUNT)
 
-g.commit_changes()
+await g.commit_changes()
 ```
 
 Users can define an entire graph schema in the approach below. Using the Cora dataset example, the schema would look something like this:
 
 ```
-from pyTigerGraph import TigerGraphConnection
-from pyTigerGraph.schema import Graph, Vertex, Edge
+from pyTigerGraph import AsyncTigerGraphConnection
+from pyTigerGraph.schema import AsyncGraph, Vertex, Edge
 
-conn = TigerGraphConnection("http://YOUR_HOSTNAME_HERE")
+conn = AsyncTigerGraphConnection("http://YOUR_HOSTNAME_HERE")
 
-g = Graph()
+g = await AsyncGraph.create()
 
 @dataclass
 class Paper(Vertex):
@@ -68,17 +68,19 @@ class CITES(Edge):
     is_directed: bool = True
     reverse_edge: str = "R_CITES"
 
-g.add_vertex_type(Paper)
-g.add_edge_type(CITES)
+await g.add_vertex_type(Paper)
+await g.add_edge_type(CITES)
 
-g.commit_changes(conn)
+await g.commit_changes(conn)
 ```
 """
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 from pyTigerGraph.pyTigerGraph import TigerGraphConnection
+from pyTigerGraph.schema import Graph
 from dataclasses import dataclass, make_dataclass, fields, _MISSING_TYPE
 from typing import List, Dict, Union, get_origin, get_args
+from typing_extensions import Self
 from datetime import datetime
 import json
 import hashlib
@@ -381,7 +383,7 @@ class Edge:
     def __repr__(self):
         return self.edge_type
 
-class Graph():
+class AsyncGraph(Graph):
     """Graph Object
 
     The graph object can be used in conjunction with a TigerGraphConnection to retrieve the schema of the connected graph.
@@ -394,264 +396,29 @@ class Graph():
     g = Graph(conn)
     ```
     """
-    def __init__(self, conn:TigerGraphConnection = None):
+    # __init__ is being replaced by create() so we can make it async to call getSchema()
+    @classmethod
+    async def create(cls, conn:TigerGraphConnection = None) -> Self:
         """Graph class for schema representation.
 
         Args:
             conn (TigerGraphConnection, optional):
                 Connection to a TigerGraph database. Defaults to None.
         """
+        self = cls()
         self._vertex_types = {}
         self._edge_types = {}
         self._vertex_edits = {"ADD": {}, "DELETE": {}}
         self._edge_edits = {"ADD": {}, "DELETE": {}}
         if conn:
-            db_rep = conn.getSchema(force=True)
+            db_rep = await conn.getSchema(force=True)
             self.setUpConn(conn, db_rep)
+        return self
 
-    def setUpConn(self, conn, db_rep):
-        self.graphname = db_rep["GraphName"]
-        for v_type in db_rep["VertexTypes"]:
-            vert = make_dataclass(v_type["Name"],
-                                [(attr["AttributeName"], _get_type(_parse_type(attr)), None) for attr in v_type["Attributes"]] + 
-                                [(v_type["PrimaryId"]["AttributeName"], _get_type(_parse_type(v_type["PrimaryId"])), None),
-                                    ("primary_id", str, v_type["PrimaryId"]["AttributeName"]),
-                                    ("primary_id_as_attribute", bool, v_type["PrimaryId"].get("PrimaryIdAsAttribute", False))],
-                                bases=(Vertex,), repr=False)
-            self._vertex_types[v_type["Name"]] = vert
+    def __init__(self):
+        pass
 
-        for e_type in db_rep["EdgeTypes"]:
-            if e_type["FromVertexTypeName"] == "*":
-                source_vertices = [self._vertex_types[x["From"]] for x in e_type["EdgePairs"]]
-            else:
-                source_vertices = self._vertex_types[e_type["FromVertexTypeName"]]
-            if e_type["ToVertexTypeName"] == "*":
-                target_vertices = [self._vertex_types[x["To"]] for x in e_type["EdgePairs"]]
-            else:
-                target_vertices = self._vertex_types[e_type["ToVertexTypeName"]]
-                
-            e = make_dataclass(e_type["Name"],
-                                [(attr["AttributeName"], _get_type(_parse_type(attr)), None) for attr in e_type["Attributes"]] + 
-                                [("from_vertex", source_vertices, None),
-                                    ("to_vertex", target_vertices, None),
-                                    ("is_directed", bool, e_type["IsDirected"]),
-                                    ("reverse_edge", str, e_type["Config"].get("REVERSE_EDGE"))],
-                                bases=(Edge,), repr=False)
-            if isinstance(target_vertices, list):
-                for tgt_v in target_vertices:
-                    tgt_v.incoming_edge_types[e_type["Name"]] = e
-            else:
-                target_vertices.incoming_edge_types[e_type["Name"]] = e
-            if isinstance(source_vertices, list):
-                for src_v in source_vertices:
-                    src_v.outgoing_edge_types[e_type["Name"]] = e
-            else:
-                source_vertices.outgoing_edge_types[e_type["Name"]] = e
-            
-            self._edge_types[e_type["Name"]] = e
-        self.conn = conn
-
-    def add_vertex_type(self, vertex: Vertex, outdegree_stats=True):
-        """Add a vertex type to the list of changes to commit to the graph.
-
-        Args:
-            vertex (Vertex):
-                The vertex type definition to add to the addition cache.
-            outdegree_stats (bool, optional):
-                Whether or not to include "WITH OUTEGREE_STATS=TRUE" in the schema definition.
-                Used for caching outdegree, defaults to True.
-        """
-        if vertex.__name__ in self._vertex_types.keys():
-            raise TigerGraphException(vertex.__name__+" already exists in the database")
-        if vertex.__name__ in self._vertex_edits.keys():
-            warnings.warn(vertex.__name__ + " already in staged edits. Overwriting previous edits.")
-        gsql_def = "ADD VERTEX "+vertex.__name__+"("
-        attrs = vertex.attributes
-        primary_id = None
-        primary_id_as_attribute = None
-        primary_id_type = None
-        for field in fields(vertex):
-            if field.name == "primary_id":
-                primary_id = field.default
-                primary_id_type = field.type
-            if field.name == "primary_id_as_attribute":
-                primary_id_as_attribute = field.default
-
-        if not(primary_id):
-            raise TigerGraphException("primary_id of vertex type "+str(vertex.__name__)+" not defined")
-
-        if not(primary_id_as_attribute):
-            raise TigerGraphException("primary_id_as_attribute of vertex type "+str(vertex.__name__)+" not defined")
-
-        if not(_py_to_tg_type(primary_id_type).lower() in PRIMARY_ID_TYPES):
-            raise TigerGraphException(str(primary_id_type), "is not a supported type for primary IDs.")
-
-        gsql_def += "PRIMARY_ID "+primary_id+" "+_py_to_tg_type(primary_id_type)
-        for attr in attrs.keys():
-            if attr == primary_id or attr == "primary_id" or attr == "primary_id_as_attribute":
-                continue
-            else:
-                gsql_def += ", "
-                gsql_def += attr + " "+_py_to_tg_type(attrs[attr])
-        gsql_def += ")"
-        if outdegree_stats:
-            gsql_def += ' WITH STATS="OUTDEGREE_BY_EDGETYPE"'
-        if outdegree_stats and primary_id_as_attribute:
-            gsql_def += ", "
-        if primary_id_as_attribute:
-            gsql_def += 'PRIMARY_ID_AS_ATTRIBUTE="true"'
-        gsql_def += ";"
-        self._vertex_edits["ADD"][vertex.__name__] = gsql_def
-
-    def add_edge_type(self, edge: Edge):
-        """Add an edge type to the list of changes to commit to the graph.
-
-        Args:
-            edge (Edge):
-                The edge type definition to add to the addition cache.
-        """
-        if edge in self._edge_types.values():
-            raise TigerGraphException(edge.__name__+" already exists in the database")
-        if edge in self._edge_edits.values():
-            warnings.warn(edge.__name__ + " already in staged edits. Overwriting previous edits")
-        attrs = edge.attributes
-        is_directed = None
-        reverse_edge = None
-        discriminator = None
-        for field in fields(edge):
-            if field.name == "is_directed":
-                is_directed = field.default
-            if field.name == "reverse_edge":
-                reverse_edge = field.default
-
-            if field.name == "discriminator":
-                discriminator = field.default
-      
-        if not(reverse_edge) and is_directed:
-            raise TigerGraphException("Reverse edge definition not set. Set the reverse_edge variable to a boolean or string.")
-        if is_directed is None:
-            raise TigerGraphConnection("is_directed variable not defined. Define is_directed as a class variable to the desired setting.")
-        
-        if not(edge.attributes.get("from_vertex", None)):
-            raise TigerGraphException("from_vertex is not defined. Define from_vertex class variable.")
-
-        if not(edge.attributes.get("to_vertex", None)):
-            raise TigerGraphException("to_vertex is not defined. Define to_vertex class variable.")
-        
-        gsql_def = ""
-        if is_directed:
-            gsql_def += "ADD DIRECTED EDGE "+edge.__name__+"("
-        else:
-            gsql_def += "ADD UNDIRECTED EDGE "+edge.__name__+"("
-    
-        if not(get_origin(edge.attributes["from_vertex"]) is Union) and not(get_origin(edge.attributes["to_vertex"]) is Union):
-            from_vert = edge.attributes["from_vertex"].__name__
-            to_vert = edge.attributes["to_vertex"].__name__
-            gsql_def += "FROM "+from_vert+", "+"TO "+to_vert
-        elif get_origin(edge.attributes["from_vertex"]) is Union and not(get_origin(edge.attributes["to_vertex"]) is Union):
-            print(get_args(edge.attributes["from_vertex"]))
-            for v in get_args(edge.attributes["from_vertex"]):
-                from_vert = v.__name__
-                to_vert = edge.attributes["to_vertex"].__name__
-                gsql_def += "FROM "+from_vert+", "+"TO "+to_vert + "|"
-            gsql_def = gsql_def[:-1]
-        elif not(get_origin(edge.attributes["from_vertex"]) is Union) and get_origin(edge.attributes["to_vertex"]) is Union:
-            for v in get_args(edge.attributes["to_vertex"]):
-                from_vert = edge.attributes["from_vertex"].__name__
-                to_vert = v.__name__
-                gsql_def += "FROM "+from_vert+", "+"TO "+to_vert + "|"
-            gsql_def = gsql_def[:-1]
-        elif get_origin(edge.attributes["from_vertex"]) is Union and get_origin(edge.attributes["to_vertex"]) is Union:
-            if len(get_args(edge.attributes["from_vertex"])) != len(get_args(edge.attributes["to_vertex"])):
-                raise TigerGraphException("from_vertex and to_vertex list have different lengths.")
-            else:
-                for i in range(len(get_args(edge.attributes["from_vertex"]))):
-                    from_vert = get_args(edge.attributes["from_vertex"])[i].__name__
-                    to_vert = get_args(edge.attributes["to_vertex"])[i].__name__
-                    gsql_def += "FROM "+from_vert+", "+"TO "+to_vert + "|"
-                gsql_def = gsql_def[:-1]
-        else:
-            raise TigerGraphException("from_vertex and to_vertex parameters have to be of type Union[Vertex, Vertex, ...] or Vertex")
-
-        if discriminator:
-            if isinstance(discriminator, list):
-                gsql_def += ", DISCRIMINATOR("
-                for attr in discriminator:
-                    attr + " "+_py_to_tg_type(attrs[attr]) + ", "
-                gsql_def = gsql_def[:-2]
-                gsql_def += ")"
-            elif isinstance(discriminator, str):
-                gsql_def += ", DISCRIMINATOR("+discriminator + " "+_py_to_tg_type(attrs[discriminator])+")"
-            else:
-                raise TigerGraphException("Discriminator definitions can only be of type string (one discriminator) or list (compound discriminator)")
-        for attr in attrs.keys():
-            if attr == "from_vertex" or attr == "to_vertex" or attr == "is_directed" or attr == "reverse_edge" or (discriminator and attr in discriminator) or attr == "discriminator":
-                continue
-            else:
-                gsql_def += ", "
-                gsql_def += attr + " "+_py_to_tg_type(attrs[attr])
-        gsql_def += ")"
-        if reverse_edge:
-            if isinstance(reverse_edge, str):
-                gsql_def += ' WITH REVERSE_EDGE="'+reverse_edge+'"'
-            elif isinstance(reverse_edge, bool):
-                gsql_def += ' WITH REVERSE_EDGE="reverse_'+edge.__name__+'"'
-            else:
-                raise TigerGraphException("Reverse edge name of type: "+str(type(attrs["reverse_edge"])+" is not supported."))
-        gsql_def+=";"
-        self._edge_edits["ADD"][edge.__name__] = gsql_def
-
-    def remove_vertex_type(self, vertex: Vertex):
-        """Add a vertex type to the list of changes to remove from the graph.
-
-        Args:
-            vertex (Vertex):
-                The vertex type definition to add to the removal cache.
-        """
-        gsql_def = "DROP VERTEX "+vertex.__name__+";"
-        self._vertex_edits["DELETE"][vertex.__name__] = gsql_def
-
-    def remove_edge_type(self, edge: Edge):
-        """Add an edge type to the list of changes to remove from the graph.
-
-        Args:
-            edge (Edge):
-                The edge type definition to add to the removal cache.
-        """
-        gsql_def = "DROP EDGE "+edge.__name__+";"
-        self._edge_edits["DELETE"][edge.__name__] = gsql_def
-
-    def _parsecommit_changes(self, conn):
-        all_attr = [x._attribute_edits for x in list(self._vertex_types.values()) + list(self._edge_types.values())]
-        for elem in list(self._vertex_types.values()) + list(self._edge_types.values()): # need to remove the changes locally
-            elem._attribute_edits = {"ADD": {}, "DELETE": {}}
-        all_attribute_edits = {"ADD": {}, "DELETE": {}}
-        for change in all_attr:
-            all_attribute_edits["ADD"].update(change["ADD"])
-            all_attribute_edits["DELETE"].update(change["DELETE"])
-        md5 = hashlib.md5()
-        md5.update(json.dumps({**self._vertex_edits, **self._edge_edits, **all_attribute_edits}).encode())
-        job_name = "pytg_change_"+md5.hexdigest()
-        start_gsql = "USE GRAPH "+conn.graphname+"\n"
-        start_gsql += "DROP JOB "+job_name+"\n"
-        start_gsql += "CREATE SCHEMA_CHANGE JOB " + job_name + " FOR GRAPH " + conn.graphname + " {\n"
-        for v_to_add in self._vertex_edits["ADD"]:
-            start_gsql += self._vertex_edits["ADD"][v_to_add] + "\n"
-        for e_to_add in self._edge_edits["ADD"]:
-            start_gsql += self._edge_edits["ADD"][e_to_add] + "\n"
-        for v_to_drop in self._vertex_edits["DELETE"]:
-            start_gsql += self._vertex_edits["DELETE"][v_to_drop] + "\n"
-        for e_to_drop in self._edge_edits["DELETE"]:
-            start_gsql += self._edge_edits["DELETE"][e_to_drop] + "\n"
-        for attr_to_add in all_attribute_edits["ADD"]:
-            start_gsql += all_attribute_edits["ADD"][attr_to_add] + "\n"
-        for attr_to_drop in all_attribute_edits["DELETE"]:
-            start_gsql += all_attribute_edits["DELETE"][attr_to_drop] +"\n"
-        start_gsql += "}\n"
-        start_gsql += "RUN SCHEMA_CHANGE JOB "+job_name
-        return start_gsql
-
-    def commit_changes(self, conn: TigerGraphConnection = None):
+    async def commit_changes(self, conn: TigerGraphConnection = None):
         """Commit schema changes to the graph.
         Args:
             conn (TigerGraphConnection, optional):
@@ -664,22 +431,18 @@ class Graph():
             else:
                 raise TigerGraphException("No Connection Defined. Please instantiate a TigerGraphConnection to the database to commit the schema.")
             
-        if "does not exist." in conn.gsql("USE GRAPH "+conn.graphname):
-            conn.gsql("CREATE GRAPH "+conn.graphname+"()")
+        if "does not exist." in await conn.gsql("USE GRAPH "+conn.graphname):
+            await conn.gsql("CREATE GRAPH "+conn.graphname+"()")
         start_gsql = self._parsecommit_changes(conn)
-        res = conn.gsql(start_gsql)
+        res = await conn.gsql(start_gsql)
         if "updated to new version" in res:
-            self.__init__(conn)
+            # reset self
+            self._vertex_types = {}
+            self._edge_types = {}
+            self._vertex_edits = {"ADD": {}, "DELETE": {}}
+            self._edge_edits = {"ADD": {}, "DELETE": {}}
+            db_rep = await conn.getSchema(force=True)
+            self.setUpConn(conn, db_rep)
         else:
             raise TigerGraphException("Schema change failed with message:\n"+res)
-        
 
-    @property
-    def vertex_types(self):
-        """Vertex types property."""
-        return self._vertex_types
-
-    @property
-    def edge_types(self):
-        """Edge types property."""
-        return self._edge_types

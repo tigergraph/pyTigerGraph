@@ -13,15 +13,16 @@ if TYPE_CHECKING:
     import pandas as pd
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
-from pyTigerGraph.pyTigerGraphSchema import pyTigerGraphSchema
-from pyTigerGraph.pyTigerGraphUtils import pyTigerGraphUtils
-from pyTigerGraph.pyTigerGraphGSQL import pyTigerGraphGSQL
+from pyTigerGraph.pyTigerGraphQuery import pyTigerGraphQuery
+from pyTigerGraph.async_ver2.pyTigerGraphUtils import AsyncPyTigerGraphUtils
+from pyTigerGraph.async_ver2.pyTigerGraphGSQL import AsyncPyTigerGraphGSQL
+from pyTigerGraph.async_ver2.pyTigerGraphSchema import AsyncPyTigerGraphSchema
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL):
+class AsyncPyTigerGraphQuery(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, AsyncPyTigerGraphGSQL, pyTigerGraphQuery):
     # TODO getQueries()  # List _all_ query names
-    def showQuery(self, queryName: str) -> str:
+    async def showQuery(self, queryName: str) -> str:
         """Returns the string of the given GSQL query.
         
         Args:
@@ -30,12 +31,12 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         """
         if logger.level == logging.DEBUG:
             logger.debug("entry: showQuery")
-        res = self.gsql("USE GRAPH "+self.graphname+" SHOW QUERY "+queryName)
+        res = await self.gsql("USE GRAPH "+self.graphname+" SHOW QUERY "+queryName)
         if logger.level == logging.DEBUG:
             logger.debug("exit: showQuery")
         return res
 
-    def getQueryMetadata(self, queryName: str) -> dict:
+    async def getQueryMetadata(self, queryName: str) -> dict:
         """Returns metadata details about a query. 
         Specifically, it lists the input parameters in the same order as they exist in the query
         and outputs `PRINT` statement syntax.
@@ -51,12 +52,12 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         """
         if logger.level == logging.DEBUG:
             logger.debug("entry: getQueryMetadata")
-        if self._versionGreaterThan4_0():
+        if await self._versionGreaterThan4_0():
             params = {"graph": self.graphname, "queryName": queryName}
-            res = self._post(self.gsUrl+"/gsql/v1/queries/signature", params=params, authMode="pwd", resKey="")
+            res = await self._req("POST", self.gsUrl+"/gsql/v1/queries/signature", params=params, authMode="pwd", resKey="")
         else:    
             params = {"graph": self.graphname, "query": queryName}
-            res = self._get(self.gsUrl+"/gsqlserver/gsql/queryinfo", params=params, authMode="pwd", resKey="")
+            res = await self._req("GET", self.gsUrl+"/gsqlserver/gsql/queryinfo", params=params, authMode="pwd", resKey="")
         if not res["error"]: 
             if logger.level == logging.DEBUG:
                 logger.debug("exit: getQueryMetadata")
@@ -64,19 +65,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         else:
             TigerGraphException(res["message"], res["code"])
     
-    def _parseGetInstalledQueries(self, fmt, ret):
-        if fmt == "json":
-            ret = json.dumps(ret)
-        if fmt == "df":
-            try:
-                import pandas as pd
-            except ImportError:
-                raise ImportError("Pandas is required to use this function. "
-                    "Download pandas using 'pip install pandas'.")
-            ret = pd.DataFrame(ret).T
-        return ret
-
-    def getInstalledQueries(self, fmt: str = "py") -> Union[dict, str, 'pd.DataFrame']:
+    async def getInstalledQueries(self, fmt: str = "py") -> Union[dict, str, 'pd.DataFrame']:
         """Returns a list of installed queries.
 
         Args:
@@ -97,7 +86,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        ret = self.getEndpoints(dynamic=True)
+        ret = await self.getEndpoints(dynamic=True)
         ret = self._parseGetInstalledQueries(fmt, ret)
 
         if logger.level == logging.DEBUG:
@@ -114,79 +103,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
     #   GET /gsql/queries/install/{request_id}
     #   xref:tigergraph-server:API:built-in-endpoints.adoc#_check_query_installation_status[Check query installation status]
 
-    def _parseQueryParameters(self, params: dict) -> str:
-        """Parses a dictionary of query parameters and converts them to query strings.
-
-        While most of the values provided for various query parameter types can be easily converted
-        to query strings (key1=value1&key2=value2), `SET` and `BAG` parameter types, and especially
-        `VERTEX` and `SET<VERTEX>` (i.e. vertex primary ID types without vertex type specification)
-        require special handling.
-
-        See xref:tigergraph-server:API:built-in-endpoints.adoc#_query_parameter_passing[Query parameter passing]
-
-        TODO Accept this format for SET<VERTEX>:
-            "key": [([p_id1, p_id2, ...], "vtype"), ...]
-            I.e. multiple primary IDs of the same vertex type
-        """
-        logger.info("entry: _parseQueryParameters")
-        if logger.level == logging.DEBUG:
-            logger.debug("params: " + self._locals(locals()))
-
-        ret = ""
-        for k, v in params.items():
-            if isinstance(v, tuple):
-                if len(v) == 2 and isinstance(v[1], str):
-                    ret += k + "=" + str(v[0]) + "&" + k + ".type=" + self._safeChar(v[1]) + "&"
-                else:
-                    raise TigerGraphException(
-                        "Invalid parameter value: (vertex_primary_id, vertex_type)"
-                        " was expected.")
-            elif isinstance(v, list):
-                i = 0
-                for vv in v:
-                    if isinstance(vv, tuple):
-                        if len(vv) == 2 and isinstance(vv[1], str):
-                            ret += k + "[" + str(i) + "]=" + self._safeChar(vv[0]) + "&" + \
-                                   k + "[" + str(i) + "].type=" + vv[1] + "&"
-                        else:
-                            raise TigerGraphException(
-                                "Invalid parameter value: (vertex_primary_id , vertex_type)"
-                                " was expected.")
-                    else:
-                        ret += k + "=" + self._safeChar(vv) + "&"
-                    i += 1
-            elif isinstance(v, datetime):
-                ret += k + "=" + self._safeChar(v.strftime("%Y-%m-%d %H:%M:%S")) + "&"
-            else:
-                ret += k + "=" + self._safeChar(v) + "&"
-        ret = ret[:-1]
-
-        if logger.level == logging.DEBUG:
-            logger.debug("return: " + str(ret))
-        logger.info("exit: _parseQueryParameters")
-
-        return ret
-
-    def _prepRunInstalledQuery(self, timeout, sizeLimit, runAsync, replica, threadLimit, memoryLimit):
-        """header builder for runInstalledQuery()"""
-        headers = {}
-        res_key = "results"
-        if timeout and timeout > 0:
-            headers["GSQL-TIMEOUT"] = str(timeout)
-        if sizeLimit and sizeLimit > 0:
-            headers["RESPONSE-LIMIT"] = str(sizeLimit)
-        if runAsync:
-            headers["GSQL-ASYNC"] = "true"
-            res_key = "request_id"
-        if replica:
-            headers["GSQL-REPLICA"] = str(replica)
-        if threadLimit:
-            headers["GSQL-THREAD-LIMIT"] = str(threadLimit) 
-        if memoryLimit:
-            headers["GSQL-QueryLocalMemLimitMB"] = str(memoryLimit)
-        return headers, res_key
-
-    def runInstalledQuery(self, queryName: str, params: Union[str, dict] = None,
+    async def runInstalledQuery(self, queryName: str, params: Union[str, dict] = None,
             timeout: int = None, sizeLimit: int = None, usePost: bool = False, runAsync: bool = False,
             replica: int = None, threadLimit: int = None, memoryLimit: int = None) -> list:
         """Runs an installed query.
@@ -257,8 +174,9 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
 
         headers, res_key = self._prepRunInstalledQuery(timeout=timeout, sizeLimit=sizeLimit, runAsync=runAsync, 
                                               replica=replica, threadLimit=threadLimit, memoryLimit=memoryLimit)
+
         if usePost:
-            ret = self._req("POST", self.restppUrl + "/query/" + self.graphname + "/" + queryName,
+            ret = await self._req("POST", self.restppUrl + "/query/" + self.graphname + "/" + queryName,
                 data=params, headers=headers, resKey=res_key, jsonData=True)
 
             if logger.level == logging.DEBUG:
@@ -269,7 +187,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         else:
             if isinstance(params, dict):
                 params = self._parseQueryParameters(params)
-            ret = self._req("GET", self.restppUrl + "/query/" + self.graphname + "/" + queryName,
+            ret = await self._req("GET", self.restppUrl + "/query/" + self.graphname + "/" + queryName,
                 params=params, headers=headers, resKey=res_key)
 
             if logger.level == logging.DEBUG:
@@ -278,7 +196,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
 
             return ret
 
-    def checkQueryStatus(self, requestId: str = ""):
+    async def checkQueryStatus(self, requestId: str = ""):
         """Checks the status of the queries running on the graph specified in the connection.
 
         Args:
@@ -291,11 +209,11 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_check_query_status_detached_mode[Check query status (detached mode)]
         """
         if requestId != "":
-            return self._get(self.restppUrl + "/query_status?graph_name="+self.graphname+"&requestid="+requestId)
+            return await self._req("GET", self.restppUrl + "/query_status?graph_name="+self.graphname+"&requestid="+requestId)
         else:
-            return self._get(self.restppUrl + "/query_status?graph_name="+self.graphname+"&requestid=all")
+            return await self._req("GET", self.restppUrl + "/query_status?graph_name="+self.graphname+"&requestid=all")
 
-    def getQueryResult(self, requestId: str = ""):
+    async def getQueryResult(self, requestId: str = ""):
         """Gets the result of a detached query.
 
         Args:
@@ -303,9 +221,9 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
                 String ID of the request.
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_check_query_results_detached_mode[Check query results (detached mode)]
         """
-        return self._get(self.restppUrl + "/query_result?graph_name="+self.graphname+"&requestid="+requestId)
+        return await self._req("GET", self.restppUrl + "/query_result?graph_name="+self.graphname+"&requestid="+requestId)
 
-    def runInterpretedQuery(self, queryText: str, params: Union[str, dict] = None) -> list:
+    async def runInterpretedQuery(self, queryText: str, params: Union[str, dict] = None) -> list:
         """Runs an interpreted query.
 
         Use ``$graphname`` or ``@graphname@`` in the ``FOR GRAPH`` clause to avoid hardcoding the
@@ -364,12 +282,12 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         if isinstance(params, dict):
             params = self._parseQueryParameters(params)
 
-        if self._versionGreaterThan4_0():
-            ret = self._post(self.gsUrl + "/gsql/v1/queries/interpret",
+        if await self._versionGreaterThan4_0():
+            ret = await self._req("POST", self.gsUrl + "/gsql/v1/queries/interpret",
                              params=params, data=queryText, authMode="pwd",
                              headers={'Content-Type': 'text/plain'})
         else:
-            ret = self._post(self.gsUrl + "/gsqlserver/interpreted_query", data=queryText,
+            ret = await self._req("POST", self.gsUrl + "/gsqlserver/interpreted_query", data=queryText,
                 params=params, authMode="pwd")
 
         if logger.level == logging.DEBUG:
@@ -378,12 +296,12 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
 
         return ret
 
-    def getRunningQueries(self) -> dict:
+    async def getRunningQueries(self) -> dict:
         """Reports the statistics of currently running queries on the graph.
         """
         if logger.level == logging.DEBUG:
             logger.debug("entry: getRunningQueries")
-        res = self._get(self.restppUrl+"/showprocesslist/"+self.graphname, resKey="")
+        res = await self._req("GET", self.restppUrl+"/showprocesslist/"+self.graphname, resKey="")
         if not res["error"]:
             if logger.level == logging.DEBUG:
                 logger.debug("exit: getRunningQueries")
@@ -391,7 +309,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         else:
             raise TigerGraphException(res["message"], res["code"])
 
-    def abortQuery(self, request_id: Union[str, list] = None, url: str = None):
+    async def abortQuery(self, request_id: Union[str, list] = None, url: str = None):
         """This function safely abortsa a selected query by ID or all queries of an endpoint by endpoint URL of a graph.
         If neither `request_id` or `url` are specified, all queries currently running on the graph are aborted.
         
@@ -407,7 +325,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
             params["requestid"] = request_id
         if url:
             params["url"] = url
-        res = self._get(self.restppUrl+"/abortquery/"+self.graphname, params=params, resKey="")
+        res = await self._get(self.restppUrl+"/abortquery/"+self.graphname, params=params, resKey="")
         if not res["error"]:
             if logger.level == logging.DEBUG: 
                 logger.debug("exit: abortQuery")
@@ -415,181 +333,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         else:
             raise TigerGraphException(res["message"], res["code"])
 
-    def parseQueryOutput(self, output: list, graphOnly: bool = True) -> dict:
-        """Parses query output and separates vertex and edge data (and optionally other output) for
-            easier use.
-
-        Args:
-            output:
-                The data structure returned by `runInstalledQuery()` or `runInterpretedQuery()`.
-            graphOnly:
-                If `True` (the default setting), restricts captured output to vertices and edges.
-                If `False`, captures values of variables and accumulators and any other plain text printed.
-
-        Returns:
-            A dictionary with two (or three) keys: `"vertices"`, `"edges"` and optionally `"output"`.
-            The first two refer to another dictionary containing keys for each vertex and edge types
-            found and the instances of those vertex and edge types. `"output"` is a list of
-            dictionaries containing the key/value pairs of any other output.
-
-        The JSON output from a query can contain a mixture of results: vertex sets (the output of a
-            SELECT statement), edge sets (e.g. collected in a global accumulator), printout of
-            global and local variables and accumulators, including complex types (LIST, MAP, etc.).
-            The type of the various output entries is not explicit and requires manual inspection to determine the type.
-
-        This function "cleans" this output, separating and collecting vertices and edges in an easy
-            to access way. It can also collect other output or ignore it. /
-        The output of this function can be used e.g. with the `vertexSetToDataFrame()` and
-            `edgeSetToDataFrame()` functions or (after some transformation) to pass a subgraph to a
-            visualization component.
-        """
-
-        def attCopy(src: dict, trg: dict):
-            """Copies the attributes of a vertex or edge into another vertex or edge, respectively.
-
-            args:
-                src:
-                    Source vertex or edge instance.
-                trg:
-                    Target vertex or edge instance.
-            """
-            srca = src["attributes"]
-            trga = trg["attributes"]
-            for att in srca:
-                trga[att] = srca[att]
-
-        def addOccurrences(obj: dict, src: str):
-            """Counts and lists the occurrences of a vertex or edge.
-
-            Args:
-                obj:
-                    The vertex or edge that was found in the output.
-                src:
-                    The label (variable name or alias) of the source where the vertex or edge
-                    was found.
-
-            A given vertex or edge can appear multiple times (in different vertex or edge sets) in
-            the output of a query. Each output has a label (either the variable name or an alias
-            used in the `PRINT` statement), `x_sources` contains a list of these labels.
-            """
-            if "x_occurrences" in obj:
-                obj["x_occurrences"] += 1
-            else:
-                obj["x_occurrences"] = 1
-            if "x_sources" in obj:
-                obj["x_sources"].append(src)
-            else:
-                obj["x_sources"] = [src]
-
-        logger.info("entry: parseQueryOutput")
-        if logger.level == logging.DEBUG:
-            logger.debug("params: " + self._locals(locals()))
-
-        vs = {}
-        es = {}
-        ou = []
-
-        # Outermost data type is a list
-        for o1 in output:
-            # Next level data type is dictionary that could be vertex sets, edge sets or generic
-            # output (of simple or complex data types)
-            for o2 in o1:
-                _o2 = o1[o2]
-                # Is it an array of dictionaries?
-                if isinstance(_o2, list) and len(_o2) > 0 and isinstance(_o2[0], dict):
-                    # Iterate through the array
-                    for o3 in _o2:
-                        if "v_type" in o3:  # It's a vertex!
-
-                            # Handle vertex type first
-                            vType = o3["v_type"]
-                            vtm = {}
-                            # Do we have this type of vertices in our list
-                            # (which is actually a dictionary)?
-                            if vType in vs:
-                                vtm = vs[vType]
-                            # No, let's create a dictionary for them and add to the list
-                            else:
-                                vtm = {}
-                                vs[vType] = vtm
-
-                            # Then handle the vertex itself
-                            vId = o3["v_id"]
-                            # Do we have this specific vertex (identified by the ID) in our list?
-                            if vId in vtm:
-                                tmp = vtm[vId]
-                                attCopy(o3, tmp)
-                                addOccurrences(tmp, o2)
-                            else:  # No, add it
-                                addOccurrences(o3, o2)
-                                vtm[vId] = o3
-
-                        elif "e_type" in o3:  # It's an edge!
-
-                            # Handle edge type first
-                            eType = o3["e_type"]
-                            etm = {}
-                            # Do we have this type of edges in our list
-                            # (which is actually a dictionary)?
-                            if eType in es:
-                                etm = es[eType]
-                            # No, let's create a dictionary for them and add to the list
-                            else:
-                                etm = {}
-                                es[eType] = etm
-
-                            # Then handle the edge itself
-                            eId = o3["from_type"] + "(" + o3["from_id"] + ")->" + o3["to_type"] + \
-                                  "(" + o3["to_id"] + ")"
-                            o3["e_id"] = eId
-
-                            # Add reverse edge name, if applicable
-                            if eType["IsDirected"]:
-                                config = eType["Config"]
-                                rev = ""
-                                if "REVERSE_EDGE" in config:
-                                    rev = config["REVERSE_EDGE"]
-                                if rev:
-                                    o3["reverse_edge"] = rev
-
-                            # Do we have this specific edge (identified by the composite ID) in our
-                            # list?
-                            if eId in etm:
-                                tmp = etm[eId]
-                                attCopy(o3, tmp)
-                                addOccurrences(tmp, o2)
-                            else:  # No, add it
-                                addOccurrences(o3, o2)
-                                etm[eId] = o3
-
-                        else:  # It's a ... something else
-                            ou.append({"label": o2, "value": _o2})
-                else:  # It's a ... something else
-                    ou.append({"label": o2, "value": _o2})
-
-        ret = {"vertices": vs, "edges": es}
-        if not graphOnly:
-            ret["output"] = ou
-
-        if logger.level == logging.DEBUG:
-            logger.debug("return: " + str(ret))
-        logger.info("exit: parseQueryOutput")
-
-        return ret
-
-    def _prepGetStatistics(self, seconds, segments):
-        '''parameter parsing for getStatistics()'''
-        if not seconds:
-            seconds = 10
-        else:
-            seconds = max(min(seconds, 0), 60)
-        if not segments:
-            segments = 10
-        else:
-            segments = max(min(segments, 0), 100)
-        return seconds, segments
-
-    def getStatistics(self, seconds: int = 10, segments: int = 10) -> dict:
+    async def getStatistics(self, seconds: int = 10, segments: int = 10) -> dict:
         """Retrieves real-time query performance statistics over the given time period.
 
         Args:
@@ -611,7 +355,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
             logger.debug("params: " + self._locals(locals()))
 
         seconds, segments = self._prepGetStatistics(self, seconds, segments)
-        ret = self._req("GET", self.restppUrl + "/statistics/" + self.graphname + "?seconds=" +
+        ret = await self._req("GET", self.restppUrl + "/statistics/" + self.graphname + "?seconds=" +
                          str(seconds) + "&segment=" + str(segments), resKey="")
 
         if logger.level == logging.DEBUG:
@@ -620,7 +364,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
 
         return ret
 
-    def describeQuery(self, queryName: str, queryDescription: str, parameterDescriptions: dict = {}):
+    async def describeQuery(self, queryName: str, queryDescription: str, parameterDescriptions: dict = {}):
         """Add a query description and parameter descriptions. Only supported on versions of TigerGraph >= 4.0.0.
         
         Args:
@@ -639,7 +383,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
             - `PUT /gsql/v1/description?graph={graph_name}` (In TigerGraph versions >4.0)
         """
         logger.info("entry: describeQuery")
-        self.ver = self.getVer()
+        self.ver = await self.getVer()
         major_ver, minor_ver, patch_ver = self.ver.split(".")
         if int(major_ver) < 4:
             logger.info("exit: describeQuery")
@@ -658,10 +402,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
             ]}
         if logger.level == logging.DEBUG:
             logger.debug("params: " + params)
-        if self._versionGreaterThan4_0():
-            res = self._put(self.gsUrl+"/gsql/v1/description?graph="+self.graphname, data=params, authMode="pwd", jsonData=True)
+        if await self._versionGreaterThan4_0():
+            res = await self._put(self.gsUrl+"/gsql/v1/description?graph="+self.graphname, data=params, authMode="pwd", jsonData=True)
         else:
-            res = self._put(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname, data=params, authMode="pwd", jsonData=True)
+            res = await self._put(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname, data=params, authMode="pwd", jsonData=True)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -669,7 +413,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
 
         return res
     
-    def getQueryDescription(self, queryName: Optional[Union[str, list]] = "all"):
+    async def getQueryDescription(self, queryName: Optional[Union[str, list]] = "all"):
         """Get the description of a query. Only supported on versions of TigerGraph >= 4.0.0.
         
         Args:
@@ -686,7 +430,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
             - `GET /gsql/v1/description?graph={graph_name}` (In TigerGraph versions >4.0)
         """
         logger.info("entry: getQueryDescription")
-        self.ver = self.getVer()
+        self.ver = await self.getVer()
         major_ver, minor_ver, patch_ver = self.ver.split(".")
         if int(major_ver) < 4:
             logger.info("exit: getQueryDescription")
@@ -698,10 +442,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         if isinstance(queryName, list):
             queryName = ",".join(queryName)
 
-        if self._versionGreaterThan4_0():
-            res = self._get(self.gsUrl+"/gsql/v1/description?graph="+self.graphname+"&query="+queryName, authMode="pwd", resKey=None)
+        if await self._versionGreaterThan4_0():
+            res = await self._get(self.gsUrl+"/gsql/v1/description?graph="+self.graphname+"&query="+queryName, authMode="pwd", resKey=None)
         else:    
-            res = self._get(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname+"&query="+queryName, authMode="pwd", resKey=None)
+            res = await self._get(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname+"&query="+queryName, authMode="pwd", resKey=None)
         if not res["error"]:
             if logger.level == logging.DEBUG:
                 logger.debug("exit: getQueryDescription")
@@ -709,7 +453,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         else:
             raise TigerGraphException(res["message"], res["code"])
         
-    def dropQueryDescription(self, queryName: str, dropParamDescriptions: bool = True):
+    async def dropQueryDescription(self, queryName: str, dropParamDescriptions: bool = True):
         """Drop the description of a query. Only supported on versions of TigerGraph >= 4.0.0.
         
         Args:
@@ -727,7 +471,7 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
             - `DELETE /gsql/v1/description?graph={graph_name}` (In TigerGraph versions >4.0)
         """
         logger.info("entry: dropQueryDescription")
-        self.ver = self.getVer()
+        self.ver = await self.getVer()
         major_ver, minor_ver, patch_ver = self.ver.split(".")
         if int(major_ver) < 4:
             logger.info("exit: describeQuery")
@@ -740,10 +484,10 @@ class pyTigerGraphQuery(pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL)
         else:
             params = {"queries": [queryName]}
         print(params)
-        if self._versionGreaterThan4_0():
-            res = self._delete(self.gsUrl+"/gsql/v1/description?graph="+self.graphname, authMode="pwd", data=params, jsonData=True, resKey=None)
+        if await self._versionGreaterThan4_0():
+            res = await self._delete(self.gsUrl+"/gsql/v1/description?graph="+self.graphname, authMode="pwd", data=params, jsonData=True, resKey=None)
         else:
-            res = self._delete(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname, authMode="pwd", data=params, jsonData=True, resKey=None)
+            res = await self._delete(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname, authMode="pwd", data=params, jsonData=True, resKey=None)
         
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))

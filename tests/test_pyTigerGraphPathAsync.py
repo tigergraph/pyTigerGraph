@@ -1,10 +1,19 @@
 import json
 import unittest
 
-from .pyTigerGraphUnitTest import make_connection
+from .pyTigerGraphUnitTestAsync import make_connection
+
+from pyTigerGraph.pyTigerGraphException import TigerGraphException
+
+import asyncio
 
 
-class test_pyTigerGraphPath(unittest.TestCase):
+class test_pyTigerGraphPath(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        self.conn = await make_connection()
+        await self.conn.upsertVertices("vertex4", self.vs)
+        await self.conn.upsertEdges("vertex4", "edge6_loop", "vertex4", self.es)
+
     vs = [
         (10, {"a01": 999}),
         (20, {"a01": 999}),
@@ -29,19 +38,11 @@ class test_pyTigerGraphPath(unittest.TestCase):
         (30, 60, {"a01": 999})
     ]
 
-    @classmethod
-    def setUpClass(cls):
-        cls.conn = make_connection()
-
-    def setUp(self):
-        self.conn.upsertVertices("vertex4", self.vs)
-        self.conn.upsertEdges("vertex4", "edge6_loop", "vertex4", self.es)
-
-    def tearDown(self):
+    async def asyncTearDown(self):
         for i in self.es:
-            self.conn.delEdges("vertex4", i[0], "edge6_loop", "vertex4", i[1])
+            await self.conn.delEdges("vertex4", i[0], "edge6_loop", "vertex4", i[1])
         for i in self.vs:
-            self.conn.delVerticesById("vertex4", i[0])
+            await self.conn.delVerticesById("vertex4", i[0])
 
     def _check_vertices(self, res_vs: list, exp_vs: list) -> bool:
         self.assertEqual(len(exp_vs), len(res_vs))
@@ -82,12 +83,12 @@ class test_pyTigerGraphPath(unittest.TestCase):
             res
         )
 
-    def test_02_shortestPath(self):
+    async def test_02_shortestPath(self):
 
-        self.assertEqual(8, self.conn.getVertexCount("vertex4", where="a01>=900"))
-        self.assertEqual(11, self.conn.getEdgeCount("edge6_loop", "vertex4", "vertex4"))
+        self.assertEqual(8, await self.conn.getVertexCount("vertex4", where="a01>=900"))
+        self.assertEqual(11, await self.conn.getEdgeCount("edge6_loop", "vertex4", "vertex4"))
 
-        res = self.conn.shortestPath(("vertex4", 10), ("vertex4", 50))
+        res = await self.conn.shortestPath(("vertex4", 10), ("vertex4", 50))
         vs1 = [10, 20, 30, 40, 50]
         es1 = [(10, 20), (20, 30), (30, 40), (40, 50)]
         vs2 = [10, 60, 70, 40, 50]
@@ -99,7 +100,7 @@ class test_pyTigerGraphPath(unittest.TestCase):
              self._check_edges(res[0]["edges"], es2))
         )
 
-        res = self.conn.shortestPath(("vertex4", 10), ("vertex4", 50), allShortestPaths=True)
+        res = await self.conn.shortestPath(("vertex4", 10), ("vertex4", 50), allShortestPaths=True)
         vs3 = [10, 20, 30, 40, 50, 60, 70]
         es3 = [(10, 20), (20, 30), (30, 40), (40, 50), (10, 60), (60, 70), (70, 40)]
         self.assertTrue(
@@ -107,26 +108,26 @@ class test_pyTigerGraphPath(unittest.TestCase):
              self._check_edges(res[0]["edges"], es3))
         )
 
-        res = self.conn.shortestPath(("vertex4", 10), ("vertex4", 50), maxLength=3)
+        res = await self.conn.shortestPath(("vertex4", 10), ("vertex4", 50), maxLength=3)
         self.assertEqual([], res[0]["vertices"])
         self.assertEqual([], res[0]["edges"])
 
-        res = self.conn.shortestPath(("vertex4", 10), ("vertex4", 50), allShortestPaths=True,
+        res = await self.conn.shortestPath(("vertex4", 10), ("vertex4", 50), allShortestPaths=True,
             vertexFilters=("vertex4", "a01>950"))
         self.assertTrue(
             (self._check_vertices(res[0]["vertices"], vs1) and
              self._check_edges(res[0]["edges"], es1))
         )
 
-        res = self.conn.shortestPath(("vertex4", 10), ("vertex4", 50), allShortestPaths=True,
+        res = await self.conn.shortestPath(("vertex4", 10), ("vertex4", 50), allShortestPaths=True,
             edgeFilters=("edge6_loop", "a01<950"))
         self.assertTrue(
             (self._check_vertices(res[0]["vertices"], vs2) and
              self._check_edges(res[0]["edges"], es2))
         )
 
-    def test_03_allPaths(self):
-        res = self.conn.allPaths(("vertex4", 10), ("vertex4", 50), maxLength=4)
+    async def test_03_allPaths(self):
+        res = await self.conn.allPaths(("vertex4", 10), ("vertex4", 50), maxLength=4)
         vs = [10, 20, 30, 40, 50, 60, 70]
         es = [(10, 20), (20, 30), (30, 40), (40, 50), (10, 60), (60, 70), (70, 40)]
         self.assertTrue(
@@ -134,7 +135,7 @@ class test_pyTigerGraphPath(unittest.TestCase):
              self._check_edges(res[0]["edges"], es))
         )
 
-        res = self.conn.allPaths(("vertex4", 10), ("vertex4", 50), maxLength=5)
+        res = await self.conn.allPaths(("vertex4", 10), ("vertex4", 50), maxLength=5)
         vs = [10, 20, 30, 40, 50, 60, 70, 80]
         es = [(10, 20), (20, 30), (30, 40), (40, 50), (10, 60), (60, 70), (70, 40), (70, 80),
             (80, 40)]
@@ -143,7 +144,7 @@ class test_pyTigerGraphPath(unittest.TestCase):
              self._check_edges(res[0]["edges"], es))
         )
 
-        res = self.conn.allPaths(("vertex4", 10), ("vertex4", 50), maxLength=6)
+        res = await self.conn.allPaths(("vertex4", 10), ("vertex4", 50), maxLength=6)
         vs = [10, 20, 30, 40, 50, 60, 70, 80]
         es = [(10, 20), (20, 30), (30, 40), (40, 50), (10, 60), (60, 70), (70, 40), (70, 80),
             (80, 40), (30, 60)]
@@ -152,7 +153,7 @@ class test_pyTigerGraphPath(unittest.TestCase):
              self._check_edges(res[0]["edges"], es))
         )
 
-        res = self.conn.allPaths(("vertex4", 10), ("vertex4", 50), maxLength=5,
+        res = await self.conn.allPaths(("vertex4", 10), ("vertex4", 50), maxLength=5,
             vertexFilters=("vertex4", "a01>950"))
         vs = [10, 20, 30, 40, 50]
         es = [(10, 20), (20, 30), (30, 40), (40, 50)]
@@ -161,7 +162,7 @@ class test_pyTigerGraphPath(unittest.TestCase):
              self._check_edges(res[0]["edges"], es))
         )
 
-        res = self.conn.allPaths(("vertex4", 10), ("vertex4", 50), maxLength=5,
+        res = await self.conn.allPaths(("vertex4", 10), ("vertex4", 50), maxLength=5,
             edgeFilters=("edge6_loop", "a01<950"))
         vs = [10, 60, 70, 40, 50]
         es = [(10, 60), (60, 70), (70, 40), (40, 50)]

@@ -1,17 +1,16 @@
 import json
 import unittest
 
-from .pyTigerGraphUnitTest import make_connection
+from .pyTigerGraphUnitTestAsync import make_connection
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
 import asyncio
 
 
-class test_pyTigerGraphBase(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.conn = make_connection()
+class test_pyTigerGraphBase(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        self.conn = await make_connection()
 
     def test_00_errorCheck(self):
         json_ok1 = {
@@ -74,26 +73,33 @@ class test_pyTigerGraphBase(unittest.TestCase):
     def test_01_req(self):
         pass
 
-    def test_02_get(self):
+    async def test_02_get(self):
         exp = {'error': False, 'message': 'Hello GSQL'}
-        res = self.conn._get(self.conn.restppUrl + "/echo/", resKey=None)
+        res = await self.conn._get(self.conn.restppUrl + "/echo/", resKey=None)
         self.assertEqual(exp, res)
 
-    def test_03_post(self):
+    async def test_03_post(self):
         exp = {'error': False, 'message': 'Hello GSQL'}
-        res = self.conn._post(self.conn.restppUrl + "/echo/", resKey=None)
+        res = await self.conn._post(self.conn.restppUrl + "/echo/", resKey=None)
         self.assertEqual(exp, res)
 
         data = json.dumps({"function": "stat_vertex_attr", "type": "vertex4"})
         exp = [{'attributes': {'a01': {'AVG': 3, 'MAX': 5, 'MIN': 1}}, 'v_type': 'vertex4'}]
-        res = self.conn._post(self.conn.restppUrl + "/builtins/" + self.conn.graphname, data=data)
+        res = await self.conn._post(self.conn.restppUrl + "/builtins/" + self.conn.graphname, data=data)
         self.assertEqual(exp, res)
 
-    def test_04_delete(self):
+    async def test_04_delete(self):
         with self.assertRaises(TigerGraphException) as tge:
-            res = self.conn._delete(self.conn.restppUrl + "/graph/" + self.conn.graphname +
+            res = await self.conn._delete(self.conn.restppUrl + "/graph/" + self.conn.graphname +
                 "/vertices/non_existent_vertex_type/1")
         self.assertEqual("REST-30000", tge.exception.code)
+
+
+# async def main():
+    # test = test_pyTigerGraphBase()
+    # await test.setUpClass()
+    # await asyncio.gather(test.test_00_errorCheck(), test.test_01_req(), test.test_02_get(), test.test_03_post(), test.test_04_delete())
+    # await asyncio.gather(test.test_00_errorCheck())
 
 if __name__ == '__main__':
     unittest.main()

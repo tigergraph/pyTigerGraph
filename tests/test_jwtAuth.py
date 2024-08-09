@@ -2,14 +2,14 @@ import unittest
 import requests
 import json
 
-from pyTigerGraphUnitTest import make_connection
+from .pyTigerGraphUnitTest import make_connection
 from pyTigerGraph import TigerGraphConnection
 
 
 class TestJWTTokenAuth(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.conn = make_connection(graphname="Cora")
+        cls.conn = make_connection(graphname="tests")
 
 
     def test_jwtauth(self):

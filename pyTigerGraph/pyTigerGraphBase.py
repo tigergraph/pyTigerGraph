@@ -206,6 +206,8 @@ class pyTigerGraphBase(object):
         if self.jwtToken:
             self._verify_jwt_token_support()
 
+        self.asynchronous = False
+
         logger.info("exit: __init__")
 
     def _set_auth_header(self):
@@ -244,7 +246,7 @@ class pyTigerGraphBase(object):
         del _locals["self"]
         return str(_locals)
 
-    def _errorCheck(self, res: dict):
+    def _errorCheck(self, res: dict) -> bool:
         """Checks if the JSON document returned by an endpoint has contains `error: true`. If so,
             it raises an exception.
 
@@ -252,48 +254,23 @@ class pyTigerGraphBase(object):
             res:
                 The output from a request.
 
+        Returns:
+            False if no error occurred.
+
         Raises:
             TigerGraphException: if request returned with error, indicated in the returned JSON.
         """
         if "error" in res and res["error"] and res["error"] != "false":
             # Endpoint might return string "false" rather than Boolean false
             raise TigerGraphException(res["message"], (res["code"] if "code" in res else None))
+        return False
 
-    def _req(self, method: str, url: str, authMode: str = "token", headers: dict = None,
-            data: Union[dict, list, str] = None, resKey: str = "results", skipCheck: bool = False,
-            params: Union[dict, list, str] = None, strictJson: bool = True, jsonData: bool = False,
-            jsonResponse: bool = True) -> Union[dict, list]:
-        """Generic REST++ API request.
-
-        Args:
-            method:
-                HTTP method, currently one of `GET`, `POST` or `DELETE`.
-            url:
-                Complete REST++ API URL including path and parameters.
-            authMode:
-                Authentication mode, either `"token"` (default) or `"pwd"`.
-            headers:
-                Standard HTTP request headers.
-            data:
-                Request payload, typically a JSON document.
-            resKey:
-                The JSON subdocument to be returned, default is `"result"`.
-            skipCheck:
-                Some endpoints return an error to indicate that the requested
-                action is not applicable. This argument skips error checking.
-            params:
-                Request URL parameters.
-            strictJson:
-                If JSON should load the response in strict mode or not.
-            jsonData:
-                If data in data var is a JSON document.
-
-        Returns:
-            The (relevant part of the) response from the request (as a dictionary).
-        """
+    def _prepReq(self, authMode, headers, url, method, data):
         logger.info("entry: _req")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
+
+        _headers = {}
 
         # If JWT token is provided, always use jwtToken as token
         if authMode == "token":
@@ -339,35 +316,9 @@ class pyTigerGraphBase(object):
 
         _headers.update({"X-User-Agent": "pyTigerGraph"})
 
-        if jsonData:
-            res = requests.request(method, url, headers=_headers, json=_data, params=params, verify=verify)
-        else:
-            res = requests.request(method, url, headers=_headers, data=_data, params=params, verify=verify)
+        return _headers, _data, verify
 
-        try:
-            res.raise_for_status()
-        except Exception as e:
-            # In TG 4.x the port for restpp has changed from 9000 to 14240. 
-            # This block should only be called once. When using 4.x, using port 9000 should fail so self.restppurl will change to host:14240/restpp
-            # ----
-            # Changes port to 14240, adds /restpp to end to url, tries again, saves changes if successful
-            if self.restppPort == "9000" and "9000" in url:
-                newRestppUrl = self.host + ":14240/restpp"
-                # In tgcloud /restpp can already be in the restpp url. We want to extract everything after the port or /restpp
-                if '/restpp' in url:
-                    url = newRestppUrl + '/' + ''.join(url.split(':')[2].split('/')[2:])
-                else:
-                    url = newRestppUrl + '/' + ''.join(url.split(':')[2].split('/')[1:])
-                if jsonData:
-                    res = requests.request(method, url, headers=_headers, json=_data, params=params, verify=verify)
-                else:
-                    res = requests.request(method, url, headers=_headers, data=_data, params=params, verify=verify)
-                res.raise_for_status()
-                self.restppUrl = newRestppUrl
-                self.restppPort = "14240"
-            else:
-                raise e
-
+    def _parseReq(self, res, jsonResponse, strictJson, skipCheck, resKey):
         if jsonResponse:
             try:
                 res = json.loads(res.text, strict=strictJson)
@@ -388,8 +339,87 @@ class pyTigerGraphBase(object):
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res[resKey]))
         logger.info("exit: _req (resKey)")
-
+        
         return res[resKey]
+
+    def _req(self, method: str, url: str, authMode: str = "token", headers: dict = None,
+            data: Union[dict, list, str] = None, resKey: str = "results", skipCheck: bool = False,
+            params: Union[dict, list, str] = None, strictJson: bool = True, jsonData: bool = False,
+            jsonResponse: bool = True) -> Union[dict, list]:
+        """Generic REST++ API request.
+
+        Args:
+            method:
+                HTTP method, currently one of `GET`, `POST` or `DELETE`.
+            url:
+                Complete REST++ API URL including path and parameters.
+            authMode:
+                Authentication mode, either `"token"` (default) or `"pwd"`.
+            headers:
+                Standard HTTP request headers.
+            data:
+                Request payload, typically a JSON document.
+            resKey:
+                The JSON subdocument to be returned, default is `"result"`.
+            skipCheck:
+                Some endpoints return an error to indicate that the requested
+                action is not applicable. This argument skips error checking.
+            params:
+                Request URL parameters.
+            strictJson:
+                If JSON should load the response in strict mode or not.
+            jsonData:
+                If data in data var is a JSON document.
+
+        Returns:
+            The (relevant part of the) response from the request (as a dictionary).
+        """
+        _headers, _data, verify = self._prepReq(authMode, headers, url, method, data)
+
+        if jsonData:
+            res = requests.request(method, url, headers=_headers, json=_data, params=params, verify=verify)
+        else:
+            res = requests.request(method, url, headers=_headers, data=_data, params=params, verify=verify)
+
+        try:
+            if not skipCheck and not (200 <= res.status_code < 300):
+                try:
+                    self._errorCheck(json.loads(res.text))
+                except json.decoder.JSONDecodeError:
+                    pass # could not parse the res text (probably returned an html response) 
+            res.raise_for_status()
+        except Exception as e:
+
+            # In TG 4.x the port for restpp has changed from 9000 to 14240. 
+            # This block should only be called once. When using 4.x, using port 9000 should fail so self.restppurl will change to host:14240/restpp
+            # ----
+            # Changes port to 14240, adds /restpp to end to url, tries again, saves changes if successful
+            if self.restppPort == "9000" and "9000" in url:
+                newRestppUrl = self.host + ":14240/restpp"
+                # In tgcloud /restpp can already be in the restpp url. We want to extract everything after the port or /restpp
+                if '/restpp' in url:
+                    url = newRestppUrl + '/' + '/'.join(url.split(':')[2].split('/')[2:])
+                else:
+                    url = newRestppUrl + '/' + '/'.join(url.split(':')[2].split('/')[1:])
+                if jsonData:
+                    res = requests.request(method, url, headers=_headers, json=_data, params=params, verify=verify)
+                else:
+                    res = requests.request(method, url, headers=_headers, data=_data, params=params, verify=verify)
+                
+                # Run error check if there might be an error before raising for status
+                # raising for status gives less descriptive error message
+                if not skipCheck and not (200 <= res.status_code < 300) and res.status_code != 404:
+                    try:
+                        self._errorCheck(json.loads(res.text))
+                    except json.decoder.JSONDecodeError:
+                        pass # could not parse the res text (probably returned an html response) 
+                res.raise_for_status()
+                self.restppUrl = newRestppUrl
+                self.restppPort = "14240"
+            else:
+                raise e
+            
+        return self._parseReq(res, jsonResponse, strictJson, skipCheck, resKey)
     
     def _get(self, url: str, authMode: str = "token", headers: dict = None, resKey: str = "results",
             skipCheck: bool = False, params: Union[dict, list, str] = None, strictJson: bool = True) -> Union[dict, list]:
@@ -524,6 +554,20 @@ class pyTigerGraphBase(object):
         """
         self.responseConfigHeader = {"GSQL-TIMEOUT": str(timeout), "RESPONSE-LIMIT": str(responseSize)}
 
+    def _parseGetVersion(self, response, raw):
+        if raw:
+            return response
+        res = response.split("\n")
+        components = []
+        for i in range(len(res)):
+            if 2 < i < len(res) - 1:
+                m = res[i].split()
+                component = {"name": m[0], "version": m[1], "hash": m[2],
+                    "datetime": m[3] + " " + m[4] + " " + m[5]}
+                components.append(component)
+
+        return components
+
     def getVersion(self, raw: bool = False) -> Union[str, list]:
         """Retrieves the git versions of all components of the system.
 
@@ -544,22 +588,26 @@ class pyTigerGraphBase(object):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
         response = self._get(self.restppUrl+"/version", strictJson=False, resKey="message")
-        if raw:
-            return response
-        res = response.split("\n")
-        components = []
-        for i in range(len(res)):
-            if 2 < i < len(res) - 1:
-                m = res[i].split()
-                component = {"name": m[0], "version": m[1], "hash": m[2],
-                    "datetime": m[3] + " " + m[4] + " " + m[5]}
-                components.append(component)
+        components = self._parseGetVersion(response, raw)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(components))
         logger.info("exit: getVersion")
-
         return components
+
+    def _parseGetVer(self, version, component, full):
+        ret = ""
+        for v in version:
+            if v["name"] == component.lower():
+                ret = v["version"]
+        if ret != "":
+            if full:
+                return ret
+            ret = re.search("_.+_", ret)
+            ret = ret.group().strip("_")
+            return ret
+        else:
+            raise TigerGraphException("\"" + component + "\" is not a valid component.", None)
 
     def getVer(self, component: str = "product", full: bool = False) -> str:
         """Gets the version information of a specific component.
@@ -581,24 +629,14 @@ class pyTigerGraphBase(object):
         logger.info("entry: getVer")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
+        version = self.getVersion()
+        ret = self._parseGetVer(version, component, full)
 
-        ret = ""
-        for v in self.getVersion():
-            if v["name"] == component.lower():
-                ret = v["version"]
-        if ret != "":
-            if full:
-                return ret
-            ret = re.search("_.+_", ret)
-            ret = ret.group().strip("_")
-
-            if logger.level == logging.DEBUG:
+        if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(ret))
-            logger.info("exit: getVer")
+        logger.info("exit: getVer")
 
-            return ret
-        else:
-            raise TigerGraphException("\"" + component + "\" is not a valid component.", None)
+        return ret
         
     def _versionGreaterThan4_0(self) -> bool:
         """Gets if the TigerGraph database version is greater than 4.0 using gerVer().

@@ -1,16 +1,19 @@
 import json
 import unittest
 
-from .pyTigerGraphUnitTest import make_connection
+from .pyTigerGraphUnitTestAsync import make_connection
+
+from pyTigerGraph.pyTigerGraphException import TigerGraphException
+
+import asyncio
 
 
-class test_pyTigerGraphSchema(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.conn = make_connection()
+class test_pyTigerGraphSchema(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        self.conn = await make_connection()
 
-    def test_01_getUDTs(self):
-        res = self.conn._getUDTs()
+    async def test_01_getUDTs(self):
+        res = await self.conn._getUDTs()
         self.assertIsInstance(res, list)
         self.assertEqual(2, len(res))
         self.assertTrue(res[0]["name"] == "tuple1_all_types" or res[0]["name"] == "tuple2_simple")
@@ -44,8 +47,8 @@ class test_pyTigerGraphSchema(unittest.TestCase):
             res = self.conn._upsertAttrs(t[0])
             self.assertEqual(t[1], res)
 
-    def test_03_getSchema(self):
-        res = self.conn.getSchema()
+    async def test_03_getSchema(self):
+        res = await self.conn.getSchema()
         items = [
             ("GraphName"),
             ("VertexTypes", "Name", [
@@ -83,7 +86,7 @@ class test_pyTigerGraphSchema(unittest.TestCase):
                     self.assertIn(i[1], tt)
                     self.assertIn(tt[i[1]], i[2])
 
-    def test_04_upsertData(self):
+    async def test_04_upsertData(self):
         data = {
             "vertices": {
                 "vertex4": {
@@ -135,13 +138,13 @@ class test_pyTigerGraphSchema(unittest.TestCase):
                 }
             }
         }
-        res = self.conn.upsertData(data)
+        res = await self.conn.upsertData(data)
         self.assertEqual({"accepted_vertices": 4, "accepted_edges": 3}, res)
 
-        res = self.conn.delVertices("vertex4", where="a01>1000")
+        res = await self.conn.delVertices("vertex4", where="a01>1000")
         self.assertEqual(2, res)
 
-        res = self.conn.delVerticesById("vertex5", [5000, 5001])
+        res = await self.conn.delVerticesById("vertex5", [5000, 5001])
         self.assertEqual(2, res)
 
         """
@@ -204,7 +207,7 @@ class test_pyTigerGraphSchema(unittest.TestCase):
             }
         }
 
-        res = self.conn.upsertData(data, atomic=True, ackAll=True)
+        res = await self.conn.upsertData(data, atomic=True, ackAll=True)
         self.assertEqual({"accepted_vertices": 4, "accepted_edges": 3}, res)
 
         """
@@ -247,7 +250,7 @@ class test_pyTigerGraphSchema(unittest.TestCase):
             ],
             "accepted_edges": 0
         }
-        res = self.conn.upsertData(data, newVertexOnly=True)
+        res = await self.conn.upsertData(data, newVertexOnly=True)
         self.assertEqual(exp, res)
 
         """
@@ -307,7 +310,7 @@ class test_pyTigerGraphSchema(unittest.TestCase):
                 {"v_type": "vertex5", "v_id": "7003"}
             ]
         }
-        res = self.conn.upsertData(data, vertexMustExist=True)
+        res = await self.conn.upsertData(data, vertexMustExist=True)
         self.assertEqual(exp, res)
 
         """
@@ -353,21 +356,21 @@ class test_pyTigerGraphSchema(unittest.TestCase):
             ],
             "accepted_edges": 0
         }
-        res = self.conn.upsertData(data, updateVertexOnly=True)
+        res = await self.conn.upsertData(data, updateVertexOnly=True)
         self.assertEqual(exp, res)
 
-        res = self.conn.delVertices("vertex4", where="a01>=7000,a01<8000")
+        res = await self.conn.delVertices("vertex4", where="a01>=7000,a01<8000")
         self.assertEqual(3, res)
 
-        res = self.conn.delVerticesById("vertex5", [7000, 7001])
+        res = await self.conn.delVerticesById("vertex5", [7000, 7001])
         self.assertEqual(2, res)
 
-    def test_05_getEndpoints(self):
-        res = self.conn.getEndpoints()
+    async def test_05_getEndpoints(self):
+        res = await self.conn.getEndpoints()
         self.assertIsInstance(res, dict)
         self.assertIn("GET /endpoints/{graph_name}", res)
 
-        res = self.conn.getEndpoints(dynamic=True)
+        res = await self.conn.getEndpoints(dynamic=True)
         self.assertEqual(4, len(res))
 
 

@@ -5,16 +5,17 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 """
 import logging
 
-from .datasets import Datasets
-from .pyTigerGraphAuth import pyTigerGraphAuth
+from .datasets import AsyncDatasets
+from .pyTigerGraphAuth import AsyncPyTigerGraphAuth
+from pyTigerGraph.pyTigerGraphDataset import pyTigerGraphDataset
 
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphDataset(pyTigerGraphAuth):
-    def ingestDataset(
+class AsyncPyTigerGraphDataset(AsyncPyTigerGraphAuth, pyTigerGraphDataset):
+    async def ingestDataset(
         self,
-        dataset: Datasets,
+        dataset: AsyncDatasets,
         cleanup: bool = True,
         getToken: bool = False
     ) -> None:
@@ -38,13 +39,13 @@ class pyTigerGraphDataset(pyTigerGraphAuth):
             raise Exception("This dataset is not ingestable.")
 
         print("---- Checking database ----", flush=True)
-        if self.check_exist_graphs(dataset.name):
+        if await self.check_exist_graphs(dataset.name):
             # self.gsql("USE GRAPH {}\nDROP JOB ALL\nDROP GRAPH {}".format(
             #     dataset.name, dataset.name
             # ))
             self.graphname = dataset.name
             if getToken:
-                self.getToken(self.createSecret())
+                await self.getToken(await self.createSecret())
             print(
                 "A graph with name {} already exists in the database. "
                 "Skip ingestion.".format(dataset.name)
@@ -53,19 +54,19 @@ class pyTigerGraphDataset(pyTigerGraphAuth):
             return
 
         print("---- Creating graph ----", flush=True)
-        resp = dataset.create_graph(self)
+        resp = await dataset.create_graph(self)
         print(resp, flush=True)
         if "Failed" in resp:
             return
 
         print("---- Creating schema ----", flush=True)
-        resp = dataset.create_schema(self)
+        resp = await dataset.create_schema(self)
         print(resp, flush=True)
         if "Failed" in resp:
             return
 
         print("---- Creating loading job ----", flush=True)
-        resp = dataset.create_load_job(self)
+        resp = await dataset.create_load_job(self)
         print(resp, flush=True)
         if "Failed" in resp:
             return
@@ -73,44 +74,18 @@ class pyTigerGraphDataset(pyTigerGraphAuth):
         print("---- Ingesting data ----", flush=True)
         self.graphname = dataset.name
         if getToken:
-            self.getToken(self.createSecret())
+            await self.getToken(self.createSecret())
 
         responses = []
-        for resp in dataset.run_load_job(self):
+        for resp in await dataset.run_load_job(self):
             responses.append(resp)
 
         self._parseIngestDataset(responses, cleanup, dataset)
 
         print("---- Finished ingestion ----", flush=True)
         logger.info("exit: ingestDataset")
-        
-    def _parseIngestDataset(self, responses, cleanup, dataset):
-        for resp in responses:
-            stats = resp[0]["statistics"]
-            if "vertex" in stats:
-                for vstats in stats["vertex"]:
-                    print(
-                        "Ingested {} objects into VERTEX {}".format(
-                            vstats["validObject"], vstats["typeName"]
-                        ),
-                        flush=True,
-                    )
-            if "edge" in stats:
-                for estats in stats["edge"]:
-                    print(
-                        "Ingested {} objects into EDGE {}".format(
-                            estats["validObject"], estats["typeName"]
-                        ),
-                        flush=True,
-                    )
-            if logger.level == logging.DEBUG:
-                logger.debug(str(resp))
 
-        if cleanup:
-            print("---- Cleaning ----", flush=True)
-            dataset.clean_up()
-
-    def check_exist_graphs(self, name: str) -> bool:
+    async def check_exist_graphs(self, name: str) -> bool:
         "NO DOC"
-        resp = self.gsql("ls")
+        resp = await self.gsql("ls")
         return "Graph {}".format(name) in resp

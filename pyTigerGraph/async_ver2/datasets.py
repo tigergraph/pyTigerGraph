@@ -12,35 +12,20 @@ from os.path import isdir
 from os.path import join as pjoin
 from shutil import rmtree
 from urllib.parse import urljoin
+from typing_extensions import Self
+import io
 
-import requests
+import httpx
+import asyncio
 
+from pyTigerGraph.datasets import Datasets, BaseDataset
 
-class BaseDataset(ABC):
-    "NO DOC"
-    def __init__(self, name: str = None) -> None:
-        self.name = name
-        self.ingest_ready = False
+class AsyncDatasets(Datasets):
+    # using a factory method instead of __init__ since we need to call asynchronous methods when creating this. 
+    # AsyncDatasets can only be created by calling: dataset = await AsyncDatasets.create()
 
-    @abstractmethod
-    def create_graph(self, conn) -> str:
-        pass
-
-    @abstractmethod
-    def create_schema(self, conn) -> str:
-        pass
-
-    @abstractmethod
-    def create_load_job(self, conn) -> None:
-        pass
-
-    @abstractmethod
-    def run_load_job(self, conn) -> None:
-        pass
-
-
-class Datasets(BaseDataset):
-    def __init__(self, name: str = None, tmp_dir: str = "./tmp") -> None:
+    @classmethod
+    async def create(cls, name: str = None, tmp_dir: str = "./tmp") -> Self:
         """Stock datasets.
 
         Please see https://tigergraph-public-data.s3.us-west-1.amazonaws.com/inventory.json[this link]
@@ -57,13 +42,14 @@ class Datasets(BaseDataset):
             tmp_dir (str, optional):
                 Where to store the artifacts of this dataset. Defaults to "./tmp".
         """
-        super().__init__(name)
+        self = cls()
+        BaseDataset.__init__(self, name)
         self.base_url = "https://tigergraph-public-data.s3.us-west-1.amazonaws.com/"
         self.tmp_dir = tmp_dir
 
         if not name:
-            self.list()
-            return
+            await self.list()
+            return self
             
         # Download the dataset and extract
         if isdir(pjoin(tmp_dir, name)):
@@ -74,7 +60,7 @@ class Datasets(BaseDataset):
             )
 
         if not isdir(pjoin(tmp_dir, name)):
-            dataset_url = self.get_dataset_url()
+            dataset_url = await self.get_dataset_url()
             # Check if it is an in-stock dataset.
             if not dataset_url:
                 raise Exception("Cannot find this dataset in the inventory.")
@@ -83,10 +69,17 @@ class Datasets(BaseDataset):
 
         self.ingest_ready = True
 
-    def get_dataset_url(self) -> str:
+        return self
+
+    # For overriding Dataset's init method
+    def __init__(self):
+        pass
+
+    async def get_dataset_url(self) -> str:
         "NO DOC"
         inventory_url = urljoin(self.base_url, "inventory.json")
-        resp = requests.get(inventory_url)
+        async with httpx.AsyncClient() as client:
+                resp = await client.request("GET", inventory_url)
         resp.raise_for_status()
         resp = resp.json()
         if self.name in resp:
@@ -94,56 +87,56 @@ class Datasets(BaseDataset):
         else:
             return None
 
-    def download_extract(self) -> None:
+    async def download_extract(self) -> None:
         "NO DOC"
         makedirs(self.tmp_dir, exist_ok=True)
-        with requests.get(self.dataset_url, stream=True) as resp:
+        client = httpx.AsyncClient()
+        async with client.stream("GET", self.dataset_url) as resp:
+            raw_content = b''
+            async for byte in resp.aiter_raw():
+                raw_content += byte
+            raw_content = io.BytesIO(raw_content)
             try:
                 from tqdm.auto import tqdm
                 total_length = int(resp.headers.get("Content-Length"))
                 with tqdm.wrapattr(
-                    resp.raw, "read", total=total_length, desc="Downloading"
+                    raw_content, "read", total=total_length, desc="Downloading"
                 ) as raw:
                     with tarfile.open(fileobj=raw, mode="r|gz") as tarobj:
                         tarobj.extractall(path=self.tmp_dir)
             except ImportError:
                 warnings.warn("Cannot import tqdm. Downloading without progress report.")
-                with tarfile.open(fileobj=resp.raw, mode="r|gz") as tarobj:
+                with tarfile.open(fileobj=raw_content, mode="r|gz") as tarobj:
                     tarobj.extractall(path=self.tmp_dir)
                 print("Dataset downloaded.")
 
-    def clean_up(self) -> None:
-        "NO DOC"
-        rmtree(pjoin(self.tmp_dir, self.name))
-        self.ingest_ready = False
-
-    def create_graph(self, conn) -> str:
+    async def create_graph(self, conn) -> str:
         "NO DOC"
         with open(pjoin(self.tmp_dir, self.name, "create_graph.gsql"), "r") as infile:
-            resp = conn.gsql(infile.read())
+            resp = await conn.gsql(infile.read())
         return resp
 
-    def create_schema(self, conn) -> str:
+    async def create_schema(self, conn) -> str:
         "NO DOC"
         with open(pjoin(self.tmp_dir, self.name, "create_schema.gsql"), "r") as infile:
-            resp = conn.gsql(infile.read())
+            resp = await conn.gsql(infile.read())
         return resp
 
-    def create_load_job(self, conn) -> None:
+    async def create_load_job(self, conn) -> None:
         "NO DOC"
         with open(
             pjoin(self.tmp_dir, self.name, "create_load_job.gsql"), "r"
         ) as infile:
-            resp = conn.gsql(infile.read())
+            resp = await conn.gsql(infile.read())
         return resp
 
-    def run_load_job(self, conn) -> dict:
+    async def run_load_job(self, conn) -> dict:
         "NO DOC"
         with open(pjoin(self.tmp_dir, self.name, "run_load_job.json"), "r") as infile:
             jobs = json.load(infile)
 
         for job in jobs:
-            resp = conn.runLoadingJobWithFile(
+            resp = await conn.runLoadingJobWithFile(
                 pjoin(self.tmp_dir, self.name, job["filePath"]),
                 job["fileTag"],
                 job["jobName"],
@@ -154,11 +147,12 @@ class Datasets(BaseDataset):
             )
             yield resp
 
-    def list(self) -> None:
+    async def list(self) -> None:
         """List available stock datasets
         """
         inventory_url = urljoin(self.base_url, "inventory.json")
-        resp = requests.get(inventory_url)
+        async with httpx.AsyncClient() as client:
+                resp = await client.request("GET", inventory_url)
         resp.raise_for_status()
         print("Available datasets:")
         for k in resp.json():

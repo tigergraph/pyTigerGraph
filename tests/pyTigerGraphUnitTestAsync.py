@@ -3,10 +3,10 @@ import os
 from os.path import exists
 
 # from pyTigerGraph.async_ver2.pyTigerGraph import TigerGraphConnection
-from pyTigerGraph.pyTigerGraph import TigerGraphConnection
+from pyTigerGraph.async_ver2.pyTigerGraph import AsyncTigerGraphConnection
 
 
-def make_connection(graphname: str = None):
+async def make_connection(graphname: str = None):
     server_config = {
         "host": "http://127.0.0.1",
         "graphname": "tests",
@@ -31,7 +31,7 @@ def make_connection(graphname: str = None):
             config = json.load(config_file)
         server_config.update(config)
 
-    conn = TigerGraphConnection(
+    conn = AsyncTigerGraphConnection(
         host=server_config["host"],
         graphname=graphname if graphname else server_config["graphname"],
         username=server_config["username"],
@@ -47,6 +47,6 @@ def make_connection(graphname: str = None):
         jwtToken=server_config["jwtToken"]
     )
     if server_config.get("getToken", False):
-        conn.newGetToken(conn.createSecret())
+        await conn.newGetToken(await conn.createSecret())
 
     return conn

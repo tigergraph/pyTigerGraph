@@ -12,30 +12,15 @@ from urllib.parse import urlparse
 import requests
 from typing import TYPE_CHECKING, Union
 
-from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
+from pyTigerGraph.async_ver2.pyTigerGraphBase import AsyncPyTigerGraphBase
+from pyTigerGraph.pyTigerGraphUtils import pyTigerGraphUtils
 
 logger = logging.getLogger(__name__)
 
+class AsyncPyTigerGraphUtils(AsyncPyTigerGraphBase):
 
-class pyTigerGraphUtils(pyTigerGraphBase):
-
-    def _safeChar(self, inputString: Any) -> str:
-        """Replace special characters in string using the %xx escape.
-
-        Args:
-            inputString:
-                The string to process
-
-        Returns:
-            Processed string.
-
-        Documentation:
-            https://docs.python.org/3/library/urllib.parse.html#url-quoting
-        """
-        return urllib.parse.quote(str(inputString), safe='')
-
-    def echo(self, usePost: bool = False) -> str:
+    async def echo(self, usePost: bool = False) -> str:
         """Pings the database.
 
         Args:
@@ -55,7 +40,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
             logger.debug("params: " + self._locals(locals()))
 
         if usePost:
-            ret = str(self._post(self.restppUrl + "/echo/", resKey="message"))
+            ret = str(await self._req("POST", self.restppUrl + "/echo/", resKey="message"))
 
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(ret))
@@ -63,7 +48,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
 
             return ret
 
-        ret = str(self._get(self.restppUrl + "/echo/", resKey="message"))
+        ret = str(await self._req("GET", self.restppUrl + "/echo/", resKey="message"))
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -71,22 +56,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
 
         return ret
 
-    def _parseGetLicenseInfo(self, res):
-        ret = {}
-        if not res["error"]:
-            ret["message"] = res["message"]
-            ret["expirationDate"] = res["results"][0]["Expiration date"]
-            ret["daysRemaining"] = res["results"][0]["Days remaining"]
-        elif "code" in res and res["code"] == "REST-5000":
-            ret["message"] = \
-                "This instance does not have a valid enterprise license. Is this a trial version?"
-            ret["daysRemaining"] = -1
-        else:
-            raise TigerGraphException(res["message"], res["code"])
-        
-        return ret
-
-    def getLicenseInfo(self) -> dict:
+    async def getLicenseInfo(self) -> dict:
         """Returns the expiration date and remaining days of the license.
 
         Returns:
@@ -95,7 +65,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         """
         logger.info("entry: getLicenseInfo")
 
-        res = self._req("GET", self.restppUrl + "/showlicenseinfo", resKey="", skipCheck=True)
+        res = await self._req("GET", self.restppUrl + "/showlicenseinfo", resKey="", skipCheck=True)
         ret = self._parseGetLicenseInfo(res)
 
         if logger.level == logging.DEBUG:
@@ -104,7 +74,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
 
         return ret
 
-    def ping(self) -> dict:
+    async def ping(self) -> dict:
         """Public health check endpoint.
 
         Returns:
@@ -112,7 +82,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         """
         if logger.level == logging.DEBUG:
             logger.debug("entry: ping")
-        res = self._get(self.gsUrl+"/api/ping", resKey="")
+        res = await self._req("GET", self.gsUrl+"/api/ping", resKey="")
         if not res["error"]:
             if logger.level == logging.DEBUG:
                 logger.debug("exit: ping")
@@ -120,29 +90,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         else:
             raise TigerGraphException(res["message"], res["code"])
 
-    def _prepGetSystemMetrics(self, from_ts:int = None, to_ts:int = None, latest:int = None, who:str = None, where:str = None):
-        params = {}
-        _json = {} # in >=4.1 we need a json request of different parameter names
-        if from_ts or to_ts:
-            _json["TimeRange"] = {}
-        if from_ts:
-            params["from"] = from_ts
-            _json['TimeRange']['StartTimestampNS'] = str(from_ts)
-        if to_ts:
-            params["to"] = to_ts
-            _json['TimeRange']['EndTimestampNS'] = str(from_ts)
-        if latest:
-            params["latest"] = latest
-            _json["LatestNum"] = str(latest)
-        if who:
-            params["who"] = who
-        if where:
-            params["where"] = where
-            _json["HostID"] = where    
-
-        return params, _json
-
-    def getSystemMetrics(self, from_ts:int = None, to_ts:int = None, latest:int = None, what:str = None, who:str = None, where:str = None):
+    async def getSystemMetrics(self, from_ts:int = None, to_ts:int = None, latest:int = None, what:str = None, who:str = None, where:str = None):
         """Monitor system usage metrics.
         
         Args:
@@ -184,23 +132,22 @@ class pyTigerGraphUtils(pyTigerGraphBase):
 
         # Couldn't be placed in prep since version checking requires await statements
         if what:
-            if self._versionGreaterThan4_0():
+            if await self._versionGreaterThan4_0():
                 if what == "servicestate" or what == "connection":
                     raise TigerGraphException("This 'what' parameter is only supported on versions of TigerGraph < 4.1.0.", 0)
                 if what == "cpu" or what == "mem":
                         what = "cpu-memory" # in >=4.1 cpu and mem have been conjoined into one category
             params["what"] = what
         # in >=4.1 the datapoints endpoint has been removed and replaced
-        if self._versionGreaterThan4_0():
-            res = self._req("POST", self.gsUrl+"/informant/metrics/get/"+what, data=_json, jsonData=True, resKey="")
+        if await self._versionGreaterThan4_0():
+            res = await self._req("POST", self.gsUrl+"/informant/metrics/get/"+what, data=_json, jsonData=True, resKey="")
         else:
-            res = self._req("GET", self.gsUrl+"/ts3/api/datapoints", authMode="pwd", params=params, resKey="")
+            res = await self._req("GET", self.gsUrl+"/ts3/api/datapoints", authMode="pwd", params=params, resKey="")
         if logger.level == logging.DEBUG:
             logger.debug("exit: getSystemMetrics")
         return res
 
-
-    def getQueryPerformance(self, seconds:int = 10):
+    async def getQueryPerformance(self, seconds:int = 10):
         """Returns real-time query performance statistics over the given time period, as specified by the seconds parameter. 
         
         Args:
@@ -213,12 +160,12 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         params = {}
         if seconds:
             params["seconds"] = seconds
-        res = self._get(self.restppUrl+"/statistics/"+self.graphname, params=params, resKey="")
+        res = await self._get(self.restppUrl+"/statistics/"+self.graphname, params=params, resKey="")
         if logger.level == logging.DEBUG:
             logger.debug("exit: getQueryPerformance")
         return res
 
-    def getServiceStatus(self, request_body: dict):
+    async def getServiceStatus(self, request_body: dict):
         """Returns the status of the TigerGraph services specified in the request.
         Supported on databases versions 3.4 and above.
 
@@ -228,12 +175,12 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         """
         if logger.level == logging.DEBUG:
             logger.debug("entry: getServiceStatus")
-        res = self._post(self.gsUrl+"/informant/current-service-status", data=json.dumps(request_body), resKey="")
+        res = await self._req("POST", self.gsUrl+"/informant/current-service-status", data=json.dumps(request_body), resKey="")
         if logger.level == logging.DEBUG:
             logger.debug("exit: getServiceStatus")
         return res
 
-    def rebuildGraph(self, threadnum: int = None, vertextype: str = "", segid: str = "", path: str = "", force: bool = False):
+    async def rebuildGraph(self, threadnum: int = None, vertextype: str = "", segid: str = "", path: str = "", force: bool = False):
         """Rebuilds the graph engine immediately. See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_rebuild_graph_engine for more information.
 
         Args:
@@ -265,7 +212,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
             params["path"] = path
         if force:
             params["force"] = force
-        res = self._get(self.restppUrl+"/rebuildnow/"+self.graphname, params=params, resKey="")
+        res = await self._req("GET", self.restppUrl+"/rebuildnow/"+self.graphname, params=params, resKey="")
         if not res["error"]:
             if logger.level == logging.DEBUG:
                 logger.debug("exit: rebuildGraph")
