@@ -11,3 +11,4 @@ site/
 pyTigerGraph.egg-info
 tests1.py
 .ipynb_checkpoints
+pyrightconfig.json

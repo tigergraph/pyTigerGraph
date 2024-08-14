@@ -1,6 +1,7 @@
-import json
 import warnings
+
 from pyTigerGraph import TigerGraphConnection
+
 
 class AI:
     def __init__(self, conn: TigerGraphConnection) -> None: 
@@ -277,18 +278,24 @@ class AI:
         url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/answerquestion"
         return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
     
-    def forceConsistencyUpdate(self):
+    def forceConsistencyUpdate(self, method="supportai"):
         """ Force a consistency update for SupportAI embeddings.
+            Args:
+                method (str):
+                    The doc initialization method to run
             Returns:
                 JSON response from the consistency update.
         """
-        url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/forceupdate"
+        url = f"{self.nlqs_host}/{self.conn.graphname}/{method}/forceupdate/"
         return self.conn._req("GET", url, authMode="pwd", resKey=None)
     
-    def checkConsistencyProgress(self):
+    def checkConsistencyProgress(self, method="supportai"):
         """ Check the progress of the consistency update.
+            Args:
+                method (str):
+                    The doc initialization method to check or run
             Returns:
                 JSON response from the consistency update progress.
         """
-        url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/consistency_status"
+        url = f"{self.nlqs_host}/{self.conn.graphname}/supportai/consistency_status/{method}"
         return self.conn._req("GET", url, authMode="pwd", resKey=None)
