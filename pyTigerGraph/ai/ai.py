@@ -318,6 +318,7 @@ class AI:
         url = f"{self.nlqs_host}/{self.conn.graphname}/{method}/forceupdate/"
         return self.conn._req("GET", url, authMode="pwd", resKey=None)
     
+    ''' TODO: Add support in CoPilot
     def checkConsistencyProgress(self, method="supportai"):
         """ Check the progress of the consistency update.
             Args:
@@ -329,3 +330,4 @@ class AI:
         """
         url = f"{self.nlqs_host}/{self.conn.graphname}/supportai/consistency_status/{method}"
         return self.conn._req("GET", url, authMode="pwd", resKey=None)
+    '''
