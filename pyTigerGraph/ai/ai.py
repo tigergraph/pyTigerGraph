@@ -1,7 +1,35 @@
+"""AI Submodule
+The AI submodule is used to interact with the TigerGraph CoPilot service.
+It allows users to register custom queries, run natural language queries, and interact with the CoPilot service.
+
+To use the AI submodule, you must first create a TigerGraphConnection object, and verify that you have a TigerGraph CoPilot service running.
+
+For example, to use the AI submodule, you can run the following code:
+
+[source,python]
+----
+from pyTigerGraph import TigerGraphConnection
+
+conn = TigerGraphConnection(
+    host="https://YOUR_DB_ADDRESS", 
+    graphname="DigitalInfra", 
+    username="YOUR_DB_USERNAME", 
+    password="YOUR_DB_PASSWORD"
+)
+
+conn.getToken()
+
+conn.ai.configureCoPilotHost(hostname="http://COPILOT_ADDRESS")
+
+conn.ai.query("How many servers are there?")
+----
+
+For a more detailed and varied examples, see the demo notebooks in the (TigerGraph CoPilot GitHub repository)[https://github.com/tigergraph/CoPilot/tree/main/copilot/docs/notebooks].
+"""
+
 import warnings
 
 from pyTigerGraph import TigerGraphConnection
-
 
 class AI:
     def __init__(self, conn: TigerGraphConnection) -> None: 
@@ -283,19 +311,23 @@ class AI:
             Args:
                 method (str):
                     The doc initialization method to run
+                    Currentlty only "supportai" is supported in CoPilot v0.9.
             Returns:
                 JSON response from the consistency update.
         """
         url = f"{self.nlqs_host}/{self.conn.graphname}/{method}/forceupdate/"
         return self.conn._req("GET", url, authMode="pwd", resKey=None)
     
+    ''' TODO: Add support in CoPilot
     def checkConsistencyProgress(self, method="supportai"):
         """ Check the progress of the consistency update.
             Args:
                 method (str):
-                    The doc initialization method to check or run
+                    The doc initialization method to check or run.
+                    Currentlty only "supportai" is supported in CoPilot v0.9.
             Returns:
                 JSON response from the consistency update progress.
         """
         url = f"{self.nlqs_host}/{self.conn.graphname}/supportai/consistency_status/{method}"
         return self.conn._req("GET", url, authMode="pwd", resKey=None)
+    '''

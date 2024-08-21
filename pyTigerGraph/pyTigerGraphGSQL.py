@@ -22,7 +22,7 @@ ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 
 class pyTigerGraphGSQL(pyTigerGraphBase):
-    def gsql(self, query: str, graphname: str = None, options=None) -> Union[str, dict]:
+    def gsql(self, query: str, graphname: str = None, options: list[str] = None) -> Union[str, dict]:
         """Runs a GSQL query and processes the output.
 
         Args:
@@ -184,7 +184,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
 
         return 0
 
-    def getUDF(self, ExprFunctions: bool = True, ExprUtil: bool = True, json_out=False) -> Union[str, Tuple[str, str], Dict[str,str]]:       
+    def getUDF(self, ExprFunctions: bool = True, ExprUtil: bool = True, json_out: bool = False) -> Union[str, Tuple[str, str], Dict[str,str]]:       
         """Get user defined functions (UDF) installed in the database.
         See https://docs.tigergraph.com/gsql-ref/current/querying/func/query-user-defined-functions for details on UDFs.
 
