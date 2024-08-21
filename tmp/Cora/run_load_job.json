@@ -1,0 +1,12 @@
+[
+    {
+        "filePath": "nodes.csv",
+        "fileTag": "node_csv",
+        "jobName": "load_cora_data"
+    },
+    {
+        "filePath": "edges.csv",
+        "fileTag": "edge_csv",
+        "jobName": "load_cora_data"
+    }
+]

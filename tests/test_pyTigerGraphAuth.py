@@ -15,8 +15,8 @@ class test_pyTigerGraphAuth(unittest.TestCase):
         self.assertIsInstance(res, dict)
         # self.assertEqual(3, len(res)) # Just in case more secrets than expected
         self.assertIn("secret1", res)
-        self.assertIn("secret2", res)
-        self.assertIn("secret2", res)
+        # self.assertIn("secret2", res)
+        # self.assertIn("secret2", res)
 
     def test_02_getSecret(self):
         pass

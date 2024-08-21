@@ -5,9 +5,6 @@ from .pyTigerGraphUnitTestAsync import make_connection
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
-import asyncio
-
-
 class test_pyTigerGraphBase(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.conn = await make_connection()
@@ -94,13 +91,5 @@ class test_pyTigerGraphBase(unittest.IsolatedAsyncioTestCase):
                 "/vertices/non_existent_vertex_type/1")
         self.assertEqual("REST-30000", tge.exception.code)
 
-
-# async def main():
-    # test = test_pyTigerGraphBase()
-    # await test.setUpClass()
-    # await asyncio.gather(test.test_00_errorCheck(), test.test_01_req(), test.test_02_get(), test.test_03_post(), test.test_04_delete())
-    # await asyncio.gather(test.test_00_errorCheck())
-
 if __name__ == '__main__':
     unittest.main()
-    # asyncio.run(main())

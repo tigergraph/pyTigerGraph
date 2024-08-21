@@ -1,0 +1,24 @@
+# Create graph
+CREATE GRAPH Cora()
+
+USE GRAPH Cora
+
+# Create schema for nodes and edges  
+CREATE SCHEMA_CHANGE JOB cora_schema FOR GRAPH Cora {
+    ADD VERTEX Paper (PRIMARY_ID id Int, x List<Int>, y Int, train_mask Bool, val_mask Bool, test_mask Bool) WITH primary_id_as_attribute="true";
+    ADD DIRECTED EDGE Cite (from Paper, to Paper, time Int, is_train Bool, is_val Bool);
+}
+
+RUN SCHEMA_CHANGE JOB cora_schema
+
+# Define data loading job
+CREATE LOADING JOB load_cora_data FOR GRAPH Cora {
+    DEFINE FILENAME node_csv="./nodes.csv";
+    DEFINE FILENAME edge_csv="./edges.csv";
+
+    LOAD node_csv TO VERTEX Paper VALUES ($0, SPLIT($1," "), $2, $3, $4, $5) USING header="false", separator=",";
+    LOAD edge_csv TO EDGE Cite VALUES ($0, $1, _, _, _) USING header="false", separator=",";
+}
+
+# Load data
+RUN LOADING JOB load_cora_data

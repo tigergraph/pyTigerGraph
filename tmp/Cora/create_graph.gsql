@@ -1,0 +1,2 @@
+# Create graph
+CREATE GRAPH Cora()

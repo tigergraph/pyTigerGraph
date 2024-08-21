@@ -2,8 +2,7 @@ import json
 import os
 from os.path import exists
 
-# from pyTigerGraph.async_ver2.pyTigerGraph import TigerGraphConnection
-from pyTigerGraph.pyTigerGraph import TigerGraphConnection
+from pyTigerGraph import TigerGraphConnection
 
 
 def make_connection(graphname: str = None):

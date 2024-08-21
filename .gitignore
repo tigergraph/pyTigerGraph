@@ -11,3 +11,5 @@ site/
 pyTigerGraph.egg-info
 tests1.py
 .ipynb_checkpoints
+venv
+requirement.txt

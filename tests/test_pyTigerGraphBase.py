@@ -5,9 +5,6 @@ from .pyTigerGraphUnitTest import make_connection
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
-import asyncio
-
-
 class test_pyTigerGraphBase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -97,4 +94,3 @@ class test_pyTigerGraphBase(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-    # asyncio.run(main())
