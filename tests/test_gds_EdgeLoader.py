@@ -254,9 +254,10 @@ class TestGDSHeteroEdgeLoaderREST(unittest.TestCase):
     def test_iterate_hetero(self):
         loader = EdgeLoader(
             graph=self.conn,
-            attributes={"v0v0": ["is_train", "is_val"], "v2v0": ["is_train", "is_val"]},
+            attributes={"v0v0": ["is_train", "is_val"],
+                        "v2v0": ["is_train", "is_val"]},
             batch_size=200,
-            shuffle=True, # Needed to get around VID distribution issues
+            shuffle=True,  # Needed to get around VID distribution issues
             filter_by=None,
             loader_id=None,
             buffer_size=4,
@@ -277,7 +278,8 @@ class TestGDSHeteroEdgeLoaderREST(unittest.TestCase):
     def test_iterate_hetero_multichar_delimiter(self):
         loader = EdgeLoader(
             graph=self.conn,
-            attributes={"v0v0": ["is_train", "is_val"], "v2v0": ["is_train", "is_val"]},
+            attributes={"v0v0": ["is_train", "is_val"],
+                        "v2v0": ["is_train", "is_val"]},
             batch_size=200,
             shuffle=True,  # Needed to get around VID distribution issues
             filter_by=None,
@@ -289,7 +291,8 @@ class TestGDSHeteroEdgeLoaderREST(unittest.TestCase):
         for data in loader:
             # print(num_batches, data)
             if num_batches == 0:
-                self.assertEqual(data["v0v0"].shape[0]+data["v2v0"].shape[0], 200)
+                self.assertEqual(data["v0v0"].shape[0] +
+                                 data["v2v0"].shape[0], 200)
             self.assertEqual(len(data), 2)
             self.assertIsInstance(data["v0v0"], DataFrame)
             self.assertIn("is_val", data["v0v0"])
@@ -313,11 +316,13 @@ if __name__ == "__main__":
     suite.addTest(TestGDSEdgeLoaderREST("test_iterate"))
     suite.addTest(TestGDSEdgeLoaderREST("test_whole_edgelist"))
     suite.addTest(TestGDSEdgeLoaderREST("test_iterate_attr"))
-    suite.addTest(TestGDSEdgeLoaderREST("test_iterate_attr_multichar_delimiter"))
+    suite.addTest(TestGDSEdgeLoaderREST(
+        "test_iterate_attr_multichar_delimiter"))
     suite.addTest(TestGDSHeteroEdgeLoaderREST("test_init"))
     suite.addTest(TestGDSHeteroEdgeLoaderREST("test_iterate_as_homo"))
     suite.addTest(TestGDSHeteroEdgeLoaderREST("test_iterate_hetero"))
-    suite.addTest(TestGDSHeteroEdgeLoaderREST("test_iterate_hetero_multichar_delimiter"))
+    suite.addTest(TestGDSHeteroEdgeLoaderREST(
+        "test_iterate_hetero_multichar_delimiter"))
 
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)

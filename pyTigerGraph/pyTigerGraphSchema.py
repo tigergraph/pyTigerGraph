@@ -29,10 +29,10 @@ class pyTigerGraphSchema(pyTigerGraphBase):
 
         if self._versionGreaterThan4_0():
             res = self._get(self.gsUrl + "/gsql/v1/udt/tuples?graph=" + self.graphname,
-            authMode="pwd")
-        else:    
+                            authMode="pwd")
+        else:
             res = self._get(self.gsUrl + "/gsqlserver/gsql/udtlist?graph=" + self.graphname,
-                authMode="pwd")
+                            authMode="pwd")
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -52,7 +52,8 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         """
         ret = attrType["Name"]
         if "KeyTypeName" in attrType:
-            ret += "(" + attrType["KeyTypeName"] + "," + attrType["ValueTypeName"] + ")"
+            ret += "(" + attrType["KeyTypeName"] + \
+                "," + attrType["ValueTypeName"] + ")"
         elif "ValueTypeName" in attrType:
             ret += "(" + attrType["ValueTypeName"] + ")"
 
@@ -90,7 +91,8 @@ class pyTigerGraphSchema(pyTigerGraphBase):
             if isinstance(val, tuple):
                 vals[attr] = {"value": val[0], "op": val[1]}
             elif isinstance(val, dict):
-                vals[attr] = {"value": {"keylist": list(val.keys()), "valuelist": list(val.values())}}
+                vals[attr] = {"value": {"keylist": list(
+                    val.keys()), "valuelist": list(val.values())}}
             else:
                 vals[attr] = {"value": val}
 
@@ -126,10 +128,10 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         if not self.schema or force:
             if self._versionGreaterThan4_0():
                 self.schema = self._get(self.gsUrl + "/gsql/v1/schema/graphs/" + self.graphname,
-                    authMode="pwd")
+                                        authMode="pwd")
             else:
                 self.schema = self._get(self.gsUrl + "/gsqlserver/gsql/schema?graph=" + self.graphname,
-                    authMode="pwd")
+                                        authMode="pwd")
         if udts and ("UDTs" not in self.schema or force):
             self.schema["UDTs"] = self._getUDTs()
 
@@ -140,8 +142,8 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         return self.schema
 
     def _prepUpsertData(self, data: Union[str, object], atomic: bool = False, ackAll: bool = False,
-            newVertexOnly: bool = False, vertexMustExist: bool = False,
-            updateVertexOnly: bool = False):
+                        newVertexOnly: bool = False, vertexMustExist: bool = False,
+                        updateVertexOnly: bool = False):
         if not isinstance(data, str):
             data = json.dumps(data)
         headers = {}
@@ -160,8 +162,8 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         return data, headers, params
 
     def upsertData(self, data: Union[str, object], atomic: bool = False, ackAll: bool = False,
-            newVertexOnly: bool = False, vertexMustExist: bool = False,
-            updateVertexOnly: bool = False) -> dict:
+                   newVertexOnly: bool = False, vertexMustExist: bool = False,
+                   updateVertexOnly: bool = False) -> dict:
         """Upserts data (vertices and edges) from a JSON file or a file with equivalent object structure.
 
         Args:
@@ -197,10 +199,10 @@ class pyTigerGraphSchema(pyTigerGraphBase):
             logger.debug("params: " + self._locals(locals()))
 
         data, headers, params = self._prepUpsertData(data=data, atomic=atomic, ackAll=ackAll, newVertexOnly=newVertexOnly,
-                                               vertexMustExist=vertexMustExist, updateVertexOnly=updateVertexOnly)
+                                                     vertexMustExist=vertexMustExist, updateVertexOnly=updateVertexOnly)
 
         res = self._post(self.restppUrl + "/graph/" + self.graphname, headers=headers, data=data,
-            params=params)[0]
+                         params=params)[0]
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -221,7 +223,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         return bui, dyn, sta, url, ret
 
     def getEndpoints(self, builtin: bool = False, dynamic: bool = False,
-            static: bool = False) -> dict:
+                     static: bool = False) -> dict:
         """Lists the REST++ endpoints and their parameters.
 
         Args:
@@ -242,7 +244,8 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        bui, dyn, sta, url, ret = self._prepGetEndpoints(builtin=builtin, dynamic=dynamic, static=static)
+        bui, dyn, sta, url, ret = self._prepGetEndpoints(
+            builtin=builtin, dynamic=dynamic, static=static)
         if bui:
             eps = {}
             res = self._req("GET", url + "builtin=true", resKey="")

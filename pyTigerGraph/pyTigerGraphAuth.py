@@ -69,12 +69,12 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
         Use `getSecrets()` instead.
         """
         warnings.warn("The `showSecrets()` function is deprecated; use `getSecrets()` instead.",
-            DeprecationWarning)
+                      DeprecationWarning)
 
         return self.getSecrets()
 
     # TODO getSecret()
-        
+
     def _parseCreateSecret(self, res, alias: str = "", withAlias: bool = False):
         try:
             if ("already exists" in res):
@@ -84,7 +84,8 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                 errorMsg += "already exists."
                 raise TigerGraphException(errorMsg, "E-00001")
 
-            secret = "".join(res).replace('\n', '').split('The secret: ')[1].split(" ")[0].strip()
+            secret = "".join(res).replace('\n', '').split(
+                'The secret: ')[1].split(" ")[0].strip()
 
             if not withAlias:
                 if logger.level == logging.DEBUG:
@@ -153,7 +154,6 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
         logger.info("exit: createSecret")
         return secret
 
-
     def dropSecret(self, alias: Union[str, list], ignoreErrors: bool = True) -> str:
         """Drops a secret.
             See https://docs.tigergraph.com/tigergraph-server/current/user-access/managing-credentials#_drop_a_secret
@@ -189,27 +189,30 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
         return res
 
-    def _prep_newToken(self, secret: str = None, lifetime: int = None, token = None, method = None):
+    def _prep_newToken(self, secret: str = None, lifetime: int = None, token=None, method=None):
         # builds url and parameters for requesting get, refresh, and delete token
-        
+
         # Endpoint changed in TG 3.5 (I guess? actually unsure...Written by poor intern refactoring ugly code...)
         # TODO: Test this on TG ver <3.5
-        s, m, i = (0,0,0)
+        s, m, i = (0, 0, 0)
         if self.version:
             s, m, i = self.version.split(".")
         if 0 < int(s) < 3 or (int(s) == 3 and int(m) < 5):
             method = "GET"
-            url = self.restppUrl + "/requesttoken?secret=" + secret + ("&lifetime=" + str(lifetime) if lifetime else "") + ("&token=" + token if token else "")
+            url = self.restppUrl + "/requesttoken?secret=" + secret + \
+                ("&lifetime=" + str(lifetime) if lifetime else "") + \
+                ("&token=" + token if token else "")
             authMode = None
             if not secret:
-                raise TigerGraphException("Cannot request a token with username/password for versions < 3.5.")
+                raise TigerGraphException(
+                    "Cannot request a token with username/password for versions < 3.5.")
         else:
             method = "POST"
-            url = self.gsUrl + "/gsql/v1/tokens" # used for TG 4.x
+            url = self.gsUrl + "/gsql/v1/tokens"  # used for TG 4.x
             data = {"graph": self.graphname}
 
             # alt_url and alt_data used to construct the method and url for functions run in TG version 3.x
-            alt_url = self.restppUrl+"/requesttoken" # used for TG 3.x
+            alt_url = self.restppUrl+"/requesttoken"  # used for TG 3.x
             alt_data = {}
             if lifetime:
                 data["lifetime"] = str(lifetime)
@@ -226,7 +229,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                 authMode = "pwd"
                 alt_data = str(alt_data)
         return method, url, alt_url, authMode, data, alt_data
-    
+
     def _parse_newToken(self, res, setToken, mainVer):
         if not res.get("error"):
             if setToken:
@@ -234,8 +237,9 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                 self.authHeader = {'Authorization': "Bearer " + self.apiToken}
             else:
                 self.apiToken = None
-                self.authHeader = {'Authorization': 'Basic {0}'.format(self.base64_credential)}
-            
+                self.authHeader = {
+                    'Authorization': 'Basic {0}'.format(self.base64_credential)}
+
             if res.get("expiration"):
                 # On >=4.1 the format for the date of expiration changed. Convert back to old format
                 # Can't use self._versionGreaterThan4_0 since you need a token for that
@@ -243,27 +247,31 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                     ret = res["token"], res.get("expiration")
                 else:
                     ret = res["token"], res.get("expiration"), \
-                        datetime.utcfromtimestamp(float(res.get("expiration"))).strftime('%Y-%m-%d %H:%M:%S')
+                        datetime.utcfromtimestamp(
+                            float(res.get("expiration"))).strftime('%Y-%m-%d %H:%M:%S')
             else:
                 ret = res["token"]
             return ret
 
         if "Endpoint is not found from url = /requesttoken" in res["message"]:
             raise TigerGraphException("REST++ authentication is not enabled, can't generate token.",
-                None)
-        raise TigerGraphException(res["message"], (res["code"] if "code" in res else None))
+                                      None)
+        raise TigerGraphException(
+            res["message"], (res["code"] if "code" in res else None))
 
-    def _newToken(self, secret: str = None, lifetime: int = None, token = None, _method = None)  -> Union[tuple, str]:
-        method, url, alt_url, authMode, data, alt_data = self._prep_newToken(secret = secret, lifetime = lifetime, token=token)
+    def _newToken(self, secret: str = None, lifetime: int = None, token=None, _method=None) -> Union[tuple, str]:
+        method, url, alt_url, authMode, data, alt_data = self._prep_newToken(
+            secret=secret, lifetime=lifetime, token=token)
         #  _method Used for delete and refresh token
-       
+
         # method == GET when using old version since _prep_newToken() gets the method for getting a new token for a version
         if method == "GET":
             if _method:
                 method = _method
 
             # Use TG < 3.5 format (no json data)
-            res = self._req(method, url, authMode=authMode, data=data, resKey=None)
+            res = self._req(method, url, authMode=authMode,
+                            data=data, resKey=None)
             mainVer = 3
         else:
             if _method:
@@ -271,11 +279,13 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
             # Try using TG 4.1 endpoint first, if url not found then try <4.1 endpoint
             try:
-                res = self._req(method, url, authMode=authMode, data=data, resKey=None, jsonData=True)
+                res = self._req(method, url, authMode=authMode,
+                                data=data, resKey=None, jsonData=True)
                 mainVer = 4
             except requests.exceptions.HTTPError as e:
                 if e.response.status_code == 404 or e.response.status_code == 405:
-                    res = self._req(method, alt_url, authMode=authMode, data=alt_data, resKey=None)
+                    res = self._req(
+                        method, alt_url, authMode=authMode, data=alt_data, resKey=None)
                     # res['token'] = res['results']['token'] # bringing token out to outer dict level for consistency, can't just use resKey="results" since want to preserve error message
                     mainVer = 3
                 else:
@@ -283,29 +293,31 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
         # uses mainVer instead of _versionGreaterThan4_0 since you need a token for verson checking
         return res, mainVer
-        
-    def newGetToken(self, secret: str = None, setToken: bool = True, lifetime: int = None)  -> Union[tuple, str]:
+
+    def newGetToken(self, secret: str = None, setToken: bool = True, lifetime: int = None) -> Union[tuple, str]:
         logger.info("entry: getToken")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        res, mainVer = self._newToken(secret=secret,lifetime=lifetime)
+        res, mainVer = self._newToken(secret=secret, lifetime=lifetime)
         token = self._parse_newToken(res, setToken, mainVer)
         logger.info("exit: getToken")
         return token
 
-    def newRefreshToken(self, secret: str = None, setToken: bool = True, lifetime: int = None, token = "")  -> Union[tuple, str]:
+    def newRefreshToken(self, secret: str = None, setToken: bool = True, lifetime: int = None, token="") -> Union[tuple, str]:
         logger.info("entry: refreshToken")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
-        
+
         if self._versionGreaterThan4_0():
             logger.info("exit: refreshToken")
-            raise TigerGraphException("Refreshing tokens is only supported on versions of TigerGraph <= 4.0.0.", 0)
-        
+            raise TigerGraphException(
+                "Refreshing tokens is only supported on versions of TigerGraph <= 4.0.0.", 0)
+
         if not token:
             token = self.apiToken
-        res, mainVer =  self._newToken(secret=secret, lifetime=lifetime, token=token, _method="PUT")
+        res, mainVer = self._newToken(
+            secret=secret, lifetime=lifetime, token=token, _method="PUT")
         newToken = self._parse_newToken(res, setToken, mainVer)
         logger.info("exit: refreshToken")
         return newToken
@@ -321,8 +333,9 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             logger.info("exit: deleteToken")
 
             return True
-        
-        raise TigerGraphException(res["message"], (res["code"] if "code" in res else None))
+
+        raise TigerGraphException(
+            res["message"], (res["code"] if "code" in res else None))
 
     def getToken(self, secret: str = None, setToken: bool = True, lifetime: int = None) -> Union[tuple, str]:
         """Requests an authorization token.
@@ -377,14 +390,14 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                 if lifetime:
                     _json["lifetime"] = str(lifetime)
                 res = self._req("POST", self.gsUrl +
-                    "/gsql/v1/tokens", data=_json, jsonData=True, resKey=None)
+                                "/gsql/v1/tokens", data=_json, jsonData=True, resKey=None)
 
                 # if /gsql/v1/tokens endpoint doesn't exist then try old endpoint
                 if res.status_code == 404:
-                    mainVer = 3
                     res = self._req("GET", self.restppUrl +
-                        "/requesttoken?secret=" + secret +
-                        ("&lifetime=" + str(lifetime) if lifetime else ""), resKey=None)
+                                    "/requesttoken?secret=" + secret +
+                                    ("&lifetime=" + str(lifetime) if lifetime else ""), verify=False)
+                    mainVer = 3  # Can't use _verGreaterThan4_0 to check version since you need to set a token for that
                 else:
                     mainVer = 4
                 res = json.loads(res.text)
@@ -393,14 +406,15 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                     success = True
             except Exception as e:
                 raise e
-        elif not(success) and not(secret) and mainVer == 3:
-            res = self._req("POST", self.restppUrl+"/requesttoken", authMode="pwd", data=str({"graph": self.graphname}), resKey="results")
+        elif not (success) and not (secret) and mainVer == 3:
+            res = self._req("POST", self.restppUrl+"/requesttoken", authMode="pwd",
+                            data=str({"graph": self.graphname}), resKey="results")
             success = True
-        elif not(success) and (int(s) < 3 or (int(s) == 3 and int(m) < 5)):
-            raise TigerGraphException("Cannot request a token with username/password for versions < 3.5.")
+        elif not (success) and (int(s) < 3 or (int(s) == 3 and int(m) < 5)):
+            raise TigerGraphException(
+                "Cannot request a token with username/password for versions < 3.5.")
 
-
-        if not success and mainVer == 3: # can't use _verGreaterThan4_0 bc haven't set the token yet
+        if not success and mainVer == 3:  # can't use _verGreaterThan4_0 bc haven't set the token yet
             try:
                 data = {"secret": secret}
 
@@ -408,26 +422,27 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                     data["lifetime"] = str(lifetime)
 
                 res = json.loads(requests.post(self.restppUrl + "/requesttoken",
-                    data=json.dumps(data), verify=False).text)
+                                               data=json.dumps(data), verify=False).text)
             except Exception as e:
                 raise e
 
-        
         if not res.get("error"):
             if setToken:
                 self.apiToken = res["token"]
                 self.authHeader = {'Authorization': "Bearer " + self.apiToken}
             else:
                 self.apiToken = None
-                self.authHeader = {'Authorization': 'Basic {0}'.format(self.base64_credential)}
-            
+                self.authHeader = {
+                    'Authorization': 'Basic {0}'.format(self.base64_credential)}
+
             if res.get("expiration"):
                 # On >=4.1 the format for the date of expiration changed. Convert back to old format
                 if self._versionGreaterThan4_0():
                     ret = res["token"], res.get("expiration")
                 else:
                     ret = res["token"], res.get("expiration"), \
-                        datetime.utcfromtimestamp(float(res.get("expiration"))).strftime('%Y-%m-%d %H:%M:%S')
+                        datetime.utcfromtimestamp(
+                            float(res.get("expiration"))).strftime('%Y-%m-%d %H:%M:%S')
             else:
                 ret = res["token"]
 
@@ -439,8 +454,9 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
         if "Endpoint is not found from url = /requesttoken" in res["message"]:
             raise TigerGraphException("REST++ authentication is not enabled, can't generate token.",
-                None)
-        raise TigerGraphException(res["message"], (res["code"] if "code" in res else None))
+                                      None)
+        raise TigerGraphException(
+            res["message"], (res["code"] if "code" in res else None))
 
     def refreshToken(self, secret: str, token: str = "", lifetime: int = None) -> tuple:
         """Extends a token's lifetime.
@@ -497,22 +513,27 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
         if self._versionGreaterThan4_0():
             logger.info("exit: refreshToken")
-            raise TigerGraphException("Refreshing tokens is only supported on versions of TigerGraph <= 4.0.0.", 0)
+            raise TigerGraphException(
+                "Refreshing tokens is only supported on versions of TigerGraph <= 4.0.0.", 0)
 
         if int(s) < 3 or (int(s) == 3 and int(m) < 5):
             if self.useCert and self.certPath:
                 res = json.loads(requests.request("PUT", self.restppUrl + "/requesttoken?secret=" +
-                    secret + "&token=" + token + ("&lifetime=" + str(lifetime) if lifetime else ""),
-                    verify=False).text)
+                                                  secret + "&token=" + token +
+                                                  ("&lifetime=" + str(lifetime)
+                                                   if lifetime else ""),
+                                                  verify=False).text)
             else:
                 res = json.loads(requests.request("PUT", self.restppUrl + "/requesttoken?secret=" +
-                    secret + "&token=" + token + ("&lifetime=" + str(lifetime) if lifetime else "")
-                    ).text)
+                                                  secret + "&token=" + token +
+                                                  ("&lifetime=" + str(lifetime)
+                                                   if lifetime else "")
+                                                  ).text)
             if not res["error"]:
                 success = True
             if "Endpoint is not found from url = /requesttoken" in res["message"]:
                 raise TigerGraphException("REST++ authentication is not enabled, can't refresh token.",
-                    None)
+                                          None)
 
         if not success:
             data = {"secret": secret, "token": token}
@@ -520,15 +541,15 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                 data["lifetime"] = str(lifetime)
             if self.useCert is True and self.certPath is not None:
                 res = json.loads(requests.put(self.restppUrl + "/requesttoken",
-                    data=json.dumps(data), verify=False).text)
+                                              data=json.dumps(data), verify=False).text)
             else:
                 res = json.loads(requests.put(self.restppUrl + "/requesttoken",
-                    data=json.dumps(data)).text)
+                                              data=json.dumps(data), verify=False).text)
             if not res["error"]:
                 success = True
             if "Endpoint is not found from url = /requesttoken" in res["message"]:
                 raise TigerGraphException("REST++ authentication is not enabled, can't refresh token.",
-                    None)
+                                          None)
 
         if success:
             exp = time.time() + res["expiration"]
@@ -541,7 +562,8 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
             return ret
 
-        raise TigerGraphException(res["message"], (res["code"] if "code" in res else None))
+        raise TigerGraphException(
+            res["message"], (res["code"] if "code" in res else None))
 
     def deleteToken(self, secret, token=None, skipNA=True) -> bool:
         """Deletes a token.
@@ -590,24 +612,24 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             if self.useCert is True and self.certPath is not None:
                 if self._versionGreaterThan4_0():
                     res = requests.request("DELETE", self.gsUrl +
-                    "/gsql/v1/tokens", verify=False, json={"secret": secret, "token": token},
-                      headers={"X-User-Agent": "pyTigerGraph"})
+                                           "/gsql/v1/tokens", verify=False, json={"secret": secret, "token": token},
+                                           headers={"X-User-Agent": "pyTigerGraph"})
                     res = json.loads(res.text)
                 else:
                     res = json.loads(
                         requests.request("DELETE",
-                        self.restppUrl + "/requesttoken?secret=" + secret + "&token=" + token,
-                        verify=False).text)
+                                         self.restppUrl + "/requesttoken?secret=" + secret + "&token=" + token,
+                                         verify=False).text)
             else:
                 if self._versionGreaterThan4_0():
                     res = requests.request("DELETE", self.gsUrl +
-                    "/gsql/v1/tokens", verify=False, json={"tokens": token},
-                      headers={"X-User-Agent": "pyTigerGraph"})
+                                           "/gsql/v1/tokens", verify=False, json={"tokens": token},
+                                           headers={"X-User-Agent": "pyTigerGraph"})
                     res = json.loads(res.text)
                 else:
                     res = json.loads(
                         requests.request("DELETE",
-                            self.restppUrl + "/requesttoken?secret=" + secret + "&token=" + token).text)
+                                         self.restppUrl + "/requesttoken?secret=" + secret + "&token=" + token).text)
             if not res["error"]:
                 success = True
 
@@ -615,20 +637,20 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             data = {"secret": secret, "token": token}
             if self.useCert is True and self.certPath is not None:
                 res = json.loads(requests.delete(self.restppUrl + "/requesttoken",
-                    data=json.dumps(data)).text)
+                                                 data=json.dumps(data)).text)
             else:
                 if self._versionGreaterThan4_0():
                     res = requests.request("DELETE", self.gsUrl +
-                    "/gsql/v1/tokens", verify=False, data=json.dumps(data),
-                      headers={"X-User-Agent": "pyTigerGraph"})
+                                           "/gsql/v1/tokens", verify=False, data=json.dumps(data),
+                                           headers={"X-User-Agent": "pyTigerGraph"})
                     res = json.loads(res.text)
                 else:
                     res = json.loads(requests.delete(self.restppUrl + "/requesttoken",
-                        data=json.dumps(data), verify=False).text)
+                                                     data=json.dumps(data), verify=False).text)
 
         if "Endpoint is not found from url = /requesttoken" in res["message"]:
             raise TigerGraphException("REST++ authentication is not enabled, can't delete token.",
-                None)
+                                      None)
 
         if not res["error"]:
             if logger.level == logging.DEBUG:
@@ -644,4 +666,5 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
             return True
 
-        raise TigerGraphException(res["message"], (res["code"] if "code" in res else None))
+        raise TigerGraphException(
+            res["message"], (res["code"] if "code" in res else None))

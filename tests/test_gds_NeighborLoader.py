@@ -108,7 +108,7 @@ class TestGDSNeighborLoaderKafka(unittest.TestCase):
                 break
         rq_id = self.conn.getRunningQueries()["results"]
         self.assertEqual(len(rq_id), 0)
-        
+
     def test_whole_graph_pyg(self):
         loader = NeighborLoader(
             graph=self.conn,
@@ -256,21 +256,21 @@ class TestGDSNeighborLoaderKafka(unittest.TestCase):
         neighbor_loader = NeighborLoader(
             graph=params["conn"],
             batch_size=8,
-            num_neighbors = 10,
-            num_hops =2,
-            v_in_feats = ["x"],
-            v_out_labels = ["y"],
-            v_extra_feats = ["train_mask", "val_mask", "test_mask"],
-            output_format = "PyG",
+            num_neighbors=10,
+            num_hops=2,
+            v_in_feats=["x"],
+            v_out_labels=["y"],
+            v_extra_feats=["train_mask", "val_mask", "test_mask"],
+            output_format="PyG",
             shuffle=False,
-            filter_by = "train_mask",
+            filter_by="train_mask",
             timeout=300000,
             kafka_address="kafka:9092",
             kafka_num_partitions=2,
             kafka_auto_offset_reset="earliest",
             kafka_group_id="test_group",
-            kafka_auto_del_topic = False,
-            kafka_skip_produce = params["kafka_skip_produce"]
+            kafka_auto_del_topic=False,
+            kafka_skip_produce=params["kafka_skip_produce"]
         )
         num_batches = 0
         num_seeds = 0
@@ -279,7 +279,7 @@ class TestGDSNeighborLoaderKafka(unittest.TestCase):
             num_batches += 1
             num_seeds += data["is_seed"].sum().item()
         return num_batches, num_seeds
-    
+
     def test_distributed_loaders(self):
         params = [
             {"conn": self.conn, "kafka_skip_produce": False},
@@ -289,6 +289,7 @@ class TestGDSNeighborLoaderKafka(unittest.TestCase):
             res = pool.map(self.run_loader, params)
         self.assertEqual(res[0][0]+res[1][0], 18)
         self.assertEqual(res[0][1]+res[1][1], 140)
+
 
 class TestGDSNeighborLoaderREST(unittest.TestCase):
     @classmethod
@@ -682,17 +683,23 @@ class TestGDSHeteroNeighborLoaderREST(unittest.TestCase):
             # print(num_batches, data)
             self.assertIsInstance(data, pygHeteroData)
             self.assertGreater(data["v0"]["x"].shape[0], 0)
-            self.assertEqual(data["v0"]["x"].shape[0], data["v0"]["y"].shape[0])
+            self.assertEqual(data["v0"]["x"].shape[0],
+                             data["v0"]["y"].shape[0])
             self.assertEqual(
                 data["v0"]["x"].shape[0], data["v0"]["train_mask"].shape[0]
             )
-            self.assertEqual(data["v0"]["x"].shape[0], data["v0"]["test_mask"].shape[0])
-            self.assertEqual(data["v0"]["x"].shape[0], data["v0"]["is_seed"].shape[0])
-            self.assertEqual(data["v0"]["x"].shape[0], data["v0"]["val_mask"].shape[0])
+            self.assertEqual(data["v0"]["x"].shape[0],
+                             data["v0"]["test_mask"].shape[0])
+            self.assertEqual(data["v0"]["x"].shape[0],
+                             data["v0"]["is_seed"].shape[0])
+            self.assertEqual(data["v0"]["x"].shape[0],
+                             data["v0"]["val_mask"].shape[0])
             self.assertGreater(data["v1"]["x"].shape[0], 0)
-            self.assertEqual(data["v1"]["x"].shape[0], data["v1"]["is_seed"].shape[0])
+            self.assertEqual(data["v1"]["x"].shape[0],
+                             data["v1"]["is_seed"].shape[0])
             self.assertGreater(data["v2"]["x"].shape[0], 0)
-            self.assertEqual(data["v2"]["x"].shape[0], data["v2"]["is_seed"].shape[0])
+            self.assertEqual(data["v2"]["x"].shape[0],
+                             data["v2"]["is_seed"].shape[0])
             self.assertTrue(
                 data["v0v0"]["edge_index"].shape[1] > 0
                 and data["v0v0"]["edge_index"].shape[1] <= 710
@@ -741,17 +748,23 @@ class TestGDSHeteroNeighborLoaderREST(unittest.TestCase):
             # print(num_batches, data)
             self.assertIsInstance(data, pygHeteroData)
             self.assertGreater(data["v0"]["x"].shape[0], 0)
-            self.assertEqual(data["v0"]["x"].shape[0], data["v0"]["y"].shape[0])
+            self.assertEqual(data["v0"]["x"].shape[0],
+                             data["v0"]["y"].shape[0])
             self.assertEqual(
                 data["v0"]["x"].shape[0], data["v0"]["train_mask"].shape[0]
             )
-            self.assertEqual(data["v0"]["x"].shape[0], data["v0"]["test_mask"].shape[0])
-            self.assertEqual(data["v0"]["x"].shape[0], data["v0"]["is_seed"].shape[0])
-            self.assertEqual(data["v0"]["x"].shape[0], data["v0"]["val_mask"].shape[0])
+            self.assertEqual(data["v0"]["x"].shape[0],
+                             data["v0"]["test_mask"].shape[0])
+            self.assertEqual(data["v0"]["x"].shape[0],
+                             data["v0"]["is_seed"].shape[0])
+            self.assertEqual(data["v0"]["x"].shape[0],
+                             data["v0"]["val_mask"].shape[0])
             self.assertGreater(data["v1"]["x"].shape[0], 0)
-            self.assertEqual(data["v1"]["x"].shape[0], data["v1"]["is_seed"].shape[0])
+            self.assertEqual(data["v1"]["x"].shape[0],
+                             data["v1"]["is_seed"].shape[0])
             self.assertGreater(data["v2"]["x"].shape[0], 0)
-            self.assertEqual(data["v2"]["x"].shape[0], data["v2"]["is_seed"].shape[0])
+            self.assertEqual(data["v2"]["x"].shape[0],
+                             data["v2"]["is_seed"].shape[0])
             self.assertTrue(
                 data["v0v0"]["edge_index"].shape[1] > 0
                 and data["v0v0"]["edge_index"].shape[1] <= 710
@@ -795,7 +808,8 @@ class TestGDSHeteroNeighborLoaderREST(unittest.TestCase):
             buffer_size=4,
         )
         data = loader.fetch(
-            [{"primary_id": "10", "type": "v0"}, {"primary_id": "55", "type": "v0"}]
+            [{"primary_id": "10", "type": "v0"}, {
+                "primary_id": "55", "type": "v0"}]
         )
         self.assertIn("primary_id", data["v0"])
         self.assertGreater(data["v0"]["x"].shape[0], 2)
@@ -825,7 +839,8 @@ class TestGDSHeteroNeighborLoaderREST(unittest.TestCase):
             buffer_size=4,
         )
         data = loader.fetch(
-            [{"primary_id": "10", "type": "v0"}, {"primary_id": "55", "type": "v0"}]
+            [{"primary_id": "10", "type": "v0"}, {
+                "primary_id": "55", "type": "v0"}]
         )
         self.assertIn("primary_id", data["v0"])
         self.assertGreater(data["v0"]["x"].shape[0], 2)
@@ -837,7 +852,7 @@ class TestGDSHeteroNeighborLoaderREST(unittest.TestCase):
                 self.assertTrue(data["v0"]["is_seed"][i].item())
             else:
                 self.assertFalse(data["v0"]["is_seed"][i].item())
-    
+
     def test_metadata(self):
         loader = NeighborLoader(
             graph=self.conn,
@@ -861,9 +876,10 @@ class TestGDSHeteroNeighborLoaderREST(unittest.TestCase):
                  ("v2", "v2v0", "v0"),
                  ("v2", "v2v1", "v1"),
                  ("v2", "v2v2", "v2")])
-        
+
         metadata = loader.metadata()
         self.assertEqual(test, metadata)
+
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
@@ -886,7 +902,8 @@ if __name__ == "__main__":
     suite.addTest(TestGDSHeteroNeighborLoaderREST("test_whole_graph_df"))
     suite.addTest(TestGDSHeteroNeighborLoaderREST("test_whole_graph_pyg"))
     suite.addTest(TestGDSHeteroNeighborLoaderREST("test_iterate_pyg"))
-    suite.addTest(TestGDSHeteroNeighborLoaderREST("test_iterate_pyg_multichar_delimiter"))
+    suite.addTest(TestGDSHeteroNeighborLoaderREST(
+        "test_iterate_pyg_multichar_delimiter"))
     suite.addTest(TestGDSHeteroNeighborLoaderREST("test_fetch"))
     suite.addTest(TestGDSHeteroNeighborLoaderREST("test_fetch_delimiter"))
     suite.addTest(TestGDSHeteroNeighborLoaderREST("test_metadata"))

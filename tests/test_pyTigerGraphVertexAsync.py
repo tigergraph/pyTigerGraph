@@ -17,7 +17,7 @@ class test_pyTigerGraphAuth(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(res, list)
         self.assertEqual(7, len(res))
         exp = ["vertex1_all_types", "vertex2_primary_key", "vertex3_primary_key_composite",
-            "vertex4", "vertex5", "vertex6", "vertex7"]
+               "vertex4", "vertex5", "vertex6", "vertex7"]
         self.assertEqual(exp, res)
 
     async def test_02_getVertexType(self):
@@ -64,12 +64,12 @@ class test_pyTigerGraphAuth(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(TigerGraphException) as tge:
             await self.conn.getVertexCount("*", "a01>=3")
         self.assertEqual("VertexType cannot be \"*\" if where condition is specified.",
-            tge.exception.message)
+                         tge.exception.message)
 
         with self.assertRaises(TigerGraphException) as tge:
             await self.conn.getVertexCount(["vertex4", "vertex5", "vertex6"], "a01>=3")
         self.assertEqual("VertexType cannot be a list if where condition is specified.",
-            tge.exception.message)
+                         tge.exception.message)
 
         with self.assertRaises(TigerGraphException) as tge:
             await self.conn.getVertexCount("non_existing_vertex_type")
@@ -116,7 +116,8 @@ class test_pyTigerGraphAuth(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(res, list)
         v = {}
         for r in res:
-            if "v_id" in r and r["v_id"] == '100':  # v_id value is returned as str, not int
+            # v_id value is returned as str, not int
+            if "v_id" in r and r["v_id"] == '100':
                 v = r
         self.assertNotEqual({}, v)
         self.assertIn("attributes", v)
@@ -137,14 +138,14 @@ class test_pyTigerGraphAuth(unittest.IsolatedAsyncioTestCase):
 
     async def test_07_getVertices(self):
         res = await self.conn.getVertices("vertex4", select="a01", where="a01>1,a01<5", sort="-a01",
-            limit=2)
+                                          limit=2)
         self.assertIsInstance(res, list)
         self.assertEqual(2, len(res))
         self.assertEqual(4, res[0]["attributes"]["a01"])
         self.assertEqual(3, res[1]["attributes"]["a01"])
 
         res = await self.conn.getVertices("vertex4", select="a01", where="a01>1,a01<5", sort="-a01",
-            limit=2, fmt="json")
+                                          limit=2, fmt="json")
         self.assertIsInstance(res, str)
         res = json.loads(res)
         self.assertIsInstance(res, list)
@@ -153,19 +154,20 @@ class test_pyTigerGraphAuth(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(3, res[1]["attributes"]["a01"])
 
         res = await self.conn.getVertices("vertex4", select="a01", where="a01>1,a01<5", sort="-a01",
-            limit=2, fmt="df")
+                                          limit=2, fmt="df")
         self.assertIsInstance(res, pandas.DataFrame)
         self.assertEqual(2, len(res.index))
 
     async def test_08_getVertexDataFrame(self):
         res = await self.conn.getVertexDataFrame("vertex4", select="a01", where="a01>1,a01<5",
-            sort="-a01",
-            limit=2)
+                                                 sort="-a01",
+                                                 limit=2)
         self.assertIsInstance(res, pandas.DataFrame)
         self.assertEqual(2, len(res.index))
 
     async def test_09_getVerticesById(self):
-        res = await self.conn.getVerticesById("vertex4", [1, 3, 5], select="a01")  # select is ignored
+        # select is ignored
+        res = await self.conn.getVerticesById("vertex4", [1, 3, 5], select="a01")
         self.assertIsInstance(res, list)
         self.assertEqual(3, len(res))
 
@@ -241,7 +243,7 @@ class test_pyTigerGraphAuth(unittest.IsolatedAsyncioTestCase):
         res = self.conn.vertexSetToDataFrame(res)
         self.assertIsInstance(res, pandas.DataFrame)
         self.assertEqual(5, len(res.index))
-        self.assertEqual(["v_id","a01"], list(res.columns))
+        self.assertEqual(["v_id", "a01"], list(res.columns))
 
 
 if __name__ == '__main__':

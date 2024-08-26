@@ -17,6 +17,7 @@ from torch_geometric.data import Data as pygData
 from torch_geometric.data import HeteroData as pygHeteroData
 '''
 
+
 class TestingCallback(BaseCallback):
     def __init__(self, test_name, output_dir="./logs"):
         self.output_dir = output_dir
@@ -38,6 +39,7 @@ class TestingCallback(BaseCallback):
 
     def on_epoch_end(self, trainer):
         trainer.eval()
+
 
 class TestGDSTrainer(unittest.TestCase):
     @classmethod
@@ -77,12 +79,13 @@ class TestGDSTrainer(unittest.TestCase):
             buffer_size=4,
         )
 
-        gs = GraphSAGEForVertexClassification(num_layers=2, 
-                                              out_dim=7, 
+        gs = GraphSAGEForVertexClassification(num_layers=2,
+                                              out_dim=7,
                                               dropout=.2,
                                               hidden_dim=128)
 
-        trainer = Trainer(gs, train, valid, callbacks=[TestingCallback("cora_class")])
+        trainer = Trainer(gs, train, valid, callbacks=[
+                          TestingCallback("cora_class")])
 
         trainer.train(num_epochs=1)
         ifLogged = os.path.isfile("./logs/train_results_cora_class.log")
@@ -104,15 +107,17 @@ class TestGDSTrainer(unittest.TestCase):
             buffer_size=4,
         )
 
-        gs = GraphSAGEForVertexClassification(num_layers=2, 
-                                              out_dim=7, 
+        gs = GraphSAGEForVertexClassification(num_layers=2,
+                                              out_dim=7,
                                               dropout=.2,
                                               hidden_dim=128)
 
-        trainer = Trainer(gs, train, valid, callbacks=[TestingCallback("cora_class")])
+        trainer = Trainer(gs, train, valid, callbacks=[
+                          TestingCallback("cora_class")])
 
         trainer.train(num_epochs=1)
-        out, _ = trainer.predict(infer.fetch([{"primary_id": 1, "type": "Paper"}]))
+        out, _ = trainer.predict(infer.fetch(
+            [{"primary_id": 1, "type": "Paper"}]))
         self.assertEqual(out.shape[1], 7)
 
 

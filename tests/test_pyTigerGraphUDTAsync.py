@@ -16,12 +16,12 @@ class test_pyTigerGraphUDT(unittest.IsolatedAsyncioTestCase):
 
     async def test_02_getUDT(self):
         res = await self.conn.getUDT("tuple2_simple")
-        self.assertTrue(res[0]['fieldName']=='field1')
-        self.assertTrue(res[0]['fieldType']=='INT')
-        self.assertTrue(res[1]['fieldName']=='field2')
-        self.assertTrue(res[1]['fieldType']=='STRING')
-        self.assertTrue(res[2]['fieldName']=='field3')
-        self.assertTrue(res[2]['fieldType']=='DATETIME')
+        self.assertTrue(res[0]['fieldName'] == 'field1')
+        self.assertTrue(res[0]['fieldType'] == 'INT')
+        self.assertTrue(res[1]['fieldName'] == 'field2')
+        self.assertTrue(res[1]['fieldType'] == 'STRING')
+        self.assertTrue(res[2]['fieldName'] == 'field3')
+        self.assertTrue(res[2]['fieldType'] == 'DATETIME')
 
 
 if __name__ == '__main__':

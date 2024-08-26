@@ -21,6 +21,7 @@ from pyTigerGraph.pyTigerGraphVertex import pyTigerGraphVertex
 
 logger = logging.getLogger(__name__)
 
+
 class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, pyTigerGraphVertex):
 
     async def getVertexTypes(self, force: bool = False) -> list:
@@ -73,7 +74,8 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, p
         ret = []
 
         for at in et["Attributes"]:
-            ret.append((at["AttributeName"], self._getAttrType(at["AttributeType"])))
+            ret.append(
+                (at["AttributeName"], self._getAttrType(at["AttributeType"])))
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -158,13 +160,14 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, p
         if isinstance(vertexType, str) and vertexType != "*":
             if where:
                 res = await self._req("GET", self.restppUrl + "/graph/" + self.graphname + "/vertices/" + vertexType
-                    + "?count_only=true" + "&filter=" + where)
+                                      + "?count_only=true" + "&filter=" + where)
                 res = res[0]["count"]
             else:
                 res = await self._req("POST", self.restppUrl + "/builtins/" + self.graphname + ("?realtime=true" if realtime else ""),
-                                 data={"function": "stat_vertex_number", "type": vertexType},
-                                 jsonData=True)
-                
+                                      data={"function": "stat_vertex_number",
+                                            "type": vertexType},
+                                      jsonData=True)
+
                 res = res[0]["count"]
 
             if logger.level == logging.DEBUG:
@@ -172,11 +175,11 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, p
             logger.info("exit: getVertexCount (1)")
 
             return res
-        
+
         res = await self._req("POST", self.restppUrl + "/builtins/" + self.graphname + ("?realtime=true" if realtime else ""),
-                         data={"function": "stat_vertex_number", "type": "*"},
-                         jsonData=True)
-        
+                              data={"function": "stat_vertex_number", "type": "*"},
+                              jsonData=True)
+
         ret = self._parseGetVertexCount(res, vertexType, where)
 
         if logger.level == logging.DEBUG:
@@ -292,7 +295,7 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, p
         return ret
 
     async def upsertVertexDataFrame(self, df: 'pd.DataFrame', vertexType: str, v_id: bool = None,
-            attributes: dict = None) -> int:
+                                    attributes: dict = None) -> int:
         """Upserts vertices from a Pandas DataFrame.
 
         Args:
@@ -316,8 +319,8 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, p
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        
-        json_up = self._prepUpsertVertexDataFrame(df=df, v_id=v_id, attributes=attributes)
+        json_up = self._prepUpsertVertexDataFrame(
+            df=df, v_id=v_id, attributes=attributes)
         ret = await self.upsertVertices(vertexType=vertexType, vertices=json_up)
 
         if logger.level == logging.DEBUG:
@@ -327,8 +330,8 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, p
         return ret
 
     async def getVertices(self, vertexType: str, select: str = "", where: str = "",
-            limit: Union[int, str] = None, sort: str = "", fmt: str = "py", withId: bool = True,
-            withType: bool = False, timeout: int = 0) -> Union[dict, str, 'pd.DataFrame']:
+                          limit: Union[int, str] = None, sort: str = "", fmt: str = "py", withId: bool = True,
+                          withType: bool = False, timeout: int = 0) -> Union[dict, str, 'pd.DataFrame']:
         """Retrieves vertices of the given vertex type.
 
         *Note*:
@@ -375,7 +378,8 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, p
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        url = self._prepGetVertices(vertexType=vertexType, select=select, where=where, limit=limit, sort=sort, timeout=timeout)
+        url = self._prepGetVertices(
+            vertexType=vertexType, select=select, where=where, limit=limit, sort=sort, timeout=timeout)
         ret = await self._req("GET", url)
 
         if fmt == "json":
@@ -390,7 +394,7 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, p
         return ret
 
     async def getVertexDataFrame(self, vertexType: str, select: str = "", where: str = "",
-            limit: Union[int, str] = None, sort: str = "", timeout: int = 0) -> 'pd.DataFrame':
+                                 limit: Union[int, str] = None, sort: str = "", timeout: int = 0) -> 'pd.DataFrame':
         """Retrieves vertices of the given vertex type and returns them as pandas DataFrame.
 
         This is a shortcut to `getVertices(..., fmt="df", withId=True, withType=False)`.
@@ -427,7 +431,7 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, p
             logger.debug("params: " + self._locals(locals()))
 
         ret = await self.getVertices(vertexType, select=select, where=where, limit=limit, sort=sort,
-            fmt="df", withId=True, withType=False, timeout=timeout)
+                                     fmt="df", withId=True, withType=False, timeout=timeout)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -436,7 +440,7 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, p
         return ret
 
     async def getVertexDataframe(self, vertexType: str, select: str = "", where: str = "",
-            limit: Union[int, str] = None, sort: str = "", timeout: int = 0) -> 'pd.DataFrame':
+                                 limit: Union[int, str] = None, sort: str = "", timeout: int = 0) -> 'pd.DataFrame':
         """DEPRECATED
 
         Use `getVertexDataFrame()` instead.
@@ -446,11 +450,11 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, p
             DeprecationWarning)
 
         return await self.getVertexDataFrame(vertexType, select=select, where=where, limit=limit,
-            sort=sort, timeout=timeout)
+                                             sort=sort, timeout=timeout)
 
     async def getVerticesById(self, vertexType: str, vertexIds: Union[int, str, list], select: str = "",
-            fmt: str = "py", withId: bool = True, withType: bool = False,
-            timeout: int = 0) -> Union[list, str, 'pd.DataFrame']:
+                              fmt: str = "py", withId: bool = True, withType: bool = False,
+                              timeout: int = 0) -> Union[list, str, 'pd.DataFrame']:
         """Retrieves vertices of the given vertex type, identified by their ID.
 
         Args:
@@ -486,7 +490,8 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, p
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        vids, url = self._prepGetVerticesById(vertexIds=vertexIds, vertexType=vertexType)
+        vids, url = self._prepGetVerticesById(
+            vertexIds=vertexIds, vertexType=vertexType)
 
         ret = []
         for vid in vids:
@@ -504,7 +509,7 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, p
         return ret
 
     async def getVertexDataFrameById(self, vertexType: str, vertexIds: Union[int, str, list],
-            select: str = "") -> 'pd.DataFrame':
+                                     select: str = "") -> 'pd.DataFrame':
         """Retrieves vertices of the given vertex type, identified by their ID.
 
         This is a shortcut to ``getVerticesById(..., fmt="df", withId=True, withType=False)``.
@@ -525,7 +530,7 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, p
             logger.debug("params: " + self._locals(locals()))
 
         ret = await self.getVerticesById(vertexType, vertexIds, select, fmt="df", withId=True,
-            withType=False)
+                                         withType=False)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -534,7 +539,7 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, p
         return ret
 
     async def getVertexDataframeById(self, vertexType: str, vertexIds: Union[int, str, list],
-            select: str = "") -> 'pd.DataFrame':
+                                     select: str = "") -> 'pd.DataFrame':
         """DEPRECATED
 
         Use `getVertexDataFrameById()` instead.
@@ -579,7 +584,7 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, p
         for vt in vts:
             data = '{"function":"stat_vertex_attr","type":"' + vt + '"}'
             res = await self._req("POST", self.restppUrl + "/builtins/" + self.graphname, data=data, resKey="",
-                skipCheck=True)
+                                  skipCheck=True)
             responses.append((vt, res))
 
         ret = self._parseGetVertexStats(responses, skipNA)
@@ -591,7 +596,7 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, p
         return ret
 
     async def delVertices(self, vertexType: str, where: str = "", limit: str = "", sort: str = "",
-            permanent: bool = False, timeout: int = 0) -> int:
+                          permanent: bool = False, timeout: int = 0) -> int:
         """Deletes vertices from graph.
 
         *Note*:
@@ -632,7 +637,8 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, p
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        url = self._prepDelVertices(vertexType=vertexType, where=where, limit=limit, sort=sort, permanent=permanent, timeout=timeout)
+        url = self._prepDelVertices(vertexType=vertexType, where=where,
+                                    limit=limit, sort=sort, permanent=permanent, timeout=timeout)
         ret = await self._req("DELETE", url)
         ret = ret["deleted_vertices"]
 
@@ -643,7 +649,7 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, p
         return ret
 
     async def delVerticesById(self, vertexType: str, vertexIds: Union[int, str, list],
-            permanent: bool = False, timeout: int = 0) -> int:
+                              permanent: bool = False, timeout: int = 0) -> int:
         """Deletes vertices from graph identified by their ID.
 
         Args:
@@ -668,7 +674,8 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, p
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        url1, url2, vids = self._prepDelVerticesById(vertexIds=vertexIds, vertexType=vertexType, permanent=permanent, timeout=timeout)
+        url1, url2, vids = self._prepDelVerticesById(
+            vertexIds=vertexIds, vertexType=vertexType, permanent=permanent, timeout=timeout)
         ret = 0
         for vid in vids:
             res = await self._req("DELETE", url1 + str(vid) + url2)

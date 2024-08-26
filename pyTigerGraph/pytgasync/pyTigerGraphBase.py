@@ -16,13 +16,14 @@ from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
 logger = logging.getLogger(__name__)
 
+
 class AsyncPyTigerGraphBase(pyTigerGraphBase):
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
-            gsqlSecret: str = "", username: str = "tigergraph", password: str = "tigergraph",
-            tgCloud: bool = False, restppPort: Union[int, str] = "9000",
-            gsPort: Union[int, str] = "14240", gsqlVersion: str = "", version: str = "",
-            apiToken: str = "", useCert: bool = None, certPath: str = None, debug: bool = None,
-            sslPort: Union[int, str] = "443", gcp: bool = False, jwtToken: str = ""):
+                 gsqlSecret: str = "", username: str = "tigergraph", password: str = "tigergraph",
+                 tgCloud: bool = False, restppPort: Union[int, str] = "9000",
+                 gsPort: Union[int, str] = "14240", gsqlVersion: str = "", version: str = "",
+                 apiToken: str = "", useCert: bool = None, certPath: str = None, debug: bool = None,
+                 sslPort: Union[int, str] = "443", gcp: bool = False, jwtToken: str = ""):
         """Initiate a connection object (doc string copied from synchronous __init__).
 
         Args:
@@ -70,16 +71,16 @@ class AsyncPyTigerGraphBase(pyTigerGraphBase):
 
         """
 
-        super().__init__(host=host, graphname=graphname, gsqlSecret=gsqlSecret, 
-                         username=username, password=password, tgCloud=tgCloud, 
-                         restppPort=restppPort, gsPort=gsPort, gsqlVersion=gsqlVersion, 
-                         version=version, apiToken=apiToken, useCert=useCert, certPath=certPath, 
+        super().__init__(host=host, graphname=graphname, gsqlSecret=gsqlSecret,
+                         username=username, password=password, tgCloud=tgCloud,
+                         restppPort=restppPort, gsPort=gsPort, gsqlVersion=gsqlVersion,
+                         version=version, apiToken=apiToken, useCert=useCert, certPath=certPath,
                          debug=debug, sslPort=sslPort, gcp=gcp, jwtToken=jwtToken)
-        
+
     async def _req(self, method: str, url: str, authMode: str = "token", headers: dict = None,
-            data: Union[dict, list, str] = None, resKey: str = "results", skipCheck: bool = False,
-            params: Union[dict, list, str] = None, strictJson: bool = True, jsonData: bool = False,
-            jsonResponse: bool = True, func = None) -> Union[dict, list]:
+                   data: Union[dict, list, str] = None, resKey: str = "results", skipCheck: bool = False,
+                   params: Union[dict, list, str] = None, strictJson: bool = True, jsonData: bool = False,
+                   jsonResponse: bool = True, func=None) -> Union[dict, list]:
         """Generic REST++ API request. Copied from synchronous version, changing requests to httpx with async functionality.
 
         Args:
@@ -108,7 +109,8 @@ class AsyncPyTigerGraphBase(pyTigerGraphBase):
         Returns:
             The (relevant part of the) response from the request (as a dictionary).
         """
-        _headers, _data, verify = self._prepReq(authMode, headers, url, method, data)
+        _headers, _data, verify = self._prepReq(
+            authMode, headers, url, method, data)
 
         async with httpx.AsyncClient() as client:
             if jsonData:
@@ -121,10 +123,11 @@ class AsyncPyTigerGraphBase(pyTigerGraphBase):
                 try:
                     self._errorCheck(json.loads(res.text))
                 except json.decoder.JSONDecodeError:
-                    pass # could not parse the res text (probably returned an html response)
+                    # could not parse the res text (probably returned an html response)
+                    pass
             res.raise_for_status()
         except Exception as e:
-            # In TG 4.x the port for restpp has changed from 9000 to 14240. 
+            # In TG 4.x the port for restpp has changed from 9000 to 14240.
             # This block should only be called once. When using 4.x, using port 9000 should fail so self.restppurl will change to host:14240/restpp
             # ----
             # Changes port to 14240, adds /restpp to end to url, tries again, saves changes if successful
@@ -132,9 +135,11 @@ class AsyncPyTigerGraphBase(pyTigerGraphBase):
                 newRestppUrl = self.host + ":14240/restpp"
                 # In tgcloud /restpp can already be in the restpp url. We want to extract everything after the port or /restpp
                 if '/restpp' in url:
-                    url = newRestppUrl + '/' + '/'.join(url.split(':')[2].split('/')[2:])
+                    url = newRestppUrl + '/' + \
+                        '/'.join(url.split(':')[2].split('/')[2:])
                 else:
-                    url = newRestppUrl + '/' + '/'.join(url.split(':')[2].split('/')[1:])
+                    url = newRestppUrl + '/' + \
+                        '/'.join(url.split(':')[2].split('/')[1:])
                 async with httpx.AsyncClient() as client:
                     if jsonData:
                         res = await client.request(method, url, headers=_headers, json=_data, params=params)
@@ -144,7 +149,8 @@ class AsyncPyTigerGraphBase(pyTigerGraphBase):
                     try:
                         self._errorCheck(json.loads(res.text))
                     except json.decoder.JSONDecodeError:
-                        pass # could not parse the res text (probably returned an html response)
+                        # could not parse the res text (probably returned an html response)
+                        pass
                 res.raise_for_status()
                 self.restppUrl = newRestppUrl
                 self.restppPort = "14240"
@@ -152,9 +158,9 @@ class AsyncPyTigerGraphBase(pyTigerGraphBase):
                 raise e
 
         return self._parseReq(res, jsonResponse, strictJson, skipCheck, resKey)
-    
+
     async def _get(self, url: str, authMode: str = "token", headers: dict = None, resKey: str = "results",
-            skipCheck: bool = False, params: Union[dict, list, str] = None, strictJson: bool = True) -> Union[dict, list]:
+                   skipCheck: bool = False, params: Union[dict, list, str] = None, strictJson: bool = True) -> Union[dict, list]:
         """Generic GET method.
 
         Args:
@@ -188,8 +194,8 @@ class AsyncPyTigerGraphBase(pyTigerGraphBase):
         return res
 
     async def _post(self, url: str, authMode: str = "token", headers: dict = None,
-            data: Union[dict, list, str, bytes] = None, resKey: str = "results", skipCheck: bool = False,
-            params: Union[dict, list, str] = None, jsonData: bool = False) -> Union[dict, list]:
+                    data: Union[dict, list, str, bytes] = None, resKey: str = "results", skipCheck: bool = False,
+                    params: Union[dict, list, str] = None, jsonData: bool = False) -> Union[dict, list]:
         """Generic POST method.
 
         Args:
@@ -223,8 +229,8 @@ class AsyncPyTigerGraphBase(pyTigerGraphBase):
         logger.info("exit: _post")
 
         return res
-    
-    async def _put(self, url: str, authMode: str = "token", data = None, resKey=None, jsonData=False) -> Union[dict, list]:
+
+    async def _put(self, url: str, authMode: str = "token", data=None, resKey=None, jsonData=False) -> Union[dict, list]:
         """Generic PUT method.
 
         Args:
@@ -323,11 +329,11 @@ class AsyncPyTigerGraphBase(pyTigerGraphBase):
         ret = self._parseGetVer(version, component, full)
 
         if logger.level == logging.DEBUG:
-                logger.debug("return: " + str(ret))
+            logger.debug("return: " + str(ret))
         logger.info("exit: getVer")
 
         return ret
-        
+
     async def _versionGreaterThan4_0(self) -> bool:
         """Gets if the TigerGraph database version is greater than 4.0 using gerVer().
 
@@ -336,6 +342,6 @@ class AsyncPyTigerGraphBase(pyTigerGraphBase):
         """
         version = await self.getVer()
         version = version.split('.')
-        if version[0]>="4" and version[1]>"0":
+        if version[0] >= "4" and version[1] > "0":
             return True
         return False

@@ -36,7 +36,8 @@ class test_pyTigerGraphQuery(unittest.IsolatedAsyncioTestCase):
             "p07_vertex": (1, "vertex4"),
             "p08_vertex_vertex4": 1,
             "p09_datetime": datetime.now(),
-            "p10_set_int": [1, 2, 3, 2, 3, 3],  # Intentionally bag-like, to see it behaving as set
+            # Intentionally bag-like, to see it behaving as set
+            "p10_set_int": [1, 2, 3, 2, 3, 3],
             "p11_bag_int": [1, 2, 3, 2, 3, 3],
             "p13_set_vertex": [(1, "vertex4"), (2, "vertex4"), (3, "vertex4")],
             "p14_set_vertex_vertex4": [1, 2, 3]
@@ -56,7 +57,7 @@ class test_pyTigerGraphQuery(unittest.IsolatedAsyncioTestCase):
 
     async def test_04_runInterpretedQuery(self):
         queryText = \
-"""INTERPRET QUERY () FOR GRAPH $graphname {
+            """INTERPRET QUERY () FOR GRAPH $graphname {
   SumAccum<INT> @@summa;
   start = {vertex4.*};
   res =
@@ -70,7 +71,7 @@ class test_pyTigerGraphQuery(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(15, res[0]["ret"])
 
         queryText = \
-"""INTERPRET QUERY () FOR GRAPH @graphname@ {
+            """INTERPRET QUERY () FOR GRAPH @graphname@ {
   SumAccum<INT> @@summa;
   start = {vertex4.*};
   res =
@@ -90,7 +91,7 @@ class test_pyTigerGraphQuery(unittest.IsolatedAsyncioTestCase):
             job = await self.conn.checkQueryStatus(q_id)
             job = job[0]
             if job["status"] == "success":
-                break 
+                break
             sleep(1)
             trials += 1
         res = await self.conn.getQueryResult(q_id)
@@ -109,7 +110,7 @@ class test_pyTigerGraphQuery(unittest.IsolatedAsyncioTestCase):
         query = query.split("\n")[1]
         q1 = """# installed v2"""
         self.assertEqual(q1, query)
-    
+
     async def test_08_getQueryMetadata(self):
         query_md = await self.conn.getQueryMetadata("query1")
         self.assertEqual(query_md["output"][0], {"ret": "int"})
@@ -126,7 +127,7 @@ class test_pyTigerGraphQuery(unittest.IsolatedAsyncioTestCase):
     async def test_11_queryDescriptions(self):
         version = await self.conn.getVer()
         version = version.split('.')
-        if version[0]>="4": # Query descriptions only supported in Tigergraph versions >= 4.x
+        if version[0] >= "4":  # Query descriptions only supported in Tigergraph versions >= 4.x
             await self.conn.dropQueryDescription('query1')
             desc = await self.conn.getQueryDescription('query1')
             self.assertEqual(desc, [{'queryName': 'query1', 'parameters': []}])
@@ -135,24 +136,31 @@ class test_pyTigerGraphQuery(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(desc[0]['description'], 'This is a description')
 
             await self.conn.dropQueryDescription('query4_all_param_types')
-            await self.conn.describeQuery('query4_all_param_types', 'this is a query description', 
-                    {'p01_int':'this is a parameter description', 
-                        'p02_uint':'this is a second param desc'})
+            await self.conn.describeQuery('query4_all_param_types', 'this is a query description',
+                                          {'p01_int': 'this is a parameter description',
+                                           'p02_uint': 'this is a second param desc'})
             desc = await self.conn.getQueryDescription('query4_all_param_types')
-            self.assertEqual(desc[0]['description'], 'this is a query description')
-            self.assertEqual(desc[0]['parameters'][0]['description'], 'this is a parameter description')
-            self.assertEqual(desc[0]['parameters'][1]['description'], 'this is a second param desc')
+            self.assertEqual(desc[0]['description'],
+                             'this is a query description')
+            self.assertEqual(
+                desc[0]['parameters'][0]['description'], 'this is a parameter description')
+            self.assertEqual(desc[0]['parameters'][1]
+                             ['description'], 'this is a second param desc')
 
         else:
             with self.assertRaises(TigerGraphException) as tge:
                 res = await self.conn.dropQueryDescription('query1')
-            self.assertEqual("This function is only supported on versions of TigerGraph >= 4.0.0.", tge.exception.message)
+            self.assertEqual(
+                "This function is only supported on versions of TigerGraph >= 4.0.0.", tge.exception.message)
             with self.assertRaises(TigerGraphException) as tge:
                 res = await self.conn.describeQuery('query1', 'test')
-            self.assertEqual("This function is only supported on versions of TigerGraph >= 4.0.0.", tge.exception.message)
+            self.assertEqual(
+                "This function is only supported on versions of TigerGraph >= 4.0.0.", tge.exception.message)
             with self.assertRaises(TigerGraphException) as tge:
                 res = await self.conn.getQueryDescription('query1')
-            self.assertEqual("This function is only supported on versions of TigerGraph >= 4.0.0.", tge.exception.message)
-        
+            self.assertEqual(
+                "This function is only supported on versions of TigerGraph >= 4.0.0.", tge.exception.message)
+
+
 if __name__ == '__main__':
     unittest.main()

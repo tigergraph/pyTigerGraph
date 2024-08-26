@@ -129,12 +129,15 @@ def install_query_file(
         )
     # If a suffix is to be added to query name
     if replace and ("{QUERYSUFFIX}" in replace):
-        query_name = query_name.replace("{QUERYSUFFIX}", replace["{QUERYSUFFIX}"])
+        query_name = query_name.replace(
+            "{QUERYSUFFIX}", replace["{QUERYSUFFIX}"])
     # If query is already installed, skip unless force install.
-    is_installed, is_enabled = is_query_installed(conn, query_name, return_status=True)
+    is_installed, is_enabled = is_query_installed(
+        conn, query_name, return_status=True)
     if is_installed:
         if force or (not is_enabled):
-            query = "USE GRAPH {}\nDROP QUERY {}\n".format(conn.graphname, query_name)
+            query = "USE GRAPH {}\nDROP QUERY {}\n".format(
+                conn.graphname, query_name)
             resp = conn.gsql(query)
             if "Successfully dropped queries" not in resp:
                 raise ConnectionError(resp)
@@ -166,7 +169,7 @@ def install_query_file(
     return query_name
 
 
-def add_attribute(conn: "TigerGraphConnection", schema_type:str, attr_type:str = None, attr_name:Union[str, dict] = None, schema_name:list = None, global_change:bool = False):
+def add_attribute(conn: "TigerGraphConnection", schema_type: str, attr_type: str = None, attr_name: Union[str, dict] = None, schema_name: list = None, global_change: bool = False):
     '''
     If the current attribute is not already added to the schema, it will create the schema job to do that.
     Check whether to add the attribute to vertex(vertices) or edge(s).
@@ -203,7 +206,7 @@ def add_attribute(conn: "TigerGraphConnection", schema_type:str, attr_type:str =
     for t in target:
         attributes = []
         if v_type:
-            meta_data =  conn.getVertexType(t, force=True)
+            meta_data = conn.getVertexType(t, force=True)
         else:
             meta_data = conn.getEdgeType(t, force=True)
         for i in range(len(meta_data['Attributes'])):
@@ -211,10 +214,11 @@ def add_attribute(conn: "TigerGraphConnection", schema_type:str, attr_type:str =
         # If attribute is not in list of vertex attributes, do the schema change to add it
         if isinstance(attr_name, str):
             if not attr_type:
-                raise Exception("attr_type must be defined if attr_name is of type string")
+                raise Exception(
+                    "attr_type must be defined if attr_name is of type string")
             if attr_name != None and attr_name not in attributes:
                 tasks.append("ALTER {} {} ADD ATTRIBUTE ({} {});\n".format(
-                        schema_type, t, attr_name, attr_type))
+                    schema_type, t, attr_name, attr_type))
         elif isinstance(attr_name, dict):
             for aname in attr_name:
                 if aname != None and aname not in attributes:
@@ -226,9 +230,9 @@ def add_attribute(conn: "TigerGraphConnection", schema_type:str, attr_type:str =
         return "Attribute already exists"
     # Drop all jobs on the graph
     # self.conn.gsql("USE GRAPH {}\n".format(self.conn.graphname) + "DROP JOB *")
-    # Create schema change job 
-    job_name = "add_{}_attr_{}".format(schema_type,random_string(6)) 
-    if not(global_change):
+    # Create schema change job
+    job_name = "add_{}_attr_{}".format(schema_type, random_string(6))
+    if not (global_change):
         job = "USE GRAPH {}\n".format(conn.graphname) + "CREATE SCHEMA_CHANGE JOB {} {{\n".format(
             job_name) + ''.join(tasks) + "}}\nRUN SCHEMA_CHANGE JOB {}".format(job_name)
     else:

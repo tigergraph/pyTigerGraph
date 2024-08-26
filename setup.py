@@ -8,6 +8,8 @@ here = pathlib.Path(__file__).parent.resolve()
 long_description = (here / "README.md").read_text(encoding="utf-8")
 
 # Get version number from a single source of truth
+
+
 def get_version(version_path):
     with open(version_path) as infile:
         for line in infile:
@@ -18,6 +20,8 @@ def get_version(version_path):
             raise RuntimeError("Unable to find version string.")
 
 # Get non-python files under a directory recursively.
+
+
 def get_data_files(directory):
     files = [
         str(p.relative_to(directory))
@@ -30,7 +34,8 @@ def get_data_files(directory):
 setup(
     name='pyTigerGraph',
     packages=find_packages(where="."),
-    package_data={"pyTigerGraph.gds": get_data_files(here / "pyTigerGraph" / "gds")},
+    package_data={"pyTigerGraph.gds": get_data_files(
+        here / "pyTigerGraph" / "gds")},
     version=get_version(here/"pyTigerGraph"/"__init__.py"),
     license='Apache 2',
     description='Library to connect to TigerGraph databases',
@@ -40,12 +45,14 @@ setup(
     author_email='support@tigergraph.com',
     url='https://docs.tigergraph.com/pytigergraph/current/intro/',
     download_url='',
-    keywords=['TigerGraph', 'Graph Database', 'Data Science', 'Machine Learning'],
+    keywords=['TigerGraph', 'Graph Database',
+              'Data Science', 'Machine Learning'],
     install_requires=[
         'validators',
         'requests'],
     classifiers=[
-        'Development Status :: 5 - Production/Stable',  # 3 - Alpha, 4 - Beta or 5 - Production/Stable
+        # 3 - Alpha, 4 - Beta or 5 - Production/Stable
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Build Tools',
         'License :: OSI Approved :: Apache Software License',

@@ -83,7 +83,7 @@ class pyTigerGraphDataset(pyTigerGraphAuth):
 
         print("---- Finished ingestion ----", flush=True)
         logger.info("exit: ingestDataset")
-        
+
     def _parseIngestDataset(self, responses, cleanup, dataset):
         for resp in responses:
             stats = resp[0]["statistics"]

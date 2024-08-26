@@ -15,8 +15,8 @@ class test_pyTigerGraphAuth(unittest.TestCase):
         self.assertIsInstance(res, dict)
         # self.assertEqual(3, len(res)) # Just in case more secrets than expected
         self.assertIn("secret1", res)
-        # self.assertIn("secret2", res)
-        # self.assertIn("secret2", res)
+        self.assertIn("secret2", res)
+        self.assertIn("secret2", res)
 
     def test_02_getSecret(self):
         pass
@@ -40,7 +40,8 @@ class test_pyTigerGraphAuth(unittest.TestCase):
 
         with self.assertRaises(TigerGraphException) as tge:
             self.conn.createSecret("secret1")
-        self.assertEqual("The secret with alias secret1 already exists.", tge.exception.message)
+        self.assertEqual(
+            "The secret with alias secret1 already exists.", tge.exception.message)
 
     def test_04_dropSecret(self):
         res = self.conn.showSecrets()
@@ -67,10 +68,11 @@ class test_pyTigerGraphAuth(unittest.TestCase):
     def test_06_refreshToken(self):
         # TG 4.x does not allow refreshing tokens
         self.conn.newGetToken(self.conn.createSecret())
-        if self.conn._versionGreaterThan4_0(): 
+        if self.conn._versionGreaterThan4_0():
             with self.assertRaises(TigerGraphException) as tge:
                 self.conn.newRefreshToken("secret1")
-            self.assertEqual("Refreshing tokens is only supported on versions of TigerGraph <= 4.0.0.", tge.exception.message)
+            self.assertEqual(
+                "Refreshing tokens is only supported on versions of TigerGraph <= 4.0.0.", tge.exception.message)
         else:
             self.conn.dropSecret("secret6", ignoreErrors=True)
             res = self.conn.createSecret("secret6", True)
@@ -85,6 +87,7 @@ class test_pyTigerGraphAuth(unittest.TestCase):
         token = self.conn.newGetToken(res["secret7"])
         self.assertTrue(self.conn.newDeleteToken(res["secret7"], token[0]))
         self.conn.dropSecret("secret7")
+
 
 if __name__ == '__main__':
     unittest.main()

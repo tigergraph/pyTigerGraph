@@ -6,6 +6,7 @@ from .pyTigerGraphUnitTest import make_connection
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
+
 class test_pyTigerGraphUtils(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -63,15 +64,17 @@ class test_pyTigerGraphUtils(unittest.TestCase):
             self.assertIn("NetworkMetrics", res)
             res = self.conn.getSystemMetrics(what="qps")
             self.assertIn("QPSMetrics", res)
-            
+
             with self.assertRaises(TigerGraphException) as tge:
                 res = self.conn.getSystemMetrics(what="servicestate")
-            self.assertEqual("This 'what' parameter is only supported on versions of TigerGraph < 4.1.0.", tge.exception.message)
-            
+            self.assertEqual(
+                "This 'what' parameter is only supported on versions of TigerGraph < 4.1.0.", tge.exception.message)
+
             with self.assertRaises(TigerGraphException) as tge:
                 res = self.conn.getSystemMetrics(what="connection")
-            self.assertEqual("This 'what' parameter is only supported on versions of TigerGraph < 4.1.0.", tge.exception.message)
-        else:    
+            self.assertEqual(
+                "This 'what' parameter is only supported on versions of TigerGraph < 4.1.0.", tge.exception.message)
+        else:
             res = self.conn.getSystemMetrics(what="mem", latest=10)
             self.assertEqual(len(res), 10)
 
@@ -80,13 +83,16 @@ class test_pyTigerGraphUtils(unittest.TestCase):
         self.assertIn("CompletedRequests", str(res))
 
     def test_08_getServiceStatus(self):
-        req = {"ServiceDescriptors":[{"ServiceName": "GSQL"}]}
+        req = {"ServiceDescriptors": [{"ServiceName": "GSQL"}]}
         res = self.conn.getServiceStatus(req)
-        self.assertEqual(res["ServiceStatusEvents"][0]["ServiceStatus"], "Online")
+        self.assertEqual(res["ServiceStatusEvents"][0]
+                         ["ServiceStatus"], "Online")
 
     def test_09_rebuildGraph(self):
         res = self.conn.rebuildGraph()
-        self.assertEqual(res["message"], "RebuildNow finished, please check details in the folder: /tmp/rebuildnow")
+        self.assertEqual(
+            res["message"], "RebuildNow finished, please check details in the folder: /tmp/rebuildnow")
+
 
 if __name__ == '__main__':
     unittest.main()

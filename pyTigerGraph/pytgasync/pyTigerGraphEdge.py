@@ -103,7 +103,8 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery, pyTigerGraphEdge):
         ret = []
 
         for at in et["Attributes"]:
-            ret.append((at["AttributeName"], self._getAttrType(at["AttributeType"])))
+            ret.append(
+                (at["AttributeName"], self._getAttrType(at["AttributeType"])))
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -171,7 +172,7 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery, pyTigerGraphEdge):
         edgeTypeDetails = await self.getEdgeType(edgeType)
         ret = self._parseGetEdgeTargetVertexType(edgeTypeDetails)
         return ret
-    
+
     async def isDirected(self, edgeType: str) -> bool:
         """Is the specified edge type directed?
 
@@ -273,7 +274,8 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery, pyTigerGraphEdge):
 
         for at in et["Attributes"]:
             if "IsDiscriminator" in at and at["IsDiscriminator"]:
-                ret.append((at["AttributeName"], self._getAttrType(at["AttributeType"])))
+                ret.append(
+                    (at["AttributeName"], self._getAttrType(at["AttributeType"])))
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -282,8 +284,8 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery, pyTigerGraphEdge):
         return ret
 
     async def getEdgeCountFrom(self, sourceVertexType: str = "", sourceVertexId: Union[str, int] = None,
-            edgeType: str = "", targetVertexType: str = "", targetVertexId: Union[str, int] = None,
-            where: str = "") -> dict:
+                               edgeType: str = "", targetVertexType: str = "", targetVertexId: Union[str, int] = None,
+                               where: str = "") -> dict:
         """Returns the number of edges from a specific vertex.
 
         Args:
@@ -329,14 +331,13 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery, pyTigerGraphEdge):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        url, data = self._prepGetEdgeCountFrom(sourceVertexType=sourceVertexType, sourceVertexId=sourceVertexId, edgeType=edgeType, 
+        url, data = self._prepGetEdgeCountFrom(sourceVertexType=sourceVertexType, sourceVertexId=sourceVertexId, edgeType=edgeType,
                                                targetVertexType=targetVertexType, targetVertexId=targetVertexId, where=where)
         if data:
             res = await self._req("POST", url, data=data)
         else:
             res = await self._req("GET", url)
         ret = self._parseGetEdgeCountFrom(res, edgeType)
-
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -345,7 +346,7 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery, pyTigerGraphEdge):
         return ret
 
     async def getEdgeCount(self, edgeType: str = "*", sourceVertexType: str = "",
-            targetVertexType: str = "") -> dict:
+                           targetVertexType: str = "") -> dict:
         """Returns the number of edges of an edge type.
 
         This is a simplified version of `getEdgeCountFrom()`, to be used when the total number of
@@ -368,7 +369,7 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery, pyTigerGraphEdge):
             logger.debug("params: " + self._locals(locals()))
 
         ret = await self.getEdgeCountFrom(edgeType=edgeType, sourceVertexType=sourceVertexType,
-            targetVertexType=targetVertexType)
+                                          targetVertexType=targetVertexType)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -377,7 +378,7 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery, pyTigerGraphEdge):
         return ret
 
     async def upsertEdge(self, sourceVertexType: str, sourceVertexId: str, edgeType: str,
-            targetVertexType: str, targetVertexId: str, attributes: dict = None) -> int:
+                         targetVertexType: str, targetVertexId: str, attributes: dict = None) -> int:
         """Upserts an edge.
 
         Data is upserted:
@@ -424,7 +425,8 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery, pyTigerGraphEdge):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        data = self._prepUpsertEdge(attributes, sourceVertexType, sourceVertexId, edgeType, targetVertexType, targetVertexId)
+        data = self._prepUpsertEdge(
+            attributes, sourceVertexType, sourceVertexId, edgeType, targetVertexType, targetVertexId)
         ret = await self._req("POST", self.restppUrl + "/graph/" + self.graphname, data=data)
         ret = ret[0]["accepted_edges"]
 
@@ -435,7 +437,7 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery, pyTigerGraphEdge):
         return ret
 
     async def upsertEdges(self, sourceVertexType: str, edgeType: str, targetVertexType: str,
-            edges: list) -> int:
+                          edges: list) -> int:
         """Upserts multiple edges (of the same type).
 
         Args:
@@ -488,7 +490,8 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery, pyTigerGraphEdge):
             otherwise handle 1 and "1" as two separate keys.
         """
 
-        data = self._prepUpsertEdges(sourceVertexType=sourceVertexType, edgeType=edgeType, targetVertexType=targetVertexType, edges=edges)
+        data = self._prepUpsertEdges(sourceVertexType=sourceVertexType,
+                                     edgeType=edgeType, targetVertexType=targetVertexType, edges=edges)
         ret = await self._req("POST", self.restppUrl + "/graph/" + self.graphname, data=data)
         ret = ret[0]["accepted_edges"]
 
@@ -499,8 +502,8 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery, pyTigerGraphEdge):
         return ret
 
     async def upsertEdgeDataFrame(self, df: 'pd.DataFrame', sourceVertexType: str, edgeType: str,
-            targetVertexType: str, from_id: str = "", to_id: str = "",
-            attributes: dict = None) -> int:
+                                  targetVertexType: str, from_id: str = "", to_id: str = "",
+                                  attributes: dict = None) -> int:
         """Upserts edges from a Pandas DataFrame.
 
         Args:
@@ -541,9 +544,9 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery, pyTigerGraphEdge):
         return ret
 
     async def getEdges(self, sourceVertexType: str, sourceVertexId: str, edgeType: str = "",
-            targetVertexType: str = "", targetVertexId: str = "", select: str = "", where: str = "",
-            limit: Union[int, str] = None, sort: str = "", fmt: str = "py", withId: bool = True,
-            withType: bool = False, timeout: int = 0) -> Union[dict, str, 'pd.DataFrame']:
+                       targetVertexType: str = "", targetVertexId: str = "", select: str = "", where: str = "",
+                       limit: Union[int, str] = None, sort: str = "", fmt: str = "py", withId: bool = True,
+                       withType: bool = False, timeout: int = 0) -> Union[dict, str, 'pd.DataFrame']:
         """Retrieves edges of the given edge type originating from a specific source vertex.
 
         Only `sourceVertexType` and `sourceVertexId` are required.
@@ -596,7 +599,7 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery, pyTigerGraphEdge):
             logger.debug("params: " + self._locals(locals()))
 
         url = self._prepGetEdges(sourceVertexType, sourceVertexId, edgeType,
-            targetVertexType, targetVertexId, select, where, limit, sort, timeout)
+                                 targetVertexType, targetVertexId, select, where, limit, sort, timeout)
         ret = await self._req("GET", url)
 
         if fmt == "json":
@@ -611,8 +614,8 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery, pyTigerGraphEdge):
         return ret
 
     async def getEdgesDataFrame(self, sourceVertexType: str, sourceVertexId: str, edgeType: str = "",
-            targetVertexType: str = "", targetVertexId: str = "", select: str = "", where: str = "",
-            limit: Union[int, str] = None, sort: str = "", timeout: int = 0) -> 'pd.DataFrame':
+                                targetVertexType: str = "", targetVertexId: str = "", select: str = "", where: str = "",
+                                limit: Union[int, str] = None, sort: str = "", timeout: int = 0) -> 'pd.DataFrame':
         """Retrieves edges of the given edge type originating from a specific source vertex.
 
         This is a shortcut to ``getEdges(..., fmt="df", withId=True, withType=False)``.
@@ -652,7 +655,7 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery, pyTigerGraphEdge):
             logger.debug("params: " + self._locals(locals()))
 
         ret = await self.getEdges(sourceVertexType, sourceVertexId, edgeType, targetVertexType,
-            targetVertexId, select, where, limit, sort, fmt="df", timeout=timeout)
+                                  targetVertexId, select, where, limit, sort, fmt="df", timeout=timeout)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -661,8 +664,8 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery, pyTigerGraphEdge):
         return ret
 
     async def getEdgesDataframe(self, sourceVertexType: str, sourceVertexId: str, edgeType: str = "",
-            targetVertexType: str = "", targetVertexId: str = "", select: str = "", where: str = "",
-            limit: Union[int, str] = None, sort: str = "", timeout: int = 0) -> 'pd.DataFrame':
+                                targetVertexType: str = "", targetVertexId: str = "", select: str = "", where: str = "",
+                                limit: Union[int, str] = None, sort: str = "", timeout: int = 0) -> 'pd.DataFrame':
         """DEPRECATED
 
         Use `getEdgesDataFrame()` instead.
@@ -672,10 +675,10 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery, pyTigerGraphEdge):
             DeprecationWarning)
 
         return await self.getEdgesDataFrame(sourceVertexType, sourceVertexId, edgeType, targetVertexType,
-            targetVertexId, select, where, limit, sort, timeout)
+                                            targetVertexId, select, where, limit, sort, timeout)
 
     async def getEdgesByType(self, edgeType: str, fmt: str = "py", withId: bool = True,
-            withType: bool = False) -> Union[dict, str, 'pd.DataFrame']:
+                             withType: bool = False) -> Union[dict, str, 'pd.DataFrame']:
         """Retrieves edges of the given edge type regardless the source vertex.
 
         Args:
@@ -763,10 +766,11 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery, pyTigerGraphEdge):
 
         responses = []
         for et in ets:
-            data = '{"function":"stat_edge_attr","type":"' + et + '","from_type":"*","to_type":"*"}'
+            data = '{"function":"stat_edge_attr","type":"' + \
+                et + '","from_type":"*","to_type":"*"}'
             res = await self._req("POST", self.restppUrl + "/builtins/" + self.graphname, data=data, resKey="",
-                skipCheck=True)
-            responses.append((et,res))
+                                  skipCheck=True)
+            responses.append((et, res))
         ret = self._parseGetEdgeStats(responses, skipNA)
 
         if logger.level == logging.DEBUG:
@@ -776,8 +780,8 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery, pyTigerGraphEdge):
         return ret
 
     async def delEdges(self, sourceVertexType: str, sourceVertexId: str, edgeType: str = "",
-            targetVertexType: str = "", targetVertexId: str = "", where: str = "",
-            limit: str = "", sort: str = "", timeout: int = 0) -> dict:
+                       targetVertexType: str = "", targetVertexId: str = "", where: str = "",
+                       limit: str = "", sort: str = "", timeout: int = 0) -> dict:
         """Deletes edges from the graph.
 
         Only `sourceVertexType` and `sourceVertexId` are required.
@@ -816,7 +820,8 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery, pyTigerGraphEdge):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        url = self._prepDelEdges(sourceVertexType, sourceVertexId, edgeType, targetVertexType, targetVertexId, where, limit, sort, timeout)
+        url = self._prepDelEdges(sourceVertexType, sourceVertexId, edgeType,
+                                 targetVertexType, targetVertexId, where, limit, sort, timeout)
         res = await self._req("DELETE", url)
         ret = {}
         for r in res:

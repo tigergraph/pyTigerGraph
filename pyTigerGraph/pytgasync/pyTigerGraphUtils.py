@@ -18,6 +18,7 @@ from pyTigerGraph.pyTigerGraphUtils import pyTigerGraphUtils
 
 logger = logging.getLogger(__name__)
 
+
 class AsyncPyTigerGraphUtils(AsyncPyTigerGraphBase):
 
     async def echo(self, usePost: bool = False) -> str:
@@ -90,9 +91,9 @@ class AsyncPyTigerGraphUtils(AsyncPyTigerGraphBase):
         else:
             raise TigerGraphException(res["message"], res["code"])
 
-    async def getSystemMetrics(self, from_ts:int = None, to_ts:int = None, latest:int = None, what:str = None, who:str = None, where:str = None):
+    async def getSystemMetrics(self, from_ts: int = None, to_ts: int = None, latest: int = None, what: str = None, who: str = None, where: str = None):
         """Monitor system usage metrics.
-        
+
         Args:
             from_ts (int, optional):
                 The epoch timestamp that indicates the start of the time filter.
@@ -128,15 +129,17 @@ class AsyncPyTigerGraphUtils(AsyncPyTigerGraphBase):
         if logger.level == logging.DEBUG:
             logger.debug("entry: getSystemMetrics")
 
-        params, _json = self._prepGetSystemMetrics(from_ts=from_ts, to_ts=to_ts, latest=latest, who=who, where=where)
+        params, _json = self._prepGetSystemMetrics(
+            from_ts=from_ts, to_ts=to_ts, latest=latest, who=who, where=where)
 
         # Couldn't be placed in prep since version checking requires await statements
         if what:
             if await self._versionGreaterThan4_0():
                 if what == "servicestate" or what == "connection":
-                    raise TigerGraphException("This 'what' parameter is only supported on versions of TigerGraph < 4.1.0.", 0)
+                    raise TigerGraphException(
+                        "This 'what' parameter is only supported on versions of TigerGraph < 4.1.0.", 0)
                 if what == "cpu" or what == "mem":
-                        what = "cpu-memory" # in >=4.1 cpu and mem have been conjoined into one category
+                    what = "cpu-memory"  # in >=4.1 cpu and mem have been conjoined into one category
             params["what"] = what
         # in >=4.1 the datapoints endpoint has been removed and replaced
         if await self._versionGreaterThan4_0():
@@ -147,9 +150,9 @@ class AsyncPyTigerGraphUtils(AsyncPyTigerGraphBase):
             logger.debug("exit: getSystemMetrics")
         return res
 
-    async def getQueryPerformance(self, seconds:int = 10):
+    async def getQueryPerformance(self, seconds: int = 10):
         """Returns real-time query performance statistics over the given time period, as specified by the seconds parameter. 
-        
+
         Args:
             seconds (int, optional):
                 Seconds are measured up to 60, so the seconds parameter must be a positive integer less than or equal to 60.
@@ -219,4 +222,3 @@ class AsyncPyTigerGraphUtils(AsyncPyTigerGraphBase):
             return res
         else:
             raise TigerGraphException(res["message"], res["code"])
-        

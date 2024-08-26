@@ -14,16 +14,18 @@ class test_pyTigerGraphSchema(unittest.IsolatedAsyncioTestCase):
         res = await self.conn._getUDTs()
         self.assertIsInstance(res, list)
         self.assertEqual(2, len(res))
-        self.assertTrue(res[0]["name"] == "tuple1_all_types" or res[0]["name"] == "tuple2_simple")
-        tuple2_simple = res[0] if (res[0]["name"] == "tuple2_simple") else res[1]
+        self.assertTrue(
+            res[0]["name"] == "tuple1_all_types" or res[0]["name"] == "tuple2_simple")
+        tuple2_simple = res[0] if (
+            res[0]["name"] == "tuple2_simple") else res[1]
         self.assertIn('fields', tuple2_simple)
         fields = tuple2_simple['fields']
-        self.assertTrue(fields[0]['fieldName']=='field1')
-        self.assertTrue(fields[0]['fieldType']=='INT')
-        self.assertTrue(fields[1]['fieldName']=='field2')
-        self.assertTrue(fields[1]['fieldType']=='STRING')
-        self.assertTrue(fields[2]['fieldName']=='field3')
-        self.assertTrue(fields[2]['fieldType']=='DATETIME')
+        self.assertTrue(fields[0]['fieldName'] == 'field1')
+        self.assertTrue(fields[0]['fieldType'] == 'INT')
+        self.assertTrue(fields[1]['fieldName'] == 'field2')
+        self.assertTrue(fields[1]['fieldType'] == 'STRING')
+        self.assertTrue(fields[2]['fieldName'] == 'field3')
+        self.assertTrue(fields[2]['fieldType'] == 'DATETIME')
 
     def test_02_upsertAttrs(self):
         tests = [

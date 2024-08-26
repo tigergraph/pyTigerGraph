@@ -46,26 +46,27 @@ class AsyncPyTigerGraphGSQL(AsyncPyTigerGraphBase, pyTigerGraphGSQL):
         # but you need a secret to get a token and you need this function to get a secret
         try:
             res = await self._req("POST",
-                            self.gsUrl + "/gsql/v1/statements",
-                            data=query.encode("utf-8"), # quote_plus would not work with the new endpoint
-                            authMode="pwd", resKey=None, skipCheck=True,
-                            jsonResponse=False,
-                            headers={"Content-Type": "text/plain"})
+                                  self.gsUrl + "/gsql/v1/statements",
+                                  # quote_plus would not work with the new endpoint
+                                  data=query.encode("utf-8"),
+                                  authMode="pwd", resKey=None, skipCheck=True,
+                                  jsonResponse=False,
+                                  headers={"Content-Type": "text/plain"})
 
         except httpx.HTTPError as e:
-            if e.response.status_code == 404:            
+            if e.response.status_code == 404:
                 res = await self._req("POST",
-                                self.gsUrl + "/gsqlserver/gsql/file",
-                                data=quote_plus(query.encode("utf-8")),
-                                authMode="pwd", resKey=None, skipCheck=True,
-                                jsonResponse=False)
+                                      self.gsUrl + "/gsqlserver/gsql/file",
+                                      data=quote_plus(query.encode("utf-8")),
+                                      authMode="pwd", resKey=None, skipCheck=True,
+                                      jsonResponse=False)
             else:
                 raise e
         return self._parseGSQL(res, query, graphname=graphname, options=options)
-    
+
     # TODO IMPLEMENT INSTALL_UDF
-        
-    async def newGetUDF(self, ExprFunctions: bool = True, ExprUtil: bool = True, json_out=False) -> Union[str, Tuple[str, str], Dict[str,str]]:   
+
+    async def newGetUDF(self, ExprFunctions: bool = True, ExprUtil: bool = True, json_out=False) -> Union[str, Tuple[str, str], Dict[str, str]]:
         """Get user defined functions (UDF) installed in the database.
         See https://docs.tigergraph.com/gsql-ref/current/querying/func/query-user-defined-functions for details on UDFs.
 
@@ -90,16 +91,17 @@ class AsyncPyTigerGraphGSQL(AsyncPyTigerGraphBase, pyTigerGraphGSQL):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        urls, alt_urls = self._prepNewGetUDF(ExprFunctions=ExprFunctions, ExprUtil=ExprUtil)
+        urls, alt_urls = self._prepNewGetUDF(
+            ExprFunctions=ExprFunctions, ExprUtil=ExprUtil)
         if not await self._versionGreaterThan4_0():
             if json_out == True:
-                raise TigerGraphException("The 'json_out' parameter is only supported in TigerGraph Versions >=4.1.")
+                raise TigerGraphException(
+                    "The 'json_out' parameter is only supported in TigerGraph Versions >=4.1.")
             urls = alt_urls
         responses = {}
-        
+
         for file_name in urls:
-            resp = await self._req("GET",f"{self.gsUrl}{urls[file_name]}", resKey="")
+            resp = await self._req("GET", f"{self.gsUrl}{urls[file_name]}", resKey="")
             responses[file_name] = resp
-        
+
         return self._parseNewGetUDF(responses, json_out=json_out)
-        

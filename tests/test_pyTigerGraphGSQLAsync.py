@@ -14,13 +14,15 @@ class test_pyTigerGraphGSQL(unittest.IsolatedAsyncioTestCase):
         res = await self.conn.gsql("help")
         self.assertIsInstance(res, str)
         res = res.split("\n")
-        self.assertEqual("GSQL Help: Summary of TigerGraph GSQL Shell commands.", res[0])
+        self.assertEqual(
+            "GSQL Help: Summary of TigerGraph GSQL Shell commands.", res[0])
 
     async def test_02_gsql(self):
         res = await self.conn.gsql("ls")
         self.assertIsInstance(res, str)
         res = res.split("\n")[0]
-        self.assertIn(res,["---- Global vertices, edges, and all graphs", "---- Graph " + self.conn.graphname])
+        self.assertIn(res, ["---- Global vertices, edges, and all graphs",
+                      "---- Graph " + self.conn.graphname])
 
     # def test_03_installUDF(self):
     #     path = os.path.dirname(os.path.realpath(__file__))
@@ -60,4 +62,3 @@ if __name__ == "__main__":
     # runner.run(suite)
 
     unittest.main()
-

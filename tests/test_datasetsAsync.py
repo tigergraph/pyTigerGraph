@@ -5,7 +5,7 @@ from textwrap import dedent
 from unittest.mock import patch
 
 from pyTigerGraph.pytgasync.datasets import AsyncDatasets
-# from pyTigerGraph.datasets import AsyncDatasets
+
 
 class TestDatasets(unittest.IsolatedAsyncioTestCase):
     async def test_get_dataset_url(self):

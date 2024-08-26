@@ -5,8 +5,8 @@ Contains functions to visualize graphs.
 try:
     import ipycytoscape
 except:
-    raise Exception("Please install ipycytoscape to use visualization functions")
-
+    raise Exception(
+        "Please install ipycytoscape to use visualization functions")
 
 
 def drawSchema(schema: dict, style: list = []):
@@ -99,7 +99,8 @@ def _convert_schema_for_ipycytoscape(schema: dict):
                 cytoscape_edge = dict()
                 cytoscape_edge["data"] = dict()
                 cytoscape_edge["data"]["id"] = (
-                    edge["Name"] + ":" + edgePair["From"] + ":" + edgePair["To"]
+                    edge["Name"] + ":" + edgePair["From"] +
+                    ":" + edgePair["To"]
                 )
                 cytoscape_edge["data"]["source"] = edgePair["From"]
                 cytoscape_edge["data"]["target"] = edgePair["To"]

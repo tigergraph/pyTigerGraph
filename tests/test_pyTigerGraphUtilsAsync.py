@@ -63,15 +63,17 @@ class test_pyTigerGraphUtils(unittest.IsolatedAsyncioTestCase):
             self.assertIn("NetworkMetrics", res)
             res = await self.conn.getSystemMetrics(what="qps")
             self.assertIn("QPSMetrics", res)
-            
+
             with self.assertRaises(TigerGraphException) as tge:
                 res = await self.conn.getSystemMetrics(what="servicestate")
-            self.assertEqual("This 'what' parameter is only supported on versions of TigerGraph < 4.1.0.", tge.exception.message)
-            
+            self.assertEqual(
+                "This 'what' parameter is only supported on versions of TigerGraph < 4.1.0.", tge.exception.message)
+
             with self.assertRaises(TigerGraphException) as tge:
                 res = await self.conn.getSystemMetrics(what="connection")
-            self.assertEqual("This 'what' parameter is only supported on versions of TigerGraph < 4.1.0.", tge.exception.message)
-        else:    
+            self.assertEqual(
+                "This 'what' parameter is only supported on versions of TigerGraph < 4.1.0.", tge.exception.message)
+        else:
             res = await self.conn.getSystemMetrics(what="mem", latest=10)
             self.assertEqual(len(res), 10)
 
@@ -80,13 +82,16 @@ class test_pyTigerGraphUtils(unittest.IsolatedAsyncioTestCase):
         self.assertIn("CompletedRequests", str(res))
 
     async def test_08_getServiceStatus(self):
-        req = {"ServiceDescriptors":[{"ServiceName": "GSQL"}]}
+        req = {"ServiceDescriptors": [{"ServiceName": "GSQL"}]}
         res = await self.conn.getServiceStatus(req)
-        self.assertEqual(res["ServiceStatusEvents"][0]["ServiceStatus"], "Online")
+        self.assertEqual(res["ServiceStatusEvents"][0]
+                         ["ServiceStatus"], "Online")
 
     async def test_09_rebuildGraph(self):
         res = await self.conn.rebuildGraph()
-        self.assertEqual(res["message"], "RebuildNow finished, please check details in the folder: /tmp/rebuildnow")
+        self.assertEqual(
+            res["message"], "RebuildNow finished, please check details in the folder: /tmp/rebuildnow")
+
 
 if __name__ == '__main__':
     unittest.main()

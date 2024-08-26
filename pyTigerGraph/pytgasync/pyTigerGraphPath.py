@@ -17,9 +17,9 @@ logger = logging.getLogger(__name__)
 class AsyncPyTigerGraphPath(AsyncPyTigerGraphBase, pyTigerGraphPath):
 
     async def shortestPath(self, sourceVertices: Union[dict, tuple, list],
-            targetVertices: Union[dict, tuple, list], maxLength: int = None,
-            vertexFilters: Union[list, dict] = None, edgeFilters: Union[list, dict] = None,
-            allShortestPaths: bool = False) -> dict:
+                           targetVertices: Union[dict, tuple, list], maxLength: int = None,
+                           vertexFilters: Union[list, dict] = None, edgeFilters: Union[list, dict] = None,
+                           allShortestPaths: bool = False) -> dict:
         """Finds the shortest path (or all shortest paths) between the source and target vertex sets.
 
         A vertex set is a set of dictionaries that each has three top-level keys: `v_type`, `v_id`,
@@ -68,7 +68,7 @@ class AsyncPyTigerGraphPath(AsyncPyTigerGraphBase, pyTigerGraphPath):
             logger.debug("params: " + self._locals(locals()))
 
         data = self._preparePathParams(sourceVertices, targetVertices, maxLength, vertexFilters,
-            edgeFilters, allShortestPaths)
+                                       edgeFilters, allShortestPaths)
         ret = await self._post(self.restppUrl + "/shortestpath/" + self.graphname, data=data)
 
         if logger.level == logging.DEBUG:
@@ -78,8 +78,8 @@ class AsyncPyTigerGraphPath(AsyncPyTigerGraphBase, pyTigerGraphPath):
         return ret
 
     async def allPaths(self, sourceVertices: Union[dict, tuple, list],
-            targetVertices: Union[dict, tuple, list], maxLength: int,
-            vertexFilters: Union[list, dict] = None, edgeFilters: Union[list, dict] = None) -> dict:
+                       targetVertices: Union[dict, tuple, list], maxLength: int,
+                       vertexFilters: Union[list, dict] = None, edgeFilters: Union[list, dict] = None) -> dict:
         """Find all possible paths up to a given maximum path length between the source and target
         vertex sets.
 
@@ -123,7 +123,7 @@ class AsyncPyTigerGraphPath(AsyncPyTigerGraphBase, pyTigerGraphPath):
             logger.debug("params: " + self._locals(locals()))
 
         data = self._preparePathParams(sourceVertices, targetVertices, maxLength, vertexFilters,
-            edgeFilters)
+                                       edgeFilters)
         ret = await self._post(self.restppUrl + "/allpaths/" + self.graphname, data=data)
 
         if logger.level == logging.DEBUG:

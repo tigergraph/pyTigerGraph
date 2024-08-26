@@ -58,7 +58,7 @@ if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(TestDatasets("test_get_dataset_url"))
     suite.addTest(TestDatasets("test_download_extract"))
-    # suite.addTest(TestDatasets("test_clean_up"))
+    suite.addTest(TestDatasets("test_clean_up"))
     suite.addTest(TestDatasets("test_list"))
 
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)

@@ -144,7 +144,8 @@ class TestGDSDataLoaders(unittest.TestCase):
             buffer_size=4,
         )
         self.assertEqual(loader.kafka_address_consumer, "34.127.11.236:9092")
-        self.assertEqual(loader._payload["security_protocol"], "SASL_PLAINTEXT")
+        self.assertEqual(
+            loader._payload["security_protocol"], "SASL_PLAINTEXT")
         self.assertEqual(loader._payload["sasl_mechanism"], "PLAIN")
         self.assertEqual(loader._payload["sasl_username"], "bill")
         self.assertEqual(loader._payload["sasl_password"], "bill")

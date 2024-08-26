@@ -5,6 +5,7 @@ from .pyTigerGraphUnitTestAsync import make_connection
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
+
 class test_pyTigerGraphBase(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.conn = await make_connection()
@@ -81,15 +82,17 @@ class test_pyTigerGraphBase(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(exp, res)
 
         data = json.dumps({"function": "stat_vertex_attr", "type": "vertex4"})
-        exp = [{'attributes': {'a01': {'AVG': 3, 'MAX': 5, 'MIN': 1}}, 'v_type': 'vertex4'}]
+        exp = [
+            {'attributes': {'a01': {'AVG': 3, 'MAX': 5, 'MIN': 1}}, 'v_type': 'vertex4'}]
         res = await self.conn._post(self.conn.restppUrl + "/builtins/" + self.conn.graphname, data=data)
         self.assertEqual(exp, res)
 
     async def test_04_delete(self):
         with self.assertRaises(TigerGraphException) as tge:
             res = await self.conn._delete(self.conn.restppUrl + "/graph/" + self.conn.graphname +
-                "/vertices/non_existent_vertex_type/1")
+                                          "/vertices/non_existent_vertex_type/1")
         self.assertEqual("REST-30000", tge.exception.code)
+
 
 if __name__ == '__main__':
     unittest.main()

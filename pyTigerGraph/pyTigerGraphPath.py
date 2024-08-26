@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 
 class pyTigerGraphPath(pyTigerGraphBase):
     def _preparePathParams(self, sourceVertices: Union[dict, tuple, list],
-            targetVertices: Union[dict, tuple, list], maxLength: int = None,
-            vertexFilters: Union[list, dict] = None, edgeFilters: Union[list, dict] = None,
-            allShortestPaths: bool = False) -> str:
+                           targetVertices: Union[dict, tuple, list], maxLength: int = None,
+                           vertexFilters: Union[list, dict] = None, edgeFilters: Union[list, dict] = None,
+                           allShortestPaths: bool = False) -> str:
         """Prepares the input parameters by transforming them to the format expected by the path
          algorithms.
 
@@ -125,7 +125,8 @@ class pyTigerGraphPath(pyTigerGraphBase):
         if not sourceVertices or not targetVertices:
             return ""
             # TODO Should allow returning error instead of handling missing parameters here?
-        data = {"sources": parseVertices(sourceVertices), "targets": parseVertices(targetVertices)}
+        data = {"sources": parseVertices(
+            sourceVertices), "targets": parseVertices(targetVertices)}
         if vertexFilters:
             data["vertexFilters"] = parseFilters(vertexFilters)
         if edgeFilters:
@@ -144,9 +145,9 @@ class pyTigerGraphPath(pyTigerGraphBase):
         return ret
 
     def shortestPath(self, sourceVertices: Union[dict, tuple, list],
-            targetVertices: Union[dict, tuple, list], maxLength: int = None,
-            vertexFilters: Union[list, dict] = None, edgeFilters: Union[list, dict] = None,
-            allShortestPaths: bool = False) -> dict:
+                     targetVertices: Union[dict, tuple, list], maxLength: int = None,
+                     vertexFilters: Union[list, dict] = None, edgeFilters: Union[list, dict] = None,
+                     allShortestPaths: bool = False) -> dict:
         """Finds the shortest path (or all shortest paths) between the source and target vertex sets.
 
         A vertex set is a set of dictionaries that each has three top-level keys: `v_type`, `v_id`,
@@ -195,8 +196,9 @@ class pyTigerGraphPath(pyTigerGraphBase):
             logger.debug("params: " + self._locals(locals()))
 
         data = self._preparePathParams(sourceVertices, targetVertices, maxLength, vertexFilters,
-            edgeFilters, allShortestPaths)
-        ret = self._post(self.restppUrl + "/shortestpath/" + self.graphname, data=data)
+                                       edgeFilters, allShortestPaths)
+        ret = self._post(self.restppUrl + "/shortestpath/" +
+                         self.graphname, data=data)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -205,8 +207,8 @@ class pyTigerGraphPath(pyTigerGraphBase):
         return ret
 
     def allPaths(self, sourceVertices: Union[dict, tuple, list],
-            targetVertices: Union[dict, tuple, list], maxLength: int,
-            vertexFilters: Union[list, dict] = None, edgeFilters: Union[list, dict] = None) -> dict:
+                 targetVertices: Union[dict, tuple, list], maxLength: int,
+                 vertexFilters: Union[list, dict] = None, edgeFilters: Union[list, dict] = None) -> dict:
         """Find all possible paths up to a given maximum path length between the source and target
         vertex sets.
 
@@ -250,8 +252,9 @@ class pyTigerGraphPath(pyTigerGraphBase):
             logger.debug("params: " + self._locals(locals()))
 
         data = self._preparePathParams(sourceVertices, targetVertices, maxLength, vertexFilters,
-            edgeFilters)
-        ret = self._post(self.restppUrl + "/allpaths/" + self.graphname, data=data)
+                                       edgeFilters)
+        ret = self._post(self.restppUrl + "/allpaths/" +
+                         self.graphname, data=data)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))

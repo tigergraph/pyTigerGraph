@@ -15,7 +15,7 @@ class test_pyTigerGraphEdge(unittest.IsolatedAsyncioTestCase):
         res = sorted(await self.conn.getEdgeTypes())
         self.assertEqual(6, len(res))
         exp = ["edge1_undirected", "edge2_directed", "edge3_directed_with_reverse",
-            "edge4_many_to_many", "edge5_all_to_all", "edge6_loop"]
+               "edge4_many_to_many", "edge5_all_to_all", "edge6_loop"]
         self.assertEqual(exp, res)
 
     async def test_02_getEdgeType(self):
@@ -45,7 +45,8 @@ class test_pyTigerGraphEdge(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(res["IsDirected"])
         self.assertIn("Config", res)
         self.assertIn("REVERSE_EDGE", res["Config"])
-        self.assertEqual("edge3_directed_with_reverse_reverse_edge", res["Config"]["REVERSE_EDGE"])
+        self.assertEqual("edge3_directed_with_reverse_reverse_edge",
+                         res["Config"]["REVERSE_EDGE"])
 
         res = await self.conn.getEdgeType("edge4_many_to_many")
         self.assertIsNotNone(res)
@@ -67,7 +68,7 @@ class test_pyTigerGraphEdge(unittest.IsolatedAsyncioTestCase):
         self.assertIn("EdgePairs", res)
         self.assertEqual(49, len(res["EdgePairs"]))
 
-        res =await  self.conn.getEdgeType("non_existing_edge_type")
+        res = await self.conn.getEdgeType("non_existing_edge_type")
         self.assertEqual({}, res)
         # TODO This will need to be reviewed if/when getEdgeType() return value changes from {} in
         #      case of invalid/non-existing edge type name is specified (e.g. an exception will be
@@ -94,10 +95,12 @@ class test_pyTigerGraphEdge(unittest.IsolatedAsyncioTestCase):
     async def test_06_getReverseEdge(self):
         res = await self.conn.getReverseEdge("edge1_undirected")
         self.assertIsInstance(res, str)
-        self.assertEqual("", res)  # TODO Change this to None or something in getReverseEdge()?
+        # TODO Change this to None or something in getReverseEdge()?
+        self.assertEqual("", res)
         res = await self.conn.getReverseEdge("edge2_directed")
         self.assertIsInstance(res, str)
-        self.assertEqual("", res)  # TODO Change this to None or something in getReverseEdge()?
+        # TODO Change this to None or something in getReverseEdge()?
+        self.assertEqual("", res)
         res = await self.conn.getReverseEdge("edge3_directed_with_reverse")
         self.assertIsInstance(res, str)
         self.assertEqual("edge3_directed_with_reverse_reverse_edge", res)
@@ -115,7 +118,7 @@ class test_pyTigerGraphEdge(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(8, res)
 
         res = await self.conn.getEdgeCountFrom(sourceVertexType="vertex4", edgeType="edge4_many_to_many",
-            targetVertexType="vertex5")
+                                               targetVertexType="vertex5")
         self.assertIsInstance(res, int)
         self.assertEqual(3, res)
 
@@ -129,22 +132,22 @@ class test_pyTigerGraphEdge(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(3, res["edge1_undirected"])
 
         res = await self.conn.getEdgeCountFrom(sourceVertexType="vertex4", sourceVertexId=1,
-            edgeType="edge1_undirected")
+                                               edgeType="edge1_undirected")
         self.assertIsInstance(res, int)
         self.assertEqual(3, res)
 
         res = await self.conn.getEdgeCountFrom(sourceVertexType="vertex4", sourceVertexId=1,
-            edgeType="edge1_undirected", where="a01=2")
+                                               edgeType="edge1_undirected", where="a01=2")
         self.assertIsInstance(res, int)
         self.assertEqual(2, res)
 
         res = await self.conn.getEdgeCountFrom(sourceVertexType="vertex4", sourceVertexId=1,
-            edgeType="edge1_undirected", targetVertexType="vertex5")
+                                               edgeType="edge1_undirected", targetVertexType="vertex5")
         self.assertIsInstance(res, int)
         self.assertEqual(3, res)
 
         res = await self.conn.getEdgeCountFrom(sourceVertexType="vertex4", sourceVertexId=1,
-            edgeType="edge1_undirected", targetVertexType="vertex5", targetVertexId=3)
+                                               edgeType="edge1_undirected", targetVertexType="vertex5", targetVertexId=3)
         self.assertIsInstance(res, int)
         self.assertEqual(1, res)
 
@@ -253,7 +256,7 @@ class test_pyTigerGraphEdge(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(res, list)
         self.assertEqual(3, len(res))
 
-        res =await  self.conn.getEdges("vertex4", 1, "edge1_undirected", "vertex5", fmt="df")
+        res = await self.conn.getEdges("vertex4", 1, "edge1_undirected", "vertex5", fmt="df")
         self.assertIsInstance(res, pandas.DataFrame)
         self.assertEqual(3, len(res.index))
 
@@ -289,7 +292,7 @@ class test_pyTigerGraphEdge(unittest.IsolatedAsyncioTestCase):
         self.assertEqual({}, res["edge6_loop"])
 
         res = await self.conn.getEdgeStats(["edge1_undirected", "edge2_directed", "edge6_loop"],
-            skipNA=True)
+                                           skipNA=True)
         self.assertIsInstance(res, dict)
         self.assertEqual(2, len(res))
         self.assertIn("edge1_undirected", res)

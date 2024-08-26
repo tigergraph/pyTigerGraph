@@ -136,14 +136,15 @@ class TestGDSHGTLoaderREST(unittest.TestCase):
             add_self_loop=False,
             loader_id=None,
             buffer_size=4,
-            filter_by= {"v2": "train_mask"}
+            filter_by={"v2": "train_mask"}
         )
         num_batches = 0
         for data in loader:
             # print(num_batches, data)
             self.assertIsInstance(data, pygHeteroData)
             self.assertGreater(data["v2"]["x"].shape[0], 0)
-            self.assertEqual(data["v2"]["x"].shape[0], data["v2"]["is_seed"].shape[0])
+            self.assertEqual(data["v2"]["x"].shape[0],
+                             data["v2"]["is_seed"].shape[0])
             num_batches += 1
         self.assertEqual(num_batches, 6)
 
@@ -163,7 +164,8 @@ class TestGDSHGTLoaderREST(unittest.TestCase):
             buffer_size=4,
         )
         data = loader.fetch(
-            [{"primary_id": "13", "type": "v2"}, {"primary_id": "28", "type": "v2"}]
+            [{"primary_id": "13", "type": "v2"}, {
+                "primary_id": "28", "type": "v2"}]
         )
         self.assertIn("13", data["v2"]["primary_id"])
         self.assertIn("28", data["v2"]["primary_id"])

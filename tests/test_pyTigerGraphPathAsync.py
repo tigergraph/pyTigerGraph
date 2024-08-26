@@ -58,8 +58,9 @@ class test_pyTigerGraphPath(unittest.IsolatedAsyncioTestCase):
 
     def test_01_preparePathParams(self):
         res = self.conn._preparePathParams([("srctype1", 1), ("srctype2", 2), ("srctype3", 3)],
-            [("trgtype1", 1), ("trgtype2", 2), ("trgtype3", 3)], 5,
-            [("srctype1", "a01>10")], [("trgtype1", "a10<20")], True)
+                                           [("trgtype1", 1), ("trgtype2", 2),
+                                            ("trgtype3", 3)], 5,
+                                           [("srctype1", "a01>10")], [("trgtype1", "a10<20")], True)
         self.assertIsInstance(res, str)
         res = json.loads(res)
         self.assertEqual(6, len(res))
@@ -100,7 +101,8 @@ class test_pyTigerGraphPath(unittest.IsolatedAsyncioTestCase):
 
         res = await self.conn.shortestPath(("vertex4", 10), ("vertex4", 50), allShortestPaths=True)
         vs3 = [10, 20, 30, 40, 50, 60, 70]
-        es3 = [(10, 20), (20, 30), (30, 40), (40, 50), (10, 60), (60, 70), (70, 40)]
+        es3 = [(10, 20), (20, 30), (30, 40), (40, 50),
+               (10, 60), (60, 70), (70, 40)]
         self.assertTrue(
             (self._check_vertices(res[0]["vertices"], vs3) and
              self._check_edges(res[0]["edges"], es3))
@@ -111,14 +113,14 @@ class test_pyTigerGraphPath(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([], res[0]["edges"])
 
         res = await self.conn.shortestPath(("vertex4", 10), ("vertex4", 50), allShortestPaths=True,
-            vertexFilters=("vertex4", "a01>950"))
+                                           vertexFilters=("vertex4", "a01>950"))
         self.assertTrue(
             (self._check_vertices(res[0]["vertices"], vs1) and
              self._check_edges(res[0]["edges"], es1))
         )
 
         res = await self.conn.shortestPath(("vertex4", 10), ("vertex4", 50), allShortestPaths=True,
-            edgeFilters=("edge6_loop", "a01<950"))
+                                           edgeFilters=("edge6_loop", "a01<950"))
         self.assertTrue(
             (self._check_vertices(res[0]["vertices"], vs2) and
              self._check_edges(res[0]["edges"], es2))
@@ -127,7 +129,8 @@ class test_pyTigerGraphPath(unittest.IsolatedAsyncioTestCase):
     async def test_03_allPaths(self):
         res = await self.conn.allPaths(("vertex4", 10), ("vertex4", 50), maxLength=4)
         vs = [10, 20, 30, 40, 50, 60, 70]
-        es = [(10, 20), (20, 30), (30, 40), (40, 50), (10, 60), (60, 70), (70, 40)]
+        es = [(10, 20), (20, 30), (30, 40), (40, 50),
+              (10, 60), (60, 70), (70, 40)]
         self.assertTrue(
             (self._check_vertices(res[0]["vertices"], vs) and
              self._check_edges(res[0]["edges"], es))
@@ -136,7 +139,7 @@ class test_pyTigerGraphPath(unittest.IsolatedAsyncioTestCase):
         res = await self.conn.allPaths(("vertex4", 10), ("vertex4", 50), maxLength=5)
         vs = [10, 20, 30, 40, 50, 60, 70, 80]
         es = [(10, 20), (20, 30), (30, 40), (40, 50), (10, 60), (60, 70), (70, 40), (70, 80),
-            (80, 40)]
+              (80, 40)]
         self.assertTrue(
             (self._check_vertices(res[0]["vertices"], vs) and
              self._check_edges(res[0]["edges"], es))
@@ -145,14 +148,14 @@ class test_pyTigerGraphPath(unittest.IsolatedAsyncioTestCase):
         res = await self.conn.allPaths(("vertex4", 10), ("vertex4", 50), maxLength=6)
         vs = [10, 20, 30, 40, 50, 60, 70, 80]
         es = [(10, 20), (20, 30), (30, 40), (40, 50), (10, 60), (60, 70), (70, 40), (70, 80),
-            (80, 40), (30, 60)]
+              (80, 40), (30, 60)]
         self.assertTrue(
             (self._check_vertices(res[0]["vertices"], vs) and
              self._check_edges(res[0]["edges"], es))
         )
 
         res = await self.conn.allPaths(("vertex4", 10), ("vertex4", 50), maxLength=5,
-            vertexFilters=("vertex4", "a01>950"))
+                                       vertexFilters=("vertex4", "a01>950"))
         vs = [10, 20, 30, 40, 50]
         es = [(10, 20), (20, 30), (30, 40), (40, 50)]
         self.assertTrue(
@@ -161,7 +164,7 @@ class test_pyTigerGraphPath(unittest.IsolatedAsyncioTestCase):
         )
 
         res = await self.conn.allPaths(("vertex4", 10), ("vertex4", 50), maxLength=5,
-            edgeFilters=("edge6_loop", "a01<950"))
+                                       edgeFilters=("edge6_loop", "a01<950"))
         vs = [10, 60, 70, 40, 50]
         es = [(10, 60), (60, 70), (70, 40), (40, 50)]
         self.assertTrue(

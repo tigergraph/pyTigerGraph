@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
 
     async def runLoadingJobWithFile(self, filePath: str, fileTag: str, jobName: str, sep: str = None,
-            eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000) -> Union[dict, None]:
+                                    eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000) -> Union[dict, None]:
         """Execute a loading job with the referenced file.
 
         The file will first be uploaded to the TigerGraph server and the value of the appropriate
@@ -50,14 +50,15 @@ class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        data, params = self._prepRunLoadingJobWithFile(filePath, jobName, fileTag, sep, eol)
+        data, params = self._prepRunLoadingJobWithFile(
+            filePath, jobName, fileTag, sep, eol)
 
         if not data and not params:
             # failed to read file
             return None
 
         res = await self._req("POST", self.restppUrl + "/ddl/" + self.graphname, params=params, data=data,
-            headers={"RESPONSE-LIMIT": str(sizeLimit), "GSQL-TIMEOUT": str(timeout)})
+                              headers={"RESPONSE-LIMIT": str(sizeLimit), "GSQL-TIMEOUT": str(timeout)})
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -66,7 +67,7 @@ class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
         return res
 
     async def uploadFile(self, filePath, fileTag, jobName="", sep=None, eol=None, timeout=16000,
-            sizeLimit=128000000) -> dict:
+                         sizeLimit=128000000) -> dict:
         """DEPRECATED
 
         Use `runLoadingJobWithFile()` instead.

@@ -15,8 +15,8 @@ class test_pyTigerGraphAuth(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(res, dict)
         # self.assertEqual(3, len(res)) # Just in case more secrets than expected
         self.assertIn("secret1", res)
-        # self.assertIn("secret2", res)
-        # self.assertIn("secret2", res)
+        self.assertIn("secret2", res)
+        self.assertIn("secret2", res)
 
     async def test_02_getSecret(self):
         pass
@@ -40,7 +40,8 @@ class test_pyTigerGraphAuth(unittest.IsolatedAsyncioTestCase):
 
         with self.assertRaises(TigerGraphException) as tge:
             await self.conn.createSecret("secret1")
-        self.assertEqual("The secret with alias secret1 already exists.", tge.exception.message)
+        self.assertEqual(
+            "The secret with alias secret1 already exists.", tge.exception.message)
 
     async def test_04_dropSecret(self):
         res = await self.conn.showSecrets()
@@ -67,10 +68,11 @@ class test_pyTigerGraphAuth(unittest.IsolatedAsyncioTestCase):
     async def test_06_refreshToken(self):
         # TG 4.x does not allow refreshing tokens
         await self.conn.newGetToken(await self.conn.createSecret())
-        if await self.conn._versionGreaterThan4_0(): 
+        if await self.conn._versionGreaterThan4_0():
             with self.assertRaises(TigerGraphException) as tge:
                 await self.conn.newRefreshToken("secret1")
-            self.assertEqual("Refreshing tokens is only supported on versions of TigerGraph <= 4.0.0.", tge.exception.message)
+            self.assertEqual(
+                "Refreshing tokens is only supported on versions of TigerGraph <= 4.0.0.", tge.exception.message)
         else:
             await self.conn.dropSecret("secret6", ignoreErrors=True)
             res = await self.conn.createSecret("secret6", True)
@@ -82,9 +84,10 @@ class test_pyTigerGraphAuth(unittest.IsolatedAsyncioTestCase):
     async def test_07_deleteToken(self):
         await self.conn.dropSecret("secret7", ignoreErrors=True)
         res = await self.conn.createSecret("secret7", True)
-        token =  await self.conn.newGetToken(res["secret7"])
+        token = await self.conn.newGetToken(res["secret7"])
         self.assertTrue(await self.conn.newDeleteToken(res["secret7"], token[0]))
         await self.conn.dropSecret("secret7")
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -22,6 +22,7 @@ class AsyncFeaturizerResult:
     """AsyncFeaturizerResult
     Object to keep track of featurizer algorithms being ran in asynchronous mode. (`runAsync=True`).
     """
+
     def __init__(self, conn, algorithm, query_id, results=None):
         """NO DOC:
         class for asynchronous featurizer results. Populated during `runAlgorithm()` if `runAsync = True`.
@@ -108,10 +109,10 @@ class Featurizer:
     print(res)
     ```
     """
+
     def __init__(
         self, conn: "TigerGraphConnection", repo: str = None, algo_version: str = None
     ):
-
         """NO DOC: Class for feature extraction.
 
         The job of a feature extracter is to install and run algorithms in the Graph Data Science (GDS) libarary.
@@ -141,7 +142,8 @@ class Featurizer:
                     self.major_ver
                 )
             else:
-                raise ValueError("Database version {} not supported.".format(self.algo_ver))
+                raise ValueError(
+                    "Database version {} not supported.".format(self.algo_ver))
         self.repo = repo
         # Get algo dict from manifest
         try:
@@ -180,7 +182,8 @@ class Featurizer:
     def _get_algo_dict(self, manifest_file: str) -> dict:
         # Get algo dict from manifest
         if manifest_file.startswith("http"):
-            resp = requests.get(manifest_file, allow_redirects=False, timeout=10)
+            resp = requests.get(
+                manifest_file, allow_redirects=False, timeout=10)
             resp.raise_for_status()
             algo_dict = resp.json()
         else:
@@ -210,7 +213,8 @@ class Featurizer:
             for k, v in algo_dict.items():
                 if k == "name":
                     algo_num += 1
-                    print("{}{:02}. name: {}".format("  " * depth, algo_num, v))
+                    print("{}{:02}. name: {}".format(
+                        "  " * depth, algo_num, v))
                     return algo_num
                 if isinstance(v, dict):
                     print("{}{}:".format("  " * depth, k))
@@ -227,7 +231,8 @@ class Featurizer:
         else:
             print("Available algorithms per category:")
             for k in self.algo_dict:
-                print("- {}: {} algorithms".format(k, get_num_algos(self.algo_dict[k])))
+                print("- {}: {} algorithms".format(k,
+                      get_num_algos(self.algo_dict[k])))
             print(
                 "Call listAlgorithms() with the category name to see the list of algorithms"
             )
@@ -268,7 +273,8 @@ class Featurizer:
         # Get query name from the first line
         firstline = query.split("\n", 1)[0]
         try:
-            query_name = re.search(r"QUERY (.+?)\(", firstline).group(1).strip()
+            query_name = re.search(
+                r"QUERY (.+?)\(", firstline).group(1).strip()
         except:
             raise ValueError(
                 "Cannot parse the query file. It should start with CREATE QUERY ... "
@@ -294,13 +300,14 @@ class Featurizer:
                 query = query.replace(placeholder, replace[placeholder])
         self.query = query
         if (
-            query_name == "tg_fastRP" 
+            query_name == "tg_fastRP"
             and self.major_ver != "master"
-            and int(self.major_ver) <= 3 
+            and int(self.major_ver) <= 3
             and int(self.minor_ver) <= 7
         ):
             # Drop all jobs on the graph
-            self.conn.gsql("USE GRAPH {}\n".format(self.conn.graphname) + "drop job *")
+            self.conn.gsql("USE GRAPH {}\n".format(
+                self.conn.graphname) + "drop job *")
             res = add_attribute(
                 self.conn,
                 schema_type="VERTEX",
@@ -363,9 +370,11 @@ class Featurizer:
                 self.sch_type,
             ) = self._get_algo_details(self.algo_dict)
         if query_name not in self.algo_paths:
-            raise ValueError("Cannot find {} in the library.".format(query_name))
+            raise ValueError(
+                "Cannot find {} in the library.".format(query_name))
         for query in self.algo_paths[query_name]:
-            _ = self._install_query_file(query, global_change=global_change, distributed_mode=distributed_query)
+            _ = self._install_query_file(
+                query, global_change=global_change, distributed_mode=distributed_query)
         self.query_name = query_name
         return self.query_name
 
@@ -374,9 +383,11 @@ class Featurizer:
             if "name" in d.keys():
                 if "path" not in d.keys():
                     raise Exception(
-                        "Cannot find path for {} in the manifest file".format(d["name"])
+                        "Cannot find path for {} in the manifest file".format(
+                            d["name"])
                     )
-                paths[d["name"]] = [pjoin(self.repo, p) for p in d["path"].split(";")]
+                paths[d["name"]] = [pjoin(self.repo, p)
+                                    for p in d["path"].split(";")]
                 if "value_type" in d.keys():
                     types[d["name"]] = d["value_type"]
                 if "schema_type" in d.keys():
@@ -401,7 +412,8 @@ class Featurizer:
                 self.sch_type,
             ) = self._get_algo_details(self.algo_dict)
         if query_name not in self.algo_paths:
-            raise ValueError("Cannot find {} in the library.".format(query_name))
+            raise ValueError(
+                "Cannot find {} in the library.".format(query_name))
         query_path = self.algo_paths[query_name][-1]
         if query_path.startswith("http"):
             resp = requests.get(query_path, allow_redirects=False, timeout=10)
@@ -460,7 +472,7 @@ class Featurizer:
         """
         param_values = {}
         param_types = {}
-        header = query[query.find("(") + 1 : query.find(")")].strip()
+        header = query[query.find("(") + 1: query.find(")")].strip()
         if not header:
             return {}, {}
         header = header.split(",")
@@ -489,7 +501,8 @@ class Featurizer:
                     param_values[param] = None
                 param_types[param] = "bool"
             elif param_type.lower() == "string":
-                param_values[param] = default.strip('"').strip("'") if default else None
+                param_values[param] = default.strip(
+                    '"').strip("'") if default else None
                 param_types[param] = "str"
             else:
                 param_values[param] = default
@@ -636,14 +649,16 @@ class Featurizer:
                 raise ValueError(
                     "Please run installAlgorithm() to install this custom query first."
                 )
-            self.installAlgorithm(query_name, global_change=global_schema, distributed_query=distributed_query)
+            self.installAlgorithm(
+                query_name, global_change=global_schema, distributed_query=distributed_query)
 
         # Check query parameters for built-in queries.
         if not custom_query:
             if params is None:
                 params = self.getParams(query_name, printout=False)
                 if params:
-                    missing_params = [k for k, v in params.items() if v is None]
+                    missing_params = [
+                        k for k, v in params.items() if v is None]
                     if missing_params:
                         raise ValueError(
                             'Missing mandatory parameters: {}. Please run getParams("{}") for parameter details.'.format(
@@ -660,7 +675,8 @@ class Featurizer:
                         )
                     )
                 query_params.update(params)
-                missing_params = [k for k, v in query_params.items() if v is None]
+                missing_params = [
+                    k for k, v in query_params.items() if v is None]
                 if missing_params:
                     raise ValueError(
                         'Missing mandatory parameters: {}. Please run getParams("{}") for parameter details.'.format(
@@ -722,9 +738,11 @@ class Featurizer:
                 return result
 
     def _get_template_queries(self):
-        categories = self.conn.gsql("SHOW PACKAGE GDBMS_ALGO").strip().split("\n")[2:]
+        categories = self.conn.gsql(
+            "SHOW PACKAGE GDBMS_ALGO").strip().split("\n")[2:]
         for cat in categories:
-            resp = self.conn.gsql("SHOW PACKAGE GDBMS_ALGO.{}".format(cat.strip("- ")))
+            resp = self.conn.gsql(
+                "SHOW PACKAGE GDBMS_ALGO.{}".format(cat.strip("- ")))
             self.template_queries[cat.strip("- ")] = resp.strip()
 
     def _add_result_attribute(
@@ -763,7 +781,8 @@ class Featurizer:
                 elif isinstance(params[key], list):
                     schema_name = params[key]
                 else:
-                    raise ValueError("v_type should be either a list or string")
+                    raise ValueError(
+                        "v_type should be either a list or string")
             elif schema_type == "EDGE" and (
                 "e_type" in params or "e_type_set" in params
             ):
@@ -773,7 +792,8 @@ class Featurizer:
                 elif isinstance(params[key], list):
                     schema_name = params[key]
                 else:
-                    raise ValueError("e_type should be either a list or string")
+                    raise ValueError(
+                        "e_type should be either a list or string")
         # Find whether global or local changes are needed by checking schema type.
         global_types = []
         local_types = []

@@ -83,7 +83,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
             ret["daysRemaining"] = -1
         else:
             raise TigerGraphException(res["message"], res["code"])
-        
+
         return ret
 
     def getLicenseInfo(self) -> dict:
@@ -95,7 +95,8 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         """
         logger.info("entry: getLicenseInfo")
 
-        res = self._req("GET", self.restppUrl + "/showlicenseinfo", resKey="", skipCheck=True)
+        res = self._req("GET", self.restppUrl +
+                        "/showlicenseinfo", resKey="", skipCheck=True)
         ret = self._parseGetLicenseInfo(res)
 
         if logger.level == logging.DEBUG:
@@ -120,9 +121,9 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         else:
             raise TigerGraphException(res["message"], res["code"])
 
-    def _prepGetSystemMetrics(self, from_ts:int = None, to_ts:int = None, latest:int = None, who:str = None, where:str = None):
+    def _prepGetSystemMetrics(self, from_ts: int = None, to_ts: int = None, latest: int = None, who: str = None, where: str = None):
         params = {}
-        _json = {} # in >=4.1 we need a json request of different parameter names
+        _json = {}  # in >=4.1 we need a json request of different parameter names
         if from_ts or to_ts:
             _json["TimeRange"] = {}
         if from_ts:
@@ -138,13 +139,13 @@ class pyTigerGraphUtils(pyTigerGraphBase):
             params["who"] = who
         if where:
             params["where"] = where
-            _json["HostID"] = where    
+            _json["HostID"] = where
 
         return params, _json
 
-    def getSystemMetrics(self, from_ts:int = None, to_ts:int = None, latest:int = None, what:str = None, who:str = None, where:str = None):
+    def getSystemMetrics(self, from_ts: int = None, to_ts: int = None, latest: int = None, what: str = None, who: str = None, where: str = None):
         """Monitor system usage metrics.
-        
+
         Args:
             from_ts (int, optional):
                 The epoch timestamp that indicates the start of the time filter.
@@ -180,29 +181,32 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         if logger.level == logging.DEBUG:
             logger.debug("entry: getSystemMetrics")
 
-        params, _json = self._prepGetSystemMetrics(from_ts=from_ts, to_ts=to_ts, latest=latest, who=who, where=where)
+        params, _json = self._prepGetSystemMetrics(
+            from_ts=from_ts, to_ts=to_ts, latest=latest, who=who, where=where)
 
         # Couldn't be placed in prep since version checking requires await statements
         if what:
             if self._versionGreaterThan4_0():
                 if what == "servicestate" or what == "connection":
-                    raise TigerGraphException("This 'what' parameter is only supported on versions of TigerGraph < 4.1.0.", 0)
+                    raise TigerGraphException(
+                        "This 'what' parameter is only supported on versions of TigerGraph < 4.1.0.", 0)
                 if what == "cpu" or what == "mem":
-                        what = "cpu-memory" # in >=4.1 cpu and mem have been conjoined into one category
+                    what = "cpu-memory"  # in >=4.1 cpu and mem have been conjoined into one category
             params["what"] = what
         # in >=4.1 the datapoints endpoint has been removed and replaced
         if self._versionGreaterThan4_0():
-            res = self._req("POST", self.gsUrl+"/informant/metrics/get/"+what, data=_json, jsonData=True, resKey="")
+            res = self._req("POST", self.gsUrl+"/informant/metrics/get/" +
+                            what, data=_json, jsonData=True, resKey="")
         else:
-            res = self._req("GET", self.gsUrl+"/ts3/api/datapoints", authMode="pwd", params=params, resKey="")
+            res = self._req("GET", self.gsUrl+"/ts3/api/datapoints",
+                            authMode="pwd", params=params, resKey="")
         if logger.level == logging.DEBUG:
             logger.debug("exit: getSystemMetrics")
         return res
 
-
-    def getQueryPerformance(self, seconds:int = 10):
+    def getQueryPerformance(self, seconds: int = 10):
         """Returns real-time query performance statistics over the given time period, as specified by the seconds parameter. 
-        
+
         Args:
             seconds (int, optional):
                 Seconds are measured up to 60, so the seconds parameter must be a positive integer less than or equal to 60.
@@ -213,7 +217,8 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         params = {}
         if seconds:
             params["seconds"] = seconds
-        res = self._get(self.restppUrl+"/statistics/"+self.graphname, params=params, resKey="")
+        res = self._get(self.restppUrl+"/statistics/" +
+                        self.graphname, params=params, resKey="")
         if logger.level == logging.DEBUG:
             logger.debug("exit: getQueryPerformance")
         return res
@@ -228,7 +233,8 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         """
         if logger.level == logging.DEBUG:
             logger.debug("entry: getServiceStatus")
-        res = self._post(self.gsUrl+"/informant/current-service-status", data=json.dumps(request_body), resKey="")
+        res = self._post(self.gsUrl+"/informant/current-service-status",
+                         data=json.dumps(request_body), resKey="")
         if logger.level == logging.DEBUG:
             logger.debug("exit: getServiceStatus")
         return res
@@ -265,11 +271,11 @@ class pyTigerGraphUtils(pyTigerGraphBase):
             params["path"] = path
         if force:
             params["force"] = force
-        res = self._get(self.restppUrl+"/rebuildnow/"+self.graphname, params=params, resKey="")
+        res = self._get(self.restppUrl+"/rebuildnow/" +
+                        self.graphname, params=params, resKey="")
         if not res["error"]:
             if logger.level == logging.DEBUG:
                 logger.debug("exit: rebuildGraph")
             return res
         else:
             raise TigerGraphException(res["message"], res["code"])
-        

@@ -20,8 +20,9 @@ import asyncio
 
 from pyTigerGraph.datasets import Datasets, BaseDataset
 
+
 class AsyncDatasets(Datasets):
-    # using a factory method instead of __init__ since we need to call asynchronous methods when creating this. 
+    # using a factory method instead of __init__ since we need to call asynchronous methods when creating this.
     # AsyncDatasets can only be created by calling: dataset = await AsyncDatasets.create()
 
     @classmethod
@@ -50,7 +51,7 @@ class AsyncDatasets(Datasets):
         if not name:
             await self.list()
             return self
-            
+
         # Download the dataset and extract
         if isdir(pjoin(tmp_dir, name)):
             print(
@@ -79,7 +80,7 @@ class AsyncDatasets(Datasets):
         "NO DOC"
         inventory_url = urljoin(self.base_url, "inventory.json")
         async with httpx.AsyncClient() as client:
-                resp = await client.request("GET", inventory_url)
+            resp = await client.request("GET", inventory_url)
         resp.raise_for_status()
         resp = resp.json()
         if self.name in resp:
@@ -105,7 +106,8 @@ class AsyncDatasets(Datasets):
                     with tarfile.open(fileobj=raw, mode="r|gz") as tarobj:
                         tarobj.extractall(path=self.tmp_dir)
             except ImportError:
-                warnings.warn("Cannot import tqdm. Downloading without progress report.")
+                warnings.warn(
+                    "Cannot import tqdm. Downloading without progress report.")
                 with tarfile.open(fileobj=raw_content, mode="r|gz") as tarobj:
                     tarobj.extractall(path=self.tmp_dir)
                 print("Dataset downloaded.")
@@ -152,9 +154,8 @@ class AsyncDatasets(Datasets):
         """
         inventory_url = urljoin(self.base_url, "inventory.json")
         async with httpx.AsyncClient() as client:
-                resp = await client.request("GET", inventory_url)
+            resp = await client.request("GET", inventory_url)
         resp.raise_for_status()
         print("Available datasets:")
         for k in resp.json():
             print("- {}".format(k))
-

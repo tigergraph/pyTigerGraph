@@ -30,10 +30,10 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase, pyTigerGraphSchema):
 
         if await self._versionGreaterThan4_0():
             res = await self._req("GET", self.gsUrl + "/gsql/v1/udt/tuples?graph=" + self.graphname,
-            authMode="pwd")
-        else:    
+                                  authMode="pwd")
+        else:
             res = await self._req("GET", self.gsUrl + "/gsqlserver/gsql/udtlist?graph=" + self.graphname,
-                authMode="pwd")
+                                  authMode="pwd")
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -67,10 +67,10 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase, pyTigerGraphSchema):
         if not self.schema or force:
             if await self._versionGreaterThan4_0():
                 self.schema = await self._req("GET", self.gsUrl + "/gsql/v1/schema/graphs/" + self.graphname,
-                    authMode="pwd")
+                                              authMode="pwd")
             else:
                 self.schema = await self._req("GET", self.gsUrl + "/gsqlserver/gsql/schema?graph=" + self.graphname,
-                    authMode="pwd")
+                                              authMode="pwd")
         if udts and ("UDTs" not in self.schema or force):
             self.schema["UDTs"] = await self._getUDTs()
 
@@ -81,8 +81,8 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase, pyTigerGraphSchema):
         return self.schema
 
     async def upsertData(self, data: Union[str, object], atomic: bool = False, ackAll: bool = False,
-            newVertexOnly: bool = False, vertexMustExist: bool = False,
-            updateVertexOnly: bool = False) -> dict:
+                         newVertexOnly: bool = False, vertexMustExist: bool = False,
+                         updateVertexOnly: bool = False) -> dict:
         """Upserts data (vertices and edges) from a JSON file or a file with equivalent object structure.
 
         Args:
@@ -118,10 +118,10 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase, pyTigerGraphSchema):
             logger.debug("params: " + self._locals(locals()))
 
         data, headers, params = self._prepUpsertData(data=data, atomic=atomic, ackAll=ackAll, newVertexOnly=newVertexOnly,
-                                               vertexMustExist=vertexMustExist, updateVertexOnly=updateVertexOnly)
-        
+                                                     vertexMustExist=vertexMustExist, updateVertexOnly=updateVertexOnly)
+
         res = await self._req("POST", self.restppUrl + "/graph/" + self.graphname, headers=headers, data=data,
-            params=params)
+                              params=params)
         res = res[0]
 
         if logger.level == logging.DEBUG:
@@ -131,7 +131,7 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase, pyTigerGraphSchema):
         return res
 
     async def getEndpoints(self, builtin: bool = False, dynamic: bool = False,
-            static: bool = False) -> dict:
+                           static: bool = False) -> dict:
         """Lists the REST++ endpoints and their parameters.
 
         Args:
@@ -152,7 +152,8 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase, pyTigerGraphSchema):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        bui, dyn, sta, url, ret = self._prepGetEndpoints(builtin=builtin, dynamic=dynamic, static=static)
+        bui, dyn, sta, url, ret = self._prepGetEndpoints(
+            builtin=builtin, dynamic=dynamic, static=static)
         if bui:
             eps = {}
             res = await self._req("GET", url + "builtin=true", resKey="")

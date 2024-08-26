@@ -144,6 +144,7 @@ class TestGDSNodePieceLoader(unittest.TestCase):
             num_batches += 1
         self.assertEqual(num_batches, 9)
 
+
 class TestGDSNodePieceLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -224,7 +225,7 @@ class TestGDSHeteroNodePieceLoaderREST(unittest.TestCase):
             compute_anchors=True,
             anchor_percentage=0.5,
             v_feats={"v0": ["x", "y"],
-                        "v1": ["x"]},
+                     "v1": ["x"]},
             batch_size=20,
             shuffle=True,
             filter_by=None,
@@ -240,7 +241,7 @@ class TestGDSHeteroNodePieceLoaderREST(unittest.TestCase):
             anchor_percentage=0.5,
             graph=self.conn,
             v_feats={"v0": ["x", "y"],
-                        "v1": ["x"]},
+                     "v1": ["x"]},
             batch_size=20,
             shuffle=True,
             filter_by=None,
@@ -268,7 +269,7 @@ class TestGDSHeteroNodePieceLoaderREST(unittest.TestCase):
             compute_anchors=True,
             anchor_percentage=0.5,
             v_feats={"v0": ["x", "y"],
-                        "v1": ["x"]},
+                     "v1": ["x"]},
             num_batches=1,
             shuffle=False,
             filter_by=None,
@@ -293,7 +294,7 @@ if __name__ == "__main__":
     suite.addTest(TestGDSNodePieceLoader("test_init"))
     suite.addTest(TestGDSNodePieceLoader("test_iterate"))
     suite.addTest(TestGDSNodePieceLoader("test_all_vertices"))
-    #suite.addTest(TestGDSNodePieceLoader("test_sasl_plaintext"))
+    # suite.addTest(TestGDSNodePieceLoader("test_sasl_plaintext"))
     # suite.addTest(TestGDSNodePieceLoader("test_sasl_ssl"))
     suite.addTest(TestGDSNodePieceLoaderREST("test_init"))
     suite.addTest(TestGDSNodePieceLoaderREST("test_iterate"))

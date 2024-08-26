@@ -17,7 +17,8 @@ from .pyTigerGraphGSQL import AsyncPyTigerGraphGSQL
 
 logger = logging.getLogger(__name__)
 
-#TODO FINISH MAKING THE ASYNCS AND ADD COMMENTS
+# TODO FINISH MAKING THE ASYNCS AND ADD COMMENTS
+
 
 class AsyncPyTigerGraphAuth(AsyncPyTigerGraphGSQL, pyTigerGraphAuth):
 
@@ -128,10 +129,11 @@ class AsyncPyTigerGraphAuth(AsyncPyTigerGraphGSQL, pyTigerGraphAuth):
 
         return res
 
-    async def _newToken(self, secret: str = None, lifetime: int = None, token = None, _method = None)  -> Union[tuple, str]:
-        method, url, alt_url, authMode, data, alt_data = self._prep_newToken(secret = secret, lifetime = lifetime, token=token)
+    async def _newToken(self, secret: str = None, lifetime: int = None, token=None, _method=None) -> Union[tuple, str]:
+        method, url, alt_url, authMode, data, alt_data = self._prep_newToken(
+            secret=secret, lifetime=lifetime, token=token)
         #  _method Used for delete and refresh token
-       
+
         # method == GET when using old version since _prep_newToken() gets the method for getting a new token for a version
         if method == "GET":
             if _method:
@@ -158,26 +160,27 @@ class AsyncPyTigerGraphAuth(AsyncPyTigerGraphGSQL, pyTigerGraphAuth):
 
         # uses mainVer instead of _versionGreaterThan4_0 since you need a token for verson checking
         return res, mainVer
-        
-    async def newGetToken(self, secret: str = None, setToken: bool = True, lifetime: int = None)  -> Union[tuple, str]:
+
+    async def newGetToken(self, secret: str = None, setToken: bool = True, lifetime: int = None) -> Union[tuple, str]:
         logger.info("entry: getToken")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        res, mainVer = await self._newToken(secret=secret,lifetime=lifetime)
+        res, mainVer = await self._newToken(secret=secret, lifetime=lifetime)
         token = self._parse_newToken(res, setToken, mainVer)
         logger.info("exit: getToken")
         return token
 
-    async def newRefreshToken(self, secret: str = None, setToken: bool = True, lifetime: int = None, token = "")  -> Union[tuple, str]:
+    async def newRefreshToken(self, secret: str = None, setToken: bool = True, lifetime: int = None, token="") -> Union[tuple, str]:
         logger.info("entry: refreshToken")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
-        
+
         if await self._versionGreaterThan4_0():
             logger.info("exit: refreshToken")
-            raise TigerGraphException("Refreshing tokens is only supported on versions of TigerGraph <= 4.0.0.", 0)
-        
+            raise TigerGraphException(
+                "Refreshing tokens is only supported on versions of TigerGraph <= 4.0.0.", 0)
+
         if not token:
             token = self.apiToken
         res, mainVer = await self._newToken(secret=secret, lifetime=lifetime, token=token, _method="PUT")
@@ -196,5 +199,6 @@ class AsyncPyTigerGraphAuth(AsyncPyTigerGraphGSQL, pyTigerGraphAuth):
             logger.info("exit: deleteToken")
 
             return True
-        
-        raise TigerGraphException(res["message"], (res["code"] if "code" in res else None))
+
+        raise TigerGraphException(
+            res["message"], (res["code"] if "code" in res else None))

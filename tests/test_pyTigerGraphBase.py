@@ -5,6 +5,7 @@ from .pyTigerGraphUnitTest import make_connection
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
+
 class test_pyTigerGraphBase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -82,15 +83,18 @@ class test_pyTigerGraphBase(unittest.TestCase):
         self.assertEqual(exp, res)
 
         data = json.dumps({"function": "stat_vertex_attr", "type": "vertex4"})
-        exp = [{'attributes': {'a01': {'AVG': 3, 'MAX': 5, 'MIN': 1}}, 'v_type': 'vertex4'}]
-        res = self.conn._post(self.conn.restppUrl + "/builtins/" + self.conn.graphname, data=data)
+        exp = [
+            {'attributes': {'a01': {'AVG': 3, 'MAX': 5, 'MIN': 1}}, 'v_type': 'vertex4'}]
+        res = self.conn._post(self.conn.restppUrl +
+                              "/builtins/" + self.conn.graphname, data=data)
         self.assertEqual(exp, res)
 
     def test_04_delete(self):
         with self.assertRaises(TigerGraphException) as tge:
             res = self.conn._delete(self.conn.restppUrl + "/graph/" + self.conn.graphname +
-                "/vertices/non_existent_vertex_type/1")
+                                    "/vertices/non_existent_vertex_type/1")
         self.assertEqual("REST-30000", tge.exception.code)
+
 
 if __name__ == '__main__':
     unittest.main()
