@@ -13,3 +13,4 @@ tests1.py
 .ipynb_checkpoints
 venv
 requirement.txt
+pyrightconfig.json
