@@ -517,7 +517,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
 
         - If edge is not yet present in graph, it will be created (see special case below).
         - If it's already in the graph, it is updated with the values specified in the request.
-        - If `vertex_must_exist` is True then edge will only be created if both vertex exists
+        - If `vertex_must_exist` is True then edge will only be created if both vertices exists
             in graph. Otherwise missing vertices are created with the new edge; the newly created
             vertices' attributes (if any) will be created with default values.
 
@@ -570,8 +570,8 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                 "edges": {
                     sourceVertexType: {
                         sourceVertexId: {
-                            edgeType: {targetVertexType: {
-                                targetVertexId: vals}}
+                            edgeType: {targetVertexType: {targetVertexId: vals}}
+
                         }
                     }
                 }
@@ -807,6 +807,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         ret = self._post(
             self.restppUrl + "/graph/" + self.graphname, data=data, params=params
         )[0]["accepted_edges"]
+
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
         logger.info("exit: upsertEdges")
@@ -830,6 +831,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
     def upsertEdgeDataFrame(self, df: 'pd.DataFrame', sourceVertexType: str, edgeType: str,
                             targetVertexType: str, from_id: str = "", to_id: str = "",
                             attributes: dict = None, vertexMustExist: bool = False) -> int:
+
         """Upserts edges from a Pandas DataFrame.
 
         Args:

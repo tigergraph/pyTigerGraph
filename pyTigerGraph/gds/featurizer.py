@@ -1,5 +1,23 @@
 """Featurizer
 The Featurizer class provides methods for installing and running Graph Data Science Algorithms onto a TigerGraph server.
+
+To use the Featurizer, you must first create a connection to a TigerGraph server using the `TigerGraphConnection` class.
+
+For example, to run PageRank, you would use the following code:
+
+[source,python]
+----
+import pyTigerGraph as tg
+
+conn = tg.TigerGraphConnection(host="HOSTNAME_HERE", username="USERNAME_HERE", password="PASSWORD_HERE", graphname="GRAPHNAME_HERE")
+
+conn.getToken()
+
+feat = conn.gds.featurizer()
+
+res = feat.runAlgorithm("tg_pagerank", params={"v_type": "Paper", "e_type": "CITES"})
+print(res)
+----
 """
 
 from typing import TYPE_CHECKING, Any, List, Tuple

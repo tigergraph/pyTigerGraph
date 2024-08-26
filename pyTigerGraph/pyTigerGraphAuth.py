@@ -7,7 +7,7 @@ import json
 import logging
 import time
 import warnings
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Union
 import inspect
 
@@ -354,7 +354,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                 Duration of token validity (in seconds, default 30 days = 2,592,000 seconds).
 
         Returns:
-            If your TigerGraph instance is running version 3.10, the return value is 
+            If your TigerGraph instance is running version <=3.10, the return value is 
             a tuple of `(<token>, <expiration_timestamp_unixtime>, <expiration_timestamp_ISO8601>)`.
             The return value can be ignored, as the token is automatically set for the connection after this call.
 
@@ -406,13 +406,31 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                     success = True
             except Exception as e:
                 raise e
+
         elif not (success) and not (secret) and mainVer == 3:
             res = self._req("POST", self.restppUrl+"/requesttoken", authMode="pwd",
                             data=str({"graph": self.graphname}), resKey="results")
+
+        elif not(success) and not(secret):
+            _json = {"graph": self.graphname}
+            try:
+                res = self._post(self.gsUrl +
+                    "/gsql/v1/tokens", data=_json, authMode="pwd", jsonData=True, resKey=None)
+                mainVer = 4
+                
+            # The new endpoint doesn't exist (since on TigerGraph Ver <4.1). Use old endpoint
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 404:    
+                    res = self._post(self.restppUrl+"/requesttoken", authMode="pwd", data=str({"graph": self.graphname}), resKey="results")
+                    mainVer = 3
+                else:
+                    raise e
+
             success = True
         elif not (success) and (int(s) < 3 or (int(s) == 3 and int(m) < 5)):
             raise TigerGraphException(
                 "Cannot request a token with username/password for versions < 3.5.")
+
 
         if not success and mainVer == 3:  # can't use _verGreaterThan4_0 bc haven't set the token yet
             try:
@@ -436,8 +454,8 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                     'Authorization': 'Basic {0}'.format(self.base64_credential)}
 
             if res.get("expiration"):
-                # On >=4.1 the format for the date of expiration changed. Convert back to old format
-                if self._versionGreaterThan4_0():
+                # On >=4.1 the format for the date of expiration changed, can't get utc time stamp from it
+                if mainVer == 4:
                     ret = res["token"], res.get("expiration")
                 else:
                     ret = res["token"], res.get("expiration"), \
@@ -458,7 +476,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
         raise TigerGraphException(
             res["message"], (res["code"] if "code" in res else None))
 
-    def refreshToken(self, secret: str, token: str = "", lifetime: int = None) -> tuple:
+    def refreshToken(self, secret: str, token: str = "", setToken: bool = True, lifetime: int = None) -> tuple:
         """Extends a token's lifetime.
 
         This function works only if REST++ authentication is enabled. If not, an exception will be
@@ -529,6 +547,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                                                   ("&lifetime=" + str(lifetime)
                                                    if lifetime else "")
                                                   ).text)
+
             if not res["error"]:
                 success = True
             if "Endpoint is not found from url = /requesttoken" in res["message"]:
@@ -545,6 +564,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             else:
                 res = json.loads(requests.put(self.restppUrl + "/requesttoken",
                                               data=json.dumps(data), verify=False).text)
+
             if not res["error"]:
                 success = True
             if "Endpoint is not found from url = /requesttoken" in res["message"]:
@@ -554,7 +574,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
         if success:
             exp = time.time() + res["expiration"]
             ret = res["token"], int(exp), \
-                datetime.utcfromtimestamp(exp).strftime('%Y-%m-%d %H:%M:%S')
+                datetime.fromtimestamp(exp, timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
 
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(ret))

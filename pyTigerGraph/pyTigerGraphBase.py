@@ -63,10 +63,10 @@ class pyTigerGraphBase(object):
             gsqlVersion:
                 The version of the GSQL client to be used. Effectively the version of the database
                 being connected to.
+            apiToken (Optional):
+                Paremeter for specifying a RESTPP service token. Use `getToken()` to get a token.
             version:
                 DEPRECATED; use `gsqlVersion`.
-            apiToken:
-                DEPRECATED; use `getToken()` with a secret to get a session token.
             useCert:
                 DEPRECATED; the need for a CA certificate is now determined by URL scheme.
             certPath:
@@ -110,12 +110,6 @@ class pyTigerGraphBase(object):
             "{0}:{1}".format(self.username, self.password).encode("utf-8")).decode("utf-8")
 
         self.authHeader = self._set_auth_header()
-
-        # TODO Remove apiToken parameter
-        if apiToken:
-            warnings.warn(
-                "The `apiToken` parameter is deprecated; use `getToken()` function instead.",
-                DeprecationWarning)
 
         # TODO Eliminate version and use gsqlVersion only, meaning TigerGraph server version
         if gsqlVersion:
@@ -330,6 +324,35 @@ class pyTigerGraphBase(object):
         _headers.update({"X-User-Agent": "pyTigerGraph"})
 
         return _headers, _data, verify
+
+        if jsonData:
+            res = requests.request(method, url, headers=_headers, json=_data, params=params, verify=verify)
+        else:
+            res = requests.request(method, url, headers=_headers, data=_data, params=params, verify=verify)
+
+        try:
+            res.raise_for_status()
+        except Exception as e:
+            # In TG 4.x the port for restpp has changed from 9000 to 14240. 
+            # This block should only be called once. When using 4.x, using port 9000 should fail so self.restppurl will change to host:14240/restpp
+            # ----
+            # Changes port to 14240, adds /restpp to end to url, tries again, saves changes if successful
+            if self.restppPort == "9000" and "9000" in url:
+                newRestppUrl = self.host + ":14240/restpp"
+                # In tgcloud /restpp can already be in the restpp url. We want to extract everything after the port or /restpp
+                if '/restpp' in url:
+                    url = newRestppUrl + '/' + '/'.join(url.split(':')[2].split('/')[2:])
+                else:
+                    url = newRestppUrl + '/' + '/'.join(url.split(':')[2].split('/')[1:])
+                if jsonData:
+                    res = requests.request(method, url, headers=_headers, json=_data, params=params, verify=verify)
+                else:
+                    res = requests.request(method, url, headers=_headers, data=_data, params=params, verify=verify)
+                res.raise_for_status()
+                self.restppUrl = newRestppUrl
+                self.restppPort = "14240"
+            else:
+                raise e
 
     def _parseReq(self, res, jsonResponse, strictJson, skipCheck, resKey):
         if jsonResponse:

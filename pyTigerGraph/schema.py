@@ -3,7 +3,7 @@ The Object-Oriented Schema functionality allows users to manipulate schema eleme
 
 To add an AccountHolder vertex and a HOLDS_ACCOUNT edge to the Ethereum dataset, simply:
 
-```
+```py
 from pyTigerGraph import TigerGraphConnection
 from pyTigerGraph.schema import Graph, Vertex, Edge
 

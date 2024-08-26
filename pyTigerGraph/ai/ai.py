@@ -1,5 +1,34 @@
-import json
+"""AI Submodule
+The AI submodule is used to interact with the TigerGraph CoPilot service.
+It allows users to register custom queries, run natural language queries, and interact with the CoPilot service.
+
+To use the AI submodule, you must first create a TigerGraphConnection object, and verify that you have a TigerGraph CoPilot service running.
+
+For example, to use the AI submodule, you can run the following code:
+
+[source,python]
+----
+from pyTigerGraph import TigerGraphConnection
+
+conn = TigerGraphConnection(
+    host="https://YOUR_DB_ADDRESS", 
+    graphname="DigitalInfra", 
+    username="YOUR_DB_USERNAME", 
+    password="YOUR_DB_PASSWORD"
+)
+
+conn.getToken()
+
+conn.ai.configureCoPilotHost(hostname="http://COPILOT_ADDRESS")
+
+conn.ai.query("How many servers are there?")
+----
+
+For a more detailed and varied examples, see the demo notebooks in the (TigerGraph CoPilot GitHub repository)[https://github.com/tigergraph/CoPilot/tree/main/copilot/docs/notebooks].
+"""
+
 import warnings
+
 from pyTigerGraph import TigerGraphConnection
 
 
@@ -15,7 +44,6 @@ class AI:
         """
         self.conn = conn
         self.nlqs_host = None
-        self.if4 = conn.getVer().split(".")[0] >= "4"
         if conn.tgCloud:
             # split scheme and host
             scheme, host = conn.host.split("://")
@@ -58,7 +86,8 @@ class AI:
             Returns:
                 Hash of query that was registered.
         """
-        if self.if4:
+        if4 = self.conn.getVer().split(".")[0] >= "4"
+        if if4:
             if description or docstring or param_types:
                 warnings.warn(
                     """When using TigerGraph 4.x, query descriptions, docstrings, and parameter types are not required parameters.
@@ -106,7 +135,8 @@ class AI:
             Returns:
                 Hash of query that was updated.
         """
-        if self.if4:
+        if4 = self.conn.getVer().split(".")[0] >= "4"
+        if if4:
             if description or docstring or param_types:
                 warnings.warn(
                     """When using TigerGraph 4.x, query descriptions, docstrings, and parameter types are not required parameters.
@@ -282,20 +312,29 @@ class AI:
             "method_params": method_parameters
         }
         url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/answerquestion"
-        return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
-
-    def forceConsistencyUpdate(self):
+        return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
+    
+    def forceConsistencyUpdate(self, method="supportai"):
         """ Force a consistency update for SupportAI embeddings.
+            Args:
+                method (str):
+                    The doc initialization method to run
+                    Currentlty only "supportai" is supported in CoPilot v0.9.
             Returns:
                 JSON response from the consistency update.
         """
-        url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/forceupdate"
+        url = f"{self.nlqs_host}/{self.conn.graphname}/{method}/forceupdate/"
         return self.conn._req("GET", url, authMode="pwd", resKey=None)
 
-    def checkConsistencyProgress(self):
+    def checkConsistencyProgress(self, method="supportai"):
+
         """ Check the progress of the consistency update.
+            Args:
+                method (str):
+                    The doc initialization method to check or run.
+                    Currentlty only "supportai" is supported in CoPilot v0.9.
             Returns:
                 JSON response from the consistency update progress.
         """
-        url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/consistency_status"
+        url = f"{self.nlqs_host}/{self.conn.graphname}/supportai/consistency_status/{method}"
         return self.conn._req("GET", url, authMode="pwd", resKey=None)

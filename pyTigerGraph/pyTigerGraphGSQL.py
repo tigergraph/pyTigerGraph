@@ -23,7 +23,6 @@ ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 
 class pyTigerGraphGSQL(pyTigerGraphBase):
-
     def _prepGSQL(self, query: str, graphname: str = None, options=None):
         logger.info("entry: gsql")
         if logger.level == logging.DEBUG:
@@ -138,7 +137,6 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
 
         Endpoints:
             - `PUT /gsqlserver/gsql/userdefinedfunction?filename={ExprFunctions or ExprUtil}"` (In TigerGraph versions 3.x)
-            - `PUT /gsql/v1/udt/files/{ExprFunctions or ExprUtil}` (In TigerGraph versions 4.x)
         """
         logger.info("entry: installUDF")
         if logger.level == logging.DEBUG:
@@ -287,8 +285,9 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                 Only supported on version >=4.1
 
         Returns:
-            str: If only one of `ExprFunctions` or `ExprUtil` is True, return of the content of that file.
-            Tuple[str, str]: content of ExprFunctions and content of ExprUtil.
+            - `str`: If only one of `ExprFunctions` or `ExprUtil` is True and json_out is False, return of the content of that file.
+            - `Tuple[str, str]`: If both `ExprFunctions` and `ExprUtil` are True and json_out is False, return content of ExprFunctions and content of ExprUtil.
+            - `Dict[str, str]`: If json_out is True, return dict with `ExprFunctions` and/or `ExprUtil` as keys and content of file as value.
 
         Endpoints:
             - `GET /gsqlserver/gsql/userdefinedfunction?filename={ExprFunctions or ExprUtil}` (In TigerGraph versions 3.x)
