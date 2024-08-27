@@ -1,9 +1,0 @@
-USE GRAPH Cora
-
-# Create schema for nodes and edges  
-CREATE SCHEMA_CHANGE JOB cora_schema FOR GRAPH Cora {
-    ADD VERTEX Paper (PRIMARY_ID id Int, x List<Int>, y Int, train_mask Bool, val_mask Bool, test_mask Bool) WITH primary_id_as_attribute="true";
-    ADD DIRECTED EDGE Cite (from Paper, to Paper, time Int, is_train Bool, is_val Bool);
-}
-
-RUN SCHEMA_CHANGE JOB cora_schema
