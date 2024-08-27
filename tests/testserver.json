@@ -1,7 +1,7 @@
 {
-    "host": "http://35.193.253.214",
+    "host": "http://tiegrgraph",
     "username": "tigergraph",
-    "password": "mypassword",
+    "password": "tigergraph",
     "restppPort": "9000",
     "gsPort": "14240",
     "getToken": true,
