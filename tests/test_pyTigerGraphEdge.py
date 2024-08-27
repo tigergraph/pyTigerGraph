@@ -5,7 +5,6 @@ import pandas as pd
 from .pyTigerGraphUnitTest import make_connection
 
 
-
 class test_pyTigerGraphEdge(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -354,7 +353,7 @@ class test_pyTigerGraphEdge(unittest.TestCase):
         self.assertEqual(1, len(res))
 
         res = self.conn.getEdges(
-            "vertex4", 1, "edge1_undirected", select="a01", where="a01>1")
+            "vertex4", 1, "edge1_undirected", select="a01", where="a01>1"
         )
 
         self.assertIsInstance(res, list)
@@ -366,7 +365,7 @@ class test_pyTigerGraphEdge(unittest.TestCase):
         self.assertEqual(2, len(res))
 
         res = self.conn.getEdges(
-            "vertex4", 1, "edge1_undirected", "vertex5", fmt="json")
+            "vertex4", 1, "edge1_undirected", "vertex5", fmt="json"
         )
 
         self.assertIsInstance(res, str)
@@ -374,12 +373,14 @@ class test_pyTigerGraphEdge(unittest.TestCase):
         self.assertIsInstance(res, list)
         self.assertEqual(5, len(res))
 
-        res = self.conn.getEdges("vertex4", 1, "edge1_undirected", "vertex5", fmt="df")
+        res = self.conn.getEdges(
+            "vertex4", 1, "edge1_undirected", "vertex5", fmt="df")
         self.assertIsInstance(res, pd.DataFrame)
         self.assertEqual(5, len(res.index))
 
     def test_13_getEdgesDataFrame(self):
-        res = self.conn.getEdgesDataFrame("vertex4", 1, "edge1_undirected", "vertex5")
+        res = self.conn.getEdgesDataFrame(
+            "vertex4", 1, "edge1_undirected", "vertex5")
         self.assertIsInstance(res, pd.DataFrame)
         self.assertEqual(5, len(res.index))
 
