@@ -1,7 +1,6 @@
 import asyncio
 import unittest
 from .pyTigerGraphUnitTestAsync import make_connection
-# from pyTigerGraph import AsyncTigerGraphConnection
 
 
 class test_async(unittest.IsolatedAsyncioTestCase):
@@ -13,15 +12,7 @@ class test_async(unittest.IsolatedAsyncioTestCase):
         if not hasattr(self, 'conn'):
             raise AttributeError(
                 "Connection was not initialized. Please check the setup.")
-        # conn = AsyncTigerGraphConnection(
-        #     host="http://35.193.253.214",
-        #     graphname="tests",
-        #     username="tigergraph",
-        #     password="mypassword"
-        # )
-        # self.conn = await make_connection()
 
-        #  async def f(self):
         tasks: list[asyncio.Task] = []
 
         async with asyncio.TaskGroup() as tg:
@@ -42,4 +33,3 @@ class test_async(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    # asyncio.run(f())
