@@ -75,14 +75,17 @@ g.commit_changes(conn)
 ```
 """
 
-from pyTigerGraph.pyTigerGraphException import TigerGraphException
-from pyTigerGraph.pyTigerGraph import TigerGraphConnection
-from dataclasses import dataclass, make_dataclass, fields, _MISSING_TYPE
-from typing import List, Dict, Union, get_origin, get_args
-from datetime import datetime
 import json
 import hashlib
 import warnings
+
+from typing import List, Dict, Union, get_origin, get_args
+from datetime import datetime
+from dataclasses import dataclass, make_dataclass, fields, _MISSING_TYPE
+
+from pyTigerGraph.pyTigerGraphException import TigerGraphException
+from pyTigerGraph.pyTigerGraph import TigerGraphConnection
+
 
 BASE_TYPES = ["string", "int", "uint", "float", "double", "bool", "datetime"]
 PRIMARY_ID_TYPES = ["string", "int", "uint", "datetime"]

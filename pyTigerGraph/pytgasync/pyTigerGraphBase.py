@@ -1,17 +1,10 @@
-# import base64
 import json
 import logging
-# import sys
-# import re
-# import warnings
-from typing import Union
-from urllib.parse import urlparse
-# import requests
-
-# from pyTigerGraph.pyTigerGraphException import TigerGraphException
-
-# import asyncio
 import httpx
+
+from typing import Union
+from urllib.parse import urlpars
+
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
 logger = logging.getLogger(__name__)

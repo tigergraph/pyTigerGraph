@@ -4,25 +4,12 @@ from typing import TYPE_CHECKING, Union
 
 import urllib3
 
-# from pyTigerGraph.pyTigerGraphEdge import pyTigerGraphEdge
-# from pyTigerGraph.pyTigerGraphLoading import pyTigerGraphLoading
-# from pyTigerGraph.pyTigerGraphPath import pyTigerGraphPath
-# from pyTigerGraph.pyTigerGraphUDT import pyTigerGraphUDT
-# from pyTigerGraph.pyTigerGraphVertex import pyTigerGraphVertex
-# from pyTigerGraph.pyTigerGraphDataset import pyTigerGraphDataset
-
-# from .pyTigerGraphAuth import AsyncPyTigerGraphAuth
-# from .pyTigerGraphGSQL import AsyncPyTigerGraphGSQL
-# from .pyTigerGraphBase import AsyncPyTigerGraphBase
-# from .pyTigerGraphSchema import AsyncPyTigerGraphSchema
-# from .pyTigerGraphUtils import AsyncPyTigerGraphUtils
-from .pyTigerGraphVertex import AsyncPyTigerGraphVertex
-from .pyTigerGraphDataset import AsyncPyTigerGraphDataset
-# from .pyTigerGraphQuery import AsyncPyTigerGraphQuery
-from .pyTigerGraphEdge import AsyncPyTigerGraphEdge
-from .pyTigerGraphLoading import AsyncPyTigerGraphLoading
-from .pyTigerGraphPath import AsyncPyTigerGraphPath
-from .pyTigerGraphUDT import AsyncPyTigerGraphUDT
+from pyTigerGraph.pytgasync.pyTigerGraphVertex import AsyncPyTigerGraphVertex
+from pyTigerGraph.pytgasync.pyTigerGraphDataset import AsyncPyTigerGraphDataset
+from pyTigerGraph.pytgasync.pyTigerGraphEdge import AsyncPyTigerGraphEdge
+from pyTigerGraph.pytgasync.pyTigerGraphLoading import AsyncPyTigerGraphLoading
+from pyTigerGraph.pytgasync.pyTigerGraphPath import AsyncPyTigerGraphPath
+from pyTigerGraph.pytgasync.pyTigerGraphUDT import AsyncPyTigerGraphUDT
 
 if TYPE_CHECKING:
     from ..gds import gds

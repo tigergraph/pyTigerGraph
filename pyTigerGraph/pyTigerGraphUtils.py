@@ -6,11 +6,9 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 import json
 import logging
 import urllib
-from typing import Any, Union
-from urllib.parse import urlparse
 
-# import requests
-from typing import TYPE_CHECKING, Union
+from typing import Any, Union, TYPE_CHECKING
+from urllib.parse import urlparse
 
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 from pyTigerGraph.pyTigerGraphException import TigerGraphException

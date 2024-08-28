@@ -4,18 +4,14 @@ Use GSQL within pyTigerGraph.
 All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object].
 """
 import logging
-# import os
-# import sys
-from typing import Union, Tuple, Dict
-from urllib.parse import urlparse, quote_plus
 import re
-# import types
-
-
 import requests
 
-from .pyTigerGraphBase import pyTigerGraphBase
-from .pyTigerGraphException import TigerGraphException
+from typing import Union, Tuple, Dict
+from urllib.parse import urlparse, quote_plus
+
+from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
+from pyTigerGraph.pyTigerGraphException import TigerGraphException
 
 logger = logging.getLogger(__name__)
 

@@ -6,6 +6,7 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 import json
 import logging
 import re
+
 from typing import Union
 
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase

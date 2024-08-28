@@ -1,5 +1,5 @@
-from .pyTigerGraph import TigerGraphConnection
-from .pytgasync.pyTigerGraph import AsyncTigerGraphConnection
+from pyTigerGraph.pyTigerGraph import TigerGraphConnection
+from pyTigerGraph.pytgasync.pyTigerGraph import AsyncTigerGraphConnection
 
 __version__ = "1.7"
 

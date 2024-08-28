@@ -7,11 +7,10 @@ import json
 import logging
 import time
 import warnings
+import requests
+
 from datetime import datetime, timezone
 from typing import Union
-# import inspect
-
-import requests
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 from pyTigerGraph.pyTigerGraphGSQL import pyTigerGraphGSQL

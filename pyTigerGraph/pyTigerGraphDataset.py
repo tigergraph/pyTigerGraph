@@ -5,8 +5,8 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 """
 import logging
 
-from .datasets import Datasets
-from .pyTigerGraphAuth import pyTigerGraphAuth
+from pyTigerGraph.datasets import Datasets
+from pyTigerGraph.pyTigerGraphAuth import pyTigerGraphAuth
 
 logger = logging.getLogger(__name__)
 

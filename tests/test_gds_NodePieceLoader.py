@@ -3,7 +3,6 @@ import unittest
 from pyTigerGraphUnitTest import make_connection
 
 from pandas import DataFrame
-# from pyTigerGraph import TigerGraphConnection
 from pyTigerGraph.gds.dataloaders import NodePieceLoader
 from pyTigerGraph.gds.utilities import is_query_installed
 

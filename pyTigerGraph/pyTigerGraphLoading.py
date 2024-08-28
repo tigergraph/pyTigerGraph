@@ -5,7 +5,9 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 """
 import logging
 import warnings
+
 from typing import Union
+
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
 logger = logging.getLogger(__name__)

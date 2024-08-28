@@ -3,9 +3,7 @@
 The functions on this page run installed or interpret queries in TigerGraph.
 All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object].
 """
-# import json
 import logging
-# from datetime import datetime
 
 from typing import TYPE_CHECKING, Union, Optional
 
@@ -17,6 +15,7 @@ from pyTigerGraph.pyTigerGraphQuery import pyTigerGraphQuery
 from pyTigerGraph.pytgasync.pyTigerGraphUtils import AsyncPyTigerGraphUtils
 from pyTigerGraph.pytgasync.pyTigerGraphGSQL import AsyncPyTigerGraphGSQL
 from pyTigerGraph.pytgasync.pyTigerGraphSchema import AsyncPyTigerGraphSchema
+
 logger = logging.getLogger(__name__)
 
 

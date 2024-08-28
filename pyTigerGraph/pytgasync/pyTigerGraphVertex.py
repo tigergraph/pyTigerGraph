@@ -13,8 +13,6 @@ from typing import TYPE_CHECKING, Union
 if TYPE_CHECKING:
     import pandas as pd
 
-# from pyTigerGraph.pyTigerGraphException import TigerGraphException
-
 from pyTigerGraph.pytgasync.pyTigerGraphSchema import AsyncPyTigerGraphSchema
 from pyTigerGraph.pytgasync.pyTigerGraphUtils import AsyncPyTigerGraphUtils
 from pyTigerGraph.pyTigerGraphVertex import pyTigerGraphVertex

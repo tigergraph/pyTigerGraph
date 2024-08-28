@@ -10,9 +10,10 @@ import logging
 import sys
 import re
 import warnings
+import requests
+
 from typing import Union
 from urllib.parse import urlparse
-import requests
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 

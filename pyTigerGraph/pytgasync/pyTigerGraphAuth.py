@@ -3,17 +3,14 @@
 The functions on this page authenticate connections and manage TigerGraph credentials.
 All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object].
 """
-# import json
+
 import logging
-# import time
-# import warnings
-# from datetime import datetime
 from typing import Union
 import httpx
 
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 from pyTigerGraph.pyTigerGraphAuth import pyTigerGraphAuth
-from .pyTigerGraphGSQL import AsyncPyTigerGraphGSQL
+from pyTigerGraph.pytgasync.pyTigerGraphGSQL import AsyncPyTigerGraphGSQL
 
 logger = logging.getLogger(__name__)
 

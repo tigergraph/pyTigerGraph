@@ -5,8 +5,8 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 """
 import logging
 
-from .datasets import AsyncDatasets
-from .pyTigerGraphAuth import AsyncPyTigerGraphAuth
+from pyTigerGraph.pytgasync.datasets import AsyncDatasets
+from pyTigerGraph.pytgasync.pyTigerGraphAuth import AsyncPyTigerGraphAuth
 from pyTigerGraph.pyTigerGraphDataset import pyTigerGraphDataset
 
 logger = logging.getLogger(__name__)

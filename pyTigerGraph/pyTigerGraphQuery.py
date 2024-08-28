@@ -5,8 +5,8 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 """
 import json
 import logging
-from datetime import datetime
 
+from datetime import datetime
 from typing import TYPE_CHECKING, Union, Optional
 
 if TYPE_CHECKING:
@@ -16,6 +16,7 @@ from pyTigerGraph.pyTigerGraphException import TigerGraphException
 from pyTigerGraph.pyTigerGraphSchema import pyTigerGraphSchema
 from pyTigerGraph.pyTigerGraphUtils import pyTigerGraphUtils
 from pyTigerGraph.pyTigerGraphGSQL import pyTigerGraphGSQL
+
 logger = logging.getLogger(__name__)
 
 

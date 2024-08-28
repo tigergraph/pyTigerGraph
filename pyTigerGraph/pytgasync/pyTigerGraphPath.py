@@ -4,7 +4,6 @@ The functions on this page find paths between vertices within the graph.
 All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object].
 """
 
-# import json
 import logging
 from typing import Union
 
