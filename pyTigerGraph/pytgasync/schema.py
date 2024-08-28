@@ -82,9 +82,9 @@ from dataclasses import dataclass, make_dataclass, fields, _MISSING_TYPE
 from typing import List, Dict, Union, get_origin, get_args
 from typing_extensions import Self
 from datetime import datetime
-import json
-import hashlib
-import warnings
+# import json
+# import hashlib
+# import warnings
 
 BASE_TYPES = ["string", "int", "uint", "float", "double", "bool", "datetime"]
 PRIMARY_ID_TYPES = ["string", "int", "uint", "datetime"]
@@ -174,236 +174,236 @@ def _py_to_tg_type(attr_type):
                 attr_type+"not a valid TigerGraph datatype.")
 
 
-@dataclass
-class Vertex(object):
-    """Vertex Object
+# @dataclass
+# class Vertex(object):
+#     """Vertex Object
 
-    Abstract parent class for other types of vertices to be inherited from.
-    Contains class methods to edit the attributes associated with the vertex type.
+#     Abstract parent class for other types of vertices to be inherited from.
+#     Contains class methods to edit the attributes associated with the vertex type.
 
-    When defining new vertex types, make sure to include the `primary_id` and `primary_id_as_attribute` class attributes, as these are necessary to define the vertex in TigerGraph.
+#     When defining new vertex types, make sure to include the `primary_id` and `primary_id_as_attribute` class attributes, as these are necessary to define the vertex in TigerGraph.
 
-    For example, to define an AccountHolder vertex type, use:
+#     For example, to define an AccountHolder vertex type, use:
 
-    ```
-    @dataclass
-    class AccountHolder(Vertex):
-        name: str
-        address: str
-        accounts: List[str]
-        dob: datetime
-        some_map: Dict[str, int]
-        some_double: "DOUBLE"
-        primary_id: str = "name"
-        primary_id_as_attribute: bool = True
-    ```
-    """
-    def __init_subclass__(cls):
-        """NO DOC: placeholder for class variables"""
-        cls.incoming_edge_types = {}
-        cls.outgoing_edge_types = {}
-        cls._attribute_edits = {"ADD": {}, "DELETE": {}}
-        cls.primary_id: Union[str, List[str]]
-        cls.primary_id_as_attribute: bool
+#     ```
+#     @dataclass
+#     class AccountHolder(Vertex):
+#         name: str
+#         address: str
+#         accounts: List[str]
+#         dob: datetime
+#         some_map: Dict[str, int]
+#         some_double: "DOUBLE"
+#         primary_id: str = "name"
+#         primary_id_as_attribute: bool = True
+#     ```
+#     """
+#     def __init_subclass__(cls):
+#         """NO DOC: placeholder for class variables"""
+#         cls.incoming_edge_types = {}
+#         cls.outgoing_edge_types = {}
+#         cls._attribute_edits = {"ADD": {}, "DELETE": {}}
+#         cls.primary_id: Union[str, List[str]]
+#         cls.primary_id_as_attribute: bool
 
-    @classmethod
-    def _set_attr_edit(self, add: dict = None, delete: dict = None):
-        """NO DOC: internal updating function for attributes"""
-        if add:
-            self._attribute_edits["ADD"].update(add)
-        if delete:
-            self._attribute_edits["DELETE"].update(delete)
+#     @classmethod
+#     def _set_attr_edit(self, add: dict = None, delete: dict = None):
+#         """NO DOC: internal updating function for attributes"""
+#         if add:
+#             self._attribute_edits["ADD"].update(add)
+#         if delete:
+#             self._attribute_edits["DELETE"].update(delete)
 
-    @classmethod
-    def _get_attr_edit(self):
-        """NO DOC: get attribute edits internal function"""
-        return self._attribute_edits
+#     @classmethod
+#     def _get_attr_edit(self):
+#         """NO DOC: get attribute edits internal function"""
+#         return self._attribute_edits
 
-    @classmethod
-    def add_attribute(self, attribute_name: str, attribute_type, default_value=None):
-        """Function to add an attribute to the given vertex type.
+#     @classmethod
+#     def add_attribute(self, attribute_name: str, attribute_type, default_value=None):
+#         """Function to add an attribute to the given vertex type.
 
-        Args:
-            attribute_name (str):
-                The name of the attribute to add
-            attribute_type (Python type):
-                The Python type of the attribute to add. 
-                For types that are not supported in Python but are in GSQL, wrap them in quotes; e.g. "DOUBLE"
-            default_value (type of attribute, default None):
-                The desired default value of the attribute. Defaults to None.
-        """
-        if attribute_name in self._get_attr_edit()["ADD"].keys():
-            warnings.warn(
-                attribute_name + " already in staged edits. Overwriting previous edits.")
-        for attr in self.attributes:
-            if attr == attribute_name:
-                raise TigerGraphException(
-                    attribute_name + " already exists as an attribute on "+self.__name__ + " vertices")
-        attr_type = _py_to_tg_type(attribute_type)
-        gsql_add = "ALTER VERTEX "+self.__name__ + \
-            " ADD ATTRIBUTE ("+attribute_name+" "+attr_type
-        if default_value:
-            if attribute_type == str:
-                gsql_add += " DEFAULT '"+default_value+"'"
-            else:
-                gsql_add += " DEFAULT "+str(default_value)
-        gsql_add += ");"
-        self._set_attr_edit(add={attribute_name: gsql_add})
+#         Args:
+#             attribute_name (str):
+#                 The name of the attribute to add
+#             attribute_type (Python type):
+#                 The Python type of the attribute to add.
+#                 For types that are not supported in Python but are in GSQL, wrap them in quotes; e.g. "DOUBLE"
+#             default_value (type of attribute, default None):
+#                 The desired default value of the attribute. Defaults to None.
+#         """
+#         if attribute_name in self._get_attr_edit()["ADD"].keys():
+#             warnings.warn(
+#                 attribute_name + " already in staged edits. Overwriting previous edits.")
+#         for attr in self.attributes:
+#             if attr == attribute_name:
+#                 raise TigerGraphException(
+#                     attribute_name + " already exists as an attribute on "+self.__name__ + " vertices")
+#         attr_type = _py_to_tg_type(attribute_type)
+#         gsql_add = "ALTER VERTEX "+self.__name__ + \
+#             " ADD ATTRIBUTE ("+attribute_name+" "+attr_type
+#         if default_value:
+#             if attribute_type == str:
+#                 gsql_add += " DEFAULT '"+default_value+"'"
+#             else:
+#                 gsql_add += " DEFAULT "+str(default_value)
+#         gsql_add += ");"
+#         self._set_attr_edit(add={attribute_name: gsql_add})
 
-    @classmethod
-    def remove_attribute(self, attribute_name):
-        """Function to remove an attribute from the given vertex type.
+#     @classmethod
+#     def remove_attribute(self, attribute_name):
+#         """Function to remove an attribute from the given vertex type.
 
-        Args:
-            attribute_name (str):
-                The name of the attribute to remove from the vertex.
-        """
-        if self.primary_id_as_attribute:
-            if attribute_name == self.primary_id:
-                raise TigerGraphException(
-                    "Cannot remove primary ID attribute: "+self.primary_id+".")
-        removed = False
-        for attr in self.attributes:
-            if attr == attribute_name:
-                self._set_attr_edit(delete={
-                                    attribute_name: "ALTER VERTEX "+self.__name__+" DROP ATTRIBUTE ("+attribute_name+");"})
-                removed = True
-        if not (removed):
-            raise TigerGraphException("An attribute of " + attribute_name +
-                                      " is not an attribute on " + self.__name__ + " vertices")
+#         Args:
+#             attribute_name (str):
+#                 The name of the attribute to remove from the vertex.
+#         """
+#         if self.primary_id_as_attribute:
+#             if attribute_name == self.primary_id:
+#                 raise TigerGraphException(
+#                     "Cannot remove primary ID attribute: "+self.primary_id+".")
+#         removed = False
+#         for attr in self.attributes:
+#             if attr == attribute_name:
+#                 self._set_attr_edit(delete={
+#                                     attribute_name: "ALTER VERTEX "+self.__name__+" DROP ATTRIBUTE ("+attribute_name+");"})
+#                 removed = True
+#         if not (removed):
+#             raise TigerGraphException("An attribute of " + attribute_name +
+#                                       " is not an attribute on " + self.__name__ + " vertices")
 
-    @classmethod
-    @property
-    def attributes(self):
-        """Class attribute to view the attributes and types of the vertex."""
-        return self.__annotations__
+#     @classmethod
+#     @property
+#     def attributes(self):
+#         """Class attribute to view the attributes and types of the vertex."""
+#         return self.__annotations__
 
-    def __getattr__(self, attr):
-        if self.attributes.get(attr):
-            return self.attributes.get(attr)
-        else:
-            raise TigerGraphException(
-                "No attribute named " + attr + "for vertex type " + self.vertex_type)
+#     def __getattr__(self, attr):
+#         if self.attributes.get(attr):
+#             return self.attributes.get(attr)
+#         else:
+#             raise TigerGraphException(
+#                 "No attribute named " + attr + "for vertex type " + self.vertex_type)
 
-    def __eq__(self, lhs):
-        return isinstance(lhs, Vertex) and lhs.vertex_type == self.vertex_type
+#     def __eq__(self, lhs):
+#         return isinstance(lhs, Vertex) and lhs.vertex_type == self.vertex_type
 
-    def __repr__(self):
-        return self.vertex_type
+#     def __repr__(self):
+#         return self.vertex_type
 
 
-@dataclass
-class Edge:
-    """Edge Object
+# @dataclass
+# class Edge:
+#     """Edge Object
 
-    Abstract parent class for other types of edges to be inherited from.
-    Contains class methods to edit the attributes associated with the edge type.
+#     Abstract parent class for other types of edges to be inherited from.
+#     Contains class methods to edit the attributes associated with the edge type.
 
-    When defining new vertex types, make sure to include the required `from_vertex`, `to_vertex`, `reverse_edge`, `is_directed` attributes and optionally the `discriminator` attribute, as these are necessary to define the vertex in TigerGraph.
+#     When defining new vertex types, make sure to include the required `from_vertex`, `to_vertex`, `reverse_edge`, `is_directed` attributes and optionally the `discriminator` attribute, as these are necessary to define the vertex in TigerGraph.
 
-    For example, to define an HOLDS_ACCOUNT edge type, use:
+#     For example, to define an HOLDS_ACCOUNT edge type, use:
 
-    ```
-    @dataclass
-    class HOLDS_ACCOUNT(Edge):
-        opened_on: datetime
-        from_vertex: Union[AccountHolder, g.vertex_types["Account"]]
-        to_vertex: g.vertex_types["Account"]
-        is_directed: bool = True
-        reverse_edge: str = "ACCOUNT_HELD_BY"
-        discriminator: str = "opened_on"
-    ```
-    """
+#     ```
+#     @dataclass
+#     class HOLDS_ACCOUNT(Edge):
+#         opened_on: datetime
+#         from_vertex: Union[AccountHolder, g.vertex_types["Account"]]
+#         to_vertex: g.vertex_types["Account"]
+#         is_directed: bool = True
+#         reverse_edge: str = "ACCOUNT_HELD_BY"
+#         discriminator: str = "opened_on"
+#     ```
+#     """
 
-    def __init_subclass__(cls):
-        """NO DOC: placeholder for class variables"""
-        cls._attribute_edits = {"ADD": {}, "DELETE": {}}
-        cls.is_directed: bool
-        cls.reverse_edge: Union[str, bool]
-        cls.from_vertex_types: Union[Vertex, List[Vertex]]
-        cls.to_vertex_types: Union[Vertex, List[Vertex]]
-        cls.discriminator: Union[str, List[str]]
+#     def __init_subclass__(cls):
+#         """NO DOC: placeholder for class variables"""
+#         cls._attribute_edits = {"ADD": {}, "DELETE": {}}
+#         cls.is_directed: bool
+#         cls.reverse_edge: Union[str, bool]
+#         cls.from_vertex_types: Union[Vertex, List[Vertex]]
+#         cls.to_vertex_types: Union[Vertex, List[Vertex]]
+#         cls.discriminator: Union[str, List[str]]
 
-    @classmethod
-    def _set_attr_edit(self, add: dict = None, delete: dict = None):
-        """NO DOC: function to edit attributes"""
-        if add:
-            self._attribute_edits["ADD"].update(add)
-        if delete:
-            self._attribute_edits["DELETE"].update(delete)
+#     @classmethod
+#     def _set_attr_edit(self, add: dict = None, delete: dict = None):
+#         """NO DOC: function to edit attributes"""
+#         if add:
+#             self._attribute_edits["ADD"].update(add)
+#         if delete:
+#             self._attribute_edits["DELETE"].update(delete)
 
-    @classmethod
-    def _get_attr_edit(self):
-        """NO DOC: getter for attribute edits"""
-        return self._attribute_edits
+#     @classmethod
+#     def _get_attr_edit(self):
+#         """NO DOC: getter for attribute edits"""
+#         return self._attribute_edits
 
-    @classmethod
-    def add_attribute(self, attribute_name, attribute_type, default_value=None):
-        """Function to add an attribute to the given edge type.
+#     @classmethod
+#     def add_attribute(self, attribute_name, attribute_type, default_value=None):
+#         """Function to add an attribute to the given edge type.
 
-        Args:
-            attribute_name (str):
-                The name of the attribute to add.
-            attribute_type (Python type):
-                The Python type of the attribute to add. 
-                For types that are not supported in Python but are in GSQL, wrap them in quotes; e.g. "DOUBLE"
-            default_value (type of attribute, default None):
-                The desired default value of the attribute. Defaults to None.
-        """
-        if attribute_name in self._get_attr_edit()["ADD"].keys():
-            warnings.warn(
-                attribute_name + " already in staged edits. Overwriting previous edits.")
-        for attr in self.attributes:
-            if attr == attribute_name:
-                raise TigerGraphException(
-                    attribute_name + " already exists as an attribute on "+self.__name__ + " edges")
-        attr_type = _py_to_tg_type(attribute_type)
-        gsql_add = "ALTER EDGE "+self.__name__ + \
-            " ADD ATTRIBUTE ("+attribute_name+" "+attr_type
-        if default_value:
-            if attribute_type == str:
-                gsql_add += " DEFAULT '"+default_value+"'"
-            else:
-                gsql_add += " DEFAULT "+str(default_value)
-        gsql_add += ");"
-        self._set_attr_edit(add={attribute_name: gsql_add})
+#         Args:
+#             attribute_name (str):
+#                 The name of the attribute to add.
+#             attribute_type (Python type):
+#                 The Python type of the attribute to add.
+#                 For types that are not supported in Python but are in GSQL, wrap them in quotes; e.g. "DOUBLE"
+#             default_value (type of attribute, default None):
+#                 The desired default value of the attribute. Defaults to None.
+#         """
+#         if attribute_name in self._get_attr_edit()["ADD"].keys():
+#             warnings.warn(
+#                 attribute_name + " already in staged edits. Overwriting previous edits.")
+#         for attr in self.attributes:
+#             if attr == attribute_name:
+#                 raise TigerGraphException(
+#                     attribute_name + " already exists as an attribute on "+self.__name__ + " edges")
+#         attr_type = _py_to_tg_type(attribute_type)
+#         gsql_add = "ALTER EDGE "+self.__name__ + \
+#             " ADD ATTRIBUTE ("+attribute_name+" "+attr_type
+#         if default_value:
+#             if attribute_type == str:
+#                 gsql_add += " DEFAULT '"+default_value+"'"
+#             else:
+#                 gsql_add += " DEFAULT "+str(default_value)
+#         gsql_add += ");"
+#         self._set_attr_edit(add={attribute_name: gsql_add})
 
-    @classmethod
-    def remove_attribute(self, attribute_name):
-        """Function to remove an attribute from the given edge type.
+#     @classmethod
+#     def remove_attribute(self, attribute_name):
+#         """Function to remove an attribute from the given edge type.
 
-        Args:
-            attribute_name (str):
-                The name of the attribute to remove from the edge.
-        """
-        removed = False
-        for attr in self.attributes:
-            if attr == attribute_name:
-                self._set_attr_edit(delete={
-                                    attribute_name: "ALTER EDGE "+self.__name__+" DROP ATTRIBUTE ("+attribute_name+");"})
-                removed = True
-        if not (removed):
-            raise TigerGraphException(
-                "An attribute of " + attribute_name + " is not an attribute on " + self.__name__ + " edges")
+#         Args:
+#             attribute_name (str):
+#                 The name of the attribute to remove from the edge.
+#         """
+#         removed = False
+#         for attr in self.attributes:
+#             if attr == attribute_name:
+#                 self._set_attr_edit(delete={
+#                                     attribute_name: "ALTER EDGE "+self.__name__+" DROP ATTRIBUTE ("+attribute_name+");"})
+#                 removed = True
+#         if not (removed):
+#             raise TigerGraphException(
+#                 "An attribute of " + attribute_name + " is not an attribute on " + self.__name__ + " edges")
 
-    @classmethod
-    @property
-    def attributes(self):
-        """Class attribute to view the attributes and types of the vertex."""
-        return self.__annotations__
+#     @classmethod
+#     @property
+#     def attributes(self):
+#         """Class attribute to view the attributes and types of the vertex."""
+#         return self.__annotations__
 
-    def __getattr__(self, attr):
-        if self.attributes.get(attr):
-            return self.attributes.get(attr)
-        else:
-            raise TigerGraphException(
-                "No attribute named " + attr + "for edge type " + self.edge_type)
+#     def __getattr__(self, attr):
+#         if self.attributes.get(attr):
+#             return self.attributes.get(attr)
+#         else:
+#             raise TigerGraphException(
+#                 "No attribute named " + attr + "for edge type " + self.edge_type)
 
-    def __eq__(self, lhs):
-        return isinstance(lhs, Edge) and lhs.edge_type == self.edge_type and lhs.from_vertex_type == self.from_vertex_type and lhs.to_vertex_type == self.to_vertex_type
+#     def __eq__(self, lhs):
+#         return isinstance(lhs, Edge) and lhs.edge_type == self.edge_type and lhs.from_vertex_type == self.from_vertex_type and lhs.to_vertex_type == self.to_vertex_type
 
-    def __repr__(self):
-        return self.edge_type
+#     def __repr__(self):
+#         return self.edge_type
 
 
 class AsyncGraph(Graph):

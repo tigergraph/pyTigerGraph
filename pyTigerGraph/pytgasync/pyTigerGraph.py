@@ -4,28 +4,28 @@ from typing import TYPE_CHECKING, Union
 
 import urllib3
 
-from pyTigerGraph.pyTigerGraphEdge import pyTigerGraphEdge
-from pyTigerGraph.pyTigerGraphLoading import pyTigerGraphLoading
-from pyTigerGraph.pyTigerGraphPath import pyTigerGraphPath
-from pyTigerGraph.pyTigerGraphUDT import pyTigerGraphUDT
-from pyTigerGraph.pyTigerGraphVertex import pyTigerGraphVertex
-from pyTigerGraph.pyTigerGraphDataset import pyTigerGraphDataset
+# from pyTigerGraph.pyTigerGraphEdge import pyTigerGraphEdge
+# from pyTigerGraph.pyTigerGraphLoading import pyTigerGraphLoading
+# from pyTigerGraph.pyTigerGraphPath import pyTigerGraphPath
+# from pyTigerGraph.pyTigerGraphUDT import pyTigerGraphUDT
+# from pyTigerGraph.pyTigerGraphVertex import pyTigerGraphVertex
+# from pyTigerGraph.pyTigerGraphDataset import pyTigerGraphDataset
 
-from .pyTigerGraphAuth import AsyncPyTigerGraphAuth
-from .pyTigerGraphGSQL import AsyncPyTigerGraphGSQL
-from .pyTigerGraphBase import AsyncPyTigerGraphBase
-from .pyTigerGraphSchema import AsyncPyTigerGraphSchema
-from .pyTigerGraphUtils import AsyncPyTigerGraphUtils
+# from .pyTigerGraphAuth import AsyncPyTigerGraphAuth
+# from .pyTigerGraphGSQL import AsyncPyTigerGraphGSQL
+# from .pyTigerGraphBase import AsyncPyTigerGraphBase
+# from .pyTigerGraphSchema import AsyncPyTigerGraphSchema
+# from .pyTigerGraphUtils import AsyncPyTigerGraphUtils
 from .pyTigerGraphVertex import AsyncPyTigerGraphVertex
 from .pyTigerGraphDataset import AsyncPyTigerGraphDataset
-from .pyTigerGraphQuery import AsyncPyTigerGraphQuery
+# from .pyTigerGraphQuery import AsyncPyTigerGraphQuery
 from .pyTigerGraphEdge import AsyncPyTigerGraphEdge
 from .pyTigerGraphLoading import AsyncPyTigerGraphLoading
 from .pyTigerGraphPath import AsyncPyTigerGraphPath
 from .pyTigerGraphUDT import AsyncPyTigerGraphUDT
 
 if TYPE_CHECKING:
-    from .gds import gds
+    from ..gds import gds
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -55,7 +55,7 @@ class AsyncTigerGraphConnection(AsyncPyTigerGraphDataset, AsyncPyTigerGraphEdge,
         if name == "gds":
             if super().__getattribute__(name) is None:
                 try:
-                    from .gds import gds
+                    from ..gds import gds
                     self.gds = gds.GDS(self)
                     return super().__getattribute__(name)
                 except:
@@ -67,7 +67,7 @@ class AsyncTigerGraphConnection(AsyncPyTigerGraphDataset, AsyncPyTigerGraphEdge,
         elif name == "ai":
             if super().__getattribute__(name) is None:
                 try:
-                    from .ai import ai
+                    from ..ai import ai
                     self.ai = ai.AI(self)
                     return super().__getattribute__(name)
                 except Exception as e:

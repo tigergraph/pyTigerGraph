@@ -326,14 +326,16 @@ class pyTigerGraphBase(object):
         return _headers, _data, verify
 
         if jsonData:
-            res = requests.request(method, url, headers=_headers, json=_data, params=params, verify=verify)
+            res = requests.request(
+                method, url, headers=_headers, json=_data, params=params, verify=verify)
         else:
-            res = requests.request(method, url, headers=_headers, data=_data, params=params, verify=verify)
+            res = requests.request(
+                method, url, headers=_headers, data=_data, params=params, verify=verify)
 
         try:
             res.raise_for_status()
         except Exception as e:
-            # In TG 4.x the port for restpp has changed from 9000 to 14240. 
+            # In TG 4.x the port for restpp has changed from 9000 to 14240.
             # This block should only be called once. When using 4.x, using port 9000 should fail so self.restppurl will change to host:14240/restpp
             # ----
             # Changes port to 14240, adds /restpp to end to url, tries again, saves changes if successful
@@ -341,13 +343,17 @@ class pyTigerGraphBase(object):
                 newRestppUrl = self.host + ":14240/restpp"
                 # In tgcloud /restpp can already be in the restpp url. We want to extract everything after the port or /restpp
                 if '/restpp' in url:
-                    url = newRestppUrl + '/' + '/'.join(url.split(':')[2].split('/')[2:])
+                    url = newRestppUrl + '/' + \
+                        '/'.join(url.split(':')[2].split('/')[2:])
                 else:
-                    url = newRestppUrl + '/' + '/'.join(url.split(':')[2].split('/')[1:])
+                    url = newRestppUrl + '/' + \
+                        '/'.join(url.split(':')[2].split('/')[1:])
                 if jsonData:
-                    res = requests.request(method, url, headers=_headers, json=_data, params=params, verify=verify)
+                    res = requests.request(
+                        method, url, headers=_headers, json=_data, params=params, verify=verify)
                 else:
-                    res = requests.request(method, url, headers=_headers, data=_data, params=params, verify=verify)
+                    res = requests.request(
+                        method, url, headers=_headers, data=_data, params=params, verify=verify)
                 res.raise_for_status()
                 self.restppUrl = newRestppUrl
                 self.restppPort = "14240"

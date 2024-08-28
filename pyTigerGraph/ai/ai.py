@@ -312,8 +312,8 @@ class AI:
             "method_params": method_parameters
         }
         url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/answerquestion"
-        return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
-    
+        return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
+
     def forceConsistencyUpdate(self, method="supportai"):
         """ Force a consistency update for SupportAI embeddings.
             Args:
@@ -327,7 +327,6 @@ class AI:
         return self.conn._req("GET", url, authMode="pwd", resKey=None)
 
     def checkConsistencyProgress(self, method="supportai"):
-
         """ Check the progress of the consistency update.
             Args:
                 method (str):

@@ -7,7 +7,7 @@ import logging
 import warnings
 from typing import Union
 from pyTigerGraph.pytgasync.pyTigerGraphBase import AsyncPyTigerGraphBase
-from pyTigerGraph.pyTigerGraphLoading import pyTigerGraphLoading
+# from pyTigerGraph.pyTigerGraphLoading import pyTigerGraphLoading
 
 logger = logging.getLogger(__name__)
 

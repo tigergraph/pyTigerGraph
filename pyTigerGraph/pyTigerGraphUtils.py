@@ -9,7 +9,7 @@ import urllib
 from typing import Any, Union
 from urllib.parse import urlparse
 
-import requests
+# import requests
 from typing import TYPE_CHECKING, Union
 
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase

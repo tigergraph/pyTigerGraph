@@ -16,7 +16,7 @@ from typing_extensions import Self
 import io
 
 import httpx
-import asyncio
+# import asyncio
 
 from pyTigerGraph.datasets import Datasets, BaseDataset
 

@@ -3,7 +3,7 @@
 The functions in this page retrieve information about the graph schema.
 All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object].
 """
-import json
+# import json
 import logging
 import re
 from typing import Union

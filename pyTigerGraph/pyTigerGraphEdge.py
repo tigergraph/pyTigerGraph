@@ -570,7 +570,8 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                 "edges": {
                     sourceVertexType: {
                         sourceVertexId: {
-                            edgeType: {targetVertexType: {targetVertexId: vals}}
+                            edgeType: {targetVertexType: {
+                                targetVertexId: vals}}
 
                         }
                     }
@@ -831,7 +832,6 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
     def upsertEdgeDataFrame(self, df: 'pd.DataFrame', sourceVertexType: str, edgeType: str,
                             targetVertexType: str, from_id: str = "", to_id: str = "",
                             attributes: dict = None, vertexMustExist: bool = False) -> int:
-
         """Upserts edges from a Pandas DataFrame.
 
         Args:
