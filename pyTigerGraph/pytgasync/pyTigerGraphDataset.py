@@ -74,7 +74,8 @@ class AsyncPyTigerGraphDataset(AsyncPyTigerGraphAuth, pyTigerGraphDataset):
         print("---- Ingesting data ----", flush=True)
         self.graphname = dataset.name
         if getToken:
-            await self.getToken(self.createSecret())
+            secret = await self.createSecret()
+            await self.getToken(secret)
 
         responses = []
         for resp in await dataset.run_load_job(self):
