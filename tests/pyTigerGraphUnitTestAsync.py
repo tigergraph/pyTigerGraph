@@ -46,6 +46,6 @@ async def make_connection(graphname: str = None):
         jwtToken=server_config["jwtToken"]
     )
     if server_config.get("getToken", False):
-        await conn.newGetToken(await conn.createSecret())
+        await conn.getToken(await conn.createSecret())
 
     return conn

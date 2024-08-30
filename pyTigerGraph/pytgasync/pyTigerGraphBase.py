@@ -3,7 +3,7 @@ import logging
 import httpx
 
 from typing import Union
-from urllib.parse import urlpars
+from urllib.parse import urlparse
 
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 

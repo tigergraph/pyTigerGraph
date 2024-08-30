@@ -61,31 +61,31 @@ class test_pyTigerGraphAuth(unittest.IsolatedAsyncioTestCase):
 
     async def test_05_getToken(self):
         res = await self.conn.createSecret("secret5", True)
-        token = await self.conn.newGetToken(res["secret5"])
+        token = await self.conn.getToken(res["secret5"])
         self.assertIsInstance(token, tuple)
         await self.conn.dropSecret("secret5")
 
     async def test_06_refreshToken(self):
         # TG 4.x does not allow refreshing tokens
-        await self.conn.newGetToken(await self.conn.createSecret())
+        await self.conn.getToken(await self.conn.createSecret())
         if await self.conn._versionGreaterThan4_0():
             with self.assertRaises(TigerGraphException) as tge:
-                await self.conn.newRefreshToken("secret1")
+                await self.conn.refreshToken("secret1")
             self.assertEqual(
                 "Refreshing tokens is only supported on versions of TigerGraph <= 4.0.0.", tge.exception.message)
         else:
             await self.conn.dropSecret("secret6", ignoreErrors=True)
             res = await self.conn.createSecret("secret6", True)
-            token = await self.conn.newGetToken(res["secret6"])
-            refreshed = await self.conn.newRefreshToken(res["secret6"], token[0])
+            token = await self.conn.getToken(res["secret6"])
+            refreshed = await self.conn.refreshToken(res["secret6"], token[0])
             self.assertIsInstance(refreshed, tuple)
             await self.conn.dropSecret("secret6")
 
     async def test_07_deleteToken(self):
         await self.conn.dropSecret("secret7", ignoreErrors=True)
         res = await self.conn.createSecret("secret7", True)
-        token = await self.conn.newGetToken(res["secret7"])
-        self.assertTrue(await self.conn.newDeleteToken(res["secret7"], token[0]))
+        token = await self.conn.getToken(res["secret7"])
+        self.assertTrue(await self.conn.deleteToken(res["secret7"], token[0]))
         await self.conn.dropSecret("secret7")
 
 
