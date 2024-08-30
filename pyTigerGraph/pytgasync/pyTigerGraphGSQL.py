@@ -64,7 +64,7 @@ class AsyncPyTigerGraphGSQL(AsyncPyTigerGraphBase, pyTigerGraphGSQL):
 
     # TODO IMPLEMENT INSTALL_UDF
 
-    async def newGetUDF(self, ExprFunctions: bool = True, ExprUtil: bool = True, json_out=False) -> Union[str, Tuple[str, str], Dict[str, str]]:
+    async def getUDF(self, ExprFunctions: bool = True, ExprUtil: bool = True, json_out=False) -> Union[str, Tuple[str, str], Dict[str, str]]:
         """Get user defined functions (UDF) installed in the database.
         See https://docs.tigergraph.com/gsql-ref/current/querying/func/query-user-defined-functions for details on UDFs.
 
@@ -89,7 +89,7 @@ class AsyncPyTigerGraphGSQL(AsyncPyTigerGraphBase, pyTigerGraphGSQL):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        urls, alt_urls = self._prepNewGetUDF(
+        urls, alt_urls = self._prepGetUDF(
             ExprFunctions=ExprFunctions, ExprUtil=ExprUtil)
         if not await self._versionGreaterThan4_0():
             if json_out == True:
@@ -102,4 +102,4 @@ class AsyncPyTigerGraphGSQL(AsyncPyTigerGraphBase, pyTigerGraphGSQL):
             resp = await self._req("GET", f"{self.gsUrl}{urls[file_name]}", resKey="")
             responses[file_name] = resp
 
-        return self._parseNewGetUDF(responses, json_out=json_out)
+        return self._parseGetUDF(responses, json_out=json_out)

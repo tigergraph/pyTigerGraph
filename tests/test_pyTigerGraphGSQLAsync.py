@@ -36,17 +36,17 @@ class test_pyTigerGraphGSQL(unittest.IsolatedAsyncioTestCase):
 
     async def test_getUDF(self):
         # Don't get anything
-        res = await self.conn.newGetUDF(ExprFunctions=False, ExprUtil=False)
+        res = await self.conn.getUDF(ExprFunctions=False, ExprUtil=False)
         self.assertEqual(res, "")
         # Get both ExprFunctions and ExprUtil (default)
-        udf = await self.conn.newGetUDF()
+        udf = await self.conn.getUDF()
         self.assertIn("init_kafka_producer", udf[0])
         self.assertIn("class KafkaProducer", udf[1])
         # Get ExprFunctions only
-        udf = await self.conn.newGetUDF(ExprUtil=False)
+        udf = await self.conn.getUDF(ExprUtil=False)
         self.assertIn("init_kafka_producer", udf)
         # Get ExprUtil only
-        udf = await self.conn.newGetUDF(ExprFunctions=False)
+        udf = await self.conn.getUDF(ExprFunctions=False)
         self.assertIn("class KafkaProducer", udf)
 
 
