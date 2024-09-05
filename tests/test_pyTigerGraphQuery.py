@@ -4,7 +4,7 @@ from time import sleep
 
 from .pyTigerGraphUnitTest import make_connection
 
-from pyTigerGraph.pyTigerGraphException import TigerGraphException
+from pyTigerGraph.common.exception import TigerGraphException
 
 
 class test_pyTigerGraphQuery(unittest.TestCase):

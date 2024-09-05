@@ -10,28 +10,30 @@ import urllib
 from typing import Any, Union, TYPE_CHECKING
 from urllib.parse import urlparse
 
-from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
-from pyTigerGraph.pyTigerGraphException import TigerGraphException
+# from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
+# from pyTigerGraph.common.base import pyTigerGraphBaseBase
+from pyTigerGraph.common.util import pyTigerGraphBaseUtils
+from pyTigerGraph.common.exception import TigerGraphException
 
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphUtils(pyTigerGraphBase):
+class pyTigerGraphUtils(pyTigerGraphBaseUtils):
 
-    def _safeChar(self, inputString: Any) -> str:
-        """Replace special characters in string using the %xx escape.
+    # def _safeChar(self, inputString: Any) -> str:
+    #     """Replace special characters in string using the %xx escape.
 
-        Args:
-            inputString:
-                The string to process
+    #     Args:
+    #         inputString:
+    #             The string to process
 
-        Returns:
-            Processed string.
+    #     Returns:
+    #         Processed string.
 
-        Documentation:
-            https://docs.python.org/3/library/urllib.parse.html#url-quoting
-        """
-        return urllib.parse.quote(str(inputString), safe='')
+    #     Documentation:
+    #         https://docs.python.org/3/library/urllib.parse.html#url-quoting
+    #     """
+    #     return urllib.parse.quote(str(inputString), safe='')
 
     def echo(self, usePost: bool = False) -> str:
         """Pings the database.
@@ -69,20 +71,20 @@ class pyTigerGraphUtils(pyTigerGraphBase):
 
         return ret
 
-    def _parseGetLicenseInfo(self, res):
-        ret = {}
-        if not res["error"]:
-            ret["message"] = res["message"]
-            ret["expirationDate"] = res["results"][0]["Expiration date"]
-            ret["daysRemaining"] = res["results"][0]["Days remaining"]
-        elif "code" in res and res["code"] == "REST-5000":
-            ret["message"] = \
-                "This instance does not have a valid enterprise license. Is this a trial version?"
-            ret["daysRemaining"] = -1
-        else:
-            raise TigerGraphException(res["message"], res["code"])
+    # def _parseGetLicenseInfo(self, res):
+    #     ret = {}
+    #     if not res["error"]:
+    #         ret["message"] = res["message"]
+    #         ret["expirationDate"] = res["results"][0]["Expiration date"]
+    #         ret["daysRemaining"] = res["results"][0]["Days remaining"]
+    #     elif "code" in res and res["code"] == "REST-5000":
+    #         ret["message"] = \
+    #             "This instance does not have a valid enterprise license. Is this a trial version?"
+    #         ret["daysRemaining"] = -1
+    #     else:
+    #         raise TigerGraphException(res["message"], res["code"])
 
-        return ret
+    #     return ret
 
     def getLicenseInfo(self) -> dict:
         """Returns the expiration date and remaining days of the license.
@@ -119,27 +121,27 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         else:
             raise TigerGraphException(res["message"], res["code"])
 
-    def _prepGetSystemMetrics(self, from_ts: int = None, to_ts: int = None, latest: int = None, who: str = None, where: str = None):
-        params = {}
-        _json = {}  # in >=4.1 we need a json request of different parameter names
-        if from_ts or to_ts:
-            _json["TimeRange"] = {}
-        if from_ts:
-            params["from"] = from_ts
-            _json['TimeRange']['StartTimestampNS'] = str(from_ts)
-        if to_ts:
-            params["to"] = to_ts
-            _json['TimeRange']['EndTimestampNS'] = str(from_ts)
-        if latest:
-            params["latest"] = latest
-            _json["LatestNum"] = str(latest)
-        if who:
-            params["who"] = who
-        if where:
-            params["where"] = where
-            _json["HostID"] = where
+    # def _prepGetSystemMetrics(self, from_ts: int = None, to_ts: int = None, latest: int = None, who: str = None, where: str = None):
+    #     params = {}
+    #     _json = {}  # in >=4.1 we need a json request of different parameter names
+    #     if from_ts or to_ts:
+    #         _json["TimeRange"] = {}
+    #     if from_ts:
+    #         params["from"] = from_ts
+    #         _json['TimeRange']['StartTimestampNS'] = str(from_ts)
+    #     if to_ts:
+    #         params["to"] = to_ts
+    #         _json['TimeRange']['EndTimestampNS'] = str(from_ts)
+    #     if latest:
+    #         params["latest"] = latest
+    #         _json["LatestNum"] = str(latest)
+    #     if who:
+    #         params["who"] = who
+    #     if where:
+    #         params["where"] = where
+    #         _json["HostID"] = where
 
-        return params, _json
+    #     return params, _json
 
     def getSystemMetrics(self, from_ts: int = None, to_ts: int = None, latest: int = None, what: str = None, who: str = None, where: str = None):
         """Monitor system usage metrics.

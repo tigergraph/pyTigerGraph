@@ -5,12 +5,13 @@ import httpx
 from typing import Union
 from urllib.parse import urlparse
 
-from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
+# from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
+from pyTigerGraph.common.base import pyTigerGraphBaseBase
 
 logger = logging.getLogger(__name__)
 
 
-class AsyncPyTigerGraphBase(pyTigerGraphBase):
+class AsyncPyTigerGraphBase(pyTigerGraphBaseBase):
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
                  gsqlSecret: str = "", username: str = "tigergraph", password: str = "tigergraph",
                  tgCloud: bool = False, restppPort: Union[int, str] = "9000",

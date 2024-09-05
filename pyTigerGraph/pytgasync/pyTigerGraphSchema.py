@@ -10,12 +10,12 @@ import re
 from typing import Union
 
 from pyTigerGraph.pytgasync.pyTigerGraphBase import AsyncPyTigerGraphBase
-from pyTigerGraph.pyTigerGraphSchema import pyTigerGraphSchema
+from pyTigerGraph.common.schema import pyTigerGraphBaseSchema
 
 logger = logging.getLogger(__name__)
 
 
-class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase, pyTigerGraphSchema):
+class AsyncPyTigerGraphSchema(pyTigerGraphBaseSchema, AsyncPyTigerGraphBase):
 
     async def _getUDTs(self) -> dict:
         """Retrieves all User Defined Types (UDTs) of the graph.

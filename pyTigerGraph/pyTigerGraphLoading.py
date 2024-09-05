@@ -8,12 +8,15 @@ import warnings
 
 from typing import Union
 
-from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
+# from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
+# from pyTigerGraph.common.base import pyTigerGraphBaseBase
+from pyTigerGraph.common.loading import pyTigerGraphBaseLoading
+
 
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphLoading(pyTigerGraphBase):
+class pyTigerGraphLoading(pyTigerGraphBaseLoading):
 
     def _prepRunLoadingJobWithFile(self, filePath, jobName, fileTag, sep, eol):
         '''read file contents for runLoadingJobWithFile()'''

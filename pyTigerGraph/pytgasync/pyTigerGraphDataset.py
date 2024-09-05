@@ -3,16 +3,18 @@
 Ingest stock datasets into a TigerGraph database.
 All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object]. 
 """
+
 import logging
 
+from pyTigerGraph.common.dataset import pyTigerGraphBaseDataset
 from pyTigerGraph.pytgasync.datasets import AsyncDatasets
 from pyTigerGraph.pytgasync.pyTigerGraphAuth import AsyncPyTigerGraphAuth
-from pyTigerGraph.pyTigerGraphDataset import pyTigerGraphDataset
+
 
 logger = logging.getLogger(__name__)
 
 
-class AsyncPyTigerGraphDataset(AsyncPyTigerGraphAuth, pyTigerGraphDataset):
+class AsyncPyTigerGraphDataset(pyTigerGraphBaseDataset, AsyncPyTigerGraphAuth):
     async def ingestDataset(
         self,
         dataset: AsyncDatasets,

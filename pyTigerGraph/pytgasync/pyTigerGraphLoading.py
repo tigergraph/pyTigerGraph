@@ -8,12 +8,13 @@ import warnings
 
 from typing import Union
 
+from pyTigerGraph.common.loading import pyTigerGraphBaseLoading
 from pyTigerGraph.pytgasync.pyTigerGraphBase import AsyncPyTigerGraphBase
 
 logger = logging.getLogger(__name__)
 
 
-class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
+class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase, pyTigerGraphBaseLoading):
 
     async def runLoadingJobWithFile(self, filePath: str, fileTag: str, jobName: str, sep: str = None,
                                     eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000) -> Union[dict, None]:

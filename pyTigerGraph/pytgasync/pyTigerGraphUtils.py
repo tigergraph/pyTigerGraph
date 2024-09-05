@@ -9,13 +9,14 @@ import logging
 from typing import Any, Union, TYPE_CHECKING
 from urllib.parse import urlparse
 
-from pyTigerGraph.pyTigerGraphException import TigerGraphException
+from pyTigerGraph.common.exception import TigerGraphException
+from pyTigerGraph.common.util import pyTigerGraphBaseUtils
 from pyTigerGraph.pytgasync.pyTigerGraphBase import AsyncPyTigerGraphBase
 
 logger = logging.getLogger(__name__)
 
 
-class AsyncPyTigerGraphUtils(AsyncPyTigerGraphBase):
+class AsyncPyTigerGraphUtils(pyTigerGraphBaseUtils, AsyncPyTigerGraphBase):
 
     async def echo(self, usePost: bool = False) -> str:
         """Pings the database.

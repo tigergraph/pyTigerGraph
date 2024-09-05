@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING, Union, Optional
 if TYPE_CHECKING:
     import pandas as pd
 
-from pyTigerGraph.pyTigerGraphException import TigerGraphException
-from pyTigerGraph.pyTigerGraphQuery import pyTigerGraphQuery
+from pyTigerGraph.common.exception import TigerGraphException
+from pyTigerGraph.common.query import pyTigerGraphBaseQuery
 from pyTigerGraph.pytgasync.pyTigerGraphUtils import AsyncPyTigerGraphUtils
 from pyTigerGraph.pytgasync.pyTigerGraphGSQL import AsyncPyTigerGraphGSQL
 from pyTigerGraph.pytgasync.pyTigerGraphSchema import AsyncPyTigerGraphSchema
@@ -19,7 +19,7 @@ from pyTigerGraph.pytgasync.pyTigerGraphSchema import AsyncPyTigerGraphSchema
 logger = logging.getLogger(__name__)
 
 
-class AsyncPyTigerGraphQuery(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, AsyncPyTigerGraphGSQL, pyTigerGraphQuery):
+class AsyncPyTigerGraphQuery(pyTigerGraphBaseQuery, AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, AsyncPyTigerGraphGSQL):
     # TODO getQueries()  # List _all_ query names
     async def showQuery(self, queryName: str) -> str:
         """Returns the string of the given GSQL query.

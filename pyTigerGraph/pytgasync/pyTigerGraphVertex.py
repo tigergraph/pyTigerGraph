@@ -13,14 +13,14 @@ from typing import TYPE_CHECKING, Union
 if TYPE_CHECKING:
     import pandas as pd
 
+from pyTigerGraph.common.vertex import pyTigerGraphBaseVertex
 from pyTigerGraph.pytgasync.pyTigerGraphSchema import AsyncPyTigerGraphSchema
 from pyTigerGraph.pytgasync.pyTigerGraphUtils import AsyncPyTigerGraphUtils
-from pyTigerGraph.pyTigerGraphVertex import pyTigerGraphVertex
 
 logger = logging.getLogger(__name__)
 
 
-class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, pyTigerGraphVertex):
+class AsyncPyTigerGraphVertex(pyTigerGraphBaseVertex, AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema):
 
     async def getVertexTypes(self, force: bool = False) -> list:
         """Returns the list of vertex type names of the graph.

@@ -3,7 +3,7 @@ import os
 
 from .pyTigerGraphUnitTestAsync import make_connection
 
-from pyTigerGraph.pyTigerGraphException import TigerGraphException
+from pyTigerGraph.common.exception import TigerGraphException
 
 
 class test_pyTigerGraphGSQL(unittest.IsolatedAsyncioTestCase):
@@ -11,14 +11,14 @@ class test_pyTigerGraphGSQL(unittest.IsolatedAsyncioTestCase):
         self.conn = await make_connection()
 
     async def test_01_gsql(self):
-        res = await self.conn.gsql("help")
+        res = await self.conn.agsql("help")
         self.assertIsInstance(res, str)
         res = res.split("\n")
         self.assertEqual(
             "GSQL Help: Summary of TigerGraph GSQL Shell commands.", res[0])
 
     async def test_02_gsql(self):
-        res = await self.conn.gsql("ls")
+        res = await self.conn.agsql("ls")
         self.assertIsInstance(res, str)
         res = res.split("\n")[0]
         self.assertIn(res, ["---- Global vertices, edges, and all graphs",

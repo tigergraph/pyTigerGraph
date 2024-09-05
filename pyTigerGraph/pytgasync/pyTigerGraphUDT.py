@@ -7,12 +7,12 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 import logging
 
 from pyTigerGraph.pytgasync.pyTigerGraphSchema import AsyncPyTigerGraphSchema
-from pyTigerGraph.pyTigerGraphUDT import pyTigerGraphUDT
+# from pyTigerGraph.pyTigerGraphUDT import pyTigerGraphUDT
 
 logger = logging.getLogger(__name__)
 
 
-class AsyncPyTigerGraphUDT(AsyncPyTigerGraphSchema, pyTigerGraphUDT):
+class AsyncPyTigerGraphUDT(AsyncPyTigerGraphSchema):
 
     async def getUDTs(self) -> list:
         """Returns the list of User-Defined Tuples (names only).

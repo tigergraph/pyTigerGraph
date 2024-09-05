@@ -10,71 +10,74 @@ import requests
 from typing import Union, Tuple, Dict
 from urllib.parse import urlparse, quote_plus
 
+from pyTigerGraph.common.gsql import pyTigerGraphBaseGSQL
+# from pyTigerGraph.pyTigerGraphException import TigerGraphException
+from pyTigerGraph.common.exception import TigerGraphException
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
-from pyTigerGraph.pyTigerGraphException import TigerGraphException
+
 
 logger = logging.getLogger(__name__)
 
 ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 
-class pyTigerGraphGSQL(pyTigerGraphBase):
-    def _prepGSQL(self, query: str, graphname: str = None, options=None):
-        logger.info("entry: gsql")
-        if logger.level == logging.DEBUG:
-            logger.debug("params: " + self._locals(locals()))
+class pyTigerGraphGSQL(pyTigerGraphBaseGSQL, pyTigerGraphBase):
+    # def _prepGSQL(self, query: str, graphname: str = None, options=None):
+    #     logger.info("entry: gsql")
+    #     if logger.level == logging.DEBUG:
+    #         logger.debug("params: " + self._locals(locals()))
 
-        if graphname is None:
-            graphname = self.graphname
-        if str(graphname).upper() == "GLOBAL" or str(graphname).upper() == "":
-            graphname = ""
+    #     if graphname is None:
+    #         graphname = self.graphname
+    #     if str(graphname).upper() == "GLOBAL" or str(graphname).upper() == "":
+    #         graphname = ""
 
-        # returning all parameters in case one changed (can just return graphname tho if you want but this is more braindead)
-        return query, graphname, options
+    #     # returning all parameters in case one changed (can just return graphname tho if you want but this is more braindead)
+    #     return query, graphname, options
 
     # Once again could just put resand query parameter in but this is more braindead and allows for easier pattern
-    def _parseGSQL(self, res, query: str, graphname: str = None, options=None):
-        def check_error(query: str, resp: str) -> None:
-            if "CREATE VERTEX" in query.upper():
-                if "Failed to create vertex types" in resp:
-                    raise TigerGraphException(resp)
-            if ("CREATE DIRECTED EDGE" in query.upper()) or ("CREATE UNDIRECTED EDGE" in query.upper()):
-                if "Failed to create edge types" in resp:
-                    raise TigerGraphException(resp)
-            if "CREATE GRAPH" in query.upper():
-                if ("The graph" in resp) and ("could not be created!" in resp):
-                    raise TigerGraphException(resp)
-            if "CREATE DATA_SOURCE" in query.upper():
-                if ("Successfully created local data sources" not in resp) and ("Successfully created data sources" not in resp):
-                    raise TigerGraphException(resp)
-            if "CREATE LOADING JOB" in query.upper():
-                if "Successfully created loading jobs" not in resp:
-                    raise TigerGraphException(resp)
-            if "RUN LOADING JOB" in query.upper():
-                if "LOAD SUCCESSFUL" not in resp:
-                    raise TigerGraphException(resp)
+    # def _parseGSQL(self, res, query: str, graphname: str = None, options=None):
+    #     def check_error(query: str, resp: str) -> None:
+    #         if "CREATE VERTEX" in query.upper():
+    #             if "Failed to create vertex types" in resp:
+    #                 raise TigerGraphException(resp)
+    #         if ("CREATE DIRECTED EDGE" in query.upper()) or ("CREATE UNDIRECTED EDGE" in query.upper()):
+    #             if "Failed to create edge types" in resp:
+    #                 raise TigerGraphException(resp)
+    #         if "CREATE GRAPH" in query.upper():
+    #             if ("The graph" in resp) and ("could not be created!" in resp):
+    #                 raise TigerGraphException(resp)
+    #         if "CREATE DATA_SOURCE" in query.upper():
+    #             if ("Successfully created local data sources" not in resp) and ("Successfully created data sources" not in resp):
+    #                 raise TigerGraphException(resp)
+    #         if "CREATE LOADING JOB" in query.upper():
+    #             if "Successfully created loading jobs" not in resp:
+    #                 raise TigerGraphException(resp)
+    #         if "RUN LOADING JOB" in query.upper():
+    #             if "LOAD SUCCESSFUL" not in resp:
+    #                 raise TigerGraphException(resp)
 
-        def clean_res(resp: list) -> str:
-            ret = []
-            for line in resp:
-                if not line.startswith("__GSQL__"):
-                    ret.append(line)
-            return "\n".join(ret)
+    #     def clean_res(resp: list) -> str:
+    #         ret = []
+    #         for line in resp:
+    #             if not line.startswith("__GSQL__"):
+    #                 ret.append(line)
+    #         return "\n".join(ret)
 
-        if isinstance(res, list):
-            ret = clean_res(res)
-        else:
-            ret = clean_res(res.splitlines())
+    #     if isinstance(res, list):
+    #         ret = clean_res(res)
+    #     else:
+    #         ret = clean_res(res.splitlines())
 
-        check_error(query, ret)
+    #     check_error(query, ret)
 
-        string_without_ansi = ANSI_ESCAPE.sub('', ret)
+    #     string_without_ansi = ANSI_ESCAPE.sub('', ret)
 
-        if logger.level == logging.DEBUG:
-            logger.debug("return: " + str(ret))
-        logger.info("exit: gsql (success)")
+    #     if logger.level == logging.DEBUG:
+    #         logger.debug("return: " + str(ret))
+    #     logger.info("exit: gsql (success)")
 
-        return string_without_ansi
+    #     return string_without_ansi
 
     def gsql(self, query: str, graphname: str = None, options=None) -> Union[str, dict]:
         """Runs a GSQL query and processes the output.
@@ -191,40 +194,40 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
 
         return 0
 
-    def _prepGetUDF(self, ExprFunctions: bool = True, ExprUtil: bool = True):
-        urls = {}  # urls when using TG 4.x
-        alt_urls = {}  # urls when using TG 3.x
-        if ExprFunctions:
-            alt_urls["ExprFunctions"] = (
-                "/gsqlserver/gsql/userdefinedfunction?filename=ExprFunctions")
-            urls["ExprFunctions"] = ("/gsql/v1/udt/files/ExprFunctions")
-        if ExprUtil:
-            alt_urls["ExprUtil"] = (
-                "/gsqlserver/gsql/userdefinedfunction?filename=ExprUtil")
-            urls["ExprUtil"] = ("/gsql/v1/udt/files/ExprUtil")
+    # def _prepGetUDF(self, ExprFunctions: bool = True, ExprUtil: bool = True):
+    #     urls = {}  # urls when using TG 4.x
+    #     alt_urls = {}  # urls when using TG 3.x
+    #     if ExprFunctions:
+    #         alt_urls["ExprFunctions"] = (
+    #             "/gsqlserver/gsql/userdefinedfunction?filename=ExprFunctions")
+    #         urls["ExprFunctions"] = ("/gsql/v1/udt/files/ExprFunctions")
+    #     if ExprUtil:
+    #         alt_urls["ExprUtil"] = (
+    #             "/gsqlserver/gsql/userdefinedfunction?filename=ExprUtil")
+    #         urls["ExprUtil"] = ("/gsql/v1/udt/files/ExprUtil")
 
-        return urls, alt_urls
+    #     return urls, alt_urls
 
-    def _parseGetUDF(self, responses, json_out):
-        rets = []
-        for file_name in responses:
-            resp = responses[file_name]
-            if not resp["error"]:
-                logger.info(f"{file_name} get successfully")
-                rets.append(resp["results"])
-            else:
-                logger.error(f"Failed to get {file_name}")
-                raise TigerGraphException(resp["message"])
+    # def _parseGetUDF(self, responses, json_out):
+        # rets = []
+        # for file_name in responses:
+        #     resp = responses[file_name]
+        #     if not resp["error"]:
+        #         logger.info(f"{file_name} get successfully")
+        #         rets.append(resp["results"])
+        #     else:
+        #         logger.error(f"Failed to get {file_name}")
+        #         raise TigerGraphException(resp["message"])
 
-        if json_out:
-            # concatente the list of dicts into one dict
-            rets = rets[0].update(rets[-1])
-            return rets
-        if len(rets) == 2:
-            return tuple(rets)
-        if rets:
-            return rets[0]
-        return ""
+        # if json_out:
+        #     # concatente the list of dicts into one dict
+        #     rets = rets[0].update(rets[-1])
+        #     return rets
+        # if len(rets) == 2:
+        #     return tuple(rets)
+        # if rets:
+        #     return rets[0]
+        # return ""
 
     def getUDF(self, ExprFunctions: bool = True, ExprUtil: bool = True, json_out=False) -> Union[str, Tuple[str, str], Dict[str, str]]:
         """Get user defined functions (UDF) installed in the database.

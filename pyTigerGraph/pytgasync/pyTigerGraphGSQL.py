@@ -10,17 +10,20 @@ import httpx
 from typing import Union, Tuple, Dict
 from urllib.parse import urlparse, quote_plus
 
-from pyTigerGraph.pyTigerGraphException import TigerGraphException
-from pyTigerGraph.pyTigerGraphGSQL import pyTigerGraphGSQL
+from pyTigerGraph.common.exception import TigerGraphException
+# from pyTigerGraph.pyTigerGraphGSQL import pyTigerGraphGSQL
+from pyTigerGraph.common.gsql import pyTigerGraphBaseGSQL
+
 from pyTigerGraph.pytgasync.pyTigerGraphBase import AsyncPyTigerGraphBase
+
 
 logger = logging.getLogger(__name__)
 
 ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 
-class AsyncPyTigerGraphGSQL(AsyncPyTigerGraphBase, pyTigerGraphGSQL):
-    async def gsql(self, query: str, graphname: str = None, options=None) -> Union[str, dict]:
+class AsyncPyTigerGraphGSQL(AsyncPyTigerGraphBase, pyTigerGraphBaseGSQL):
+    async def agsql(self, query: str, graphname: str = None, options=None) -> Union[str, dict]:
         """Runs a GSQL query and processes the output.
 
         Args:

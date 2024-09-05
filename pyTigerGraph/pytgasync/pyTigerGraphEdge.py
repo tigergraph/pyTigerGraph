@@ -12,13 +12,13 @@ from typing import TYPE_CHECKING, Union
 if TYPE_CHECKING:
     import pandas as pd
 
-from pyTigerGraph.pyTigerGraphEdge import pyTigerGraphEdge
+from pyTigerGraph.common.edge import pyTigerGraphBaseEdge
 from pyTigerGraph.pytgasync.pyTigerGraphQuery import AsyncPyTigerGraphQuery
 
 logger = logging.getLogger(__name__)
 
 
-class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery, pyTigerGraphEdge):
+class AsyncPyTigerGraphEdge(pyTigerGraphBaseEdge, AsyncPyTigerGraphQuery):
 
     ___trgvtxids = "___trgvtxids"
 

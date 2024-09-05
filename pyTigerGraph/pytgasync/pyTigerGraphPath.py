@@ -7,13 +7,13 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 import logging
 from typing import Union
 
-from pyTigerGraph.pyTigerGraphPath import pyTigerGraphPath
+from pyTigerGraph.common.path import pyTigerGraphBasePath
 from pyTigerGraph.pytgasync.pyTigerGraphBase import AsyncPyTigerGraphBase
 
 logger = logging.getLogger(__name__)
 
 
-class AsyncPyTigerGraphPath(AsyncPyTigerGraphBase, pyTigerGraphPath):
+class AsyncPyTigerGraphPath(AsyncPyTigerGraphBase, pyTigerGraphBasePath):
 
     async def shortestPath(self, sourceVertices: Union[dict, tuple, list],
                            targetVertices: Union[dict, tuple, list], maxLength: int = None,
