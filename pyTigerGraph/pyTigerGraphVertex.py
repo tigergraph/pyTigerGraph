@@ -14,14 +14,14 @@ if TYPE_CHECKING:
     import pandas as pd
 
 from pyTigerGraph.common.exception import TigerGraphException
-from pyTigerGraph.common.vertex import pyTigerGraphBaseVertex
+from pyTigerGraph.common.vertex import PyTigerGraphVertexBase
 from pyTigerGraph.pyTigerGraphSchema import pyTigerGraphSchema
 from pyTigerGraph.pyTigerGraphUtils import pyTigerGraphUtils
 
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphVertex(pyTigerGraphBaseVertex, pyTigerGraphUtils, pyTigerGraphSchema):
+class pyTigerGraphVertex(PyTigerGraphVertexBase, pyTigerGraphUtils, pyTigerGraphSchema):
 
     def getVertexTypes(self, force: bool = False) -> list:
         """Returns the list of vertex type names of the graph.
@@ -188,7 +188,7 @@ class pyTigerGraphVertex(pyTigerGraphBaseVertex, pyTigerGraphUtils, pyTigerGraph
                         data={"function": "stat_vertex_number", "type": "*"},
                         jsonData=True)
 
-        ret = self._parseGetVertexCount(res, vertexType, where)
+        ret = self._parse_get_vertex_count(res, vertexType, where)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -232,7 +232,7 @@ class pyTigerGraphVertex(pyTigerGraphBaseVertex, pyTigerGraphUtils, pyTigerGraph
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        vals = self._upsertAttrs(attributes)
+        vals = self._upsert_attrs(attributes)
         data = json.dumps({"vertices": {vertexType: {vertexId: vals}}})
 
         ret = self._req("POST", self.restppUrl + "/graph/" +
@@ -289,7 +289,7 @@ class pyTigerGraphVertex(pyTigerGraphBaseVertex, pyTigerGraphUtils, pyTigerGraph
 
         data = {}
         for v in vertices:
-            vals = self._upsertAttrs(v[1])
+            vals = self._upsert_attrs(v[1])
             data[v[0]] = vals
         data = json.dumps({"vertices": {vertexType: data}})
 
@@ -301,18 +301,6 @@ class pyTigerGraphVertex(pyTigerGraphBaseVertex, pyTigerGraphUtils, pyTigerGraph
         logger.info("exit: upsertVertices")
 
         return ret
-
-    # def _prepUpsertVertexDataFrame(self, df, v_id, attributes):
-    #     json_up = []
-
-    #     for index in df.index:
-    #         json_up.append(json.loads(df.loc[index].to_json()))
-    #         json_up[-1] = (
-    #             index if v_id is None else json_up[-1][v_id],
-    #             json_up[-1] if attributes is None
-    #             else {target: json_up[-1][source] for target, source in attributes.items()}
-    #         )
-    #     return json_up
 
     def upsertVertexDataFrame(self, df: 'pd.DataFrame', vertexType: str, v_id: bool = None,
                               attributes: dict = None) -> int:
@@ -348,28 +336,6 @@ class pyTigerGraphVertex(pyTigerGraphBaseVertex, pyTigerGraphUtils, pyTigerGraph
         logger.info("exit: upsertVertexDataFrame")
 
         return ret
-
-    # def _prepGetVertices(self, vertexType: str, select: str = "", where: str = "",
-    #                      limit: Union[int, str] = None, sort: str = "", timeout: int = 0):
-    #     '''url builder for getVertices()'''
-
-    #     url = self.restppUrl + "/graph/" + self.graphname + "/vertices/" + vertexType
-    #     isFirst = True
-    #     if select:
-    #         url += "?select=" + select
-    #         isFirst = False
-    #     if where:
-    #         url += ("?" if isFirst else "&") + "filter=" + where
-    #         isFirst = False
-    #     if limit:
-    #         url += ("?" if isFirst else "&") + "limit=" + str(limit)
-    #         isFirst = False
-    #     if sort:
-    #         url += ("?" if isFirst else "&") + "sort=" + sort
-    #         isFirst = False
-    #     if timeout and timeout > 0:
-    #         url += ("?" if isFirst else "&") + "timeout=" + str(timeout)
-    #     return url
 
     def getVertices(self, vertexType: str, select: str = "", where: str = "",
                     limit: Union[int, str] = None, sort: str = "", fmt: str = "py", withId: bool = True,
@@ -420,14 +386,14 @@ class pyTigerGraphVertex(pyTigerGraphBaseVertex, pyTigerGraphUtils, pyTigerGraph
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        url = self._prepGetVertices(
+        url = self._prep_get_vertices(
             vertexType=vertexType, select=select, where=where, limit=limit, sort=sort, timeout=timeout)
         ret = self._req("GET", url)
 
         if fmt == "json":
             ret = json.dumps(ret)
         elif fmt == "df":
-            ret = self.vertexSetToDataFrame(ret, withId, withType)
+            ret = self.vertex_set_to_dataframe(ret, withId, withType)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -494,19 +460,6 @@ class pyTigerGraphVertex(pyTigerGraphBaseVertex, pyTigerGraphUtils, pyTigerGraph
         return self.getVertexDataFrame(vertexType, select=select, where=where, limit=limit,
                                        sort=sort, timeout=timeout)
 
-    # def _prepGetVerticesById(self, vertexIds, vertexType):
-    #     '''parameter parsing and url building for getVerticesById()'''
-
-    #     if not vertexIds:
-    #         raise TigerGraphException("No vertex ID was specified.", None)
-    #     vids = []
-    #     if isinstance(vertexIds, (int, str)):
-    #         vids.append(vertexIds)
-    #     else:
-    #         vids = vertexIds
-    #     url = self.restppUrl + "/graph/" + self.graphname + "/vertices/" + vertexType + "/"
-    #     return vids, url
-
     def getVerticesById(self, vertexType: str, vertexIds: Union[int, str, list], select: str = "",
                         fmt: str = "py", withId: bool = True, withType: bool = False,
                         timeout: int = 0) -> Union[list, str, 'pd.DataFrame']:
@@ -545,17 +498,17 @@ class pyTigerGraphVertex(pyTigerGraphBaseVertex, pyTigerGraphUtils, pyTigerGraph
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        vids, url = self._prepGetVerticesById(
+        vids, url = self._prep_get_vertices_by_id(
             vertexIds=vertexIds, vertexType=vertexType)
 
         ret = []
         for vid in vids:
-            ret += self._req("GET", url + self._safeChar(vid))
+            ret += self._req("GET", url + self._safe_char(vid))
 
         if fmt == "json":
             ret = json.dumps(ret)
         elif fmt == "df":
-            ret = self.vertexSetToDataFrame(ret, withId, withType)
+            ret = self.vertex_set_to_dataframe(ret, withId, withType)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -605,24 +558,6 @@ class pyTigerGraphVertex(pyTigerGraphBaseVertex, pyTigerGraphUtils, pyTigerGraph
 
         return self.getVertexDataFrameById(vertexType, vertexIds, select)
 
-    # def _parseGetVertexStats(self, responses, skipNA):
-    #     '''response parsing for getVertexStats()'''
-    #     ret = {}
-    #     for vt, res in responses:
-    #         if res["error"]:
-    #             if "stat_vertex_attr is skip" in res["message"]:
-    #                 if not skipNA:
-    #                     ret[vt] = {}
-    #             else:
-    #                 raise TigerGraphException(res["message"],
-    #                                           (res["code"] if "code" in res else None))
-    #         else:
-    #             res = res["results"]
-    #             for r in res:
-    #                 ret[r["v_type"]] = r["attributes"]
-
-    #     return ret
-
     def getVertexStats(self, vertexTypes: Union[str, list], skipNA: bool = False) -> dict:
         """Returns vertex attribute statistics.
 
@@ -660,32 +595,13 @@ class pyTigerGraphVertex(pyTigerGraphBaseVertex, pyTigerGraphUtils, pyTigerGraph
                             skipCheck=True)
             responses.append((vt, res))
 
-        ret = self._parseGetVertexStats(responses, skipNA)
+        ret = self._parse_get_vertex_stats(responses, skipNA)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
         logger.info("exit: getVertexStats")
 
         return ret
-
-    # def _prepDelVertices(self, vertexType, where, limit, sort, permanent, timeout):
-    #     '''url builder for delVertices()'''
-    #     url = self.restppUrl + "/graph/" + self.graphname + "/vertices/" + vertexType
-    #     isFirst = True
-    #     if where:
-    #         url += "?filter=" + where
-    #         isFirst = False
-    #     if limit and sort:  # These two must be provided together
-    #         url += ("?" if isFirst else "&") + "limit=" + \
-    #             str(limit) + "&sort=" + sort
-    #         isFirst = False
-    #     if permanent:
-    #         url += ("?" if isFirst else "&") + "permanent=true"
-    #         isFirst = False
-    #     if timeout and timeout > 0:
-    #         url += ("?" if isFirst else "&") + "timeout=" + str(timeout)
-
-    #     return url
 
     def delVertices(self, vertexType: str, where: str = "", limit: str = "", sort: str = "",
                     permanent: bool = False, timeout: int = 0) -> int:
@@ -729,8 +645,8 @@ class pyTigerGraphVertex(pyTigerGraphBaseVertex, pyTigerGraphUtils, pyTigerGraph
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        url = self._prepDelVertices(vertexType=vertexType, where=where,
-                                    limit=limit, sort=sort, permanent=permanent, timeout=timeout)
+        url = self._prep_del_vertices(vertexType=vertexType, where=where,
+                                      limit=limit, sort=sort, permanent=permanent, timeout=timeout)
         ret = self._req("DELETE", url)["deleted_vertices"]
 
         if logger.level == logging.DEBUG:
@@ -738,25 +654,6 @@ class pyTigerGraphVertex(pyTigerGraphBaseVertex, pyTigerGraphUtils, pyTigerGraph
         logger.info("exit: delVertices")
 
         return ret
-
-    # def _prepDelVerticesById(self, vertexIds, vertexType, permanent, timeout):
-    #     '''url builder and param parser for delVerticesById()'''
-    #     if not vertexIds:
-    #         raise TigerGraphException("No vertex ID was specified.", None)
-    #     vids = []
-    #     if isinstance(vertexIds, (int, str)):
-    #         vids.append(self._safeChar(vertexIds))
-    #     else:
-    #         vids = [self._safeChar(f) for f in vertexIds]
-
-    #     url1 = self.restppUrl + "/graph/" + \
-    #         self.graphname + "/vertices/" + vertexType + "/"
-    #     url2 = ""
-    #     if permanent:
-    #         url2 = "?permanent=true"
-    #     if timeout and timeout > 0:
-    #         url2 += ("&" if url2 else "?") + "timeout=" + str(timeout)
-    #     return url1, url2, vids
 
     def delVerticesById(self, vertexType: str, vertexIds: Union[int, str, list],
                         permanent: bool = False, timeout: int = 0) -> int:
@@ -784,7 +681,7 @@ class pyTigerGraphVertex(pyTigerGraphBaseVertex, pyTigerGraphUtils, pyTigerGraph
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        url1, url2, vids = self._prepDelVerticesById(
+        url1, url2, vids = self._prep_del_vertices_by_id(
             vertexIds=vertexIds, vertexType=vertexType, permanent=permanent, timeout=timeout)
         ret = 0
         for vid in vids:
@@ -803,70 +700,3 @@ class pyTigerGraphVertex(pyTigerGraphBaseVertex, pyTigerGraphUtils, pyTigerGraph
     # TODO Maybe call it truncateVertex[Type] or delAllVertices?
 
     # TODO GET /deleted_vertex_check/{graph_name}
-
-    # def vertexSetToDataFrame(self, vertexSet: list, withId: bool = True,
-    #                          withType: bool = False) -> 'pd.DataFrame':
-    #     """Converts a vertex set to Pandas DataFrame.
-
-    #     Vertex sets are used for both the input and output of `SELECT` statements. They contain
-    #     instances of vertices of the same type.
-    #     For each vertex instance, the vertex ID, the vertex type and the (optional) attributes are
-    #     present under the `v_id`, `v_type` and `attributes` keys, respectively. /
-    #     See an example in `edgeSetToDataFrame()`.
-
-    #     A vertex set has this structure (when serialised as JSON):
-    #     [source.wrap,json]
-    #     ----
-    #     [
-    #         {
-    #             "v_id": <vertex_id>,
-    #             "v_type": <vertex_type_name>,
-    #             "attributes":
-    #                 {
-    #                     "attr1": <value1>,
-    #                     "attr2": <value2>,
-    #                      ⋮
-    #                 }
-    #         },
-    #             ⋮
-    #     ]
-    #     ----
-    #     For more information on vertex sets see xref:gsql-ref:querying:declaration-and-assignment-statements.adoc#_vertex_set_variables[Vertex set variables].
-
-    #     Args:
-    #         vertexSet:
-    #             A JSON array containing a vertex set in the format returned by queries (see below).
-    #         withId:
-    #             Whether to include vertex primary ID as a column.
-    #         withType:
-    #             Whether to include vertex type info as a column.
-
-    #     Returns:
-    #         A pandas DataFrame containing the vertex attributes (and optionally the vertex primary
-    #         ID and type).
-    #     """
-    #     logger.info("entry: vertexSetToDataFrame")
-    #     if logger.level == logging.DEBUG:
-    #         logger.debug("params: " + self._locals(locals()))
-
-    #     try:
-    #         import pandas as pd
-    #     except ImportError:
-    #         raise ImportError("Pandas is required to use this function. "
-    #                           "Download pandas using 'pip install pandas'.")
-
-    #     df = pd.DataFrame(vertexSet)
-    #     cols = []
-    #     if withId:
-    #         cols.append(df["v_id"])
-    #     if withType:
-    #         cols.append(df["v_type"])
-    #     cols.append(pd.DataFrame(df["attributes"].tolist()))
-
-    #     ret = pd.concat(cols, axis=1)
-
-    #     if logger.level == logging.DEBUG:
-    #         logger.debug("return: " + str(ret))
-    #     logger.info("exit: vertexSetToDataFrame")
-
-    #     return ret

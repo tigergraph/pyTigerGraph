@@ -7,13 +7,13 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 import logging
 from typing import Union
 
-from pyTigerGraph.common.path import pyTigerGraphBasePath
+from pyTigerGraph.common.path import PyTigerGraphPathBase
 from pyTigerGraph.pytgasync.pyTigerGraphBase import AsyncPyTigerGraphBase
 
 logger = logging.getLogger(__name__)
 
 
-class AsyncPyTigerGraphPath(AsyncPyTigerGraphBase, pyTigerGraphBasePath):
+class AsyncPyTigerGraphPath(AsyncPyTigerGraphBase, PyTigerGraphPathBase):
 
     async def shortestPath(self, sourceVertices: Union[dict, tuple, list],
                            targetVertices: Union[dict, tuple, list], maxLength: int = None,
@@ -66,8 +66,8 @@ class AsyncPyTigerGraphPath(AsyncPyTigerGraphBase, pyTigerGraphBasePath):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        data = self._preparePathParams(sourceVertices, targetVertices, maxLength, vertexFilters,
-                                       edgeFilters, allShortestPaths)
+        data = self._prepare_path_params(sourceVertices, targetVertices, maxLength, vertexFilters,
+                                         edgeFilters, allShortestPaths)
         ret = await self._post(self.restppUrl + "/shortestpath/" + self.graphname, data=data)
 
         if logger.level == logging.DEBUG:
@@ -121,8 +121,8 @@ class AsyncPyTigerGraphPath(AsyncPyTigerGraphBase, pyTigerGraphBasePath):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        data = self._preparePathParams(sourceVertices, targetVertices, maxLength, vertexFilters,
-                                       edgeFilters)
+        data = self._prepare_path_params(sourceVertices, targetVertices, maxLength, vertexFilters,
+                                         edgeFilters)
         ret = await self._post(self.restppUrl + "/allpaths/" + self.graphname, data=data)
 
         if logger.level == logging.DEBUG:

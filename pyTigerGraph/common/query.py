@@ -14,15 +14,15 @@ if TYPE_CHECKING:
 
 from pyTigerGraph.common.exception import TigerGraphException
 # from pyTigerGraph.pyTigerGraphSchema import pyTigerGraphSchema
-# from pyTigerGraph.pyTigerGraphUtils import pyTigerGraphUtils
-from pyTigerGraph.common.gsql import pyTigerGraphBaseGSQL
+from pyTigerGraph.common.util import PyTigerGraphUtilsBase
+from pyTigerGraph.common.gsql import PyTigerGraphGSQLBase
 
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphBaseQuery(pyTigerGraphBaseGSQL):
+class PyTigerGraphQueryBase(PyTigerGraphGSQLBase, PyTigerGraphUtilsBase):
     # TODO getQueries()  # List _all_ query names
-    def _parseGetInstalledQueries(self, fmt, ret):
+    def _parse_get_installed_queries(self, fmt, ret):
         if fmt == "json":
             ret = json.dumps(ret)
         if fmt == "df":
@@ -42,7 +42,7 @@ class pyTigerGraphBaseQuery(pyTigerGraphBaseGSQL):
     #   GET /gsql/queries/install/{request_id}
     #   xref:tigergraph-server:API:built-in-endpoints.adoc#_check_query_installation_status[Check query installation status]
 
-    def _parseQueryParameters(self, params: dict) -> str:
+    def _parse_query_parameters(self, params: dict) -> str:
         """Parses a dictionary of query parameters and converts them to query strings.
 
         While most of the values provided for various query parameter types can be easily converted
@@ -65,7 +65,7 @@ class pyTigerGraphBaseQuery(pyTigerGraphBaseGSQL):
             if isinstance(v, tuple):
                 if len(v) == 2 and isinstance(v[1], str):
                     ret += k + "=" + str(v[0]) + "&" + k + \
-                        ".type=" + self._safeChar(v[1]) + "&"
+                        ".type=" + self._safe_char(v[1]) + "&"
                 else:
                     raise TigerGraphException(
                         "Invalid parameter value: (vertex_primary_id, vertex_type)"
@@ -75,20 +75,20 @@ class pyTigerGraphBaseQuery(pyTigerGraphBaseGSQL):
                 for vv in v:
                     if isinstance(vv, tuple):
                         if len(vv) == 2 and isinstance(vv[1], str):
-                            ret += k + "[" + str(i) + "]=" + self._safeChar(vv[0]) + "&" + \
+                            ret += k + "[" + str(i) + "]=" + self._safe_char(vv[0]) + "&" + \
                                 k + "[" + str(i) + "].type=" + vv[1] + "&"
                         else:
                             raise TigerGraphException(
                                 "Invalid parameter value: (vertex_primary_id , vertex_type)"
                                 " was expected.")
                     else:
-                        ret += k + "=" + self._safeChar(vv) + "&"
+                        ret += k + "=" + self._safe_char(vv) + "&"
                     i += 1
             elif isinstance(v, datetime):
                 ret += k + "=" + \
-                    self._safeChar(v.strftime("%Y-%m-%d %H:%M:%S")) + "&"
+                    self._safe_char(v.strftime("%Y-%m-%d %H:%M:%S")) + "&"
             else:
-                ret += k + "=" + self._safeChar(v) + "&"
+                ret += k + "=" + self._safe_char(v) + "&"
         ret = ret[:-1]
 
         if logger.level == logging.DEBUG:
@@ -97,7 +97,7 @@ class pyTigerGraphBaseQuery(pyTigerGraphBaseGSQL):
 
         return ret
 
-    def _prepRunInstalledQuery(self, timeout, sizeLimit, runAsync, replica, threadLimit, memoryLimit):
+    def _prep_run_installed_query(self, timeout, sizeLimit, runAsync, replica, threadLimit, memoryLimit):
         """header builder for runInstalledQuery()"""
         headers = {}
         res_key = "results"
@@ -116,7 +116,7 @@ class pyTigerGraphBaseQuery(pyTigerGraphBaseGSQL):
             headers["GSQL-QueryLocalMemLimitMB"] = str(memoryLimit)
         return headers, res_key
 
-    def _prepGetStatistics(self, seconds, segments):
+    def _prep_get_statistics(self, seconds, segments):
         '''parameter parsing for getStatistics()'''
         if not seconds:
             seconds = 10

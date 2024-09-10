@@ -6,13 +6,13 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 import logging
 
 from pyTigerGraph.datasets import Datasets
-from pyTigerGraph.common.dataset import pyTigerGraphBaseDataset
+from pyTigerGraph.common.dataset import PyTigerGraphDatasetBase
 from pyTigerGraph.pyTigerGraphAuth import pyTigerGraphAuth
 
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphDataset(pyTigerGraphBaseDataset, pyTigerGraphAuth):
+class pyTigerGraphDataset(PyTigerGraphDatasetBase, pyTigerGraphAuth):
     def ingestDataset(
         self,
         dataset: Datasets,
@@ -80,36 +80,10 @@ class pyTigerGraphDataset(pyTigerGraphBaseDataset, pyTigerGraphAuth):
         for resp in dataset.run_load_job(self):
             responses.append(resp)
 
-        self._parseIngestDataset(responses, cleanup, dataset)
+        self._parse_ingest_dataset(responses, cleanup, dataset)
 
         print("---- Finished ingestion ----", flush=True)
         logger.info("exit: ingestDataset")
-
-    # def _parseIngestDataset(self, responses, cleanup, dataset):
-    #     for resp in responses:
-    #         stats = resp[0]["statistics"]
-    #         if "vertex" in stats:
-    #             for vstats in stats["vertex"]:
-    #                 print(
-    #                     "Ingested {} objects into VERTEX {}".format(
-    #                         vstats["validObject"], vstats["typeName"]
-    #                     ),
-    #                     flush=True,
-    #                 )
-    #         if "edge" in stats:
-    #             for estats in stats["edge"]:
-    #                 print(
-    #                     "Ingested {} objects into EDGE {}".format(
-    #                         estats["validObject"], estats["typeName"]
-    #                     ),
-    #                     flush=True,
-    #                 )
-    #         if logger.level == logging.DEBUG:
-    #             logger.debug(str(resp))
-
-    #     if cleanup:
-    #         print("---- Cleaning ----", flush=True)
-    #         dataset.clean_up()
 
     def check_exist_graphs(self, name: str) -> bool:
         "NO DOC"

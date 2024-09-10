@@ -58,10 +58,10 @@ class test_pyTigerGraphPath(unittest.TestCase):
         return sorted(es) == sorted(exp_es)
 
     def test_01_preparePathParams(self):
-        res = self.conn._preparePathParams([("srctype1", 1), ("srctype2", 2), ("srctype3", 3)],
-                                           [("trgtype1", 1), ("trgtype2", 2),
-                                            ("trgtype3", 3)], 5,
-                                           [("srctype1", "a01>10")], [("trgtype1", "a10<20")], True)
+        res = self.conn._prepare_path_params([("srctype1", 1), ("srctype2", 2), ("srctype3", 3)],
+                                             [("trgtype1", 1), ("trgtype2", 2),
+                                              ("trgtype3", 3)], 5,
+                                             [("srctype1", "a01>10")], [("trgtype1", "a10<20")], True)
         self.assertIsInstance(res, str)
         res = json.loads(res)
         self.assertEqual(6, len(res))
@@ -77,7 +77,7 @@ class test_pyTigerGraphPath(unittest.TestCase):
         self.assertIn("allShortestPaths", res)
         self.assertTrue(res["allShortestPaths"])
 
-        res = self.conn._preparePathParams([("srct", 1)], [("trgt", 1)])
+        res = self.conn._prepare_path_params([("srct", 1)], [("trgt", 1)])
         self.assertEqual(
             '{"sources": [{"type": "srct", "id": 1}], "targets": [{"type": "trgt", "id": 1}]}',
             res

@@ -1,9 +1,9 @@
-"""`TigerGraphConnection`
+"""
+`TigerGraphConnection`
 
 A TigerGraphConnection object provides the HTTP(S) communication used by all other modules.
-
-
 """
+
 import base64
 import json
 import logging
@@ -32,7 +32,7 @@ def excepthook(type, value, traceback):
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphBaseBase(object):
+class PyTigerGraphCore(object):
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
                  gsqlSecret: str = "", username: str = "tigergraph", password: str = "tigergraph",
                  tgCloud: bool = False, restppPort: Union[int, str] = "9000",
@@ -228,7 +228,7 @@ class pyTigerGraphBaseBase(object):
             logger.info(f"Database version: {version}")
 
             # Check JWT support for GSQL server
-            if self._versionGreaterThan4_0():
+            if self._version_greater_than_4_0():
                 logger.debug(
                     f"Attempting to get auth info with URL: {self.gsUrl + '/gsql/v1/auth/simple'}")
                 self._get(f"{self.gsUrl}/gsql/v1/auth/simple",
@@ -250,7 +250,7 @@ class pyTigerGraphBaseBase(object):
         del _locals["self"]
         return str(_locals)
 
-    def _errorCheck(self, res: dict) -> bool:
+    def _error_check(self, res: dict) -> bool:
         """Checks if the JSON document returned by an endpoint has contains `error: true`. If so,
             it raises an exception.
 
@@ -270,7 +270,7 @@ class pyTigerGraphBaseBase(object):
                 res["message"], (res["code"] if "code" in res else None))
         return False
 
-    def _prepReq(self, authMode, headers, url, method, data):
+    def _prep_req(self, authMode, headers, url, method, data):
         logger.info("entry: _req")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
@@ -361,7 +361,7 @@ class pyTigerGraphBaseBase(object):
             else:
                 raise e
 
-    def _parseReq(self, res, jsonResponse, strictJson, skipCheck, resKey):
+    def _parse_req(self, res, jsonResponse, strictJson, skipCheck, resKey):
         if jsonResponse:
             try:
                 res = json.loads(res.text, strict=strictJson)
@@ -611,7 +611,7 @@ class pyTigerGraphBaseBase(object):
         self.responseConfigHeader = {
             "GSQL-TIMEOUT": str(timeout), "RESPONSE-LIMIT": str(responseSize)}
 
-    def _parseGetVersion(self, response, raw):
+    def _parse_get_version(self, response, raw):
         if raw:
             return response
         res = response.split("\n")
@@ -653,7 +653,7 @@ class pyTigerGraphBaseBase(object):
         logger.info("exit: getVersion")
         return components
 
-    def _parseGetVer(self, version, component, full):
+    def _parse_get_ver(self, version, component, full):
         ret = ""
         for v in version:
             if v["name"] == component.lower():
@@ -697,7 +697,7 @@ class pyTigerGraphBaseBase(object):
 
         return ret
 
-    def _versionGreaterThan4_0(self) -> bool:
+    def _version_greater_than_4_0(self) -> bool:
         """Gets if the TigerGraph database version is greater than 4.0 using gerVer().
 
         Returns:

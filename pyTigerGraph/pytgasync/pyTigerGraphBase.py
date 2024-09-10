@@ -6,12 +6,12 @@ from typing import Union
 from urllib.parse import urlparse
 
 # from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
-from pyTigerGraph.common.base import pyTigerGraphBaseBase
+from pyTigerGraph.common.base import PyTigerGraphCore
 
 logger = logging.getLogger(__name__)
 
 
-class AsyncPyTigerGraphBase(pyTigerGraphBaseBase):
+class AsyncPyTigerGraphBase(PyTigerGraphCore):
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
                  gsqlSecret: str = "", username: str = "tigergraph", password: str = "tigergraph",
                  tgCloud: bool = False, restppPort: Union[int, str] = "9000",
@@ -292,7 +292,7 @@ class AsyncPyTigerGraphBase(pyTigerGraphBaseBase):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
         response = await self._get(self.restppUrl+"/version", strictJson=False, resKey="message")
-        components = self._parseGetVersion(response, raw)
+        components = self._parse_get_version(response, raw)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(components))
@@ -320,7 +320,7 @@ class AsyncPyTigerGraphBase(pyTigerGraphBaseBase):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
         version = await self.getVersion()
-        ret = self._parseGetVer(version, component, full)
+        ret = self._parse_get_ver(version, component, full)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -328,7 +328,7 @@ class AsyncPyTigerGraphBase(pyTigerGraphBaseBase):
 
         return ret
 
-    async def _versionGreaterThan4_0(self) -> bool:
+    async def _version_greater_than_4_0(self) -> bool:
         """Gets if the TigerGraph database version is greater than 4.0 using gerVer().
 
         Returns:

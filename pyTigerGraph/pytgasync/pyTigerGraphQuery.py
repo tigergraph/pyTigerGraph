@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     import pandas as pd
 
 from pyTigerGraph.common.exception import TigerGraphException
-from pyTigerGraph.common.query import pyTigerGraphBaseQuery
+from pyTigerGraph.common.query import PyTigerGraphQueryBase
 from pyTigerGraph.pytgasync.pyTigerGraphUtils import AsyncPyTigerGraphUtils
 from pyTigerGraph.pytgasync.pyTigerGraphGSQL import AsyncPyTigerGraphGSQL
 from pyTigerGraph.pytgasync.pyTigerGraphSchema import AsyncPyTigerGraphSchema
@@ -19,7 +19,7 @@ from pyTigerGraph.pytgasync.pyTigerGraphSchema import AsyncPyTigerGraphSchema
 logger = logging.getLogger(__name__)
 
 
-class AsyncPyTigerGraphQuery(pyTigerGraphBaseQuery, AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema, AsyncPyTigerGraphGSQL):
+class AsyncPyTigerGraphQuery(PyTigerGraphQueryBase, AsyncPyTigerGraphGSQL):
     # TODO getQueries()  # List _all_ query names
     async def showQuery(self, queryName: str) -> str:
         """Returns the string of the given GSQL query.
@@ -86,7 +86,7 @@ class AsyncPyTigerGraphQuery(pyTigerGraphBaseQuery, AsyncPyTigerGraphUtils, Asyn
             logger.debug("params: " + self._locals(locals()))
 
         ret = await self.getEndpoints(dynamic=True)
-        ret = self._parseGetInstalledQueries(fmt, ret)
+        ret = self._parse_get_installed_queries(fmt, ret)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -171,8 +171,8 @@ class AsyncPyTigerGraphQuery(pyTigerGraphBaseQuery, AsyncPyTigerGraphUtils, Asyn
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        headers, res_key = self._prepRunInstalledQuery(timeout=timeout, sizeLimit=sizeLimit, runAsync=runAsync,
-                                                       replica=replica, threadLimit=threadLimit, memoryLimit=memoryLimit)
+        headers, res_key = self._prep_run_installed_query(timeout=timeout, sizeLimit=sizeLimit, runAsync=runAsync,
+                                                          replica=replica, threadLimit=threadLimit, memoryLimit=memoryLimit)
 
         if usePost:
             ret = await self._req("POST", self.restppUrl + "/query/" + self.graphname + "/" + queryName,
@@ -185,7 +185,7 @@ class AsyncPyTigerGraphQuery(pyTigerGraphBaseQuery, AsyncPyTigerGraphUtils, Asyn
             return ret
         else:
             if isinstance(params, dict):
-                params = self._parseQueryParameters(params)
+                params = self._parse_query_parameters(params)
             ret = await self._req("GET", self.restppUrl + "/query/" + self.graphname + "/" + queryName,
                                   params=params, headers=headers, resKey=res_key)
 
@@ -279,9 +279,9 @@ class AsyncPyTigerGraphQuery(pyTigerGraphBaseQuery, AsyncPyTigerGraphUtils, Asyn
         queryText = queryText.replace("$graphname", self.graphname)
         queryText = queryText.replace("@graphname@", self.graphname)
         if isinstance(params, dict):
-            params = self._parseQueryParameters(params)
+            params = self._parse_query_parameters(params)
 
-        if await self._versionGreaterThan4_0():
+        if await self._version_greater_than_4_0():
             ret = await self._req("POST", self.gsUrl + "/gsql/v1/queries/interpret",
                                   params=params, data=queryText, authMode="pwd",
                                   headers={'Content-Type': 'text/plain'})
@@ -353,7 +353,7 @@ class AsyncPyTigerGraphQuery(pyTigerGraphBaseQuery, AsyncPyTigerGraphUtils, Asyn
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        seconds, segments = self._prepGetStatistics(self, seconds, segments)
+        seconds, segments = self._prep_get_statistics(self, seconds, segments)
         ret = await self._req("GET", self.restppUrl + "/statistics/" + self.graphname + "?seconds=" +
                               str(seconds) + "&segment=" + str(segments), resKey="")
 
@@ -402,7 +402,7 @@ class AsyncPyTigerGraphQuery(pyTigerGraphBaseQuery, AsyncPyTigerGraphUtils, Asyn
             ]}
         if logger.level == logging.DEBUG:
             logger.debug("params: " + params)
-        if await self._versionGreaterThan4_0():
+        if await self._version_greater_than_4_0():
             res = await self._put(self.gsUrl+"/gsql/v1/description?graph="+self.graphname, data=params, authMode="pwd", jsonData=True)
         else:
             res = await self._put(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname, data=params, authMode="pwd", jsonData=True)
@@ -443,7 +443,7 @@ class AsyncPyTigerGraphQuery(pyTigerGraphBaseQuery, AsyncPyTigerGraphUtils, Asyn
         if isinstance(queryName, list):
             queryName = ",".join(queryName)
 
-        if await self._versionGreaterThan4_0():
+        if await self._version_greater_than_4_0():
             res = await self._get(self.gsUrl+"/gsql/v1/description?graph="+self.graphname+"&query="+queryName, authMode="pwd", resKey=None)
         else:
             res = await self._get(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname+"&query="+queryName, authMode="pwd", resKey=None)

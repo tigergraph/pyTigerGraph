@@ -8,35 +8,13 @@ import warnings
 
 from typing import Union
 
-# from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
-# from pyTigerGraph.common.base import pyTigerGraphBaseBase
-from pyTigerGraph.common.loading import pyTigerGraphBaseLoading
+from pyTigerGraph.common.loading import PyTigerGraphLoadingBase
 
 
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphLoading(pyTigerGraphBaseLoading):
-
-    def _prepRunLoadingJobWithFile(self, filePath, jobName, fileTag, sep, eol):
-        '''read file contents for runLoadingJobWithFile()'''
-        try:
-            data = open(filePath, 'rb').read()
-            params = {
-                "tag": jobName,
-                "filename": fileTag,
-            }
-            if sep is not None:
-                params["sep"] = sep
-            if eol is not None:
-                params["eol"] = eol
-            return data, params
-        except OSError as ose:
-            logger.error(ose.strerror)
-            logger.info("exit: runLoadingJobWithFile")
-
-            return None, None
-            # TODO Should throw exception instead?
+class pyTigerGraphLoading(PyTigerGraphLoadingBase):
 
     def runLoadingJobWithFile(self, filePath: str, fileTag: str, jobName: str, sep: str = None,
                               eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000) -> Union[dict, None]:
@@ -74,7 +52,7 @@ class pyTigerGraphLoading(pyTigerGraphBaseLoading):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        data, params = self._prepRunLoadingJobWithFile(
+        data, params = self._prep_run_loading_job_with_file(
             filePath, jobName, fileTag, sep, eol)
 
         if not data and not params:

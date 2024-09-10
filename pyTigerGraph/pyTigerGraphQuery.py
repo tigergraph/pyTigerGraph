@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     import pandas as pd
 
 from pyTigerGraph.common.exception import TigerGraphException
-from pyTigerGraph.common.query import pyTigerGraphBaseQuery
+from pyTigerGraph.common.query import PyTigerGraphQueryBase
 from pyTigerGraph.pyTigerGraphSchema import pyTigerGraphSchema
 from pyTigerGraph.pyTigerGraphUtils import pyTigerGraphUtils
 from pyTigerGraph.pyTigerGraphGSQL import pyTigerGraphGSQL
@@ -21,7 +21,7 @@ from pyTigerGraph.pyTigerGraphGSQL import pyTigerGraphGSQL
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphQuery(pyTigerGraphBaseQuery, pyTigerGraphUtils, pyTigerGraphSchema, pyTigerGraphGSQL):
+class pyTigerGraphQuery(PyTigerGraphQueryBase, pyTigerGraphGSQL, pyTigerGraphSchema):
     # TODO getQueries()  # List _all_ query names
     def showQuery(self, queryName: str) -> str:
         """Returns the string of the given GSQL query.
@@ -53,7 +53,7 @@ class pyTigerGraphQuery(pyTigerGraphBaseQuery, pyTigerGraphUtils, pyTigerGraphSc
         """
         if logger.level == logging.DEBUG:
             logger.debug("entry: getQueryMetadata")
-        if self._versionGreaterThan4_0():
+        if self._version_greater_than_4_0():
             params = {"graph": self.graphname, "queryName": queryName}
             res = self._post(self.gsUrl+"/gsql/v1/queries/signature",
                              params=params, authMode="pwd", resKey="")
@@ -90,7 +90,7 @@ class pyTigerGraphQuery(pyTigerGraphBaseQuery, pyTigerGraphUtils, pyTigerGraphSc
             logger.debug("params: " + self._locals(locals()))
 
         ret = self.getEndpoints(dynamic=True)
-        ret = self._parseGetInstalledQueries(fmt, ret)
+        ret = self._parse_get_installed_queries(fmt, ret)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -249,8 +249,8 @@ class pyTigerGraphQuery(pyTigerGraphBaseQuery, pyTigerGraphUtils, pyTigerGraphSc
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        headers, res_key = self._prepRunInstalledQuery(timeout=timeout, sizeLimit=sizeLimit, runAsync=runAsync,
-                                                       replica=replica, threadLimit=threadLimit, memoryLimit=memoryLimit)
+        headers, res_key = self._prep_run_installed_query(timeout=timeout, sizeLimit=sizeLimit, runAsync=runAsync,
+                                                          replica=replica, threadLimit=threadLimit, memoryLimit=memoryLimit)
         if usePost:
             ret = self._req("POST", self.restppUrl + "/query/" + self.graphname + "/" + queryName,
                             data=params, headers=headers, resKey=res_key, jsonData=True)
@@ -262,7 +262,7 @@ class pyTigerGraphQuery(pyTigerGraphBaseQuery, pyTigerGraphUtils, pyTigerGraphSc
             return ret
         else:
             if isinstance(params, dict):
-                params = self._parseQueryParameters(params)
+                params = self._parse_query_parameters(params)
             ret = self._req("GET", self.restppUrl + "/query/" + self.graphname + "/" + queryName,
                             params=params, headers=headers, resKey=res_key)
 
@@ -356,9 +356,9 @@ class pyTigerGraphQuery(pyTigerGraphBaseQuery, pyTigerGraphUtils, pyTigerGraphSc
         queryText = queryText.replace("$graphname", self.graphname)
         queryText = queryText.replace("@graphname@", self.graphname)
         if isinstance(params, dict):
-            params = self._parseQueryParameters(params)
+            params = self._parse_query_parameters(params)
 
-        if self._versionGreaterThan4_0():
+        if self._version_greater_than_4_0():
             ret = self._post(self.gsUrl + "/gsql/v1/queries/interpret",
                              params=params, data=queryText, authMode="pwd",
                              headers={'Content-Type': 'text/plain'})
@@ -606,7 +606,7 @@ class pyTigerGraphQuery(pyTigerGraphBaseQuery, pyTigerGraphUtils, pyTigerGraphSc
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        seconds, segments = self._prepGetStatistics(self, seconds, segments)
+        seconds, segments = self._prep_get_statistics(self, seconds, segments)
         ret = self._req("GET", self.restppUrl + "/statistics/" + self.graphname + "?seconds=" +
                         str(seconds) + "&segment=" + str(segments), resKey="")
 
@@ -655,7 +655,7 @@ class pyTigerGraphQuery(pyTigerGraphBaseQuery, pyTigerGraphUtils, pyTigerGraphSc
             ]}
         if logger.level == logging.DEBUG:
             logger.debug("params: " + params)
-        if self._versionGreaterThan4_0():
+        if self._version_greater_than_4_0():
             res = self._put(self.gsUrl+"/gsql/v1/description?graph=" +
                             self.graphname, data=params, authMode="pwd", jsonData=True)
         else:
@@ -698,7 +698,7 @@ class pyTigerGraphQuery(pyTigerGraphBaseQuery, pyTigerGraphUtils, pyTigerGraphSc
         if isinstance(queryName, list):
             queryName = ",".join(queryName)
 
-        if self._versionGreaterThan4_0():
+        if self._version_greater_than_4_0():
             res = self._get(self.gsUrl+"/gsql/v1/description?graph=" +
                             self.graphname+"&query="+queryName, authMode="pwd", resKey=None)
         else:
@@ -744,7 +744,7 @@ class pyTigerGraphQuery(pyTigerGraphBaseQuery, pyTigerGraphUtils, pyTigerGraphSc
         else:
             params = {"queries": [queryName]}
         print(params)
-        if self._versionGreaterThan4_0():
+        if self._version_greater_than_4_0():
             res = self._delete(self.gsUrl+"/gsql/v1/description?graph="+self.graphname,
                                authMode="pwd", data=params, jsonData=True, resKey=None)
         else:

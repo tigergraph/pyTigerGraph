@@ -9,15 +9,15 @@ import re
 
 from typing import Union
 
-# from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
-# from pyTigerGraph.common.base import pyTigerGraphBaseBase
-from pyTigerGraph.common.schema import pyTigerGraphBaseSchema
 
+# from pyTigerGraph.common.base import PyTigerGraphCore
+from pyTigerGraph.common.schema import PyTigerGraphSchemaBase
+from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphSchema(pyTigerGraphBaseSchema):
+class pyTigerGraphSchema(PyTigerGraphSchemaBase, pyTigerGraphBase):
 
     def _getUDTs(self) -> dict:
         """Retrieves all User Defined Types (UDTs) of the graph.
@@ -44,68 +44,6 @@ class pyTigerGraphSchema(pyTigerGraphBaseSchema):
 
         return res
 
-    # def _getAttrType(self, attrType: dict) -> str:
-    #     """Returns attribute data type in simple format.
-
-    #     Args:
-    #         attribute:
-    #             The details of the attribute's data type.
-
-    #     Returns:
-    #         Either "(scalar_type)" or "(complex_type, scalar_type)" string.
-    #     """
-    #     ret = attrType["Name"]
-    #     if "KeyTypeName" in attrType:
-    #         ret += "(" + attrType["KeyTypeName"] + \
-    #             "," + attrType["ValueTypeName"] + ")"
-    #     elif "ValueTypeName" in attrType:
-    #         ret += "(" + attrType["ValueTypeName"] + ")"
-
-    #     return ret
-
-    # def _upsertAttrs(self, attributes: dict) -> dict:
-    #     """Transforms attributes (provided as a table) into a hierarchy as expected by the upsert
-    #         functions.
-
-    #     Args:
-    #         attributes: A dictionary of attribute/value pairs (with an optional operator) in this
-    #             format:
-    #                 {<attribute_name>: <attribute_value>|(<attribute_name>, <operator>), …}
-
-    #     Returns:
-    #         A dictionary in this format:
-    #             {
-    #                 <attribute_name>: {"value": <attribute_value>},
-    #                 <attribute_name>: {"value": <attribute_value>, "op": <operator>}
-    #             }
-
-    #     Documentation:
-    #         xref:tigergraph-server:API:built-in-endpoints.adoc#operation-codes[Operation codes]
-    #     """
-    #     logger.info("entry: _upsertAttrs")
-    #     if logger.level == logging.DEBUG:
-    #         logger.debug("params: " + self._locals(locals()))
-
-    #     if not isinstance(attributes, dict):
-    #         return {}
-    #         # TODO Should return something else or raise exception?
-    #     vals = {}
-    #     for attr in attributes:
-    #         val = attributes[attr]
-    #         if isinstance(val, tuple):
-    #             vals[attr] = {"value": val[0], "op": val[1]}
-    #         elif isinstance(val, dict):
-    #             vals[attr] = {"value": {"keylist": list(
-    #                 val.keys()), "valuelist": list(val.values())}}
-    #         else:
-    #             vals[attr] = {"value": val}
-
-    #     if logger.level == logging.DEBUG:
-    #         logger.debug("return: " + str(vals))
-    #     logger.info("exit: _upsertAttrs")
-
-    #     return vals
-
     def getSchema(self, udts: bool = True, force: bool = False) -> dict:
         """Retrieves the schema metadata (of all vertex and edge type and, if not disabled, the
             User-Defined Type details) of the graph.
@@ -130,7 +68,7 @@ class pyTigerGraphSchema(pyTigerGraphBaseSchema):
             logger.debug("params: " + self._locals(locals()))
 
         if not self.schema or force:
-            if self._versionGreaterThan4_0():
+            if self._version_greater_than_4_0():
                 self.schema = self._get(self.gsUrl + "/gsql/v1/schema/graphs/" + self.graphname,
                                         authMode="pwd")
             else:
@@ -144,26 +82,6 @@ class pyTigerGraphSchema(pyTigerGraphBaseSchema):
         logger.info("exit: getSchema")
 
         return self.schema
-
-    # def _prepUpsertData(self, data: Union[str, object], atomic: bool = False, ackAll: bool = False,
-    #                     newVertexOnly: bool = False, vertexMustExist: bool = False,
-    #                     updateVertexOnly: bool = False):
-    #     if not isinstance(data, str):
-    #         data = json.dumps(data)
-    #     headers = {}
-    #     if atomic:
-    #         headers["gsql-atomic-level"] = "atomic"
-    #     params = {}
-    #     if ackAll:
-    #         params["ack"] = "all"
-    #     if newVertexOnly:
-    #         params["new_vertex_only"] = True
-    #     if vertexMustExist:
-    #         params["vertex_must_exist"] = True
-    #     if updateVertexOnly:
-    #         params["update_vertex_only"] = True
-
-    #     return data, headers, params
 
     def upsertData(self, data: Union[str, object], atomic: bool = False, ackAll: bool = False,
                    newVertexOnly: bool = False, vertexMustExist: bool = False,
@@ -202,8 +120,8 @@ class pyTigerGraphSchema(pyTigerGraphBaseSchema):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        data, headers, params = self._prepUpsertData(data=data, atomic=atomic, ackAll=ackAll, newVertexOnly=newVertexOnly,
-                                                     vertexMustExist=vertexMustExist, updateVertexOnly=updateVertexOnly)
+        data, headers, params = self._prep_upsert_data(data=data, atomic=atomic, ackAll=ackAll, newVertexOnly=newVertexOnly,
+                                                       vertexMustExist=vertexMustExist, updateVertexOnly=updateVertexOnly)
 
         res = self._post(self.restppUrl + "/graph/" + self.graphname, headers=headers, data=data,
                          params=params)[0]
@@ -213,18 +131,6 @@ class pyTigerGraphSchema(pyTigerGraphBaseSchema):
         logger.info("exit: getSchema")
 
         return res
-
-    # def _prepGetEndpoints(self, builtin, dynamic, static):
-    #     """Builds url starter and preps parameters of getEndpoints"""
-    #     ret = {}
-    #     if not (builtin or dynamic or static):
-    #         bui = dyn = sta = True
-    #     else:
-    #         bui = builtin
-    #         dyn = dynamic
-    #         sta = static
-    #     url = self.restppUrl + "/endpoints/" + self.graphname + "?"
-    #     return bui, dyn, sta, url, ret
 
     def getEndpoints(self, builtin: bool = False, dynamic: bool = False,
                      static: bool = False) -> dict:
@@ -248,7 +154,7 @@ class pyTigerGraphSchema(pyTigerGraphBaseSchema):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        bui, dyn, sta, url, ret = self._prepGetEndpoints(
+        bui, dyn, sta, url, ret = self._prep_get_endpoints(
             builtin=builtin, dynamic=dynamic, static=static)
         if bui:
             eps = {}

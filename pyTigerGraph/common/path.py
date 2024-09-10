@@ -9,17 +9,17 @@ import logging
 
 from typing import Union
 
-from pyTigerGraph.common.base import pyTigerGraphBaseBase
+from pyTigerGraph.common.base import PyTigerGraphCore
 
 
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphBasePath(pyTigerGraphBaseBase):
-    def _preparePathParams(self, sourceVertices: Union[dict, tuple, list],
-                           targetVertices: Union[dict, tuple, list], maxLength: int = None,
-                           vertexFilters: Union[list, dict] = None, edgeFilters: Union[list, dict] = None,
-                           allShortestPaths: bool = False) -> str:
+class PyTigerGraphPathBase(PyTigerGraphCore):
+    def _prepare_path_params(self, sourceVertices: Union[dict, tuple, list],
+                             targetVertices: Union[dict, tuple, list], maxLength: int = None,
+                             vertexFilters: Union[list, dict] = None, edgeFilters: Union[list, dict] = None,
+                             allShortestPaths: bool = False) -> str:
         """Prepares the input parameters by transforming them to the format expected by the path
          algorithms.
 
@@ -50,7 +50,7 @@ class pyTigerGraphBasePath(pyTigerGraphBaseBase):
             A string representation of the dictionary of end-point parameters.
         """
 
-        def parseVertices(vertices: Union[dict, tuple, list]) -> list:
+        def parse_vertices(vertices: Union[dict, tuple, list]) -> list:
             """Parses vertex input parameters and converts it to the format required by the path
             finding endpoints.
 
@@ -84,7 +84,7 @@ class pyTigerGraphBasePath(pyTigerGraphBaseBase):
 
             return ret
 
-        def parseFilters(filters: Union[dict, tuple, list]) -> list:
+        def parse_filters(filters: Union[dict, tuple, list]) -> list:
             """Parses filter input parameters and converts it to the format required by the path
             finding endpoints.
 
@@ -127,12 +127,12 @@ class pyTigerGraphBasePath(pyTigerGraphBaseBase):
         if not sourceVertices or not targetVertices:
             return ""
             # TODO Should allow returning error instead of handling missing parameters here?
-        data = {"sources": parseVertices(
-            sourceVertices), "targets": parseVertices(targetVertices)}
+        data = {"sources": parse_vertices(
+            sourceVertices), "targets": parse_vertices(targetVertices)}
         if vertexFilters:
-            data["vertexFilters"] = parseFilters(vertexFilters)
+            data["vertexFilters"] = parse_filters(vertexFilters)
         if edgeFilters:
-            data["edgeFilters"] = parseFilters(edgeFilters)
+            data["edgeFilters"] = parse_filters(edgeFilters)
         if maxLength:
             data["maxLength"] = maxLength
         if allShortestPaths:

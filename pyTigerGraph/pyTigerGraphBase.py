@@ -16,7 +16,7 @@ from typing import Union
 from urllib.parse import urlparse
 
 from pyTigerGraph.common.exception import TigerGraphException
-from pyTigerGraph.common.base import pyTigerGraphBaseBase
+from pyTigerGraph.common.base import PyTigerGraphCore
 
 
 def excepthook(type, value, traceback):
@@ -33,7 +33,7 @@ def excepthook(type, value, traceback):
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphBase(pyTigerGraphBaseBase, object):
+class pyTigerGraphBase(PyTigerGraphCore, object):
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
                  gsqlSecret: str = "", username: str = "tigergraph", password: str = "tigergraph",
                  tgCloud: bool = False, restppPort: Union[int, str] = "9000",

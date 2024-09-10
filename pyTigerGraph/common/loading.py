@@ -4,19 +4,16 @@ The functions on this page run loading jobs on the TigerGraph server.
 All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object].
 """
 import logging
-import warnings
 
-from typing import Union
-
-from pyTigerGraph.common.base import pyTigerGraphBaseBase
+from pyTigerGraph.common.base import PyTigerGraphCore
 
 
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphBaseLoading(pyTigerGraphBaseBase):
+class PyTigerGraphLoadingBase(PyTigerGraphCore):
 
-    def _prepRunLoadingJobWithFile(self, filePath, jobName, fileTag, sep, eol):
+    def _prep_run_loading_job_with_file(self, filePath, jobName, fileTag, sep, eol):
         '''read file contents for runLoadingJobWithFile()'''
         try:
             data = open(filePath, 'rb').read()

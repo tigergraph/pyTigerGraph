@@ -5,35 +5,19 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 """
 import json
 import logging
-import urllib
 
-from typing import Any, Union, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 from urllib.parse import urlparse
 
-# from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
-# from pyTigerGraph.common.base import pyTigerGraphBaseBase
-from pyTigerGraph.common.util import pyTigerGraphBaseUtils
+
+from pyTigerGraph.common.util import PyTigerGraphUtilsBase
 from pyTigerGraph.common.exception import TigerGraphException
+from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphUtils(pyTigerGraphBaseUtils):
-
-    # def _safeChar(self, inputString: Any) -> str:
-    #     """Replace special characters in string using the %xx escape.
-
-    #     Args:
-    #         inputString:
-    #             The string to process
-
-    #     Returns:
-    #         Processed string.
-
-    #     Documentation:
-    #         https://docs.python.org/3/library/urllib.parse.html#url-quoting
-    #     """
-    #     return urllib.parse.quote(str(inputString), safe='')
+class pyTigerGraphUtils(PyTigerGraphUtilsBase, pyTigerGraphBase):
 
     def echo(self, usePost: bool = False) -> str:
         """Pings the database.
@@ -71,21 +55,6 @@ class pyTigerGraphUtils(pyTigerGraphBaseUtils):
 
         return ret
 
-    # def _parseGetLicenseInfo(self, res):
-    #     ret = {}
-    #     if not res["error"]:
-    #         ret["message"] = res["message"]
-    #         ret["expirationDate"] = res["results"][0]["Expiration date"]
-    #         ret["daysRemaining"] = res["results"][0]["Days remaining"]
-    #     elif "code" in res and res["code"] == "REST-5000":
-    #         ret["message"] = \
-    #             "This instance does not have a valid enterprise license. Is this a trial version?"
-    #         ret["daysRemaining"] = -1
-    #     else:
-    #         raise TigerGraphException(res["message"], res["code"])
-
-    #     return ret
-
     def getLicenseInfo(self) -> dict:
         """Returns the expiration date and remaining days of the license.
 
@@ -97,7 +66,7 @@ class pyTigerGraphUtils(pyTigerGraphBaseUtils):
 
         res = self._req("GET", self.restppUrl +
                         "/showlicenseinfo", resKey="", skipCheck=True)
-        ret = self._parseGetLicenseInfo(res)
+        ret = self._parse_get_license_info(res)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -120,28 +89,6 @@ class pyTigerGraphUtils(pyTigerGraphBaseUtils):
             return res
         else:
             raise TigerGraphException(res["message"], res["code"])
-
-    # def _prepGetSystemMetrics(self, from_ts: int = None, to_ts: int = None, latest: int = None, who: str = None, where: str = None):
-    #     params = {}
-    #     _json = {}  # in >=4.1 we need a json request of different parameter names
-    #     if from_ts or to_ts:
-    #         _json["TimeRange"] = {}
-    #     if from_ts:
-    #         params["from"] = from_ts
-    #         _json['TimeRange']['StartTimestampNS'] = str(from_ts)
-    #     if to_ts:
-    #         params["to"] = to_ts
-    #         _json['TimeRange']['EndTimestampNS'] = str(from_ts)
-    #     if latest:
-    #         params["latest"] = latest
-    #         _json["LatestNum"] = str(latest)
-    #     if who:
-    #         params["who"] = who
-    #     if where:
-    #         params["where"] = where
-    #         _json["HostID"] = where
-
-    #     return params, _json
 
     def getSystemMetrics(self, from_ts: int = None, to_ts: int = None, latest: int = None, what: str = None, who: str = None, where: str = None):
         """Monitor system usage metrics.
@@ -180,12 +127,12 @@ class pyTigerGraphUtils(pyTigerGraphBaseUtils):
         if logger.level == logging.DEBUG:
             logger.debug("entry: getSystemMetrics")
 
-        params, _json = self._prepGetSystemMetrics(
+        params, _json = self._prep_get_system_metrics(
             from_ts=from_ts, to_ts=to_ts, latest=latest, who=who, where=where)
 
         # Couldn't be placed in prep since version checking requires await statements
         if what:
-            if self._versionGreaterThan4_0():
+            if self._version_greater_than_4_0():
                 if what == "servicestate" or what == "connection":
                     raise TigerGraphException(
                         "This 'what' parameter is only supported on versions of TigerGraph < 4.1.0.", 0)
@@ -193,7 +140,7 @@ class pyTigerGraphUtils(pyTigerGraphBaseUtils):
                     what = "cpu-memory"  # in >=4.1 cpu and mem have been conjoined into one category
             params["what"] = what
         # in >=4.1 the datapoints endpoint has been removed and replaced
-        if self._versionGreaterThan4_0():
+        if self._version_greater_than_4_0():
             res = self._req("POST", self.gsUrl+"/informant/metrics/get/" +
                             what, data=_json, jsonData=True, resKey="")
         else:

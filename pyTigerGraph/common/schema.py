@@ -5,20 +5,18 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 """
 import json
 import logging
-import re
 
 from typing import Union
 
-# from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
-from pyTigerGraph.common.base import pyTigerGraphBaseBase
+from pyTigerGraph.common.base import PyTigerGraphCore
 
 
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphBaseSchema(pyTigerGraphBaseBase):
+class PyTigerGraphSchemaBase(PyTigerGraphCore):
 
-    def _getAttrType(self, attrType: dict) -> str:
+    def _get_attr_type(self, attrType: dict) -> str:
         """Returns attribute data type in simple format.
 
         Args:
@@ -37,7 +35,7 @@ class pyTigerGraphBaseSchema(pyTigerGraphBaseBase):
 
         return ret
 
-    def _upsertAttrs(self, attributes: dict) -> dict:
+    def _upsert_attrs(self, attributes: dict) -> dict:
         """Transforms attributes (provided as a table) into a hierarchy as expected by the upsert
             functions.
 
@@ -80,48 +78,9 @@ class pyTigerGraphBaseSchema(pyTigerGraphBaseBase):
 
         return vals
 
-    # def getSchema(self, udts: bool = True, force: bool = False) -> dict:
-    #     """Retrieves the schema metadata (of all vertex and edge type and, if not disabled, the
-    #         User-Defined Type details) of the graph.
-
-    #     Args:
-    #         udts:
-    #             If `True`, the output includes User-Defined Types in the schema details.
-    #         force:
-    #             If `True`, retrieves the schema metadata again, otherwise returns a cached copy of
-    #             the schema metadata (if they were already fetched previously).
-
-    #     Returns:
-    #         The schema metadata.
-
-    #     Endpoint:
-    #         - `GET /gsqlserver/gsql/schema` (In TigerGraph version 3.x)
-    #             See xref:tigergraph-server:API:built-in-endpoints.adoc#_show_graph_schema_metadata[Show graph schema metadata]
-    #         - `GET /gsql/v1/schema/graphs/{graph_name}` (In TigerGraph version 4.x)
-    #     """
-    #     logger.info("entry: getSchema")
-    #     if logger.level == logging.DEBUG:
-    #         logger.debug("params: " + self._locals(locals()))
-
-    #     if not self.schema or force:
-    #         if self._versionGreaterThan4_0():
-    #             self.schema = self._get(self.gsUrl + "/gsql/v1/schema/graphs/" + self.graphname,
-    #                                     authMode="pwd")
-    #         else:
-    #             self.schema = self._get(self.gsUrl + "/gsqlserver/gsql/schema?graph=" + self.graphname,
-    #                                     authMode="pwd")
-    #     if udts and ("UDTs" not in self.schema or force):
-    #         self.schema["UDTs"] = self._getUDTs()
-
-    #     if logger.level == logging.DEBUG:
-    #         logger.debug("return: " + str(self.schema))
-    #     logger.info("exit: getSchema")
-
-    #     return self.schema
-
-    def _prepUpsertData(self, data: Union[str, object], atomic: bool = False, ackAll: bool = False,
-                        newVertexOnly: bool = False, vertexMustExist: bool = False,
-                        updateVertexOnly: bool = False):
+    def _prep_upsert_data(self, data: Union[str, object], atomic: bool = False, ackAll: bool = False,
+                          newVertexOnly: bool = False, vertexMustExist: bool = False,
+                          updateVertexOnly: bool = False):
         if not isinstance(data, str):
             data = json.dumps(data)
         headers = {}
@@ -139,56 +98,7 @@ class pyTigerGraphBaseSchema(pyTigerGraphBaseBase):
 
         return data, headers, params
 
-    # def upsertData(self, data: Union[str, object], atomic: bool = False, ackAll: bool = False,
-    #                newVertexOnly: bool = False, vertexMustExist: bool = False,
-    #                updateVertexOnly: bool = False) -> dict:
-    #     """Upserts data (vertices and edges) from a JSON file or a file with equivalent object structure.
-
-    #     Args:
-    #         data:
-    #             The data of vertex and edge instances, in a specific format.
-    #         atomic:
-    #             The request is an atomic transaction. An atomic transaction means that updates to
-    #             the database contained in the request are all-or-nothing: either all changes are
-    #             successful, or none are successful.
-    #         ackAll:
-    #             If `True`, the request will return after all GPE instances have acknowledged the
-    #             POST. Otherwise, the request will return immediately after RESTPP processes the POST.
-    #         newVertexOnly:
-    #             If `True`, the request will only insert new vertices and not update existing ones.
-    #         vertexMustExist:
-    #             If `True`, the request will only insert an edge if both the `FROM` and `TO` vertices
-    #             of the edge already exist. If the value is `False`, the request will always insert new
-    #             edges and create the necessary vertices with default values for their attributes.
-    #             Note that this parameter does not affect vertices.
-    #         updateVertexOnly:
-    #             If `True`, the request will only update existing vertices and not insert new
-    #             vertices.
-
-    #     Returns:
-    #         The result of upsert (number of vertices and edges accepted/upserted).
-
-    #     Endpoint:
-    #         - `POST /graph/{graph_name}`
-    #             See xref:tigergraph-server:API:built-in-endpoints.adoc#_upsert_data_to_graph[Upsert data to graph]
-    #     """
-    #     logger.info("entry: upsertData")
-    #     if logger.level == logging.DEBUG:
-    #         logger.debug("params: " + self._locals(locals()))
-
-    #     data, headers, params = self._prepUpsertData(data=data, atomic=atomic, ackAll=ackAll, newVertexOnly=newVertexOnly,
-    #                                                  vertexMustExist=vertexMustExist, updateVertexOnly=updateVertexOnly)
-
-    #     res = self._post(self.restppUrl + "/graph/" + self.graphname, headers=headers, data=data,
-    #                      params=params)[0]
-
-    #     if logger.level == logging.DEBUG:
-    #         logger.debug("return: " + str(res))
-    #     logger.info("exit: getSchema")
-
-    #     return res
-
-    def _prepGetEndpoints(self, builtin, dynamic, static):
+    def _prep_get_endpoints(self, builtin, dynamic, static):
         """Builds url starter and preps parameters of getEndpoints"""
         ret = {}
         if not (builtin or dynamic or static):
@@ -199,52 +109,3 @@ class pyTigerGraphBaseSchema(pyTigerGraphBaseBase):
             sta = static
         url = self.restppUrl + "/endpoints/" + self.graphname + "?"
         return bui, dyn, sta, url, ret
-
-    # def getEndpoints(self, builtin: bool = False, dynamic: bool = False,
-    #                  static: bool = False) -> dict:
-    #     """Lists the REST++ endpoints and their parameters.
-
-    #     Args:
-    #         builtin:
-    #             List the TigerGraph-provided REST++ endpoints.
-    #         dynamic:
-    #             List endpoints for user-installed queries.
-    #         static:
-    #             List static endpoints.
-
-    #     If none of the above arguments are specified, all endpoints are listed.
-
-    #     Endpoint:
-    #         - `GET /endpoints/{graph_name}`
-    #             See xref:tigergraph-server:API:built-in-endpoints.adoc#_list_all_endpoints[List all endpoints]
-    #     """
-    #     logger.info("entry: getEndpoints")
-    #     if logger.level == logging.DEBUG:
-    #         logger.debug("params: " + self._locals(locals()))
-
-    #     bui, dyn, sta, url, ret = self._prepGetEndpoints(
-    #         builtin=builtin, dynamic=dynamic, static=static)
-    #     if bui:
-    #         eps = {}
-    #         res = self._req("GET", url + "builtin=true", resKey="")
-    #         for ep in res:
-    #             if not re.search(" /graph/", ep) or re.search(" /graph/{graph_name}/", ep):
-    #                 eps[ep] = res[ep]
-    #         ret.update(eps)
-    #     if dyn:
-    #         eps = {}
-    #         res = self._req("GET", url + "dynamic=true", resKey="")
-    #         for ep in res:
-    #             if re.search("^GET /query/" + self.graphname, ep):
-    #                 eps[ep] = res[ep]
-    #         ret.update(eps)
-    #     if sta:
-    #         ret.update(self._req("GET", url + "static=true", resKey=""))
-
-    #     if logger.level == logging.DEBUG:
-    #         logger.debug("return: " + str(ret))
-    #     logger.info("exit: getEndpoints")
-
-    #     return ret
-
-    # TODO GET /rebuildnow/{graph_name}

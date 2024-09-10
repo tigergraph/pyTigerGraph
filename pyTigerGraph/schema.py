@@ -83,7 +83,7 @@ from typing import List, Dict, Union, get_origin, get_args
 from datetime import datetime
 from dataclasses import dataclass, make_dataclass, fields, _MISSING_TYPE
 
-from pyTigerGraph.pyTigerGraphException import TigerGraphException
+from pyTigerGraph.common.exception import TigerGraphException
 from pyTigerGraph.pyTigerGraph import TigerGraphConnection
 
 

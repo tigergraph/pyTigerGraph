@@ -43,7 +43,7 @@ class test_pyTigerGraphSchema(unittest.TestCase):
         ]
 
         for t in tests:
-            res = self.conn._upsertAttrs(t[0])
+            res = self.conn._upsert_attrs(t[0])
             self.assertEqual(t[1], res)
 
     def test_03_getSchema(self):
