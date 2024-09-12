@@ -1,7 +1,7 @@
 import unittest
 from multiprocessing import Pool
 
-from .pyTigerGraphUnitTestAsync import make_connection
+from pyTigerGraphUnitTestAsync import make_connection
 from pyTigerGraph.pytgasync.schema import AsyncGraph, Vertex, Edge
 from typing import List, Dict, Union
 from datetime import datetime
