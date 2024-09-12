@@ -138,7 +138,7 @@ class PyTigerGraphVertexBase(PyTigerGraphUtilsBase):
             url2 += ("&" if url2 else "?") + "timeout=" + str(timeout)
         return url1, url2, vids
 
-    def vertex_set_to_dataframe(self, vertexSet: list, withId: bool = True,
+    def vertexSetToDataFrame(self, vertexSet: list, withId: bool = True,
                                 withType: bool = False) -> 'pd.DataFrame':
         """Converts a vertex set to Pandas DataFrame.
 
