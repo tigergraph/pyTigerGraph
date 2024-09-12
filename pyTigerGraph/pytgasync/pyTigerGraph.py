@@ -22,8 +22,8 @@ if not sys.warnoptions:
 
 # TODO Proper deprecation handling; import deprecation?
 
-class AsyncTigerGraphConnection(AsyncPyTigerGraphDataset, AsyncPyTigerGraphEdge, AsyncPyTigerGraphVertex,
-                                AsyncPyTigerGraphLoading, AsyncPyTigerGraphPath, AsyncPyTigerGraphUDT, object):
+class AsyncTigerGraphConnection(AsyncPyTigerGraphVertex, AsyncPyTigerGraphEdge, AsyncPyTigerGraphUDT,
+                                AsyncPyTigerGraphLoading, AsyncPyTigerGraphPath, AsyncPyTigerGraphDataset, object):
     """Python wrapper for TigerGraph's REST++ and GSQL APIs"""
 
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
