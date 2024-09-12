@@ -243,7 +243,7 @@ class test_pyTigerGraphVertex(unittest.TestCase):
         self.assertIsInstance(res, list)
         self.assertEqual(5, len(res))
 
-        res = self.conn.vertex_set_to_dataframe(res)
+        res = self.conn.vertexSetToDataFrame(res)
         self.assertIsInstance(res, pandas.DataFrame)
         self.assertEqual(5, len(res.index))
         self.assertEqual(["v_id", "a01"], list(res.columns))
