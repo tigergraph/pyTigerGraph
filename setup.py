@@ -49,7 +49,8 @@ setup(
               'Data Science', 'Machine Learning'],
     install_requires=[
         'validators',
-        'requests'],
+        'requests',
+        'httpx'],
     classifiers=[
         # 3 - Alpha, 4 - Beta or 5 - Production/Stable
         'Development Status :: 5 - Production/Stable',
