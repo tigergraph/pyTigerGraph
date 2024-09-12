@@ -348,7 +348,7 @@ class PyTigerGraphEdgeBase(PyTigerGraphUtilsBase, PyTigerGraphSchemaBase):
             url += ("?" if isFirst else "&") + "timeout=" + str(timeout)
         return url
 
-    def edge_set_to_dataframe(self, edgeSet: list, withId: bool = True,
+    def edgeSetToDataFrame(self, edgeSet: list, withId: bool = True,
                               withType: bool = False) -> 'pd.DataFrame':
         """Converts an edge set to Pandas DataFrame
 

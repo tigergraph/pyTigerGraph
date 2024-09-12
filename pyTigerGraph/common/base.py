@@ -326,41 +326,6 @@ class PyTigerGraphCore(object):
 
         return _headers, _data, verify
 
-        if jsonData:
-            res = requests.request(
-                method, url, headers=_headers, json=_data, params=params, verify=verify)
-        else:
-            res = requests.request(
-                method, url, headers=_headers, data=_data, params=params, verify=verify)
-
-        try:
-            res.raise_for_status()
-        except Exception as e:
-            # In TG 4.x the port for restpp has changed from 9000 to 14240.
-            # This block should only be called once. When using 4.x, using port 9000 should fail so self.restppurl will change to host:14240/restpp
-            # ----
-            # Changes port to 14240, adds /restpp to end to url, tries again, saves changes if successful
-            if self.restppPort == "9000" and "9000" in url:
-                newRestppUrl = self.host + ":14240/restpp"
-                # In tgcloud /restpp can already be in the restpp url. We want to extract everything after the port or /restpp
-                if '/restpp' in url:
-                    url = newRestppUrl + '/' + \
-                        '/'.join(url.split(':')[2].split('/')[2:])
-                else:
-                    url = newRestppUrl + '/' + \
-                        '/'.join(url.split(':')[2].split('/')[1:])
-                if jsonData:
-                    res = requests.request(
-                        method, url, headers=_headers, json=_data, params=params, verify=verify)
-                else:
-                    res = requests.request(
-                        method, url, headers=_headers, data=_data, params=params, verify=verify)
-                res.raise_for_status()
-                self.restppUrl = newRestppUrl
-                self.restppPort = "14240"
-            else:
-                raise e
-
     def _parse_req(self, res, jsonResponse, strictJson, skipCheck, resKey):
         if jsonResponse:
             try:
@@ -384,217 +349,6 @@ class PyTigerGraphCore(object):
         logger.info("exit: _req (resKey)")
 
         return res[resKey]
-
-    # def _req(self, method: str, url: str, authMode: str = "token", headers: dict = None,
-    #          data: Union[dict, list, str] = None, resKey: str = "results", skipCheck: bool = False,
-    #          params: Union[dict, list, str] = None, strictJson: bool = True, jsonData: bool = False,
-    #          jsonResponse: bool = True) -> Union[dict, list]:
-    #     """Generic REST++ API request.
-
-    #     Args:
-    #         method:
-    #             HTTP method, currently one of `GET`, `POST` or `DELETE`.
-    #         url:
-    #             Complete REST++ API URL including path and parameters.
-    #         authMode:
-    #             Authentication mode, either `"token"` (default) or `"pwd"`.
-    #         headers:
-    #             Standard HTTP request headers.
-    #         data:
-    #             Request payload, typically a JSON document.
-    #         resKey:
-    #             The JSON subdocument to be returned, default is `"result"`.
-    #         skipCheck:
-    #             Some endpoints return an error to indicate that the requested
-    #             action is not applicable. This argument skips error checking.
-    #         params:
-    #             Request URL parameters.
-    #         strictJson:
-    #             If JSON should load the response in strict mode or not.
-    #         jsonData:
-    #             If data in data var is a JSON document.
-
-    #     Returns:
-    #         The (relevant part of the) response from the request (as a dictionary).
-    #     """
-    #     _headers, _data, verify = self._prepReq(
-    #         authMode, headers, url, method, data)
-
-    #     if jsonData:
-    #         res = requests.request(
-    #             method, url, headers=_headers, json=_data, params=params, verify=verify)
-    #     else:
-    #         res = requests.request(
-    #             method, url, headers=_headers, data=_data, params=params, verify=verify)
-
-    #     try:
-    #         if not skipCheck and not (200 <= res.status_code < 300):
-    #             try:
-    #                 self._errorCheck(json.loads(res.text))
-    #             except json.decoder.JSONDecodeError:
-    #                 # could not parse the res text (probably returned an html response)
-    #                 pass
-    #         res.raise_for_status()
-    #     except Exception as e:
-
-    #         # In TG 4.x the port for restpp has changed from 9000 to 14240.
-    #         # This block should only be called once. When using 4.x, using port 9000 should fail so self.restppurl will change to host:14240/restpp
-    #         # ----
-    #         # Changes port to 14240, adds /restpp to end to url, tries again, saves changes if successful
-    #         if self.restppPort == "9000" and "9000" in url:
-    #             newRestppUrl = self.host + ":14240/restpp"
-    #             # In tgcloud /restpp can already be in the restpp url. We want to extract everything after the port or /restpp
-    #             if '/restpp' in url:
-    #                 url = newRestppUrl + '/' + \
-    #                     '/'.join(url.split(':')[2].split('/')[2:])
-    #             else:
-    #                 url = newRestppUrl + '/' + \
-    #                     '/'.join(url.split(':')[2].split('/')[1:])
-    #             if jsonData:
-    #                 res = requests.request(
-    #                     method, url, headers=_headers, json=_data, params=params, verify=verify)
-    #             else:
-    #                 res = requests.request(
-    #                     method, url, headers=_headers, data=_data, params=params, verify=verify)
-
-    #             # Run error check if there might be an error before raising for status
-    #             # raising for status gives less descriptive error message
-    #             if not skipCheck and not (200 <= res.status_code < 300) and res.status_code != 404:
-    #                 try:
-    #                     self._errorCheck(json.loads(res.text))
-    #                 except json.decoder.JSONDecodeError:
-    #                     # could not parse the res text (probably returned an html response)
-    #                     pass
-    #             res.raise_for_status()
-    #             self.restppUrl = newRestppUrl
-    #             self.restppPort = "14240"
-    #         else:
-    #             raise e
-
-    #     return self._parseReq(res, jsonResponse, strictJson, skipCheck, resKey)
-
-    # def _get(self, url: str, authMode: str = "token", headers: dict = None, resKey: str = "results",
-    #          skipCheck: bool = False, params: Union[dict, list, str] = None, strictJson: bool = True) -> Union[dict, list]:
-    #     """Generic GET method.
-
-    #     Args:
-    #         url:
-    #             Complete REST++ API URL including path and parameters.
-    #         authMode:
-    #             Authentication mode, either `"token"` (default) or `"pwd"`.
-    #         headers:
-    #             Standard HTTP request headers.
-    #         resKey:
-    #             The JSON subdocument to be returned, default is `"result"`.
-    #         skipCheck:
-    #             Some endpoints return an error to indicate that the requested
-    #             action is not applicable. This argument skips error checking.
-    #         params:
-    #             Request URL parameters.
-
-    #     Returns:
-    #         The (relevant part of the) response from the request (as a dictionary).
-    #    """
-    #     logger.info("entry: _get")
-    #     if logger.level == logging.DEBUG:
-    #         logger.debug("params: " + self._locals(locals()))
-
-    #     res = self._req("GET", url, authMode, headers, None,
-    #                     resKey, skipCheck, params, strictJson)
-
-    #     if logger.level == logging.DEBUG:
-    #         logger.debug("return: " + str(res))
-    #     logger.info("exit: _get")
-
-    #     return res
-
-    # def _post(self, url: str, authMode: str = "token", headers: dict = None,
-    #           data: Union[dict, list, str, bytes] = None, resKey: str = "results", skipCheck: bool = False,
-    #           params: Union[dict, list, str] = None, jsonData: bool = False) -> Union[dict, list]:
-    #     """Generic POST method.
-
-    #     Args:
-    #         url:
-    #             Complete REST++ API URL including path and parameters.
-    #         authMode:
-    #             Authentication mode, either `"token"` (default) or `"pwd"`.
-    #         headers:
-    #             Standard HTTP request headers.
-    #         data:
-    #             Request payload, typically a JSON document.
-    #         resKey:
-    #             The JSON subdocument to be returned, default is `"result"`.
-    #         skipCheck:
-    #             Some endpoints return an error to indicate that the requested
-    #             action is not applicable. This argument skips error checking.
-    #         params:
-    #             Request URL parameters.
-
-    #     Returns:
-    #         The (relevant part of the) response from the request (as a dictionary).
-    #     """
-    #     logger.info("entry: _post")
-    #     if logger.level == logging.DEBUG:
-    #         logger.debug("params: " + self._locals(locals()))
-
-    #     res = self._req("POST", url, authMode, headers, data,
-    #                     resKey, skipCheck, params, jsonData=jsonData)
-
-    #     if logger.level == logging.DEBUG:
-    #         logger.debug("return: " + str(res))
-    #     logger.info("exit: _post")
-
-    #     return res
-
-    # def _put(self, url: str, authMode: str = "token", data=None, resKey=None, jsonData=False) -> Union[dict, list]:
-    #     """Generic PUT method.
-
-    #     Args:
-    #         url:
-    #             Complete REST++ API URL including path and parameters.
-    #         authMode:
-    #             Authentication mode, either `"token"` (default) or `"pwd"`.
-
-    #     Returns:
-    #         The response from the request (as a dictionary).
-    #     """
-    #     logger.info("entry: _put")
-    #     if logger.level == logging.DEBUG:
-    #         logger.debug("params: " + self._locals(locals()))
-
-    #     res = self._req("PUT", url, authMode, data=data,
-    #                     resKey=resKey, jsonData=jsonData)
-
-    #     if logger.level == logging.DEBUG:
-    #         logger.debug("return: " + str(res))
-    #     logger.info("exit: _put")
-
-    #     return res
-
-    # def _delete(self, url: str, authMode: str = "token", data: dict = None, resKey="results", jsonData=False) -> Union[dict, list]:
-    #     """Generic DELETE method.
-
-    #     Args:
-    #         url:
-    #             Complete REST++ API URL including path and parameters.
-    #         authMode:
-    #             Authentication mode, either `"token"` (default) or `"pwd"`.
-
-    #     Returns:
-    #         The response from the request (as a dictionary).
-    #     """
-    #     logger.info("entry: _delete")
-    #     if logger.level == logging.DEBUG:
-    #         logger.debug("params: " + self._locals(locals()))
-
-    #     res = self._req("DELETE", url, authMode, data=data,
-    #                     resKey=resKey, jsonData=jsonData)
-
-    #     if logger.level == logging.DEBUG:
-    #         logger.debug("return: " + str(res))
-    #     logger.info("exit: _delete")
-
-    #     return res
 
     def customizeHeader(self, timeout: int = 16_000, responseSize: int = 3.2e+7):
         """Method to configure the request header.
@@ -646,7 +400,7 @@ class PyTigerGraphCore(object):
             logger.debug("params: " + self._locals(locals()))
         response = self._get(self.restppUrl+"/version",
                              strictJson=False, resKey="message")
-        components = self._parseGetVersion(response, raw)
+        components = self._parse_get_version(response, raw)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(components))
@@ -689,7 +443,7 @@ class PyTigerGraphCore(object):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
         version = self.getVersion()
-        ret = self._parseGetVer(version, component, full)
+        ret = self._parse_get_ver(version, component, full)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))

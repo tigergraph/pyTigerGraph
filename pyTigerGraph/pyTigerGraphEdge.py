@@ -737,7 +737,7 @@ class pyTigerGraphEdge(PyTigerGraphEdgeBase, pyTigerGraphQuery):
         if fmt == "json":
             ret = json.dumps(ret)
         elif fmt == "df":
-            ret = self.edge_set_to_dataframe(ret, withId, withType)
+            ret = self.edgeSetToDataFrame(ret, withId, withType)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -852,7 +852,7 @@ class pyTigerGraphEdge(PyTigerGraphEdgeBase, pyTigerGraphQuery):
         if fmt == "json":
             ret = json.dumps(ret)
         elif fmt == "df":
-            ret = self.edge_set_to_dataframe(ret, withId, withType)
+            ret = self.edgeSetToDataFrame(ret, withId, withType)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
