@@ -5,7 +5,6 @@ import httpx
 from typing import Union
 from urllib.parse import urlparse
 
-# from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 from pyTigerGraph.common.base import PyTigerGraphCore
 
 logger = logging.getLogger(__name__)

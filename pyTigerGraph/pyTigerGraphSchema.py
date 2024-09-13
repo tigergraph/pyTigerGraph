@@ -9,8 +9,6 @@ import re
 
 from typing import Union
 
-
-# from pyTigerGraph.common.base import PyTigerGraphCore
 from pyTigerGraph.common.schema import PyTigerGraphSchemaBase
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 

@@ -13,7 +13,7 @@ from pyTigerGraph.common.schema import PyTigerGraphSchemaBase
 logger = logging.getLogger(__name__)
 
 
-class PyTigerGraphEdgeBase(PyTigerGraphUtilsBase, PyTigerGraphSchemaBase):
+class PyTigerGraphEdgeBase(PyTigerGraphSchemaBase):
     """
     Base edge class with shared methods for synchronous and asynchronous operations
     """

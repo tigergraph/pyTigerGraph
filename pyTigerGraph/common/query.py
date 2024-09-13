@@ -20,7 +20,7 @@ from pyTigerGraph.common.gsql import PyTigerGraphGSQLBase
 logger = logging.getLogger(__name__)
 
 
-class PyTigerGraphQueryBase(PyTigerGraphGSQLBase, PyTigerGraphUtilsBase):
+class PyTigerGraphQueryBase(PyTigerGraphGSQLBase):
     # TODO getQueries()  # List _all_ query names
     def _parse_get_installed_queries(self, fmt, ret):
         if fmt == "json":

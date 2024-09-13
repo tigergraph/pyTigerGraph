@@ -18,7 +18,7 @@ from pyTigerGraph.common.util import PyTigerGraphUtilsBase
 logger = logging.getLogger(__name__)
 
 
-class PyTigerGraphVertexBase(PyTigerGraphUtilsBase):
+class PyTigerGraphVertexBase():
     def _parse_get_vertex_count(self, res, vertexType, where):
         if where:
             if vertexType == "*":
