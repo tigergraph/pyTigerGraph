@@ -13,10 +13,12 @@ from typing import Union
 logger = logging.getLogger(__name__)
 
 
-def _prepare_path_params(self, sourceVertices: Union[dict, tuple, list],
-                            targetVertices: Union[dict, tuple, list], maxLength: int = None,
-                            vertexFilters: Union[list, dict] = None, edgeFilters: Union[list, dict] = None,
-                            allShortestPaths: bool = False) -> str:
+def _prepare_path_params(sourceVertices: Union[dict, tuple, list],
+                         targetVertices: Union[dict, tuple, list],
+                         maxLength: int = None,
+                         vertexFilters: Union[list, dict] = None,
+                         edgeFilters: Union[list, dict] = None,
+                         allShortestPaths: bool = False) -> str:
     """Prepares the input parameters by transforming them to the format expected by the path
         algorithms.
 
@@ -59,8 +61,7 @@ def _prepare_path_params(self, sourceVertices: Union[dict, tuple, list],
             A list of vertices in the format required by the path finding endpoints.
         """
         logger.info("entry: parseVertices")
-        if logger.level == logging.DEBUG:
-            logger.debug("params: " + self._locals(locals()))
+        logger.debug("params: " + str(locals))
 
         ret = []
         if not isinstance(vertices, list):
@@ -94,8 +95,7 @@ def _prepare_path_params(self, sourceVertices: Union[dict, tuple, list],
             A list of filters in the format required by the path finding endpoints.
         """
         logger.info("entry: parseFilters")
-        if logger.level == logging.DEBUG:
-            logger.debug("params: " + self._locals(locals()))
+        logger.debug("params: " + str(locals()))
 
         ret = []
         if not isinstance(filters, list):
@@ -110,15 +110,13 @@ def _prepare_path_params(self, sourceVertices: Union[dict, tuple, list],
             else:
                 logger.warning("Invalid filter type or value: " + str(f))
 
-        if logger.level == logging.DEBUG:
-            logger.debug("return: " + str(ret))
+        logger.debug("return: " + str(ret))
         logger.info("exit: parseFilters")
 
         return ret
 
     logger.info("entry: _preparePathParams")
-    if logger.level == logging.DEBUG:
-        logger.debug("params: " + self._locals(locals()))
+    logger.debug("params: " + str(locals()))
 
     # Assembling the input payload
     if not sourceVertices or not targetVertices:
@@ -137,8 +135,7 @@ def _prepare_path_params(self, sourceVertices: Union[dict, tuple, list],
 
     ret = json.dumps(data)
 
-    if logger.level == logging.DEBUG:
-        logger.debug("return: " + str(ret))
+    logger.debug("return: " + str(ret))
     logger.info("exit: _preparePathParams")
 
     return ret
