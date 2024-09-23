@@ -16,13 +16,12 @@ logger = logging.getLogger(__name__)
 
 ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
-def _prep_gsql(self, query: str, graphname: str = None, options=None):
-    logger.info("entry: gsql")
-    if logger.level == logging.DEBUG:
-        logger.debug("params: " + self._locals(locals()))
+def _prep_gsql(query: str, graphname: str = None, options=None):
+    logger.info("entry: _prep_gsql")
+    logger.debug("params: " + str(locals()))
 
     if graphname is None:
-        graphname = self.graphname
+        graphname = "GLOBAL"
     if str(graphname).upper() == "GLOBAL" or str(graphname).upper() == "":
         graphname = ""
 
@@ -30,7 +29,7 @@ def _prep_gsql(self, query: str, graphname: str = None, options=None):
     return query, graphname, options
 
 # Once again could just put resand query parameter in but this is more braindead and allows for easier pattern
-def _parse_gsql(self, res, query: str, graphname: str = None, options=None):
+def _parse_gsql(res, query: str, graphname: str = None, options=None):
     def check_error(query: str, resp: str) -> None:
         if "CREATE VERTEX" in query.upper():
             if "Failed to create vertex types" in resp:
@@ -73,7 +72,7 @@ def _parse_gsql(self, res, query: str, graphname: str = None, options=None):
 
     return string_without_ansi
 
-def _prep_get_udf(self, ExprFunctions: bool = True, ExprUtil: bool = True):
+def _prep_get_udf(ExprFunctions: bool = True, ExprUtil: bool = True):
     urls = {}  # urls when using TG 4.x
     alt_urls = {}  # urls when using TG 3.x
     if ExprFunctions:
@@ -87,7 +86,7 @@ def _prep_get_udf(self, ExprFunctions: bool = True, ExprUtil: bool = True):
 
     return urls, alt_urls
 
-def _parse_get_udf(self, responses, json_out):
+def _parse_get_udf(responses, json_out):
     rets = []
     for file_name in responses:
         resp = responses[file_name]

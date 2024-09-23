@@ -10,7 +10,12 @@ import requests
 from typing import Union, Tuple, Dict
 from urllib.parse import urlparse, quote_plus
 
-from pyTigerGraph.common.gsql import PyTigerGraphGSQLBase
+from pyTigerGraph.common.gsql import (
+    _prep_gsql,
+    _parse_gsql,
+    _prep_get_udf,
+    _parse_get_udf
+)
 from pyTigerGraph.common.exception import TigerGraphException
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
@@ -20,7 +25,7 @@ logger = logging.getLogger(__name__)
 ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 
-class pyTigerGraphGSQL(PyTigerGraphGSQLBase, pyTigerGraphBase):
+class pyTigerGraphGSQL(pyTigerGraphBase):
 
     def gsql(self, query: str, graphname: str = None, options=None) -> Union[str, dict]:
         """Runs a GSQL query and processes the output.
@@ -62,7 +67,7 @@ class pyTigerGraphGSQL(PyTigerGraphGSQLBase, pyTigerGraphBase):
                                 jsonResponse=False)
             else:
                 raise e
-        return self._parse_gsql(res, query, graphname=graphname, options=options)
+        return _parse_gsql(res, query, graphname=graphname, options=options)
 
     def installUDF(self, ExprFunctions: str = "", ExprUtil: str = "") -> None:
         """Install user defined functions (UDF) to the database.
