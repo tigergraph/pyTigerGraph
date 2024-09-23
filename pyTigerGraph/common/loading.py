@@ -8,7 +8,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def _prep_run_loading_job_with_file(self, filePath, jobName, fileTag, sep, eol):
+def _prep_run_loading_job_with_file(filePath, jobName, fileTag, sep, eol):
     '''read file contents for runLoadingJobWithFile()'''
     try:
         data = open(filePath, 'rb').read()
