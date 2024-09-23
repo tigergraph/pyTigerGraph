@@ -386,7 +386,15 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema):
             logger.debug("params: " + self._locals(locals()))
 
         url = _prep_get_vertices(
-            vertexType=vertexType, select=select, where=where, limit=limit, sort=sort, timeout=timeout)
+            restppUrl=self.restppUrl,
+            graphname=self.graphname,
+            vertexType=vertexType,
+            select=select,
+            where=where,
+            limit=limit,
+            sort=sort,
+            timeout=timeout
+        )
         ret = await self._req("GET", url)
 
         if fmt == "json":
@@ -498,7 +506,11 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema):
             logger.debug("params: " + self._locals(locals()))
 
         vids, url = _prep_get_vertices_by_id(
-            vertexIds=vertexIds, vertexType=vertexType)
+            restppUrl=self.restppUrl,
+            graphname=self.graphname,
+            vertexIds=vertexIds,
+            vertexType=vertexType
+        )
 
         ret = []
         for vid in vids:
@@ -644,8 +656,16 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        url = _prep_del_vertices(vertexType=vertexType, where=where,
-                                    limit=limit, sort=sort, permanent=permanent, timeout=timeout)
+        url = _prep_del_vertices(
+            restppUrl=self.restppUrl,
+            graphname=self.graphname,
+            vertexType=vertexType,
+            where=where,
+            limit=limit,
+            sort=sort,
+            permanent=permanent,
+            timeout=timeout
+        )
         ret = await self._req("DELETE", url)
         ret = ret["deleted_vertices"]
 
@@ -682,7 +702,13 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema):
             logger.debug("params: " + self._locals(locals()))
 
         url1, url2, vids = _prep_del_vertices_by_id(
-            vertexIds=vertexIds, vertexType=vertexType, permanent=permanent, timeout=timeout)
+            restppUrl=self.restppUrl,
+            graphname=self.graphname,
+            vertexIds=vertexIds,
+            vertexType=vertexType,
+            permanent=permanent,
+            timeout=timeout
+        )
         ret = 0
         for vid in vids:
             res = await self._req("DELETE", url1 + str(vid) + url2)
