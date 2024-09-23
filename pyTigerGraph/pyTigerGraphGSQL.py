@@ -11,7 +11,6 @@ from typing import Union, Tuple, Dict
 from urllib.parse import urlparse, quote_plus
 
 from pyTigerGraph.common.gsql import (
-    _prep_gsql,
     _parse_gsql,
     _prep_get_udf,
     _parse_get_udf
@@ -46,7 +45,6 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             - `POST /gsqlserver/gsql/file` (In TigerGraph versions 3.x)
             - `POST /gsql/v1/statements` (In TigerGraph versions 4.x)
         """
-        self._prep_gsql(query, graphname=graphname, options=options)
         # Can't use self._isVersionGreaterThan4_0 since you need a token to call /version url
         # but you need a secret to get a token and you need this function to get a secret
         try:
@@ -167,10 +165,10 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        urls, alt_urls = self._prep_get_udf(
+        urls, alt_urls = _prep_get_udf(
             ExprFunctions=ExprFunctions, ExprUtil=ExprUtil)
         if not self._version_greater_than_4_0():
-            if json_out == True:
+            if json_out:
                 raise TigerGraphException(
                     "The 'json_out' parameter is only supported in TigerGraph Versions >=4.1.")
             urls = alt_urls
@@ -181,4 +179,4 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                 "GET", f"{self.gsUrl}{urls[file_name]}", resKey="")
             responses[file_name] = resp
 
-        return self._parse_get_udf(responses, json_out=json_out)
+        return _parse_get_udf(responses, json_out=json_out)

@@ -16,18 +16,6 @@ logger = logging.getLogger(__name__)
 
 ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
-def _prep_gsql(query: str, graphname: str = None, options=None):
-    logger.info("entry: _prep_gsql")
-    logger.debug("params: " + str(locals()))
-
-    if graphname is None:
-        graphname = "GLOBAL"
-    if str(graphname).upper() == "GLOBAL" or str(graphname).upper() == "":
-        graphname = ""
-
-    # returning all parameters in case one changed (can just return graphname tho if you want but this is more braindead)
-    return query, graphname, options
-
 # Once again could just put resand query parameter in but this is more braindead and allows for easier pattern
 def _parse_gsql(res, query: str, graphname: str = None, options=None):
     def check_error(query: str, resp: str) -> None:
