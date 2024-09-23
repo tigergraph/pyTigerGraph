@@ -9,14 +9,15 @@ import logging
 
 from typing import Union
 
-# from pyTigerGraph.common.base import PyTigerGraphCore
-from pyTigerGraph.common.path import PyTigerGraphPathBase
+from pyTigerGraph.common.path import (
+    _prepare_path_params
+)
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphPath(PyTigerGraphPathBase, pyTigerGraphBase):
+class pyTigerGraphPath(pyTigerGraphBase):
 
     def shortestPath(self, sourceVertices: Union[dict, tuple, list],
                      targetVertices: Union[dict, tuple, list], maxLength: int = None,
@@ -69,7 +70,7 @@ class pyTigerGraphPath(PyTigerGraphPathBase, pyTigerGraphBase):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        data = self._prepare_path_params(sourceVertices, targetVertices, maxLength, vertexFilters,
+        data = _prepare_path_params(sourceVertices, targetVertices, maxLength, vertexFilters,
                                          edgeFilters, allShortestPaths)
         ret = self._post(self.restppUrl + "/shortestpath/" +
                          self.graphname, data=data)
@@ -125,7 +126,7 @@ class pyTigerGraphPath(PyTigerGraphPathBase, pyTigerGraphBase):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        data = self._prepare_path_params(sourceVertices, targetVertices, maxLength, vertexFilters,
+        data = _prepare_path_params(sourceVertices, targetVertices, maxLength, vertexFilters,
                                          edgeFilters)
         ret = self._post(self.restppUrl + "/allpaths/" +
                          self.graphname, data=data)

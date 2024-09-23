@@ -8,13 +8,14 @@ import warnings
 
 from typing import Union
 
-from pyTigerGraph.common.loading import PyTigerGraphLoadingBase
+from pyTigerGraph.common.loading import _prep_run_loading_job_with_file
 
+from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphLoading(PyTigerGraphLoadingBase):
+class pyTigerGraphLoading(pyTigerGraphBase):
 
     def runLoadingJobWithFile(self, filePath: str, fileTag: str, jobName: str, sep: str = None,
                               eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000) -> Union[dict, None]:
@@ -52,7 +53,7 @@ class pyTigerGraphLoading(PyTigerGraphLoadingBase):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        data, params = self._prep_run_loading_job_with_file(
+        data, params = _prep_run_loading_job_with_file(
             filePath, jobName, fileTag, sep, eol)
 
         if not data and not params:
