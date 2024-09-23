@@ -157,7 +157,12 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
             logger.debug("params: " + self._locals(locals()))
 
         bui, dyn, sta, url, ret = _prep_get_endpoints(
-            builtin=builtin, dynamic=dynamic, static=static)
+            restppUrl=self.restppUrl,
+            graphname=self.graphname,
+            builtin=builtin,
+            dynamic=dynamic,
+            static=static
+        )
         if bui:
             eps = {}
             res = await self._req("GET", url + "builtin=true", resKey="")

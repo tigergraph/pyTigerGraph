@@ -14,7 +14,7 @@ from pyTigerGraph.common.exception import TigerGraphException
 
 logger = logging.getLogger(__name__)
 
-def _safe_char(self, inputString: Any) -> str:
+def _safe_char(inputString: Any) -> str:
     """Replace special characters in string using the %xx escape.
 
     Args:
@@ -29,7 +29,7 @@ def _safe_char(self, inputString: Any) -> str:
     """
     return urllib.parse.quote(str(inputString), safe='')
 
-def _parse_get_license_info(self, res):
+def _parse_get_license_info(res):
     ret = {}
     if not res["error"]:
         ret["message"] = res["message"]
@@ -44,7 +44,11 @@ def _parse_get_license_info(self, res):
 
     return ret
 
-def _prep_get_system_metrics(self, from_ts: int = None, to_ts: int = None, latest: int = None, who: str = None, where: str = None):
+def _prep_get_system_metrics(from_ts: int = None,
+                             to_ts: int = None,
+                             latest: int = None,
+                             who: str = None,
+                             where: str = None):
     params = {}
     _json = {}  # in >=4.1 we need a json request of different parameter names
     if from_ts or to_ts:

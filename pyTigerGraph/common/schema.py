@@ -11,7 +11,7 @@ from typing import Union
 
 logger = logging.getLogger(__name__)
 
-def _get_attr_type(self, attrType: dict) -> str:
+def _get_attr_type(attrType: dict) -> str:
     """Returns attribute data type in simple format.
 
     Args:
@@ -30,7 +30,7 @@ def _get_attr_type(self, attrType: dict) -> str:
 
     return ret
 
-def _upsert_attrs(self, attributes: dict) -> dict:
+def _upsert_attrs(attributes: dict) -> dict:
     """Transforms attributes (provided as a table) into a hierarchy as expected by the upsert
         functions.
 
@@ -50,8 +50,7 @@ def _upsert_attrs(self, attributes: dict) -> dict:
         xref:tigergraph-server:API:built-in-endpoints.adoc#operation-codes[Operation codes]
     """
     logger.info("entry: _upsertAttrs")
-    if logger.level == logging.DEBUG:
-        logger.debug("params: " + self._locals(locals()))
+    logger.debug("params: " + str(locals()))
 
     if not isinstance(attributes, dict):
         return {}
@@ -73,9 +72,12 @@ def _upsert_attrs(self, attributes: dict) -> dict:
 
     return vals
 
-def _prep_upsert_data(self, data: Union[str, object], atomic: bool = False, ackAll: bool = False,
-                        newVertexOnly: bool = False, vertexMustExist: bool = False,
-                        updateVertexOnly: bool = False):
+def _prep_upsert_data(data: Union[str, object],
+                      atomic: bool = False,
+                      ackAll: bool = False,
+                      newVertexOnly: bool = False,
+                      vertexMustExist: bool = False,
+                      updateVertexOnly: bool = False):
     if not isinstance(data, str):
         data = json.dumps(data)
     headers = {}
@@ -93,7 +95,11 @@ def _prep_upsert_data(self, data: Union[str, object], atomic: bool = False, ackA
 
     return data, headers, params
 
-def _prep_get_endpoints(self, builtin, dynamic, static):
+def _prep_get_endpoints(restppUrl: str,
+                        graphname: str,
+                        builtin,
+                        dynamic,
+                        static):
     """Builds url starter and preps parameters of getEndpoints"""
     ret = {}
     if not (builtin or dynamic or static):
@@ -102,5 +108,5 @@ def _prep_get_endpoints(self, builtin, dynamic, static):
         bui = builtin
         dyn = dynamic
         sta = static
-    url = self.restppUrl + "/endpoints/" + self.graphname + "?"
+    url = restppUrl + "/endpoints/" + graphname + "?"
     return bui, dyn, sta, url, ret
