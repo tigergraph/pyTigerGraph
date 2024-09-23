@@ -6,7 +6,7 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 
 import logging
 
-from pyTigerGraph.common.dataset import PyTigerGraphDatasetBase
+from pyTigerGraph.common.dataset import _parse_ingest_dataset
 from pyTigerGraph.pytgasync.datasets import AsyncDatasets
 from pyTigerGraph.pytgasync.pyTigerGraphAuth import AsyncPyTigerGraphAuth
 
@@ -14,7 +14,7 @@ from pyTigerGraph.pytgasync.pyTigerGraphAuth import AsyncPyTigerGraphAuth
 logger = logging.getLogger(__name__)
 
 
-class AsyncPyTigerGraphDataset(PyTigerGraphDatasetBase, AsyncPyTigerGraphAuth):
+class AsyncPyTigerGraphDataset(AsyncPyTigerGraphAuth):
     async def ingestDataset(
         self,
         dataset: AsyncDatasets,
@@ -83,7 +83,7 @@ class AsyncPyTigerGraphDataset(PyTigerGraphDatasetBase, AsyncPyTigerGraphAuth):
         for resp in await dataset.run_load_job(self):
             responses.append(resp)
 
-        self._parseIngestDataset(responses, cleanup, dataset)
+        _parse_ingest_dataset(responses, cleanup, dataset)
 
         print("---- Finished ingestion ----", flush=True)
         logger.info("exit: ingestDataset")

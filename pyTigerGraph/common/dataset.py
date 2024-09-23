@@ -4,7 +4,7 @@ from pyTigerGraph.datasets import Datasets
 
 logger = logging.getLogger(__name__)
 
-def _parse_ingest_dataset(self, responses: str, cleanup: bool, dataset: Datasets):
+def _parse_ingest_dataset(responses: str, cleanup: bool, dataset: Datasets):
     for resp in responses:
         stats = resp[0]["statistics"]
         if "vertex" in stats:
