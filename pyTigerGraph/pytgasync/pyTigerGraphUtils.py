@@ -10,13 +10,16 @@ from typing import Any, Union, TYPE_CHECKING
 from urllib.parse import urlparse
 
 from pyTigerGraph.common.exception import TigerGraphException
-from pyTigerGraph.common.util import PyTigerGraphUtilsBase
+from pyTigerGraph.common.util import (
+    _parse_get_license_info,
+    _prep_get_system_metrics
+)
 from pyTigerGraph.pytgasync.pyTigerGraphBase import AsyncPyTigerGraphBase
 
 logger = logging.getLogger(__name__)
 
 
-class AsyncPyTigerGraphUtils(PyTigerGraphUtilsBase, AsyncPyTigerGraphBase):
+class AsyncPyTigerGraphUtils(AsyncPyTigerGraphBase):
 
     async def echo(self, usePost: bool = False) -> str:
         """Pings the database.
@@ -64,7 +67,7 @@ class AsyncPyTigerGraphUtils(PyTigerGraphUtilsBase, AsyncPyTigerGraphBase):
         logger.info("entry: getLicenseInfo")
 
         res = await self._req("GET", self.restppUrl + "/showlicenseinfo", resKey="", skipCheck=True)
-        ret = self._parseGetLicenseInfo(res)
+        ret = _parse_get_license_info(res)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -126,7 +129,7 @@ class AsyncPyTigerGraphUtils(PyTigerGraphUtilsBase, AsyncPyTigerGraphBase):
         if logger.level == logging.DEBUG:
             logger.debug("entry: getSystemMetrics")
 
-        params, _json = self._prepGetSystemMetrics(
+        params, _json = _prep_get_system_metrics(
             from_ts=from_ts, to_ts=to_ts, latest=latest, who=who, where=where)
 
         # Couldn't be placed in prep since version checking requires await statements

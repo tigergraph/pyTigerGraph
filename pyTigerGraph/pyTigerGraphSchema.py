@@ -9,13 +9,16 @@ import re
 
 from typing import Union
 
-from pyTigerGraph.common.schema import PyTigerGraphSchemaBase
+from pyTigerGraph.common.schema import (
+    _prep_upsert_data,
+    _prep_get_endpoints
+)
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphSchema(PyTigerGraphSchemaBase, pyTigerGraphBase):
+class pyTigerGraphSchema(pyTigerGraphBase):
 
     def _getUDTs(self) -> dict:
         """Retrieves all User Defined Types (UDTs) of the graph.
@@ -29,7 +32,7 @@ class pyTigerGraphSchema(PyTigerGraphSchemaBase, pyTigerGraphBase):
         """
         logger.info("entry: _getUDTs")
 
-        if self._versionGreaterThan4_0():
+        if self._version_greater_than_4_0():
             res = self._get(self.gsUrl + "/gsql/v1/udt/tuples?graph=" + self.graphname,
                             authMode="pwd")
         else:
@@ -118,7 +121,7 @@ class pyTigerGraphSchema(PyTigerGraphSchemaBase, pyTigerGraphBase):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        data, headers, params = self._prep_upsert_data(data=data, atomic=atomic, ackAll=ackAll, newVertexOnly=newVertexOnly,
+        data, headers, params = _prep_upsert_data(data=data, atomic=atomic, ackAll=ackAll, newVertexOnly=newVertexOnly,
                                                        vertexMustExist=vertexMustExist, updateVertexOnly=updateVertexOnly)
 
         res = self._post(self.restppUrl + "/graph/" + self.graphname, headers=headers, data=data,
@@ -152,7 +155,7 @@ class pyTigerGraphSchema(PyTigerGraphSchemaBase, pyTigerGraphBase):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        bui, dyn, sta, url, ret = self._prep_get_endpoints(
+        bui, dyn, sta, url, ret = _prep_get_endpoints(
             builtin=builtin, dynamic=dynamic, static=static)
         if bui:
             eps = {}

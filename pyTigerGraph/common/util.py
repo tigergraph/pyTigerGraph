@@ -10,62 +10,58 @@ import urllib
 from typing import Any, TYPE_CHECKING
 from urllib.parse import urlparse
 
-from pyTigerGraph.common.base import PyTigerGraphCore
 from pyTigerGraph.common.exception import TigerGraphException
 
 logger = logging.getLogger(__name__)
 
+def _safe_char(self, inputString: Any) -> str:
+    """Replace special characters in string using the %xx escape.
 
-class PyTigerGraphUtilsBase(PyTigerGraphCore):
+    Args:
+        inputString:
+            The string to process
 
-    def _safe_char(self, inputString: Any) -> str:
-        """Replace special characters in string using the %xx escape.
+    Returns:
+        Processed string.
 
-        Args:
-            inputString:
-                The string to process
+    Documentation:
+        https://docs.python.org/3/library/urllib.parse.html#url-quoting
+    """
+    return urllib.parse.quote(str(inputString), safe='')
 
-        Returns:
-            Processed string.
+def _parse_get_license_info(self, res):
+    ret = {}
+    if not res["error"]:
+        ret["message"] = res["message"]
+        ret["expirationDate"] = res["results"][0]["Expiration date"]
+        ret["daysRemaining"] = res["results"][0]["Days remaining"]
+    elif "code" in res and res["code"] == "REST-5000":
+        ret["message"] = \
+            "This instance does not have a valid enterprise license. Is this a trial version?"
+        ret["daysRemaining"] = -1
+    else:
+        raise TigerGraphException(res["message"], res["code"])
 
-        Documentation:
-            https://docs.python.org/3/library/urllib.parse.html#url-quoting
-        """
-        return urllib.parse.quote(str(inputString), safe='')
+    return ret
 
-    def _parse_get_license_info(self, res):
-        ret = {}
-        if not res["error"]:
-            ret["message"] = res["message"]
-            ret["expirationDate"] = res["results"][0]["Expiration date"]
-            ret["daysRemaining"] = res["results"][0]["Days remaining"]
-        elif "code" in res and res["code"] == "REST-5000":
-            ret["message"] = \
-                "This instance does not have a valid enterprise license. Is this a trial version?"
-            ret["daysRemaining"] = -1
-        else:
-            raise TigerGraphException(res["message"], res["code"])
+def _prep_get_system_metrics(self, from_ts: int = None, to_ts: int = None, latest: int = None, who: str = None, where: str = None):
+    params = {}
+    _json = {}  # in >=4.1 we need a json request of different parameter names
+    if from_ts or to_ts:
+        _json["TimeRange"] = {}
+    if from_ts:
+        params["from"] = from_ts
+        _json['TimeRange']['StartTimestampNS'] = str(from_ts)
+    if to_ts:
+        params["to"] = to_ts
+        _json['TimeRange']['EndTimestampNS'] = str(from_ts)
+    if latest:
+        params["latest"] = latest
+        _json["LatestNum"] = str(latest)
+    if who:
+        params["who"] = who
+    if where:
+        params["where"] = where
+        _json["HostID"] = where
 
-        return ret
-
-    def _prep_get_system_metrics(self, from_ts: int = None, to_ts: int = None, latest: int = None, who: str = None, where: str = None):
-        params = {}
-        _json = {}  # in >=4.1 we need a json request of different parameter names
-        if from_ts or to_ts:
-            _json["TimeRange"] = {}
-        if from_ts:
-            params["from"] = from_ts
-            _json['TimeRange']['StartTimestampNS'] = str(from_ts)
-        if to_ts:
-            params["to"] = to_ts
-            _json['TimeRange']['EndTimestampNS'] = str(from_ts)
-        if latest:
-            params["latest"] = latest
-            _json["LatestNum"] = str(latest)
-        if who:
-            params["who"] = who
-        if where:
-            params["where"] = where
-            _json["HostID"] = where
-
-        return params, _json
+    return params, _json

@@ -10,12 +10,15 @@ import re
 from typing import Union
 
 from pyTigerGraph.pytgasync.pyTigerGraphBase import AsyncPyTigerGraphBase
-from pyTigerGraph.common.schema import PyTigerGraphSchemaBase
+from pyTigerGraph.common.schema import (
+    _prep_upsert_data,
+    _prep_get_endpoints
+)
 
 logger = logging.getLogger(__name__)
 
 
-class AsyncPyTigerGraphSchema(PyTigerGraphSchemaBase, AsyncPyTigerGraphBase):
+class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
 
     async def _getUDTs(self) -> dict:
         """Retrieves all User Defined Types (UDTs) of the graph.
@@ -29,7 +32,7 @@ class AsyncPyTigerGraphSchema(PyTigerGraphSchemaBase, AsyncPyTigerGraphBase):
         """
         logger.info("entry: _getUDTs")
 
-        if await self._versionGreaterThan4_0():
+        if await self._version_greater_than_4_0():
             res = await self._req("GET", self.gsUrl + "/gsql/v1/udt/tuples?graph=" + self.graphname,
                                   authMode="pwd")
         else:
@@ -66,7 +69,7 @@ class AsyncPyTigerGraphSchema(PyTigerGraphSchemaBase, AsyncPyTigerGraphBase):
             logger.debug("params: " + self._locals(locals()))
 
         if not self.schema or force:
-            if await self._versionGreaterThan4_0():
+            if await self._version_greater_than_4_0():
                 self.schema = await self._req("GET", self.gsUrl + "/gsql/v1/schema/graphs/" + self.graphname,
                                               authMode="pwd")
             else:
@@ -118,7 +121,7 @@ class AsyncPyTigerGraphSchema(PyTigerGraphSchemaBase, AsyncPyTigerGraphBase):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        data, headers, params = self._prepUpsertData(data=data, atomic=atomic, ackAll=ackAll, newVertexOnly=newVertexOnly,
+        data, headers, params = _prep_upsert_data(data=data, atomic=atomic, ackAll=ackAll, newVertexOnly=newVertexOnly,
                                                      vertexMustExist=vertexMustExist, updateVertexOnly=updateVertexOnly)
 
         res = await self._req("POST", self.restppUrl + "/graph/" + self.graphname, headers=headers, data=data,
@@ -153,7 +156,7 @@ class AsyncPyTigerGraphSchema(PyTigerGraphSchemaBase, AsyncPyTigerGraphBase):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        bui, dyn, sta, url, ret = self._prepGetEndpoints(
+        bui, dyn, sta, url, ret = _prep_get_endpoints(
             builtin=builtin, dynamic=dynamic, static=static)
         if bui:
             eps = {}

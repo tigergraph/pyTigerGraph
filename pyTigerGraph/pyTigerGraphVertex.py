@@ -14,14 +14,23 @@ if TYPE_CHECKING:
     import pandas as pd
 
 from pyTigerGraph.common.exception import TigerGraphException
-from pyTigerGraph.common.vertex import PyTigerGraphVertexBase
+from pyTigerGraph.common.vertex import (
+    _parse_get_vertex_count,
+    _prep_upsert_vertex_dataframe,
+    _prep_get_vertices,
+    _prep_get_vertices_by_id,
+    _parse_get_vertex_stats,
+    _prep_del_vertices,
+    _prep_del_vertices_by_id,
+    vertexSetToDataFrame
+)
 from pyTigerGraph.pyTigerGraphSchema import pyTigerGraphSchema
 from pyTigerGraph.pyTigerGraphUtils import pyTigerGraphUtils
 
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphVertex(PyTigerGraphVertexBase, pyTigerGraphUtils, pyTigerGraphSchema):
+class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
     def getVertexTypes(self, force: bool = False) -> list:
         """Returns the list of vertex type names of the graph.
@@ -110,22 +119,6 @@ class pyTigerGraphVertex(PyTigerGraphVertexBase, pyTigerGraphUtils, pyTigerGraph
 
         return {}  # Vertex type was not found
 
-    # def _parseGetVertexCount(self, res, vertexType, where):
-    #     if where:
-    #         if vertexType == "*":
-    #             raise TigerGraphException(
-    #                 "VertexType cannot be \"*\" if where condition is specified.", None)
-    #         else:
-    #             raise TigerGraphException(
-    #                 "VertexType cannot be a list if where condition is specified.", None)
-
-    #     ret = {d["v_type"]: d["count"] for d in res}
-
-    #     if isinstance(vertexType, list):
-    #         ret = {vt: ret[vt] for vt in vertexType}
-
-    #     return ret
-
     def getVertexCount(self, vertexType: Union[str, list] = "*", where: str = "", realtime: bool = False) -> Union[int, dict]:
         """Returns the number of vertices of the specified type.
 
@@ -188,7 +181,7 @@ class pyTigerGraphVertex(PyTigerGraphVertexBase, pyTigerGraphUtils, pyTigerGraph
                         data={"function": "stat_vertex_number", "type": "*"},
                         jsonData=True)
 
-        ret = self._parse_get_vertex_count(res, vertexType, where)
+        ret = _parse_get_vertex_count(res, vertexType, where)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -327,7 +320,7 @@ class pyTigerGraphVertex(PyTigerGraphVertexBase, pyTigerGraphUtils, pyTigerGraph
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        json_up = self._prepUpsertVertexDataFrame(
+        json_up = _prep_upsert_vertex_dataframe(
             df=df, v_id=v_id, attributes=attributes)
         ret = self.upsertVertices(vertexType=vertexType, vertices=json_up)
 
@@ -386,14 +379,14 @@ class pyTigerGraphVertex(PyTigerGraphVertexBase, pyTigerGraphUtils, pyTigerGraph
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        url = self._prep_get_vertices(
+        url = _prep_get_vertices(
             vertexType=vertexType, select=select, where=where, limit=limit, sort=sort, timeout=timeout)
         ret = self._req("GET", url)
 
         if fmt == "json":
             ret = json.dumps(ret)
         elif fmt == "df":
-            ret = self.vertexSetToDataFrame(ret, withId, withType)
+            ret = vertexSetToDataFrame(ret, withId, withType)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -498,7 +491,7 @@ class pyTigerGraphVertex(PyTigerGraphVertexBase, pyTigerGraphUtils, pyTigerGraph
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        vids, url = self._prep_get_vertices_by_id(
+        vids, url = _prep_get_vertices_by_id(
             vertexIds=vertexIds, vertexType=vertexType)
 
         ret = []
@@ -508,7 +501,7 @@ class pyTigerGraphVertex(PyTigerGraphVertexBase, pyTigerGraphUtils, pyTigerGraph
         if fmt == "json":
             ret = json.dumps(ret)
         elif fmt == "df":
-            ret = self.vertexSetToDataFrame(ret, withId, withType)
+            ret = vertexSetToDataFrame(ret, withId, withType)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -595,7 +588,7 @@ class pyTigerGraphVertex(PyTigerGraphVertexBase, pyTigerGraphUtils, pyTigerGraph
                             skipCheck=True)
             responses.append((vt, res))
 
-        ret = self._parse_get_vertex_stats(responses, skipNA)
+        ret = _parse_get_vertex_stats(responses, skipNA)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -645,7 +638,7 @@ class pyTigerGraphVertex(PyTigerGraphVertexBase, pyTigerGraphUtils, pyTigerGraph
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        url = self._prep_del_vertices(vertexType=vertexType, where=where,
+        url = _prep_del_vertices(vertexType=vertexType, where=where,
                                       limit=limit, sort=sort, permanent=permanent, timeout=timeout)
         ret = self._req("DELETE", url)["deleted_vertices"]
 
@@ -681,7 +674,7 @@ class pyTigerGraphVertex(PyTigerGraphVertexBase, pyTigerGraphUtils, pyTigerGraph
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        url1, url2, vids = self._prep_del_vertices_by_id(
+        url1, url2, vids = _prep_del_vertices_by_id(
             vertexIds=vertexIds, vertexType=vertexType, permanent=permanent, timeout=timeout)
         ret = 0
         for vid in vids:

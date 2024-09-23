@@ -11,15 +11,18 @@ if TYPE_CHECKING:
     import pandas as pd
 
 from pyTigerGraph.common.exception import TigerGraphException
-from pyTigerGraph.common.query import PyTigerGraphQueryBase
-from pyTigerGraph.pytgasync.pyTigerGraphUtils import AsyncPyTigerGraphUtils
+from pyTigerGraph.common.query import (
+    _parse_get_installed_queries,
+    _parse_query_parameters,
+    _prep_run_installed_query,
+    _prep_get_statistics
+)
 from pyTigerGraph.pytgasync.pyTigerGraphGSQL import AsyncPyTigerGraphGSQL
-from pyTigerGraph.pytgasync.pyTigerGraphSchema import AsyncPyTigerGraphSchema
 
 logger = logging.getLogger(__name__)
 
 
-class AsyncPyTigerGraphQuery(PyTigerGraphQueryBase, AsyncPyTigerGraphGSQL):
+class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
     # TODO getQueries()  # List _all_ query names
     async def showQuery(self, queryName: str) -> str:
         """Returns the string of the given GSQL query.
@@ -86,7 +89,7 @@ class AsyncPyTigerGraphQuery(PyTigerGraphQueryBase, AsyncPyTigerGraphGSQL):
             logger.debug("params: " + self._locals(locals()))
 
         ret = await self.getEndpoints(dynamic=True)
-        ret = self._parse_get_installed_queries(fmt, ret)
+        ret = _parse_get_installed_queries(fmt, ret)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -171,7 +174,7 @@ class AsyncPyTigerGraphQuery(PyTigerGraphQueryBase, AsyncPyTigerGraphGSQL):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        headers, res_key = self._prep_run_installed_query(timeout=timeout, sizeLimit=sizeLimit, runAsync=runAsync,
+        headers, res_key = _prep_run_installed_query(timeout=timeout, sizeLimit=sizeLimit, runAsync=runAsync,
                                                           replica=replica, threadLimit=threadLimit, memoryLimit=memoryLimit)
 
         if usePost:
@@ -185,7 +188,7 @@ class AsyncPyTigerGraphQuery(PyTigerGraphQueryBase, AsyncPyTigerGraphGSQL):
             return ret
         else:
             if isinstance(params, dict):
-                params = self._parse_query_parameters(params)
+                params = _parse_query_parameters(params)
             ret = await self._req("GET", self.restppUrl + "/query/" + self.graphname + "/" + queryName,
                                   params=params, headers=headers, resKey=res_key)
 
@@ -279,7 +282,7 @@ class AsyncPyTigerGraphQuery(PyTigerGraphQueryBase, AsyncPyTigerGraphGSQL):
         queryText = queryText.replace("$graphname", self.graphname)
         queryText = queryText.replace("@graphname@", self.graphname)
         if isinstance(params, dict):
-            params = self._parse_query_parameters(params)
+            params = _parse_query_parameters(params)
 
         if await self._version_greater_than_4_0():
             ret = await self._req("POST", self.gsUrl + "/gsql/v1/queries/interpret",
@@ -353,7 +356,7 @@ class AsyncPyTigerGraphQuery(PyTigerGraphQueryBase, AsyncPyTigerGraphGSQL):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        seconds, segments = self._prep_get_statistics(self, seconds, segments)
+        seconds, segments = _prep_get_statistics(self, seconds, segments)
         ret = await self._req("GET", self.restppUrl + "/statistics/" + self.graphname + "?seconds=" +
                               str(seconds) + "&segment=" + str(segments), resKey="")
 

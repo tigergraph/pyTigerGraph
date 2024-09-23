@@ -13,15 +13,19 @@ if TYPE_CHECKING:
     import pandas as pd
 
 from pyTigerGraph.common.exception import TigerGraphException
-from pyTigerGraph.common.query import PyTigerGraphQueryBase
+from pyTigerGraph.common.query import (
+    _parse_get_installed_queries,
+    _parse_query_parameters,
+    _prep_run_installed_query,
+    _prep_get_statistics
+)
 from pyTigerGraph.pyTigerGraphSchema import pyTigerGraphSchema
-from pyTigerGraph.pyTigerGraphUtils import pyTigerGraphUtils
 from pyTigerGraph.pyTigerGraphGSQL import pyTigerGraphGSQL
 
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphQuery(PyTigerGraphQueryBase, pyTigerGraphGSQL, pyTigerGraphSchema):
+class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
     # TODO getQueries()  # List _all_ query names
     def showQuery(self, queryName: str) -> str:
         """Returns the string of the given GSQL query.
@@ -90,7 +94,7 @@ class pyTigerGraphQuery(PyTigerGraphQueryBase, pyTigerGraphGSQL, pyTigerGraphSch
             logger.debug("params: " + self._locals(locals()))
 
         ret = self.getEndpoints(dynamic=True)
-        ret = self._parse_get_installed_queries(fmt, ret)
+        ret = _parse_get_installed_queries(fmt, ret)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -105,80 +109,6 @@ class pyTigerGraphQuery(PyTigerGraphQueryBase, pyTigerGraphGSQL, pyTigerGraphSch
     # TODO checkQueryInstallationStatus()
     #   GET /gsql/queries/install/{request_id}
     #   xref:tigergraph-server:API:built-in-endpoints.adoc#_check_query_installation_status[Check query installation status]
-
-    # def _parseQueryParameters(self, params: dict) -> str:
-    #     """Parses a dictionary of query parameters and converts them to query strings.
-
-    #     While most of the values provided for various query parameter types can be easily converted
-    #     to query strings (key1=value1&key2=value2), `SET` and `BAG` parameter types, and especially
-    #     `VERTEX` and `SET<VERTEX>` (i.e. vertex primary ID types without vertex type specification)
-    #     require special handling.
-
-    #     See xref:tigergraph-server:API:built-in-endpoints.adoc#_query_parameter_passing[Query parameter passing]
-
-    #     TODO Accept this format for SET<VERTEX>:
-    #         "key": [([p_id1, p_id2, ...], "vtype"), ...]
-    #         I.e. multiple primary IDs of the same vertex type
-    #     """
-    #     logger.info("entry: _parseQueryParameters")
-    #     if logger.level == logging.DEBUG:
-    #         logger.debug("params: " + self._locals(locals()))
-
-    #     ret = ""
-    #     for k, v in params.items():
-    #         if isinstance(v, tuple):
-    #             if len(v) == 2 and isinstance(v[1], str):
-    #                 ret += k + "=" + str(v[0]) + "&" + k + \
-    #                     ".type=" + self._safeChar(v[1]) + "&"
-    #             else:
-    #                 raise TigerGraphException(
-    #                     "Invalid parameter value: (vertex_primary_id, vertex_type)"
-    #                     " was expected.")
-    #         elif isinstance(v, list):
-    #             i = 0
-    #             for vv in v:
-    #                 if isinstance(vv, tuple):
-    #                     if len(vv) == 2 and isinstance(vv[1], str):
-    #                         ret += k + "[" + str(i) + "]=" + self._safeChar(vv[0]) + "&" + \
-    #                             k + "[" + str(i) + "].type=" + vv[1] + "&"
-    #                     else:
-    #                         raise TigerGraphException(
-    #                             "Invalid parameter value: (vertex_primary_id , vertex_type)"
-    #                             " was expected.")
-    #                 else:
-    #                     ret += k + "=" + self._safeChar(vv) + "&"
-    #                 i += 1
-    #         elif isinstance(v, datetime):
-    #             ret += k + "=" + \
-    #                 self._safeChar(v.strftime("%Y-%m-%d %H:%M:%S")) + "&"
-    #         else:
-    #             ret += k + "=" + self._safeChar(v) + "&"
-    #     ret = ret[:-1]
-
-    #     if logger.level == logging.DEBUG:
-    #         logger.debug("return: " + str(ret))
-    #     logger.info("exit: _parseQueryParameters")
-
-    #     return ret
-
-    # def _prepRunInstalledQuery(self, timeout, sizeLimit, runAsync, replica, threadLimit, memoryLimit):
-    #     """header builder for runInstalledQuery()"""
-    #     headers = {}
-    #     res_key = "results"
-    #     if timeout and timeout > 0:
-    #         headers["GSQL-TIMEOUT"] = str(timeout)
-    #     if sizeLimit and sizeLimit > 0:
-    #         headers["RESPONSE-LIMIT"] = str(sizeLimit)
-    #     if runAsync:
-    #         headers["GSQL-ASYNC"] = "true"
-    #         res_key = "request_id"
-    #     if replica:
-    #         headers["GSQL-REPLICA"] = str(replica)
-    #     if threadLimit:
-    #         headers["GSQL-THREAD-LIMIT"] = str(threadLimit)
-    #     if memoryLimit:
-    #         headers["GSQL-QueryLocalMemLimitMB"] = str(memoryLimit)
-    #     return headers, res_key
 
     def runInstalledQuery(self, queryName: str, params: Union[str, dict] = None,
                           timeout: int = None, sizeLimit: int = None, usePost: bool = False, runAsync: bool = False,
@@ -249,7 +179,7 @@ class pyTigerGraphQuery(PyTigerGraphQueryBase, pyTigerGraphGSQL, pyTigerGraphSch
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        headers, res_key = self._prep_run_installed_query(timeout=timeout, sizeLimit=sizeLimit, runAsync=runAsync,
+        headers, res_key = _prep_run_installed_query(timeout=timeout, sizeLimit=sizeLimit, runAsync=runAsync,
                                                           replica=replica, threadLimit=threadLimit, memoryLimit=memoryLimit)
         if usePost:
             ret = self._req("POST", self.restppUrl + "/query/" + self.graphname + "/" + queryName,
@@ -262,7 +192,7 @@ class pyTigerGraphQuery(PyTigerGraphQueryBase, pyTigerGraphGSQL, pyTigerGraphSch
             return ret
         else:
             if isinstance(params, dict):
-                params = self._parse_query_parameters(params)
+                params = _parse_query_parameters(params)
             ret = self._req("GET", self.restppUrl + "/query/" + self.graphname + "/" + queryName,
                             params=params, headers=headers, resKey=res_key)
 
@@ -356,7 +286,7 @@ class pyTigerGraphQuery(PyTigerGraphQueryBase, pyTigerGraphGSQL, pyTigerGraphSch
         queryText = queryText.replace("$graphname", self.graphname)
         queryText = queryText.replace("@graphname@", self.graphname)
         if isinstance(params, dict):
-            params = self._parse_query_parameters(params)
+            params = _parse_query_parameters(params)
 
         if self._version_greater_than_4_0():
             ret = self._post(self.gsUrl + "/gsql/v1/queries/interpret",
@@ -573,18 +503,6 @@ class pyTigerGraphQuery(PyTigerGraphQueryBase, pyTigerGraphGSQL, pyTigerGraphSch
 
         return ret
 
-    # def _prepGetStatistics(self, seconds, segments):
-    #     '''parameter parsing for getStatistics()'''
-    #     if not seconds:
-    #         seconds = 10
-    #     else:
-    #         seconds = max(min(seconds, 0), 60)
-    #     if not segments:
-    #         segments = 10
-    #     else:
-    #         segments = max(min(segments, 0), 100)
-    #     return seconds, segments
-
     def getStatistics(self, seconds: int = 10, segments: int = 10) -> dict:
         """Retrieves real-time query performance statistics over the given time period.
 
@@ -606,7 +524,7 @@ class pyTigerGraphQuery(PyTigerGraphQueryBase, pyTigerGraphGSQL, pyTigerGraphSch
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        seconds, segments = self._prep_get_statistics(self, seconds, segments)
+        seconds, segments = _prep_get_statistics(self, seconds, segments)
         ret = self._req("GET", self.restppUrl + "/statistics/" + self.graphname + "?seconds=" +
                         str(seconds) + "&segment=" + str(segments), resKey="")
 
