@@ -258,6 +258,8 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                 if e.response.status_code == 404:    
                     res = self._post(self.restppUrl+"/requesttoken", authMode="pwd", data=str({"graph": self.graphname}), resKey="results")
                     mainVer = 3
+                if e.response.status_code == 400:
+                    raise TigerGraphException("Error requesting token. Check if the connection's graphname is correct.", 400)
                 else:
                     raise e
             success = True
