@@ -13,11 +13,9 @@ if TYPE_CHECKING:
     import pandas as pd
 
 from pyTigerGraph.common.exception import TigerGraphException
-# from pyTigerGraph.pyTigerGraphSchema import pyTigerGraphSchema
 from pyTigerGraph.common.util import (
     _safe_char
 )
-from pyTigerGraph.common.gsql import PyTigerGraphGSQLBase
 
 logger = logging.getLogger(__name__)
 
