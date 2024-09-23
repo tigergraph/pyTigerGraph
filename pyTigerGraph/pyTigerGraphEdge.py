@@ -12,15 +12,34 @@ from typing import TYPE_CHECKING, Union
 if TYPE_CHECKING:
     import pandas as pd
 
-from pyTigerGraph.common.edge import PyTigerGraphEdgeBase
-# from pyTigerGraph.common.base import PyTigerGraphCore
+from pyTigerGraph.common.edge import (
+    _parse_get_edge_source_vertex_type,
+    _parse_get_edge_target_vertex_type,
+    _prep_get_edge_count_from,
+    _parse_get_edge_count_from,
+    _prep_upsert_edge,
+    _dumps,
+    _prep_upsert_edges,
+    _prep_upsert_edge_dataframe,
+    _prep_get_edges,
+    _prep_get_edges_by_type,
+    _parse_get_edge_stats,
+    _prep_del_edges,
+    edgeSetToDataFrame
+)
+
+from pyTigerGraph.common.schema import (
+    _get_attr_type,
+    _upsert_attrs
+)
+
 from pyTigerGraph.pyTigerGraphQuery import pyTigerGraphQuery
 
 
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphEdge(PyTigerGraphEdgeBase, pyTigerGraphQuery):
+class pyTigerGraphEdge(pyTigerGraphQuery):
 
     ___trgvtxids = "___trgvtxids"
 
@@ -103,7 +122,7 @@ class pyTigerGraphEdge(PyTigerGraphEdgeBase, pyTigerGraphQuery):
 
         for at in et["Attributes"]:
             ret.append(
-                (at["AttributeName"], self._get_attr_type(at["AttributeType"])))
+                (at["AttributeName"], _get_attr_type(at["AttributeType"])))
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -140,7 +159,7 @@ class pyTigerGraphEdge(PyTigerGraphEdgeBase, pyTigerGraphQuery):
             logger.debug("params: " + self._locals(locals()))
 
         edgeTypeDetails = self.getEdgeType(edgeType)
-        res = self._parse_get_edge_source_vertex_type(edgeTypeDetails)
+        res = _parse_get_edge_source_vertex_type(edgeTypeDetails)
         return res
 
     def getEdgeTargetVertexType(self, edgeType: str) -> Union[str, set]:
@@ -171,7 +190,7 @@ class pyTigerGraphEdge(PyTigerGraphEdgeBase, pyTigerGraphQuery):
             logger.debug("params: " + self._locals(locals()))
 
         edgeTypeDetails = self.getEdgeType(edgeType)
-        ret = self._parse_get_edge_target_vertex_type(edgeTypeDetails)
+        ret = _parse_get_edge_target_vertex_type(edgeTypeDetails)
         return ret
 
     def isDirected(self, edgeType: str) -> bool:
@@ -274,7 +293,7 @@ class pyTigerGraphEdge(PyTigerGraphEdgeBase, pyTigerGraphQuery):
         for at in et["Attributes"]:
             if "IsDiscriminator" in at and at["IsDiscriminator"]:
                 ret.append(
-                    (at["AttributeName"], self._get_attr_type(at["AttributeType"])))
+                    (at["AttributeName"], _get_attr_type(at["AttributeType"])))
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -332,13 +351,19 @@ class pyTigerGraphEdge(PyTigerGraphEdgeBase, pyTigerGraphQuery):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        url, data = self._prep_get_edge_count_from(sourceVertexType=sourceVertexType, sourceVertexId=sourceVertexId, edgeType=edgeType,
-                                                   targetVertexType=targetVertexType, targetVertexId=targetVertexId, where=where)
+        url, data = _prep_get_edge_count_from(restppUrl=self.restppUrl,
+                                              graphname=self.graphname,
+                                              sourceVertexType=sourceVertexType,
+                                              sourceVertexId=sourceVertexId,
+                                              edgeType=edgeType,
+                                              targetVertexType=targetVertexType,
+                                              targetVertexId=targetVertexId,
+                                              where=where)
         if data:
             res = self._req("POST", url, data=data)
         else:
             res = self._req("GET", url)
-        ret = self._parse_get_edge_count_from(res, edgeType)
+        ret = _parse_get_edge_count_from(res, edgeType)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -427,13 +452,18 @@ class pyTigerGraphEdge(PyTigerGraphEdgeBase, pyTigerGraphQuery):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        data = self._prep_upsert_edge(
-            attributes, sourceVertexType, sourceVertexId, edgeType, targetVertexType, targetVertexId)
+        data = _prep_upsert_edge(sourceVertexType,
+                                 sourceVertexId,
+                                 edgeType,
+                                 targetVertexType,
+                                 targetVertexId,
+                                 attributes
+                                )
 
         ret = self._req("POST", self.restppUrl + "/graph/" + self.graphname, data=data)[0][
             "accepted_edges"]
 
-        vals = self._upsert_attrs(attributes)
+        vals = _upsert_attrs(attributes)
         data = json.dumps(
             {
                 "edges": {
@@ -504,47 +534,6 @@ class pyTigerGraphEdge(PyTigerGraphEdgeBase, pyTigerGraphQuery):
             parameters and functionality.
         """
 
-        def _dumps(data) -> str:
-            """Generates the JSON format expected by the endpoint.
-
-            The important thing this function does is converting the list of target vertex IDs and
-            the attributes belonging to the edge instances into a JSON object that can contain
-            multiple occurrences of the same key. If the these details were stored in a dictionary
-            then in case of MultiEdge only the last instance would be retained (as the key would be
-            the target vertex ID).
-
-            Args:
-                data:
-                    The Python data structure containing the edge instance details.
-
-            Returns:
-                The JSON to be sent to the endpoint.
-            """
-            ret = ""
-            if isinstance(data, dict):
-                c1 = 0
-                for k1, v1 in data.items():
-                    if c1 > 0:
-                        ret += ","
-                    if k1 == self.___trgvtxids:
-                        # Dealing with the (possibly multiple instances of) edge details
-                        # v1 should be a dict of lists
-                        c2 = 0
-                        for k2, v2 in v1.items():
-                            if c2 > 0:
-                                ret += ","
-                            c3 = 0
-                            for v3 in v2:
-                                if c3 > 0:
-                                    ret += ","
-                                ret += json.dumps(k2) + ":" + json.dumps(v3)
-                                c3 += 1
-                            c2 += 1
-                    else:
-                        ret += json.dumps(k1) + ":" + _dumps(data[k1])
-                    c1 += 1
-            return "{" + ret + "}"
-
         logger.info("entry: upsertEdges")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
@@ -558,8 +547,10 @@ class pyTigerGraphEdge(PyTigerGraphEdgeBase, pyTigerGraphQuery):
             Converting the primary IDs to string here prevents inconsistencies as Python dict would
             otherwise handle 1 and "1" as two separate keys.
         """
-        data = self._prep_upsert_edges(sourceVertexType=sourceVertexType,
-                                       edgeType=edgeType, targetVertexType=targetVertexType, edges=edges)
+        data = _prep_upsert_edges(sourceVertexType=sourceVertexType,
+                                  edgeType=edgeType,
+                                  targetVertexType=targetVertexType,
+                                  edges=edges)
         ret = self._req("POST", self.restppUrl + "/graph/" + self.graphname, data=data)[0][
             "accepted_edges"]
 
@@ -567,7 +558,7 @@ class pyTigerGraphEdge(PyTigerGraphEdgeBase, pyTigerGraphQuery):
         l1 = data[sourceVertexType]
         for e in edges:
             if len(e) > 2:
-                vals = self._upsert_attrs(e[2])
+                vals = _upsert_attrs(e[2])
             else:
                 vals = {}
             # sourceVertexId
@@ -640,8 +631,7 @@ class pyTigerGraphEdge(PyTigerGraphEdgeBase, pyTigerGraphQuery):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        json_up = self._prep_upsert_edge_dataframe(
-            df, from_id, to_id, attributes)
+        json_up = _prep_upsert_edge_dataframe(df, from_id, to_id, attributes)
         ret = self.upsertEdges(sourceVertexType, edgeType,
                                targetVertexType, json_up)
 
@@ -730,14 +720,24 @@ class pyTigerGraphEdge(PyTigerGraphEdgeBase, pyTigerGraphQuery):
 
         # TODO Change sourceVertexId to sourceVertexIds and allow passing both str and list<str> as
         #   parameter
-        url = self._prep_get_edges(sourceVertexType, sourceVertexId, edgeType,
-                                   targetVertexType, targetVertexId, select, where, limit, sort, timeout)
+        url = _prep_get_edges(self.restppUrl,
+                              self.graphname,
+                              sourceVertexType,
+                              sourceVertexId,
+                              edgeType,
+                              targetVertexType,
+                              targetVertexId,
+                              select,
+                              where,
+                              limit,
+                              sort,
+                              timeout)
         ret = self._req("GET", url)
 
         if fmt == "json":
             ret = json.dumps(ret)
         elif fmt == "df":
-            ret = self.edgeSetToDataFrame(ret, withId, withType)
+            ret = edgeSetToDataFrame(ret, withId, withType)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -844,7 +844,7 @@ class pyTigerGraphEdge(PyTigerGraphEdgeBase, pyTigerGraphQuery):
             return {}
 
         sourceVertexType = self.getEdgeSourceVertexType(edgeType)
-        queryText = self._prep_get_edges_by_type(sourceVertexType, edgeType)
+        queryText = _prep_get_edges_by_type(sourceVertexType, edgeType)
         ret = self.runInterpretedQuery(queryText)
 
         ret = ret[0]["edges"]
@@ -852,7 +852,7 @@ class pyTigerGraphEdge(PyTigerGraphEdgeBase, pyTigerGraphQuery):
         if fmt == "json":
             ret = json.dumps(ret)
         elif fmt == "df":
-            ret = self.edgeSetToDataFrame(ret, withId, withType)
+            ret = edgeSetToDataFrame(ret, withId, withType)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -903,7 +903,7 @@ class pyTigerGraphEdge(PyTigerGraphEdgeBase, pyTigerGraphQuery):
             res = self._req("POST", self.restppUrl + "/builtins/" + self.graphname, data=data, resKey="",
                             skipCheck=True)
             responses.append((et, res))
-        ret = self._parse_get_edge_stats(responses, skipNA)
+        ret = _parse_get_edge_stats(responses, skipNA)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -952,8 +952,17 @@ class pyTigerGraphEdge(PyTigerGraphEdgeBase, pyTigerGraphQuery):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        url = self._prep_del_edges(sourceVertexType, sourceVertexId, edgeType,
-                                   targetVertexType, targetVertexId, where, limit, sort, timeout)
+        url = _prep_del_edges(self.restppUrl,
+                              self.graphname,
+                              sourceVertexType,
+                              sourceVertexId,
+                              edgeType,
+                              targetVertexType,
+                              targetVertexId,
+                              where,
+                              limit,
+                              sort,
+                              timeout)
         res = self._req("DELETE", url)
         ret = {}
         for r in res:

@@ -12,13 +12,33 @@ from typing import TYPE_CHECKING, Union
 if TYPE_CHECKING:
     import pandas as pd
 
-from pyTigerGraph.common.edge import PyTigerGraphEdgeBase
+from pyTigerGraph.common.edge import (
+    _parse_get_edge_source_vertex_type,
+    _parse_get_edge_target_vertex_type,
+    _prep_get_edge_count_from,
+    _parse_get_edge_count_from,
+    _prep_upsert_edge,
+    _dumps,
+    _prep_upsert_edges,
+    _prep_upsert_edge_dataframe,
+    _prep_get_edges,
+    _prep_get_edges_by_type,
+    _parse_get_edge_stats,
+    _prep_del_edges,
+    edgeSetToDataFrame
+)
+
+from pyTigerGraph.common.schema import (
+    _get_attr_type,
+    _upsert_attrs
+)
+
 from pyTigerGraph.pytgasync.pyTigerGraphQuery import AsyncPyTigerGraphQuery
 
 logger = logging.getLogger(__name__)
 
 
-class AsyncPyTigerGraphEdge(PyTigerGraphEdgeBase, AsyncPyTigerGraphQuery):
+class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery):
 
     ___trgvtxids = "___trgvtxids"
 
@@ -103,7 +123,7 @@ class AsyncPyTigerGraphEdge(PyTigerGraphEdgeBase, AsyncPyTigerGraphQuery):
 
         for at in et["Attributes"]:
             ret.append(
-                (at["AttributeName"], self._getAttrType(at["AttributeType"])))
+                (at["AttributeName"], _get_attr_type(at["AttributeType"])))
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -139,7 +159,7 @@ class AsyncPyTigerGraphEdge(PyTigerGraphEdgeBase, AsyncPyTigerGraphQuery):
             logger.debug("params: " + self._locals(locals()))
 
         edgeTypeDetails = await self.getEdgeType(edgeType)
-        res = self._parseGetEdgeSourceVertexType(edgeTypeDetails)
+        res = _parse_get_edge_source_vertex_type(edgeTypeDetails)
         return res
 
     async def getEdgeTargetVertexType(self, edgeType: str) -> Union[str, set]:
@@ -169,7 +189,7 @@ class AsyncPyTigerGraphEdge(PyTigerGraphEdgeBase, AsyncPyTigerGraphQuery):
             logger.debug("params: " + self._locals(locals()))
 
         edgeTypeDetails = await self.getEdgeType(edgeType)
-        ret = self._parseGetEdgeTargetVertexType(edgeTypeDetails)
+        ret = _parse_get_edge_target_vertex_type(edgeTypeDetails)
         return ret
 
     async def isDirected(self, edgeType: str) -> bool:
@@ -274,7 +294,7 @@ class AsyncPyTigerGraphEdge(PyTigerGraphEdgeBase, AsyncPyTigerGraphQuery):
         for at in et["Attributes"]:
             if "IsDiscriminator" in at and at["IsDiscriminator"]:
                 ret.append(
-                    (at["AttributeName"], self._getAttrType(at["AttributeType"])))
+                    (at["AttributeName"], _get_attr_type(at["AttributeType"])))
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -330,13 +350,19 @@ class AsyncPyTigerGraphEdge(PyTigerGraphEdgeBase, AsyncPyTigerGraphQuery):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        url, data = self._prepGetEdgeCountFrom(sourceVertexType=sourceVertexType, sourceVertexId=sourceVertexId, edgeType=edgeType,
-                                               targetVertexType=targetVertexType, targetVertexId=targetVertexId, where=where)
+        url, data = _prep_get_edge_count_from(restppUrl=self.restppUrl,
+                                              graphname=self.graphname,
+                                              sourceVertexType=sourceVertexType,
+                                              sourceVertexId=sourceVertexId,
+                                              edgeType=edgeType,
+                                              targetVertexType=targetVertexType,
+                                              targetVertexId=targetVertexId,
+                                              where=where)
         if data:
             res = await self._req("POST", url, data=data)
         else:
             res = await self._req("GET", url)
-        ret = self._parseGetEdgeCountFrom(res, edgeType)
+        ret = _parse_get_edge_count_from(res, edgeType)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -424,8 +450,12 @@ class AsyncPyTigerGraphEdge(PyTigerGraphEdgeBase, AsyncPyTigerGraphQuery):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        data = self._prepUpsertEdge(
-            attributes, sourceVertexType, sourceVertexId, edgeType, targetVertexType, targetVertexId)
+        data = _prep_upsert_edge(sourceVertexType,
+                                 sourceVertexId,
+                                 edgeType,
+                                 targetVertexType,
+                                 targetVertexId,
+                                 attributes)
         ret = await self._req("POST", self.restppUrl + "/graph/" + self.graphname, data=data)
         ret = ret[0]["accepted_edges"]
 
@@ -489,8 +519,10 @@ class AsyncPyTigerGraphEdge(PyTigerGraphEdgeBase, AsyncPyTigerGraphQuery):
             otherwise handle 1 and "1" as two separate keys.
         """
 
-        data = self._prepUpsertEdges(sourceVertexType=sourceVertexType,
-                                     edgeType=edgeType, targetVertexType=targetVertexType, edges=edges)
+        data = _prep_upsert_edge(sourceVertexType=sourceVertexType,
+                                 edgeType=edgeType,
+                                 targetVertexType=targetVertexType,
+                                 edges=edges)
         ret = await self._req("POST", self.restppUrl + "/graph/" + self.graphname, data=data)
         ret = ret[0]["accepted_edges"]
 
@@ -533,7 +565,7 @@ class AsyncPyTigerGraphEdge(PyTigerGraphEdgeBase, AsyncPyTigerGraphQuery):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        json_up = self._prepUpsertEdgeDataFrame(df, from_id, to_id, attributes)
+        json_up = _prep_upsert_edge_dataframe(df, from_id, to_id, attributes)
         ret = await self.upsertEdges(sourceVertexType, edgeType, targetVertexType, json_up)
 
         if logger.level == logging.DEBUG:
@@ -597,14 +629,24 @@ class AsyncPyTigerGraphEdge(PyTigerGraphEdgeBase, AsyncPyTigerGraphQuery):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        url = self._prepGetEdges(sourceVertexType, sourceVertexId, edgeType,
-                                 targetVertexType, targetVertexId, select, where, limit, sort, timeout)
+        url = _prep_get_edges(self.restppUrl,
+                              self.graphname,
+                              sourceVertexType,
+                              sourceVertexId,
+                              edgeType,
+                              targetVertexType,
+                              targetVertexId,
+                              select,
+                              where,
+                              limit,
+                              sort,
+                              timeout)
         ret = await self._req("GET", url)
 
         if fmt == "json":
             ret = json.dumps(ret)
         elif fmt == "df":
-            ret = self.edgeSetToDataFrame(ret, withId, withType)
+            ret = edgeSetToDataFrame(ret, withId, withType)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -711,7 +753,7 @@ class AsyncPyTigerGraphEdge(PyTigerGraphEdgeBase, AsyncPyTigerGraphQuery):
             return {}
 
         sourceVertexType = await self.getEdgeSourceVertexType(edgeType)
-        queryText = self._prepGetEdgesByType(sourceVertexType, edgeType)
+        queryText = _prep_get_edges_by_type(sourceVertexType, edgeType)
         ret = await self.runInterpretedQuery(queryText)
 
         ret = ret[0]["edges"]
@@ -719,7 +761,7 @@ class AsyncPyTigerGraphEdge(PyTigerGraphEdgeBase, AsyncPyTigerGraphQuery):
         if fmt == "json":
             ret = json.dumps(ret)
         elif fmt == "df":
-            ret = self.edgeSetToDataFrame(ret, withId, withType)
+            ret = edgeSetToDataFrame(ret, withId, withType)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -770,7 +812,7 @@ class AsyncPyTigerGraphEdge(PyTigerGraphEdgeBase, AsyncPyTigerGraphQuery):
             res = await self._req("POST", self.restppUrl + "/builtins/" + self.graphname, data=data, resKey="",
                                   skipCheck=True)
             responses.append((et, res))
-        ret = self._parseGetEdgeStats(responses, skipNA)
+        ret = _parse_get_edge_stats(responses, skipNA)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -819,8 +861,17 @@ class AsyncPyTigerGraphEdge(PyTigerGraphEdgeBase, AsyncPyTigerGraphQuery):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        url = self._prepDelEdges(sourceVertexType, sourceVertexId, edgeType,
-                                 targetVertexType, targetVertexId, where, limit, sort, timeout)
+        url = _prep_del_edges(self.restppUrl,
+                              self.graphname,
+                              sourceVertexType,
+                              sourceVertexId,
+                              edgeType,
+                              targetVertexType,
+                              targetVertexId,
+                              where,
+                              limit,
+                              sort,
+                              timeout)
         res = await self._req("DELETE", url)
         ret = {}
         for r in res:

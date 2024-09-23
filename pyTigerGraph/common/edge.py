@@ -7,14 +7,18 @@ if TYPE_CHECKING:
     import pandas as pd
 
 from pyTigerGraph.common.exception import TigerGraphException
-from pyTigerGraph.common.util import PyTigerGraphUtilsBase
-from pyTigerGraph.common.schema import PyTigerGraphSchemaBase
+from pyTigerGraph.common.util import (
+    _safe_char
+)
+from pyTigerGraph.common.schema import (
+    _upsert_attrs
+)
 
 logger = logging.getLogger(__name__)
 
 ___trgvtxids = "___trgvtxids"
 
-def _parse_get_edge_source_vertex_type(self, edgeTypeDetails):
+def _parse_get_edge_source_vertex_type(edgeTypeDetails):
     # Edge type with a single source vertex type
     if edgeTypeDetails["FromVertexTypeName"] != "*":
         ret = edgeTypeDetails["FromVertexTypeName"]
@@ -46,7 +50,7 @@ def _parse_get_edge_source_vertex_type(self, edgeTypeDetails):
 
         return "*"
 
-def _parse_get_edge_target_vertex_type(self, edgeTypeDetails):
+def _parse_get_edge_target_vertex_type(edgeTypeDetails):
     # Edge type with a single target vertex type
     if edgeTypeDetails["ToVertexTypeName"] != "*":
         ret = edgeTypeDetails["ToVertexTypeName"]
@@ -78,9 +82,14 @@ def _parse_get_edge_target_vertex_type(self, edgeTypeDetails):
 
         return "*"
 
-def _prep_get_edge_count_from(self, sourceVertexType: str = "", sourceVertexId: Union[str, int] = None,
-                                edgeType: str = "", targetVertexType: str = "", targetVertexId: Union[str, int] = None,
-                                where: str = ""):
+def _prep_get_edge_count_from(restppUrl: str,
+                              graphname: str,
+                              sourceVertexType: str = "",
+                              sourceVertexId: Union[str, int] = None,
+                              edgeType: str = "",
+                              targetVertexType: str = "",
+                              targetVertexId: Union[str, int] = None,
+                              where: str = ""):
     data = None
     # If WHERE condition is not specified, use /builtins else user /vertices
     if where or (sourceVertexType and sourceVertexId):
@@ -88,18 +97,18 @@ def _prep_get_edge_count_from(self, sourceVertexType: str = "", sourceVertexId: 
             raise TigerGraphException(
                 "If where condition is specified, then both sourceVertexType and sourceVertexId"
                 " must be provided too.", None)
-        url = self.restppUrl + "/graph/" + self._safe_char(self.graphname) + "/edges/" + \
-            self._safe_char(sourceVertexType) + "/" + \
-            self._safe_char(sourceVertexId)
+        url = restppUrl + "/graph/" + _safe_char(graphname) + "/edges/" + \
+            _safe_char(sourceVertexType) + "/" + \
+            _safe_char(sourceVertexId)
         if edgeType:
-            url += "/" + self._safe_char(edgeType)
+            url += "/" + _safe_char(edgeType)
             if targetVertexType:
-                url += "/" + self._safe_char(targetVertexType)
+                url += "/" + _safe_char(targetVertexType)
                 if targetVertexId:
-                    url += "/" + self._safe_char(targetVertexId)
+                    url += "/" + _safe_char(targetVertexId)
         url += "?count_only=true"
         if where:
-            url += "&filter=" + self._safe_char(where)
+            url += "&filter=" + _safe_char(where)
     else:
         if not edgeType:  # TODO Is this a valid check?
             raise TigerGraphException(
@@ -108,10 +117,10 @@ def _prep_get_edge_count_from(self, sourceVertexType: str = "", sourceVertexId: 
                 + (',"from_type":"' + sourceVertexType + '"' if sourceVertexType else '') \
                 + (',"to_type":"' + targetVertexType + '"' if targetVertexType else '') \
                 + '}'
-        url = self.restppUrl + "/builtins/" + self.graphname
+        url = restppUrl + "/builtins/" + graphname
     return url, data
 
-def _parse_get_edge_count_from(self, res, edgeType):
+def _parse_get_edge_count_from(res, edgeType):
     if len(res) == 1 and res[0]["e_type"] == edgeType:
         ret = res[0]["count"]
 
@@ -126,12 +135,17 @@ def _parse_get_edge_count_from(self, res, edgeType):
         ret[r["e_type"]] = r["count"]
     return ret
 
-def _prep_upsert_edge(self, sourceVertexType: str, sourceVertexId: str, edgeType: str, targetVertexType: str, targetVertexId: str, attributes: dict = None):
+def _prep_upsert_edge(sourceVertexType: str,
+                      sourceVertexId: str,
+                      edgeType: str,
+                      targetVertexType: str,
+                      targetVertexId: str,
+                      attributes: dict = None):
     '''defining edge schema structure for upsertEdge()'''
-    if attributes is None:
+    if not(attributes):
         attributes = {}
 
-    vals = self._upsert_attrs(attributes)
+    vals = _upsert_attrs(attributes)
     data = json.dumps({
         "edges": {
             sourceVertexType: {
@@ -147,7 +161,7 @@ def _prep_upsert_edge(self, sourceVertexType: str, sourceVertexId: str, edgeType
     })
     return data
 
-def _dumps(self, data) -> str:
+def _dumps(data) -> str:
     """Generates the JSON format expected by the endpoint (Used in upsertEdges()).
 
     The important thing this function does is converting the list of target vertex IDs and
@@ -169,7 +183,7 @@ def _dumps(self, data) -> str:
         for k1, v1 in data.items():
             if c1 > 0:
                 ret += ","
-            if k1 == self.___trgvtxids:
+            if k1 == ___trgvtxids:
                 # Dealing with the (possibly multiple instances of) edge details
                 # v1 should be a dict of lists
                 c2 = 0
@@ -184,17 +198,20 @@ def _dumps(self, data) -> str:
                         c3 += 1
                     c2 += 1
             else:
-                ret += json.dumps(k1) + ':' + self._dumps(data[k1])
+                ret += json.dumps(k1) + ':' + _dumps(data[k1])
             c1 += 1
     return "{" + ret + "}"
 
-def _prep_upsert_edges(self, sourceVertexType, edgeType, targetVertexType, edges):
+def _prep_upsert_edges(sourceVertexType,
+                       edgeType,
+                       targetVertexType,
+                       edges):
     '''converting vertex parameters into edge structure'''
     data = {sourceVertexType: {}}
     l1 = data[sourceVertexType]
     for e in edges:
         if len(e) > 2:
-            vals = self._upsert_attrs(e[2])
+            vals = _upsert_attrs(e[2])
         else:
             vals = {}
         # sourceVertexId
@@ -211,9 +228,9 @@ def _prep_upsert_edges(self, sourceVertexType, edgeType, targetVertexType, edges
         if targetVertexType not in l3:
             l3[targetVertexType] = {}
         l4 = l3[targetVertexType]
-        if self.___trgvtxids not in l4:
-            l4[self.___trgvtxids] = {}
-        l4 = l4[self.___trgvtxids]
+        if ___trgvtxids not in l4:
+            l4[___trgvtxids] = {}
+        l4 = l4[___trgvtxids]
         # targetVertexId
         # Converted to string as the key in the JSON payload must be a string
         targetVertexId = str(e[1])
@@ -221,10 +238,10 @@ def _prep_upsert_edges(self, sourceVertexType, edgeType, targetVertexType, edges
             l4[targetVertexId] = []
         l4[targetVertexId].append(vals)
 
-    data = self._dumps({"edges": data})
+    data = _dumps({"edges": data})
     return data
 
-def _prep_upsert_edge_dataframe(self, df, from_id, to_id, attributes):
+def _prep_upsert_edge_dataframe(df, from_id, to_id, attributes):
     '''converting dataframe into an upsertable object structure'''
     json_up = []
 
@@ -238,16 +255,25 @@ def _prep_upsert_edge_dataframe(self, df, from_id, to_id, attributes):
         )
     return json_up
 
-def _prep_get_edges(self, sourceVertexType: str, sourceVertexId: str, edgeType: str = "",
-                    targetVertexType: str = "", targetVertexId: str = "", select: str = "", where: str = "",
-                    limit: Union[int, str] = None, sort: str = "", timeout: int = 0):
+def _prep_get_edges(restppUrl: str,
+                    graphname: str,
+                    sourceVertexType: str,
+                    sourceVertexId: str,
+                    edgeType: str = "",
+                    targetVertexType: str = "",
+                    targetVertexId: str = "",
+                    select: str = "",
+                    where: str = "",
+                    limit: Union[int, str] = None,
+                    sort: str = "",
+                    timeout: int = 0):
     '''url builder for getEdges()'''
     # TODO Change sourceVertexId to sourceVertexIds and allow passing both str and list<str> as
     #   parameter
     if not sourceVertexType or not sourceVertexId:
         raise TigerGraphException(
             "Both source vertex type and source vertex ID must be provided.", None)
-    url = self.restppUrl + "/graph/" + self.graphname + "/edges/" + sourceVertexType + "/" + \
+    url = restppUrl + "/graph/" + graphname + "/edges/" + sourceVertexType + "/" + \
         str(sourceVertexId)
     if edgeType:
         url += "/" + edgeType
@@ -272,7 +298,9 @@ def _prep_get_edges(self, sourceVertexType: str, sourceVertexId: str, edgeType: 
         url += ("?" if isFirst else "&") + "timeout=" + str(timeout)
     return url
 
-def _prep_get_edges_by_type(self, sourceVertexType, edgeType):
+def _prep_get_edges_by_type(graphname,
+                            sourceVertexType,
+                            edgeType):
     '''build the query to select edges for getEdgesByType()'''
     # TODO Support edges with multiple source vertex types
     if isinstance(sourceVertexType, set) or sourceVertexType == "*":
@@ -292,12 +320,12 @@ def _prep_get_edges_by_type(self, sourceVertexType, edgeType):
         PRINT @@edges AS edges; \
     }'
 
-    queryText = queryText.replace("$graph", self.graphname) \
+    queryText = queryText.replace("$graph", graphname) \
         .replace('$sourceEdgeType', sourceVertexType) \
         .replace('$edgeType', edgeType)
     return queryText
 
-def _parse_get_edge_stats(self, responses, skipNA):
+def _parse_get_edge_stats(responses, skipNA):
     '''error checking and parsing responses for getEdgeStats()'''
     ret = {}
     for et, res in responses:
@@ -315,13 +343,23 @@ def _parse_get_edge_stats(self, responses, skipNA):
                 ret[r["e_type"]] = r["attributes"]
     return ret
 
-def _prep_del_edges(self, sourceVertexType, sourceVertexId, edgeType, targetVertexType, targetVertexId, where, limit, sort, timeout):
+def _prep_del_edges(restppUrl: str,
+                    graphname: str,
+                    sourceVertexType,
+                    sourceVertexId,
+                    edgeType,
+                    targetVertexType,
+                    targetVertexId,
+                    where,
+                    limit,
+                    sort,
+                    timeout):
     '''url building for delEdges()'''
     if not sourceVertexType or not sourceVertexId:
         raise TigerGraphException("Both sourceVertexType and sourceVertexId must be provided.",
                                     None)
 
-    url = self.restppUrl + "/graph/" + self.graphname + "/edges/" + sourceVertexType + "/" + str(
+    url = restppUrl + "/graph/" + graphname + "/edges/" + sourceVertexType + "/" + str(
         sourceVertexId)
 
     if edgeType:
@@ -343,8 +381,9 @@ def _prep_del_edges(self, sourceVertexType, sourceVertexId, edgeType, targetVert
         url += ("?" if isFirst else "&") + "timeout=" + str(timeout)
     return url
 
-def edgeSetToDataFrame(self, edgeSet: list, withId: bool = True,
-                            withType: bool = False) -> 'pd.DataFrame':
+def edgeSetToDataFrame(edgeSet: list,
+                       withId: bool = True,
+                       withType: bool = False) -> 'pd.DataFrame':
     """Converts an edge set to Pandas DataFrame
 
     Edge sets contain instances of the same edge type. Edge sets are not generated "naturally"
@@ -409,8 +448,7 @@ def edgeSetToDataFrame(self, edgeSet: list, withId: bool = True,
 
     """
     logger.info("entry: edgeSetToDataFrame")
-    if logger.level == logging.DEBUG:
-        logger.debug("params: " + self._locals(locals()))
+    logger.debug("params: " + str(locals()))
 
     try:
         import pandas as pd
