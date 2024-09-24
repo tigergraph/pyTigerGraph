@@ -336,7 +336,7 @@ class PyTigerGraphCore(object):
             res = res.text
 
         if not skipCheck:
-            self._errorCheck(res)
+            self._error_check(res)
         if not resKey:
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(res))

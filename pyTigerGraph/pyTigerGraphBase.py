@@ -242,7 +242,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         Returns:
             The (relevant part of the) response from the request (as a dictionary).
         """
-        _headers, _data, verify = self._prepReq(
+        _headers, _data, verify = self._prep_req(
             authMode, headers, url, method, data)
 
         if jsonData:
@@ -255,7 +255,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         try:
             if not skipCheck and not (200 <= res.status_code < 300):
                 try:
-                    self._errorCheck(json.loads(res.text))
+                    self._error_check(json.loads(res.text))
                 except json.decoder.JSONDecodeError:
                     # could not parse the res text (probably returned an html response)
                     pass
@@ -286,7 +286,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
                 # raising for status gives less descriptive error message
                 if not skipCheck and not (200 <= res.status_code < 300) and res.status_code != 404:
                     try:
-                        self._errorCheck(json.loads(res.text))
+                        self._error_check(json.loads(res.text))
                     except json.decoder.JSONDecodeError:
                         # could not parse the res text (probably returned an html response)
                         pass
@@ -296,7 +296,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
             else:
                 raise e
 
-        return self._parseReq(res, jsonResponse, strictJson, skipCheck, resKey)
+        return self._parse_req(res, jsonResponse, strictJson, skipCheck, resKey)
 
     def _get(self, url: str, authMode: str = "token", headers: dict = None, resKey: str = "results",
              skipCheck: bool = False, params: Union[dict, list, str] = None, strictJson: bool = True) -> Union[dict, list]:

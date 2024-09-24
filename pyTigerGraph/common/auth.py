@@ -4,12 +4,11 @@ import logging
 from datetime import datetime
 from typing import Union, Tuple, Dict
 
-from pyTigerGraph.common.base import PyTigerGraphCore
 from pyTigerGraph.common.exception import TigerGraphException
 
 logger = logging.getLogger(__name__)
 
-def _parse_get_secrets(self, response: str) -> Dict[str, str]:
+def _parse_get_secrets(response: str) -> Dict[str, str]:
     secrets_dict = {}
     lines = response.split("\n")
 
@@ -26,7 +25,7 @@ def _parse_get_secrets(self, response: str) -> Dict[str, str]:
         i += 1
     return secrets_dict
 
-def _parse_create_secret(self, response: str, alias: str = "", withAlias: bool = False) -> Union[str, Dict[str, str]]:
+def _parse_create_secret(response: str, alias: str = "", withAlias: bool = False) -> Union[str, Dict[str, str]]:
     try:
         if "already exists" in response:
             error_msg = "The secret "
@@ -60,14 +59,21 @@ def _parse_create_secret(self, response: str, alias: str = "", withAlias: bool =
         raise TigerGraphException(
             "Failed to parse secret from response.", "E-00002") from e
 
-def _prep_token_request(self, secret: str = None, lifetime: int = None, token: str = None, method: str = None):
+def _prep_token_request(restppUrl: str,
+                        gsUrl: str,
+                        graphname: str,
+                        version: str = None,
+                        secret: str = None,
+                        lifetime: int = None,
+                        token: str = None,
+                        method: str = None):
     major_ver, minor_ver, patch_ver = (0, 0, 0)
-    if self.version:
-        major_ver, minor_ver, patch_ver = self.version.split(".")
+    if version:
+        major_ver, minor_ver, patch_ver = version.split(".")
 
     if 0 < int(major_ver) < 3 or (int(major_ver) == 3 and int(minor_ver) < 5):
         method = "GET"
-        url = self.restppUrl + "/requesttoken?secret=" + secret + \
+        url = restppUrl + "/requesttoken?secret=" + secret + \
             ("&lifetime=" + str(lifetime) if lifetime else "") + \
             ("&token=" + token if token else "")
         authMode = None
@@ -76,11 +82,11 @@ def _prep_token_request(self, secret: str = None, lifetime: int = None, token: s
                 "Cannot request a token with username/password for versions < 3.5.")
     else:
         method = "POST"
-        url = self.gsUrl + "/gsql/v1/tokens"  # used for TG 4.x
-        data = {"graph": self.graphname}
+        url = gsUrl + "/gsql/v1/tokens"  # used for TG 4.x
+        data = {"graph": graphname}
 
         # alt_url and alt_data used to construct the method and url for functions run in TG version 3.x
-        alt_url = self.restppUrl+"/requesttoken"  # used for TG 3.x
+        alt_url = restppUrl+"/requesttoken"  # used for TG 3.x
         alt_data = {}
 
         if lifetime:
@@ -100,16 +106,19 @@ def _prep_token_request(self, secret: str = None, lifetime: int = None, token: s
 
     return method, url, alt_url, authMode, data, alt_data
 
-def _parse_token_response(self, response: dict, setToken: bool, mainVer: int) -> Union[Tuple[str, str], str]:
+def _parse_token_response(response: dict,
+                          setToken: bool,
+                          mainVer: int,
+                          base64_credential: str) -> Tuple[Union[Tuple[str, str], str], dict]:
     if not response.get("error"):
         token = response["token"]
         if setToken:
-            self.apiToken = token
-            self.authHeader = {'Authorization': "Bearer " + self.apiToken}
+            apiToken = token
+            authHeader = {'Authorization': "Bearer " + apiToken}
         else:
-            self.apiToken = None
-            self.authHeader = {
-                'Authorization': 'Basic {0}'.format(self.base64_credential)}
+            apiToken = None
+            authHeader = {
+                'Authorization': 'Basic {0}'.format(base64_credential)}
 
         if response.get("expiration"):
             # On >=4.1 the format for the date of expiration changed. Convert back to old format
@@ -121,7 +130,7 @@ def _parse_token_response(self, response: dict, setToken: bool, mainVer: int) ->
                     datetime.utcfromtimestamp(
                         float(response.get("expiration"))).strftime('%Y-%m-%d %H:%M:%S')
         else:
-            return token
+            return token, authHeader
 
     elif "Endpoint is not found from url = /requesttoken" in response["message"]:
         raise TigerGraphException("REST++ authentication is not enabled, can't generate token.",
