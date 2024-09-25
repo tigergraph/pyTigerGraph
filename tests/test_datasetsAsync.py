@@ -44,6 +44,7 @@ class TestDatasets(unittest.IsolatedAsyncioTestCase):
         truth = """\
             Available datasets:
             - Cora
+            - CoraV2
             - Ethereum
             - ldbc_snb
             - LastFM
