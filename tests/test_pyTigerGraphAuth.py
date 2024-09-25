@@ -68,7 +68,7 @@ class test_pyTigerGraphAuth(unittest.TestCase):
     def test_06_refreshToken(self):
         # TG 4.x does not allow refreshing tokens
         self.conn.getToken(self.conn.createSecret())
-        if self.conn._versionGreaterThan4_0():
+        if self.conn._version_greater_than_4_0():
             with self.assertRaises(TigerGraphException) as tge:
                 self.conn.refreshToken("secret1")
             self.assertEqual(
