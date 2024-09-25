@@ -2,7 +2,7 @@ import unittest
 import requests
 import json
 
-from .pyTigerGraphUnitTest import make_connection
+from pyTigerGraphUnitTest import make_connection
 from pyTigerGraph import TigerGraphConnection
 
 
