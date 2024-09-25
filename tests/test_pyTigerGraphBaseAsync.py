@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from .pyTigerGraphUnitTestAsync import make_connection
+from pyTigerGraphUnitTestAsync import make_connection
 
 from pyTigerGraph.common.exception import TigerGraphException
 

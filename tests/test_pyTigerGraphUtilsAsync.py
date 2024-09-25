@@ -2,7 +2,7 @@ import re
 import unittest
 from datetime import datetime
 
-from .pyTigerGraphUnitTestAsync import make_connection
+from pyTigerGraphUnitTestAsync import make_connection
 
 from pyTigerGraph.common.exception import TigerGraphException
 
