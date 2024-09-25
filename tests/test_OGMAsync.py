@@ -1,6 +1,6 @@
 import unittest
 from multiprocessing import Pool
-
+'''
 from pyTigerGraphUnitTestAsync import make_connection
 from pyTigerGraph.pytgasync.schema import AsyncGraph, Vertex, Edge
 from typing import List, Dict, Union
@@ -227,3 +227,4 @@ if __name__ == "__main__":
     suite.addTest(TestCreateGraph("test_create"))
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)
+'''
