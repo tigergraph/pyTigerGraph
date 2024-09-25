@@ -1,6 +1,6 @@
 import asyncio
 import unittest
-from .pyTigerGraphUnitTestAsync import make_connection
+from pyTigerGraphUnitTestAsync import make_connection
 
 
 class test_async(unittest.IsolatedAsyncioTestCase):
