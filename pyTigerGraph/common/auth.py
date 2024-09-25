@@ -124,11 +124,11 @@ def _parse_token_response(response: dict,
             # On >=4.1 the format for the date of expiration changed. Convert back to old format
             # Can't use self._versionGreaterThan4_0 since you need a token for that
             if mainVer == 4:
-                return token, response.get("expiration")
+                return (token, response.get("expiration")), authHeader
             else:
-                return token, response.get("expiration"), \
+                return (token, response.get("expiration"), \
                     datetime.utcfromtimestamp(
-                        float(response.get("expiration"))).strftime('%Y-%m-%d %H:%M:%S')
+                        float(response.get("expiration"))).strftime('%Y-%m-%d %H:%M:%S')), authHeader
         else:
             return token, authHeader
 
