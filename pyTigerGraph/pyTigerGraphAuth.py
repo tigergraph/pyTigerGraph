@@ -42,7 +42,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
         res = self.gsql("""
             USE GRAPH {}
             SHOW SECRET""".format(self.graphname), )
-        ret = self._parse_get_secrets(res)
+        ret = _parse_get_secrets(res)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
