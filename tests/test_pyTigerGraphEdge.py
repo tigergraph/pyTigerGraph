@@ -2,7 +2,7 @@ import json
 import unittest
 
 import pandas as pd
-from .pyTigerGraphUnitTest import make_connection
+from pyTigerGraphUnitTest import make_connection
 
 
 class test_pyTigerGraphEdge(unittest.TestCase):

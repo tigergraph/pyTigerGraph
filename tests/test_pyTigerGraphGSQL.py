@@ -1,7 +1,7 @@
 import unittest
 import os
 
-from .pyTigerGraphUnitTest import make_connection
+from pyTigerGraphUnitTest import make_connection
 
 
 class test_pyTigerGraphGSQL(unittest.TestCase):

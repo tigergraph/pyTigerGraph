@@ -2,7 +2,7 @@ import json
 import unittest
 
 import pandas
-from .pyTigerGraphUnitTest import make_connection
+from pyTigerGraphUnitTest import make_connection
 
 from pyTigerGraph.common.exception import TigerGraphException
 
