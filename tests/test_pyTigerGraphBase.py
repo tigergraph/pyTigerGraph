@@ -66,7 +66,7 @@ class test_pyTigerGraphBase(unittest.TestCase):
         self.assertEqual("error message", tge.exception.message)
 
         with self.assertRaises(TigerGraphException) as tge:
-            res = self.conn._errorCheck(json_not_ok2)
+            res = self.conn._error_check(json_not_ok2)
         self.assertEqual("JB-007", tge.exception.code)
 
     def test_01_req(self):
