@@ -7,7 +7,7 @@ from pyTigerGraphUnitTestAsync import make_connection
 from pyTigerGraph.common.exception import TigerGraphException
 
 
-class test_pyTigerGraphQuery(unittest.IsolatedAsyncioTestCase):
+class test_pyTigerGraphQueryAsync(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.conn = await make_connection()
 

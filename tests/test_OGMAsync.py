@@ -8,7 +8,7 @@ from datetime import datetime
 from dataclasses import dataclass
 
 
-class TestHomogeneousOGM(unittest.IsolatedAsyncioTestCase):
+class TestHomogeneousOGMAsync(unittest.IsolatedAsyncioTestCase):
     @classmethod
     async def asyncSetUp(self):
         self.conn = await make_connection(graphname="Cora")

@@ -7,7 +7,7 @@ from unittest.mock import patch
 from pyTigerGraph.pytgasync.datasets import AsyncDatasets
 
 
-class TestDatasets(unittest.IsolatedAsyncioTestCase):
+class TestDatasetsAsync(unittest.IsolatedAsyncioTestCase):
     async def test_get_dataset_url(self):
         dataset = await AsyncDatasets.create()
 
@@ -57,10 +57,10 @@ class TestDatasets(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
-    suite.addTest(TestDatasets("test_get_dataset_url"))
-    suite.addTest(TestDatasets("test_download_extract"))
-    suite.addTest(TestDatasets("test_clean_up"))
-    suite.addTest(TestDatasets("test_list"))
+    suite.addTest(TestDatasetsAsync("test_get_dataset_url"))
+    suite.addTest(TestDatasetsAsync("test_download_extract"))
+    suite.addTest(TestDatasetsAsync("test_clean_up"))
+    suite.addTest(TestDatasetsAsync("test_list"))
 
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)
