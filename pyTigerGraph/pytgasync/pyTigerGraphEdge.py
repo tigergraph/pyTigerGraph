@@ -754,7 +754,7 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery):
             return {}
 
         sourceVertexType = await self.getEdgeSourceVertexType(edgeType)
-        queryText = _prep_get_edges_by_type(sourceVertexType, edgeType)
+        queryText = _prep_get_edges_by_type(self.graphname, sourceVertexType, edgeType)
         ret = await self.runInterpretedQuery(queryText)
 
         ret = ret[0]["edges"]

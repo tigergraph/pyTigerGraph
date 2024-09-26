@@ -845,7 +845,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             return {}
 
         sourceVertexType = self.getEdgeSourceVertexType(edgeType)
-        queryText = _prep_get_edges_by_type(sourceVertexType, edgeType)
+        queryText = _prep_get_edges_by_type(self.graphname, sourceVertexType, edgeType)
         ret = self.runInterpretedQuery(queryText)
 
         ret = ret[0]["edges"]
