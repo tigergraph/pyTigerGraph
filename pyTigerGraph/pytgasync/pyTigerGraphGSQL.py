@@ -96,7 +96,7 @@ class AsyncPyTigerGraphGSQL(AsyncPyTigerGraphBase):
 
         urls, alt_urls = _prep_get_udf(
             ExprFunctions=ExprFunctions, ExprUtil=ExprUtil)
-        if not await self._versionGreaterThan4_0():
+        if not await self._version_greater_than_4_0():
             if json_out:
                 raise TigerGraphException(
                     "The 'json_out' parameter is only supported in TigerGraph Versions >=4.1.")

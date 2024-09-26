@@ -195,7 +195,7 @@ class test_pyTigerGraphEdge(unittest.TestCase):
        And similarly, should the deletion test have a setup stage, when vertices to be deleted are
        inserted?
      • Or should these two actions tested together? But that would defeat the idea of unittests.
-    
+    """
 
     def test_09_upsertEdge(self):
         res = self.conn.upsertEdge(
@@ -462,7 +462,6 @@ class test_pyTigerGraphEdge(unittest.TestCase):
 
     def test_18_edgeSetToDataFrame(self):
         pass
-    """
 
 
 if __name__ == "__main__":
