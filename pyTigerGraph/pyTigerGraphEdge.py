@@ -24,9 +24,10 @@ from pyTigerGraph.common.edge import (
     _prep_get_edges,
     _prep_get_edges_by_type,
     _parse_get_edge_stats,
-    _prep_del_edges,
-    edgeSetToDataFrame
+    _prep_del_edges
 )
+
+from pyTigerGraph.common.edge import edgeSetToDataFrame as _eS2DF
 
 from pyTigerGraph.common.schema import (
     _get_attr_type,
@@ -737,7 +738,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         if fmt == "json":
             ret = json.dumps(ret)
         elif fmt == "df":
-            ret = edgeSetToDataFrame(ret, withId, withType)
+            ret = _eS2DF(ret, withId, withType)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -852,7 +853,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         if fmt == "json":
             ret = json.dumps(ret)
         elif fmt == "df":
-            ret = edgeSetToDataFrame(ret, withId, withType)
+            ret = _eS2DF(ret, withId, withType)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -971,5 +972,31 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
         logger.info("exit: delEdges")
+
+        return ret
+
+    def edgeSetToDataFrame(self, edgeSet: list, withId: bool = True, withType: bool = False) -> 'pd.DataFrame':
+        """Converts an edge set to a pandas DataFrame.
+
+        Args:
+            edgeSet:
+                The edge set to convert.
+            withId:
+                Should the source and target vertex types and IDs be included in the dataframe?
+            withType:
+                Should the edge type be included in the dataframe?
+
+        Returns:
+            The edge set as a pandas DataFrame.
+        """
+        logger.info("entry: edgeSetToDataFrame")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        ret = _eS2DF(edgeSet, withId, withType)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: edgeSetToDataFrame")
 
         return ret
