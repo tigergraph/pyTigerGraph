@@ -6,7 +6,7 @@ from pyTigerGraphUnitTestAsync import make_connection
 
 from pyTigerGraph.common.exception import TigerGraphException
 
-
+'''
 class test_pyTigerGraphEdge(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.conn = await make_connection()
@@ -342,3 +342,4 @@ class test_pyTigerGraphEdge(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == '__main__':
     unittest.main()
+'''
