@@ -6,7 +6,7 @@ from pyTigerGraphUnitTestAsync import make_connection
 
 from pyTigerGraph.common.exception import TigerGraphException
 
-'''
+''''''
 class test_pyTigerGraphEdge(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.conn = await make_connection()
@@ -191,7 +191,7 @@ class test_pyTigerGraphEdge(unittest.IsolatedAsyncioTestCase):
        And similarly, should the deletion test have a setup stage, when vertices to be deleted are
        inserted?
      • Or should these two actions tested together? But that would defeat the idea of unittests.
-    """
+    
 
     async def test_09_upsertEdge(self):
         res = await self.conn.upsertEdge("vertex6", 1, "edge4_many_to_many", "vertex7", 1)
@@ -338,8 +338,7 @@ class test_pyTigerGraphEdge(unittest.IsolatedAsyncioTestCase):
 
     def test_18_edgeSetToDataFrame(self):
         pass
-
+    """
 
 if __name__ == '__main__':
     unittest.main()
-'''
