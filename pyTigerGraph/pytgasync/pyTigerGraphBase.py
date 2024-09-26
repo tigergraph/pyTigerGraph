@@ -319,7 +319,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
         version = await self.getVersion()
-        ret = self._parse_get_ver(version, component, full)
+        ret = _parse_get_ver(version, component, full)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))

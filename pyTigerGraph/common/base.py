@@ -364,6 +364,21 @@ class PyTigerGraphCore(object):
         """
         self.responseConfigHeader = {
             "GSQL-TIMEOUT": str(timeout), "RESPONSE-LIMIT": str(responseSize)}
+        
+    def _parse_get_ver(self, version, component, full):
+        ret = ""
+        for v in version:
+            if v["name"] == component.lower():
+                ret = v["version"]
+        if ret != "":
+            if full:
+                return ret
+            ret = re.search("_.+_", ret)
+            ret = ret.group().strip("_")
+            return ret
+        else:
+            raise TigerGraphException(
+                "\"" + component + "\" is not a valid component.", None)
 
     def _parse_get_version(self, response, raw):
         if raw:

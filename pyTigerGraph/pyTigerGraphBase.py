@@ -449,21 +449,6 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         logger.info("exit: getVersion")
         return components
 
-    def _parse_get_ver(self, version, component, full):
-        ret = ""
-        for v in version:
-            if v["name"] == component.lower():
-                ret = v["version"]
-        if ret != "":
-            if full:
-                return ret
-            ret = re.search("_.+_", ret)
-            ret = ret.group().strip("_")
-            return ret
-        else:
-            raise TigerGraphException(
-                "\"" + component + "\" is not a valid component.", None)
-
     def getVer(self, component: str = "product", full: bool = False) -> str:
         """Gets the version information of a specific component.
 
