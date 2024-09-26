@@ -20,9 +20,11 @@ from pyTigerGraph.common.vertex import (
     _prep_get_vertices_by_id,
     _parse_get_vertex_stats,
     _prep_del_vertices,
-    _prep_del_vertices_by_id,
-    vertexSetToDataFrame
+    _prep_del_vertices_by_id
 )
+
+from pyTigerGraph.common.vertex import vertexSetToDataFrame as _vS2DF
+
 from pyTigerGraph.pytgasync.pyTigerGraphSchema import AsyncPyTigerGraphSchema
 from pyTigerGraph.pytgasync.pyTigerGraphUtils import AsyncPyTigerGraphUtils
 
@@ -400,7 +402,7 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema):
         if fmt == "json":
             ret = json.dumps(ret)
         elif fmt == "df":
-            ret = vertexSetToDataFrame(ret, withId, withType)
+            ret = _vS2DF(ret, withId, withType)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -519,7 +521,7 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema):
         if fmt == "json":
             ret = json.dumps(ret)
         elif fmt == "df":
-            ret = vertexSetToDataFrame(ret, withId, withType)
+            ret = _vS2DF(ret, withId, withType)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -726,3 +728,29 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema):
     # TODO Maybe call it truncateVertex[Type] or delAllVertices?
 
     # TODO GET /deleted_vertex_check/{graph_name}
+
+    async def vertexSetToDataFrame(self, vertexSet: dict, withId: bool = True, withType: bool = False) -> 'pd.DataFrame':
+        """Converts a vertex set (dictionary) to a pandas DataFrame.
+
+        Args:
+            vertexSet:
+                The vertex set to convert.
+            withId:
+                Should the vertex ID be included in the DataFrame?
+            withType:
+                Should the vertex type be included in the DataFrame?
+
+        Returns:
+            The vertex set as a pandas DataFrame.
+        """
+        logger.info("entry: vertexSetToDataFrame")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        ret = _vS2DF(vertexSet, withId, withType)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: vertexSetToDataFrame")
+
+        return ret
