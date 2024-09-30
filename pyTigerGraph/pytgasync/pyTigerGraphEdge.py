@@ -520,7 +520,7 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery):
             otherwise handle 1 and "1" as two separate keys.
         """
 
-        data = _prep_upsert_edge(sourceVertexType=sourceVertexType,
+        data = _prep_upsert_edges(sourceVertexType=sourceVertexType,
                                  edgeType=edgeType,
                                  targetVertexType=targetVertexType,
                                  edges=edges)
