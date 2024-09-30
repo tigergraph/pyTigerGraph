@@ -1,6 +1,8 @@
 import json
 import unittest
 
+from pyTigerGraph.common.schema import _upsert_attrs
+
 from pyTigerGraphUnitTest import make_connection
 
 
@@ -43,7 +45,7 @@ class test_pyTigerGraphSchema(unittest.TestCase):
         ]
 
         for t in tests:
-            res = self.conn._upsert_attrs(t[0])
+            res = _upsert_attrs(t[0])
             self.assertEqual(t[1], res)
 
     def test_03_getSchema(self):

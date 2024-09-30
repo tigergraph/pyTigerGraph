@@ -1,6 +1,8 @@
 import json
 import unittest
 
+from pyTigerGraph.common.schema import _upsert_attrs
+
 from pyTigerGraphUnitTestAsync import make_connection
 
 from pyTigerGraph.common.exception import TigerGraphException
@@ -44,7 +46,7 @@ class test_pyTigerGraphSchemaAsync(unittest.IsolatedAsyncioTestCase):
         ]
 
         for t in tests:
-            res = self.conn._upsertAttrs(t[0])
+            res = _upsert_attrs(t[0])
             self.assertEqual(t[1], res)
 
     async def test_03_getSchema(self):
