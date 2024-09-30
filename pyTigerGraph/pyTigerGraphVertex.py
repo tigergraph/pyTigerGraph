@@ -767,8 +767,10 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         """
 
         logger.info("entry: delVerticesByType")
-        if logger.level == logging.DEBUG:
-            logger.debug("params: " + self._locals(locals()))
+        logger.debug("params: " + str(locals()))
+
+        if ack.lower() != "none" or ack.lower() != "all":
+            raise TigerGraphException("Invalid value for ack parameter. Use 'none' or 'all'.", None)
 
         url = self.restppUrl + "/graph/" + self.graphname + "/vertices/" + vertexType + "?ack=" + ack
         if permanent:
@@ -776,8 +778,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         ret = self._delete(url)["deleted_vertices"]
 
-        if logger.level == logging.DEBUG:
-            logger.debug("return: " + str(ret))
+        logger.debug("return: " + str(ret))
         logger.info("exit: delVerticesByType")
 
         return ret
