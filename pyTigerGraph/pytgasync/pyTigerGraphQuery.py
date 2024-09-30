@@ -54,7 +54,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
         """
         if logger.level == logging.DEBUG:
             logger.debug("entry: getQueryMetadata")
-        if await self._versionGreaterThan4_0():
+        if await self._version_greater_than_4_0():
             params = {"graph": self.graphname, "queryName": queryName}
             res = await self._req("POST", self.gsUrl+"/gsql/v1/queries/signature", params=params, authMode="pwd", resKey="")
         else:
