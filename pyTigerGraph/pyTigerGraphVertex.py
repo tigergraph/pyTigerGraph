@@ -769,10 +769,10 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         logger.info("entry: delVerticesByType")
         logger.debug("params: " + str(locals()))
 
-        if ack.lower() != "none" or ack.lower() != "all":
+        if (ack.lower() != "none") or (ack.lower() != "all"):
             raise TigerGraphException("Invalid value for ack parameter. Use 'none' or 'all'.", None)
 
-        url = self.restppUrl + "/graph/" + self.graphname + "/vertices/" + vertexType + "?ack=" + ack
+        url = self.restppUrl + "/graph/" + self.graphname + "/vertices/" + vertexType + "?ack=" + ack.lower()
         if permanent:
             url += "&permanent=true"
 
