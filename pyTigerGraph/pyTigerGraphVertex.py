@@ -24,6 +24,8 @@ from pyTigerGraph.common.vertex import (
     _prep_del_vertices_by_id
 )
 
+from pyTigerGraph.common.schema import _upsert_attrs
+
 from pyTigerGraph.common.vertex import vertexSetToDataFrame as _vS2DF
 
 from pyTigerGraph.pyTigerGraphSchema import pyTigerGraphSchema
@@ -227,7 +229,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        vals = self._upsert_attrs(attributes)
+        vals = _upsert_attrs(attributes)
         data = json.dumps({"vertices": {vertexType: {vertexId: vals}}})
 
         ret = self._req("POST", self.restppUrl + "/graph/" +
@@ -284,7 +286,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         data = {}
         for v in vertices:
-            vals = self._upsert_attrs(v[1])
+            vals = _upsert_attrs(v[1])
             data[v[0]] = vals
         data = json.dumps({"vertices": {vertexType: data}})
 

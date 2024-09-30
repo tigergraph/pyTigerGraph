@@ -23,6 +23,7 @@ from pyTigerGraph.common.vertex import (
     _prep_del_vertices_by_id
 )
 
+from pyTigerGraph.common.schema import _upsert_attrs
 from pyTigerGraph.common.vertex import vertexSetToDataFrame as _vS2DF
 
 from pyTigerGraph.pytgasync.pyTigerGraphSchema import AsyncPyTigerGraphSchema
@@ -233,7 +234,7 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        vals = self._upsertAttrs(attributes)
+        vals = _upsert_attrs(attributes)
         data = json.dumps({"vertices": {vertexType: {vertexId: vals}}})
 
         ret = await self._req("POST", self.restppUrl + "/graph/" + self.graphname, data=data)
@@ -290,7 +291,7 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema):
 
         data = {}
         for v in vertices:
-            vals = self._upsertAttrs(v[1])
+            vals = _upsert_attrs(v[1])
             data[v[0]] = vals
         data = json.dumps({"vertices": {vertexType: data}})
 
