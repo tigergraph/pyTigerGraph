@@ -742,11 +742,45 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         logger.info("exit: delVerticesById")
 
         return ret
+    
+    def delVerticesByType(self, vertexType: str, permanent: bool = False, ack: str = "none") -> int:
+        """Deletes all vertices of the specified type.
 
-    # def delVerticesByType(self, vertexType: str, permanent: bool = False):
-    # TODO Implementation
-    # TODO DELETE /graph/{graph_name}/delete_by_type/vertices/{vertex_type}/
-    # TODO Maybe call it truncateVertex[Type] or delAllVertices?
+        Args:
+            vertexType:
+                The name of the vertex type.
+            permanent:
+                If true, the deleted vertex IDs can never be inserted back, unless the graph is
+                dropped or the graph store is cleared.
+            ack:
+                If the parameter is set to "none", the delete operation doesn’t need to get acknowledgment from any GPE.
+                If it is set to "all" (default), the operation needs to get acknowledgment from all GPEs.
+                Other values will raise an error.
+
+        Returns:
+            A single number of vertices deleted.
+
+        Usage:
+        ```py
+        conn.delVerticesByType("Person")
+        ```
+        """
+
+        logger.info("entry: delVerticesByType")
+        logger.debug("params: " + str(locals()))
+        if ack.lower() not in ["none", "all"]:
+            raise TigerGraphException("Invalid value for ack parameter. Use 'none' or 'all'.", None)
+
+        url = self.restppUrl + "/graph/" + self.graphname + "/vertices/" + vertexType + "?ack=" + ack.lower()
+        if permanent:
+            url += "&permanent=true"
+
+        ret = self._delete(url)["deleted_vertices"]
+
+        logger.debug("return: " + str(ret))
+        logger.info("exit: delVerticesByType")
+
+        return ret
 
     # TODO GET /deleted_vertex_check/{graph_name}
 
