@@ -134,7 +134,7 @@ class AsyncPyTigerGraphUtils(AsyncPyTigerGraphBase):
 
         # Couldn't be placed in prep since version checking requires await statements
         if what:
-            if await self._versionGreaterThan4_0():
+            if await self._version_greater_than_4_0():
                 if what == "servicestate" or what == "connection":
                     raise TigerGraphException(
                         "This 'what' parameter is only supported on versions of TigerGraph < 4.1.0.", 0)
@@ -142,7 +142,7 @@ class AsyncPyTigerGraphUtils(AsyncPyTigerGraphBase):
                     what = "cpu-memory"  # in >=4.1 cpu and mem have been conjoined into one category
             params["what"] = what
         # in >=4.1 the datapoints endpoint has been removed and replaced
-        if await self._versionGreaterThan4_0():
+        if await self._version_greater_than_4_0():
             res = await self._req("POST", self.gsUrl+"/informant/metrics/get/"+what, data=_json, jsonData=True, resKey="")
         else:
             res = await self._req("GET", self.gsUrl+"/ts3/api/datapoints", authMode="pwd", params=params, resKey="")

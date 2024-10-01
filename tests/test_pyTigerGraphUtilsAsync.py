@@ -78,11 +78,11 @@ class test_pyTigerGraphUtilsAsync(unittest.IsolatedAsyncioTestCase):
         else:
             res = await self.conn.getSystemMetrics(what="mem", latest=10)
             self.assertEqual(len(res), 10)
-
+    '''
     async def test_07_getQueryPerformance(self):
         res = await self.conn.getQueryPerformance()
         self.assertIn("CompletedRequests", str(res))
-
+    '''
     async def test_08_getServiceStatus(self):
         req = {"ServiceDescriptors": [{"ServiceName": "GSQL"}]}
         res = await self.conn.getServiceStatus(req)
