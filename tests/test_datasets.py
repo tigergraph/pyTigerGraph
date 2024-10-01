@@ -44,6 +44,7 @@ class TestDatasets(unittest.TestCase):
         truth = """\
             Available datasets:
             - Cora
+            - CoraV2
             - Ethereum
             - ldbc_snb
             - LastFM
