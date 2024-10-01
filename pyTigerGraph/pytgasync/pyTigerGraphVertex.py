@@ -25,6 +25,7 @@ from pyTigerGraph.common.vertex import (
 
 from pyTigerGraph.common.schema import _upsert_attrs
 from pyTigerGraph.common.vertex import vertexSetToDataFrame as _vS2DF
+from pyTigerGraph.common.util import _safe_char
 
 from pyTigerGraph.pytgasync.pyTigerGraphSchema import AsyncPyTigerGraphSchema
 from pyTigerGraph.pytgasync.pyTigerGraphUtils import AsyncPyTigerGraphUtils
@@ -517,7 +518,7 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema):
 
         ret = []
         for vid in vids:
-            ret += await self._req("GET", url + self._safeChar(vid))
+            ret += await self._req("GET", url + _safe_char(vid))
 
         if fmt == "json":
             ret = json.dumps(ret)

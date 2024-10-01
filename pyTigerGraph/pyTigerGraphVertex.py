@@ -25,7 +25,7 @@ from pyTigerGraph.common.vertex import (
 )
 
 from pyTigerGraph.common.schema import _upsert_attrs
-
+from pyTigerGraph.common.util import _safe_char
 from pyTigerGraph.common.vertex import vertexSetToDataFrame as _vS2DF
 
 from pyTigerGraph.pyTigerGraphSchema import pyTigerGraphSchema
@@ -511,7 +511,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         ret = []
         for vid in vids:
-            ret += self._req("GET", url + self._safe_char(vid))
+            ret += self._req("GET", url + _safe_char(vid))
 
         if fmt == "json":
             ret = json.dumps(ret)
