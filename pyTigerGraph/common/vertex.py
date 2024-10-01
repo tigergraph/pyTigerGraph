@@ -181,7 +181,7 @@ def vertexSetToDataFrame(vertexSet: list, withId: bool = True,
         ID and type).
     """
     logger.info("entry: vertexSetToDataFrame")
-    logger.debug("params: " + locals())
+    logger.debug("params: " + str(locals()))
 
     try:
         import pandas as pd
