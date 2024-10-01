@@ -240,7 +240,7 @@ class test_pyTigerGraphVertexAsync(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(res, list)
         self.assertEqual(5, len(res))
 
-        res = self.conn.vertexSetToDataFrame(res)
+        res = await self.conn.vertexSetToDataFrame(res)
         self.assertIsInstance(res, pandas.DataFrame)
         self.assertEqual(5, len(res.index))
         self.assertEqual(["v_id", "a01"], list(res.columns))
