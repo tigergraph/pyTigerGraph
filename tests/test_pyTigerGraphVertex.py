@@ -234,10 +234,6 @@ class test_pyTigerGraphVertex(unittest.TestCase):
         self.assertIsInstance(res, int)
         self.assertEqual(2, res)
 
-    def test_14_delVerticesByType(self):
-        pass
-        # TODO Implement pyTigergraphVertices.delVerticesByType() first
-
     def test_15_vertexSetToDataFrame(self):
         res = self.conn.getVertices("vertex4")
         self.assertIsInstance(res, list)
@@ -247,6 +243,11 @@ class test_pyTigerGraphVertex(unittest.TestCase):
         self.assertIsInstance(res, pandas.DataFrame)
         self.assertEqual(5, len(res.index))
         self.assertEqual(["v_id", "a01"], list(res.columns))
+
+    def test_16_delVerticesByType(self):
+        res = self.conn.delVerticesByType("vertex4")
+        self.assertIsInstance(res, int)
+        self.assertEqual(5, res)
 
 
 if __name__ == '__main__':

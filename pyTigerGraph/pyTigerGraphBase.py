@@ -175,8 +175,8 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         else:
             self.restppPort = restppPort
             self.restppUrl = self.host + ":" + self.restppPort
-        self.gsPort = ""
         gsPort = str(gsPort)
+        self.gsPort = gsPort
         if self.tgCloud and (gsPort == "14240" or gsPort == "443"):
             self.gsPort = sslPort
             self.gsUrl = self.host + ":" + sslPort
@@ -265,13 +265,12 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
             # In TG 4.x the port for restpp has changed from 9000 to 14240.
             # This block should only be called once. When using 4.x, using port 9000 should fail so self.restppurl will change to host:14240/restpp
             # ----
-            # Changes port to 14240, adds /restpp to end to url, tries again, saves changes if successful
-            if self.restppPort == "9000" and "9000" in url:
-                newRestppUrl = self.host + ":14240/restpp"
+            # Changes port to gsql port, adds /restpp to end to url, tries again, saves changes if successful
+            if "/restpp" not in url or self.tgCloud:
+                newRestppUrl = self.host + ":"+self.gsPort+"/restpp"
                 # In tgcloud /restpp can already be in the restpp url. We want to extract everything after the port or /restpp
-                if '/restpp' in url:
-                    url = newRestppUrl + '/' + \
-                        '/'.join(url.split(':')[2].split('/')[2:])
+                if self.tgCloud:
+                    url = newRestppUrl + '/' + '/'.join(url.split(':')[2].split('/')[2:])
                 else:
                     url = newRestppUrl + '/' + \
                         '/'.join(url.split(':')[2].split('/')[1:])
@@ -292,7 +291,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
                         pass
                 res.raise_for_status()
                 self.restppUrl = newRestppUrl
-                self.restppPort = "14240"
+                self.restppPort = self.gsPort
             else:
                 raise e
 
