@@ -1,6 +1,6 @@
 import unittest
 from multiprocessing import Pool
-'''
+
 from pyTigerGraphUnitTestAsync import make_connection
 from pyTigerGraph.pytgasync.schema import AsyncGraph, Vertex, Edge
 from typing import List, Dict, Union
@@ -150,7 +150,7 @@ class TestHomogeneousOGMAsync(unittest.IsolatedAsyncioTestCase):
             "ThisIsATest", g.vertex_types["Paper"].attributes.keys())
 
 
-class TestHeterogeneousOGM(unittest.IsolatedAsyncioTestCase):
+class TestHeterogeneousOGMAsync(unittest.IsolatedAsyncioTestCase):
     @classmethod
     async def asyncSetUp(self):
         self.conn = await make_connection(graphname="hetero")
@@ -212,19 +212,18 @@ class TestCreateGraph(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
-    suite.addTest(TestHeterogeneousOGM("test_init"))
-    suite.addTest(TestHomogeneousOGM("test_type"))
-    suite.addTest(TestHomogeneousOGM("test_add_vertex_type"))
-    suite.addTest(TestHomogeneousOGM("test_add_edge_type"))
-    suite.addTest(TestHomogeneousOGM("test_drop_edge_type"))
-    suite.addTest(TestHomogeneousOGM("test_drop_vertex_type"))
+    suite.addTest(TestHeterogeneousOGMAsync("test_init"))
+    suite.addTest(TestHomogeneousOGMAsync("test_type"))
+    suite.addTest(TestHomogeneousOGMAsync("test_add_vertex_type"))
+    suite.addTest(TestHomogeneousOGMAsync("test_add_edge_type"))
+    suite.addTest(TestHomogeneousOGMAsync("test_drop_edge_type"))
+    suite.addTest(TestHomogeneousOGMAsync("test_drop_vertex_type"))
     # suite.addTest(TestHomogeneousOGM("test_add_vertex_attribute_default_value"))
     # suite.addTest(TestHomogeneousOGM("test_drop_vertex_attribute"))
-    suite.addTest(TestHeterogeneousOGM("test_init"))
-    suite.addTest(TestHeterogeneousOGM("test_type"))
-    suite.addTest(TestHeterogeneousOGM("test_outgoing_edge_types"))
-    suite.addTest(TestHeterogeneousOGM("test_incoming_edge_types"))
+    suite.addTest(TestHeterogeneousOGMAsync("test_init"))
+    suite.addTest(TestHeterogeneousOGMAsync("test_type"))
+    suite.addTest(TestHeterogeneousOGMAsync("test_outgoing_edge_types"))
+    suite.addTest(TestHeterogeneousOGMAsync("test_incoming_edge_types"))
     suite.addTest(TestCreateGraph("test_create"))
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)
-'''

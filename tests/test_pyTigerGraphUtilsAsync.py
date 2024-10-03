@@ -78,7 +78,7 @@ class test_pyTigerGraphUtilsAsync(unittest.IsolatedAsyncioTestCase):
         else:
             res = await self.conn.getSystemMetrics(what="mem", latest=10)
             self.assertEqual(len(res), 10)
-    '''
+    ''' Commented out because the queries are not completed yet
     async def test_07_getQueryPerformance(self):
         res = await self.conn.getQueryPerformance()
         self.assertIn("CompletedRequests", str(res))

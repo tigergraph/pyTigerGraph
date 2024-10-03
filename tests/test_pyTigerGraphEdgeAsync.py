@@ -170,7 +170,7 @@ class test_pyTigerGraphEdgeAsync(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(res, int)
         self.assertEqual(3, res)
 
-    """
+    """  Commented out because the order of execution is not guaranteed, so the serialized nature doesn't work in async case.
     Apparently, the following tests are not structured properly.
     The code below first inserts edges in two steps, then retrieves them, and finally, deletes them.
     It seems that the order of execution is not guaranteed, so the serialised nature of steps might
