@@ -4,6 +4,6 @@
     "password": "tigergraph",
     "restppPort": "9000",
     "gsPort": "14240",
-    "getToken": true,
+    "getToken": false,
     "jwtToken": ""
 }

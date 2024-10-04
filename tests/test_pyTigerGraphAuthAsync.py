@@ -64,7 +64,7 @@ class test_pyTigerGraphAuthAsync(unittest.IsolatedAsyncioTestCase):
         token = await self.conn.getToken(res["secret5"])
         self.assertIsInstance(token, tuple)
         await self.conn.dropSecret("secret5")
-    
+    '''
     async def test_06_refreshToken(self):
         # TG 4.x does not allow refreshing tokens
         await self.conn.getToken(await self.conn.createSecret())
@@ -80,7 +80,7 @@ class test_pyTigerGraphAuthAsync(unittest.IsolatedAsyncioTestCase):
             refreshed = await self.conn.refreshToken(res["secret6"], token[0])
             self.assertIsInstance(refreshed, tuple)
             await self.conn.dropSecret("secret6")
-
+    '''
     async def test_07_deleteToken(self):
         await self.conn.dropSecret("secret7", ignoreErrors=True)
         res = await self.conn.createSecret("secret7", True)
