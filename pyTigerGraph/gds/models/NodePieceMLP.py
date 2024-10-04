@@ -8,14 +8,17 @@ try:
     import torch.nn as nn
     import torch.nn.functional as F
 except:
-    raise Exception("PyTorch is required to use NodePiece MLPs. Please install PyTorch")
+    raise Exception(
+        "PyTorch is required to use NodePiece MLPs. Please install PyTorch")
+
 
 class BaseNodePieceEmbeddingTable(nn.Module):
     """NO DOC."""
+
     def __init__(self,
                  vocab_size: int,
                  sequence_length: int,
-                 embedding_dim: int=768):
+                 embedding_dim: int = 768):
         super().__init__()
         self.embedding_dim = embedding_dim
         self.seq_len = sequence_length
@@ -32,27 +35,31 @@ class BaseNodePieceEmbeddingTable(nn.Module):
 
 class BaseNodePieceMLPModel(nn.Module):
     """NO DOC."""
-    def __init__(self, num_layers, out_dim, hidden_dim, vocab_size, sequence_length, embedding_dim = 768, dropout = 0.0):
+
+    def __init__(self, num_layers, out_dim, hidden_dim, vocab_size, sequence_length, embedding_dim=768, dropout=0.0):
         super().__init__()
         self.embedding_dim = embedding_dim
         self.vocab_size = vocab_size
         self.sequence_length = sequence_length
-        self.base_embedding = BaseNodePieceEmbeddingTable(vocab_size, sequence_length, embedding_dim)
-
+        self.base_embedding = BaseNodePieceEmbeddingTable(
+            vocab_size, sequence_length, embedding_dim)
 
         self.num_embedding_dim = embedding_dim*sequence_length
         self.in_layer = None
         self.hidden_dim = hidden_dim
         self.dropout = dropout
         self.out_layer = nn.Linear(self.hidden_dim, out_dim)
-        self.hidden_layers = nn.ModuleList([nn.Linear(hidden_dim, hidden_dim) for _ in range(num_layers-2)])
+        self.hidden_layers = nn.ModuleList(
+            [nn.Linear(hidden_dim, hidden_dim) for _ in range(num_layers-2)])
 
     def forward(self, batch):
         if not self.in_layer:
-            if "features" in list(batch.keys()): 
-                self.in_layer = nn.Linear(batch["features"].shape[1] + self.num_embedding_dim, self.hidden_dim)
+            if "features" in list(batch.keys()):
+                self.in_layer = nn.Linear(
+                    batch["features"].shape[1] + self.num_embedding_dim, self.hidden_dim)
             else:
-                self.in_layer = nn.Linear(self.num_embedding_dim, self.hidden_dim)
+                self.in_layer = nn.Linear(
+                    self.num_embedding_dim, self.hidden_dim)
         x = self.base_embedding(batch)
         x = torch.flatten(x, start_dim=1)
         if "features" in list(batch.keys()):
@@ -63,13 +70,15 @@ class BaseNodePieceMLPModel(nn.Module):
         x = self.out_layer(x)
         return x
 
+
 class NodePieceMLPForVertexClassification(bm.BaseModel):
     """NodePieceMLPForVertexClassification.
     This model is for training an multi-layer perceptron (MLP) on batches produced by NodePiece dataloaders, and transformed by the `NodePieceMLPTransform`.
     The architecture is for a vertex classification task, and assumes the label of each vertex is in a batch attribute called `"y"`, such as what is produced by the `NodePieceMLPTransform`.
     By default, this model collects `ClassficiationMetrics`, and uses cross entropy as its loss function.
     """
-    def __init__(self, num_layers: int, out_dim: int, hidden_dim: int, vocab_size: int, sequence_length: int, embedding_dim = 768, dropout = 0.0, class_weights = None):
+
+    def __init__(self, num_layers: int, out_dim: int, hidden_dim: int, vocab_size: int, sequence_length: int, embedding_dim=768, dropout=0.0, class_weights=None):
         """Initialize a NodePieceMLPForVertexClassification.
         Initializes the model.
         Args:
@@ -91,7 +100,8 @@ class NodePieceMLPForVertexClassification(bm.BaseModel):
                 Weight the importance of each class in the classification task when computing loss. Helpful in imbalanced classification tasks.
         """
         super().__init__()
-        self.model = BaseNodePieceMLPModel(num_layers, out_dim, hidden_dim, vocab_size, sequence_length, embedding_dim, dropout)
+        self.model = BaseNodePieceMLPModel(
+            num_layers, out_dim, hidden_dim, vocab_size, sequence_length, embedding_dim, dropout)
         self.metrics = ClassificationMetrics(out_dim)
         self.class_weight = class_weights
 
@@ -109,7 +119,7 @@ class NodePieceMLPForVertexClassification(bm.BaseModel):
         else:
             return logits
 
-    def compute_loss(self, logits, batch, loss_fn = None, **kwargs):
+    def compute_loss(self, logits, batch, loss_fn=None, **kwargs):
         """Compute loss.
         Args:
             logits (torch.Tensor):
@@ -120,7 +130,7 @@ class NodePieceMLPForVertexClassification(bm.BaseModel):
                 A PyTorch-compatible function to produce the loss of the model, which takes in logits, the labels, and optionally the class_weights.
                 Defaults to Cross Entropy.
         """
-        if not(loss_fn):
+        if not (loss_fn):
             loss_fn = F.cross_entropy
             loss = loss_fn(logits, batch["y"].long(), self.class_weight)
         else:

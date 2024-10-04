@@ -126,6 +126,7 @@ class TestGDSVertexLoader(unittest.TestCase):
             num_batches += 1
         self.assertEqual(num_batches, 9)
 
+
 class TestGDSVertexLoaderREST(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -319,12 +320,14 @@ if __name__ == "__main__":
     suite.addTest(TestGDSVertexLoaderREST("test_init"))
     suite.addTest(TestGDSVertexLoaderREST("test_iterate"))
     suite.addTest(TestGDSVertexLoaderREST("test_all_vertices"))
-    suite.addTest(TestGDSVertexLoaderREST("test_all_vertices_multichar_delimiter"))
+    suite.addTest(TestGDSVertexLoaderREST(
+        "test_all_vertices_multichar_delimiter"))
     suite.addTest(TestGDSVertexLoaderREST("test_string_attr"))
     suite.addTest(TestGDSHeteroVertexLoaderREST("test_init"))
     suite.addTest(TestGDSHeteroVertexLoaderREST("test_iterate"))
     suite.addTest(TestGDSHeteroVertexLoaderREST("test_all_vertices"))
-    suite.addTest(TestGDSHeteroVertexLoaderREST("test_all_vertices_multichar_delimiter"))
+    suite.addTest(TestGDSHeteroVertexLoaderREST(
+        "test_all_vertices_multichar_delimiter"))
 
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)

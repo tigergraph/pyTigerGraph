@@ -38,7 +38,8 @@ class BaseRandomSplitter:
             raise ValueError("Can take at most 3 partition ratios in input.")
         for v in split_ratios.values():
             if v < 0 or v > 1:
-                raise ValueError("All partition ratios have to be between 0 and 1.")
+                raise ValueError(
+                    "All partition ratios have to be between 0 and 1.")
         if sum(split_ratios.values()) > 1:
             raise ValueError("Sum of all partition ratios have to be <=1")
 
@@ -69,17 +70,17 @@ class BaseRandomSplitter:
                 else:
                     global_types.append(e_type)
         if len(global_types) > 0:
-            add_attribute(self._graph, 
-                        schema_type, 
-                        attr_name = {key: "BOOL" for key in split_ratios},
-                        schema_name = global_types,
-                        global_change = True)
+            add_attribute(self._graph,
+                          schema_type,
+                          attr_name={key: "BOOL" for key in split_ratios},
+                          schema_name=global_types,
+                          global_change=True)
         if len(local_types) > 0:
-            add_attribute(self._graph, 
-                        schema_type, 
-                        attr_name = {key: "BOOL" for key in split_ratios},
-                        schema_name = local_types,
-                        global_change = False)
+            add_attribute(self._graph,
+                          schema_type,
+                          attr_name={key: "BOOL" for key in split_ratios},
+                          schema_name=local_types,
+                          global_change=False)
         payload = {}
         payload["stypes"] = self.schema_types
         for i, key in enumerate(split_ratios):
@@ -110,11 +111,11 @@ class RandomVertexSplitter(BaseRandomSplitter):
     splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6)
     splitter.run()
     ----
-       
+
     * A random 60% of vertices will have their attribute "attr_name" set to True, and a
         random 20% of vertices will have their attribute "attr_name2" set to True. The two
         parts are disjoint. Example:
-    
+
     +
     [source,python]
     ----
@@ -134,7 +135,7 @@ class RandomVertexSplitter(BaseRandomSplitter):
     splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6, attr_name2=0.2, attr_name3=0.2)
     splitter.run()
     ----
-        
+
     Args:
         conn (TigerGraphConnection):
             Connection to TigerGraph database.
@@ -163,7 +164,7 @@ class RandomVertexSplitter(BaseRandomSplitter):
         """Perform the split.
 
         The split ratios set in initialization can be overridden here. 
-        
+
         For example:
 
         [,python]
@@ -171,7 +172,7 @@ class RandomVertexSplitter(BaseRandomSplitter):
         splitter = RandomVertexSplitter(conn, timeout, attr_name=0.6); 
         splitter.run(attr_name=0.3)
         ----
-        
+
         The spliter above uses the ratio 0.3 instead of 0.6.
 
         """
@@ -187,7 +188,7 @@ class RandomEdgeSplitter(BaseRandomSplitter):
     indicates which part an edge belongs to.
 
     Usage:
-    
+
     * A random 60% of edges will have their attribute "attr_name" set to True, and 
         others False. `attr_name` can be any attribute that exists in the database (same below).
         Example:
