@@ -938,7 +938,9 @@ class GDS:
         timeout: int = 300000,
         callback_fn: Callable = None,
         reinstall_query: bool = False,
-        distributed_query: bool = False
+        distributed_query: bool = False,
+        num_machines: int = 1,
+        num_segments: int = 20
     ) -> EdgeNeighborLoader:
         """Returns an `EdgeNeighborLoader` instance.
         An `EdgeNeighborLoader` instance performs neighbor sampling from all edges in the graph in batches in the following manner:
@@ -1098,7 +1100,9 @@ class GDS:
                     "delimiter": delimiter,
                     "timeout": timeout,
                     "callback_fn": callback_fn,
-                    "distributed_query": distributed_query
+                    "distributed_query": distributed_query,
+                    "num_machines": num_machines,
+                    "num_segments": num_segments
                 }
                 if self.kafkaConfig:
                     params.update(self.kafkaConfig)
@@ -1130,7 +1134,9 @@ class GDS:
                 "delimiter": delimiter,
                 "timeout": timeout,
                 "callback_fn": callback_fn,
-                "distributed_query": distributed_query
+                "distributed_query": distributed_query,
+                "num_machines": num_machines,
+                "num_segments": num_segments
             }
             if self.kafkaConfig:
                 params.update(self.kafkaConfig)

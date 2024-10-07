@@ -1,12 +1,12 @@
 CREATE QUERY graph_loader_{QUERYSUFFIX}(
-    INT num_batches=1, 
-    BOOL shuffle=FALSE,
     STRING filter_by,
     SET<STRING> v_types,
     SET<STRING> e_types,
     STRING delimiter,
+    BOOL shuffle=FALSE,
+    INT num_chunks=2,
     STRING kafka_address="",
-    STRING kafka_topic,
+    STRING kafka_topic="",
     INT kafka_topic_partitions=1,
     STRING kafka_max_size="104857600",
     INT kafka_timeout=300000,
@@ -40,93 +40,83 @@ CREATE QUERY graph_loader_{QUERYSUFFIX}(
       sasl_password  : SASL password for Kafka.
       ssl_ca_location: Path to CA certificate for verifying the Kafka broker key.
     */
-    INT num_vertices;
-    INT kafka_errcode;
     SumAccum<INT> @tmp_id;
-    SumAccum<STRING> @@kafka_error;
-    UINT producer;
 
-    # Initialize Kafka producer
+    start = {v_types};
+    # Filter seeds if needed
+    seeds = SELECT s
+        FROM start:s -(e_types:e)- v_types:t
+        WHERE filter_by is NULL OR e.getAttr(filter_by, "BOOL")
+        POST-ACCUM s.@tmp_id = getvid(s)
+        POST-ACCUM t.@tmp_id = getvid(t);
+    # Shuffle vertex ID if needed
+    IF shuffle THEN
+        INT num_vertices = seeds.size();
+        res = SELECT s 
+            FROM seeds:s
+            POST-ACCUM s.@tmp_id = floor(rand()*num_vertices)
+            LIMIT 1;
+    END;
+
+    # Generate batches
+    # If using kafka to export
     IF kafka_address != "" THEN
-        producer = init_kafka_producer(
+        SumAccum<STRING> @@kafka_error;
+
+        # Initialize Kafka producer
+        UINT producer = init_kafka_producer(
             kafka_address, kafka_max_size, security_protocol, 
             sasl_mechanism, sasl_username, sasl_password, ssl_ca_location,
             ssl_certificate_location, ssl_key_location, ssl_key_password,
             ssl_endpoint_identification_algorithm, sasl_kerberos_service_name,
             sasl_kerberos_keytab, sasl_kerberos_principal);
-    END;
-
-    # Shuffle vertex ID if needed
-    start = {v_types};
-    IF shuffle THEN
-        IF filter_by IS NOT NULL THEN
-            start = SELECT s FROM start:s WHERE s.getAttr(filter_by, "BOOL");
+        
+        FOREACH chunk IN RANGE[0, num_chunks-1] DO
+            res = SELECT s 
+                FROM seeds:s -(e_types:e)- v_types:t
+                WHERE (filter_by is NULL OR e.getAttr(filter_by, "BOOL")) and ((s.@tmp_id + t.@tmp_id) % num_chunks == chunk)
+                ACCUM
+                    STRING s_msg = graph_loader_sub_{QUERYSUFFIX}(s, delimiter),
+                    STRING t_msg = graph_loader_sub_{QUERYSUFFIX}(t, delimiter),
+                    INT kafka_errcode = write_to_kafka(producer, kafka_topic, (getvid(s)+getvid(t))%kafka_topic_partitions, "vertex_batch_" + stringify(getvid(s))+e.type+stringify(getvid(t)), s_msg+t_msg),
+                    IF kafka_errcode!=0 THEN 
+                        @@kafka_error += ("Error sending vertex data for edge " + stringify(getvid(s))+e.type+stringify(getvid(t)) + ": "+ stringify(kafka_errcode) + "\\n")
+                    END,
+                    {EDGEATTRSKAFKA}
+                LIMIT 1;
         END;
-        num_vertices = start.size();
-        res = SELECT s 
-              FROM start:s
-              POST-ACCUM s.@tmp_id = floor(rand()*num_vertices);
-    ELSE
-        res = SELECT s 
-              FROM start:s
-              POST-ACCUM s.@tmp_id = getvid(s);
-    END;
 
-    # Generate batches
-    FOREACH batch_id IN RANGE[0, num_batches-1] DO
-        SetAccum<VERTEX> @@vertices;
-        SumAccum<STRING> @@e_batch;
-        SumAccum<STRING> @@v_batch;
-       
-        start = {v_types};
-        IF filter_by IS NOT NULL THEN
-            res = 
-                SELECT s
-                FROM start:s -(e_types:e)- v_types:t
-                WHERE e.getAttr(filter_by, "BOOL") and ((s.@tmp_id+t.@tmp_id)*(s.@tmp_id+t.@tmp_id+1)/2+t.@tmp_id)%num_batches==batch_id
-                ACCUM 
-                    {EDGEATTRS},
-                    @@vertices += s,
-                    @@vertices += t;
-        ELSE
-            res = 
-                SELECT s
-                FROM start:s -(e_types:e)- v_types:t
-                WHERE ((s.@tmp_id+t.@tmp_id)*(s.@tmp_id+t.@tmp_id+1)/2+t.@tmp_id)%num_batches==batch_id
-                ACCUM 
-                    {EDGEATTRS},
-                    @@vertices += s,
-                    @@vertices += t;
-        END;
-    
-        # Get vertex attributes
-        v_in_batch = @@vertices;
-        attr = 
-            SELECT s
-            FROM v_in_batch:s 
-            POST-ACCUM 
-                {VERTEXATTRS};
-
-        IF kafka_address != "" THEN
-            # Write to kafka
-            kafka_errcode = write_to_kafka(producer, kafka_topic, batch_id%kafka_topic_partitions, "vertex_batch_" + stringify(batch_id), @@v_batch);
+        FOREACH i IN RANGE[0, kafka_topic_partitions-1] DO
+            INT kafka_errcode = write_to_kafka(producer, kafka_topic, i, "STOP", "");
             IF kafka_errcode!=0 THEN 
-                @@kafka_error += ("Error sending vertex batch " + stringify(batch_id) + ": "+ stringify(kafka_errcode) + "\n");
+                @@kafka_error += ("Error sending STOP signal to topic partition " + stringify(i) + ": " + stringify(kafka_errcode) + "\n");
             END;
-            kafka_errcode = write_to_kafka(producer, kafka_topic, batch_id%kafka_topic_partitions, "edge_batch_" + stringify(batch_id), @@e_batch);
-            IF kafka_errcode!=0 THEN 
-                @@kafka_error += ("Error sending edge batch " + stringify(batch_id) + ": "+ stringify(kafka_errcode) + "\n");
-            END;
-        ELSE
-            # Add to response
-            PRINT @@v_batch AS vertex_batch, @@e_batch AS edge_batch;   
         END;
-    END;
-    IF kafka_address != "" THEN
-        kafka_errcode = close_kafka_producer(producer, kafka_timeout);
+
+        INT kafka_errcode = close_kafka_producer(producer, kafka_timeout);
         IF kafka_errcode!=0 THEN 
             @@kafka_error += ("Error shutting down Kafka producer: " + stringify(kafka_errcode) + "\n");
         END;
         PRINT @@kafka_error as kafkaError;
+    # Else return as http response 
+    ELSE
+        FOREACH chunk IN RANGE[0, num_chunks-1] DO
+            MapAccum<STRING, STRING> @@v_batch;
+            MapAccum<STRING, STRING> @@e_batch;
+        
+            res = SELECT s 
+                FROM seeds:s -(e_types:e)- v_types:t
+                WHERE (filter_by is NULL OR e.getAttr(filter_by, "BOOL")) and ((s.@tmp_id + t.@tmp_id) % num_chunks == chunk)
+                ACCUM 
+                    STRING s_msg = graph_loader_sub_{QUERYSUFFIX}(s, delimiter),
+                    STRING t_msg = graph_loader_sub_{QUERYSUFFIX}(t, delimiter),
+                    @@v_batch += (stringify(getvid(s))+e.type+stringify(getvid(t)) -> s_msg+t_msg),
+                    {EDGEATTRSHTTP}
+                LIMIT 1;
+        
+            FOREACH (k,v) IN @@v_batch DO
+                PRINT v as vertex_batch, @@e_batch.get(k) as edge_batch;
+            END;
+        END;
     END;
 }

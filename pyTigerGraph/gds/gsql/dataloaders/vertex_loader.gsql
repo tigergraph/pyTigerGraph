@@ -1,13 +1,12 @@
 CREATE QUERY vertex_loader_{QUERYSUFFIX}(
     SET<VERTEX> input_vertices,
-    INT batch_size,
-    INT num_batches=1, 
-    BOOL shuffle=FALSE,
     STRING filter_by,
     SET<STRING> v_types,
     STRING delimiter,
+    BOOL shuffle=FALSE,
+    INT num_chunks=2,
     STRING kafka_address="",
-    STRING kafka_topic,
+    STRING kafka_topic="",
     INT kafka_topic_partitions=1,
     STRING kafka_max_size="104857600",
     INT kafka_timeout=300000,
@@ -22,8 +21,7 @@ CREATE QUERY vertex_loader_{QUERYSUFFIX}(
     STRING ssl_endpoint_identification_algorithm="",
     STRING sasl_kerberos_service_name="",
     STRING sasl_kerberos_keytab="",
-    STRING sasl_kerberos_principal="",
-    INT num_heap_inserts = 10
+    STRING sasl_kerberos_principal=""
 ) SYNTAX V2 {
     /*
     This query generates batches of vertices. If `input_vertices` is given, it will generate 
@@ -45,108 +43,90 @@ CREATE QUERY vertex_loader_{QUERYSUFFIX}(
       sasl_password  : SASL password for Kafka. 
       ssl_ca_location: Path to CA certificate for verifying the Kafka broker key.
     */
-    TYPEDEF TUPLE<INT tmp_id, VERTEX v> ID_Tuple;
-    INT num_vertices;
-    INT kafka_errcode;
     SumAccum<INT> @tmp_id;
-    SumAccum<STRING> @@kafka_error;
-    UINT producer;
-    INT batch_s;
-    OrAccum @prev_sampled;
 
-    # Initialize Kafka producer
-    IF kafka_address != "" THEN
-        producer = init_kafka_producer(
-            kafka_address, kafka_max_size, security_protocol, 
-            sasl_mechanism, sasl_username, sasl_password, ssl_ca_location,
-            ssl_certificate_location, ssl_key_location, ssl_key_password,
-            ssl_endpoint_identification_algorithm, sasl_kerberos_service_name,
-            sasl_kerberos_keytab, sasl_kerberos_principal);
-    END;
-
-    # Shuffle vertex ID if needed
-    start = {v_types};
-    IF filter_by IS NOT NULL THEN
-        start = SELECT s FROM start:s WHERE s.getAttr(filter_by, "BOOL");
-    END;
-    IF shuffle THEN
-        num_vertices = start.size();
-        res = SELECT s 
-              FROM start:s
-              POST-ACCUM s.@tmp_id = floor(rand()*num_vertices);
-    ELSE
-        res = SELECT s 
-              FROM start:s
-              POST-ACCUM s.@tmp_id = getvid(s);
-    END;
-    IF batch_size IS NULL THEN
-      batch_s = ceil(res.size()/num_batches);
-    ELSE  
-      batch_s = batch_size;
-    END;
-    # Generate batches
-    FOREACH batch_id IN RANGE[0, num_batches-1] DO
-        SumAccum<STRING> @@v_batch;
-        SetAccum<VERTEX> @@seeds;
-        IF input_vertices.size()==0 THEN
-            start = {v_types};
-            HeapAccum<ID_Tuple> (1, tmp_id ASC) @@batch_heap;
-            @@batch_heap.resize(batch_s);
-            IF filter_by IS NOT NULL THEN
-                FOREACH iter IN RANGE[0,num_heap_inserts-1] DO 
-                  _verts = SELECT s FROM start:s
-                         WHERE s.@tmp_id % num_heap_inserts == iter AND NOT s.@prev_sampled AND s.getAttr(filter_by, "BOOL")
-                         POST-ACCUM @@batch_heap += ID_Tuple(s.@tmp_id, s);
-                END;
-                FOREACH elem IN @@batch_heap DO
-                  @@seeds += elem.v;
-                END;
-                seeds = {@@seeds};
-                seeds = SELECT s 
-                        FROM seeds:s 
-                        POST-ACCUM 
-                            s.@prev_sampled += TRUE,
-                            {VERTEXATTRS};
-            ELSE
-                FOREACH iter IN RANGE[0,num_heap_inserts-1] DO 
-                  _verts = SELECT s FROM start:s
-                           WHERE s.@tmp_id % num_heap_inserts == iter AND NOT s.@prev_sampled
-                           POST-ACCUM @@batch_heap += ID_Tuple(s.@tmp_id, s);
-                END;
-                FOREACH elem IN @@batch_heap DO
-                  @@seeds += elem.v;
-                END;
-                seeds = {@@seeds};
-                seeds = SELECT s 
-                        FROM start:s
-                        POST-ACCUM
-                            s.@prev_sampled += TRUE,
-                            {VERTEXATTRS};
-            END;
+    # If getting all vertices of given types
+    IF input_vertices.size()==0 THEN
+        start = {v_types};
+        # Filter seeds if needed
+        seeds = SELECT s
+            FROM start:s
+            WHERE filter_by is NULL OR s.getAttr(filter_by, "BOOL");
+        # Shuffle vertex ID if needed
+        IF shuffle THEN
+            INT num_vertices = seeds.size();
+            res = SELECT s 
+                FROM seeds:s
+                POST-ACCUM s.@tmp_id = floor(rand()*num_vertices)
+                LIMIT 1;
         ELSE
-            start = input_vertices;
-            seeds = SELECT s 
-                    FROM start:s 
-                    POST-ACCUM 
-                        {VERTEXATTRS};
+            res = SELECT s 
+                FROM seeds:s
+                POST-ACCUM s.@tmp_id = getvid(s)
+                LIMIT 1;
         END;
         
+        # Export data
+        # If using kafka to export 
         IF kafka_address != "" THEN
-            # Write to kafka
-            kafka_errcode = write_to_kafka(producer, kafka_topic, batch_id%kafka_topic_partitions, "vertex_batch_" + stringify(batch_id), @@v_batch);
-            IF kafka_errcode!=0 THEN 
-                @@kafka_error += ("Error sending vertex batch " + stringify(batch_id) + ": "+ stringify(kafka_errcode) + "\n");
+            SumAccum<STRING> @@kafka_error;
+
+            # Initialize Kafka producer
+            UINT producer = init_kafka_producer(
+                kafka_address, kafka_max_size, security_protocol, 
+                sasl_mechanism, sasl_username, sasl_password, ssl_ca_location,
+                ssl_certificate_location, ssl_key_location, ssl_key_password,
+                ssl_endpoint_identification_algorithm, sasl_kerberos_service_name,
+                sasl_kerberos_keytab, sasl_kerberos_principal);
+
+            FOREACH chunk IN RANGE[0, num_chunks-1] DO
+                res = SELECT s 
+                    FROM seeds:s
+                    WHERE s.@tmp_id % num_chunks == chunk
+                    POST-ACCUM
+                        {VERTEXATTRSKAFKA}
+                    LIMIT 1;
             END;
+                
+            FOREACH i IN RANGE[0, kafka_topic_partitions-1] DO
+                INT kafka_errcode = write_to_kafka(producer, kafka_topic, i, "STOP", "");
+                IF kafka_errcode!=0 THEN 
+                    @@kafka_error += ("Error sending STOP signal to topic partition " + stringify(i) + ": " + stringify(kafka_errcode) + "\n");
+                END;
+            END;
+
+            INT kafka_errcode = close_kafka_producer(producer, kafka_timeout);
+            IF kafka_errcode!=0 THEN 
+                @@kafka_error += ("Error shutting down Kafka producer: " + stringify(kafka_errcode) + "\n");
+            END;
+            PRINT @@kafka_error as kafkaError;
+        # Else return as http response
         ELSE
-            # Add to response
-            PRINT @@v_batch AS vertex_batch;  
+            FOREACH chunk IN RANGE[0, num_chunks-1] DO
+                ListAccum<STRING> @@v_batch;
+                res = SELECT s 
+                    FROM seeds:s
+                    WHERE s.@tmp_id % num_chunks == chunk
+                    POST-ACCUM 
+                        {VERTEXATTRSHTTP}
+                    LIMIT 1;
+
+                FOREACH i IN @@v_batch DO
+                    PRINT i as data_batch;
+                END;
+            END;
         END;
-    END;
-    IF kafka_address != "" THEN
-        kafka_errcode = close_kafka_producer(producer, kafka_timeout);
-        IF kafka_errcode!=0 THEN 
-            @@kafka_error += ("Error shutting down Kafka producer: " + stringify(kafka_errcode) + "\n");
+    # Else get given vertices. 
+    ELSE
+        ListAccum<STRING> @@v_batch;
+        start = input_vertices;
+        res = SELECT s 
+            FROM start:s 
+            POST-ACCUM 
+                {VERTEXATTRSHTTP}
+            LIMIT 1;
+        FOREACH i IN @@v_batch DO
+            PRINT i as data_batch;
         END;
-        PRINT @@kafka_error as kafkaError;
     END;
 }

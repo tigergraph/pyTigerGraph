@@ -1,0 +1,46 @@
+CREATE QUERY edge_nei_loader_sub_{QUERYSUFFIX} (VERTEX u, VERTEX v, STRING delimiter, INT num_hops, INT num_neighbors, SET<STRING> e_types, SET<STRING> v_types, STRING seed_type)
+RETURNS (ListAccum<STRING>) 
+SYNTAX V1
+{
+    SumAccum<STRING> @@v_batch;
+    SumAccum<STRING> @@e_batch;
+    SetAccum<VERTEX> @@printed_vertices;
+    SetAccum<EDGE> @@printed_edges;
+    ListAccum<STRING> @@ret;
+
+    source = {u};
+    res = SELECT s
+        FROM source:s -(seed_type:e)- v_types:t
+        WHERE t==v
+        ACCUM
+            @@printed_edges += e,
+            {SEEDEDGEATTRS};
+
+    start = {u,v};
+    res = SELECT s
+        FROM start:s
+        POST-ACCUM
+            @@printed_vertices += s,
+            {VERTEXATTRS};
+
+    FOREACH i IN RANGE[1, num_hops] DO
+        start = SELECT t
+            FROM start:s -(e_types:e)- v_types:t 
+            SAMPLE num_neighbors EDGE WHEN s.outdegree() >= 1
+            ACCUM
+                IF NOT @@printed_edges.contains(e) THEN
+                    @@printed_edges += e,
+                    {OTHEREDGEATTRS}
+                END;
+        start = SELECT s
+            FROM start:s 
+            POST-ACCUM 
+                IF NOT @@printed_vertices.contains(s) THEN
+                    @@printed_vertices += s,
+                    {VERTEXATTRS}
+                END;
+    END;
+    @@ret += @@v_batch;
+    @@ret += @@e_batch;
+    RETURN @@ret;
+}

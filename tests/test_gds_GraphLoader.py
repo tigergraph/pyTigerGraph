@@ -9,7 +9,7 @@ from pyTigerGraph.gds.dataloaders import GraphLoader
 from pyTigerGraph.gds.utilities import is_query_installed
 
 
-class TestGDSGraphLoader(unittest.TestCase):
+class TestGDSGraphLoaderKafka(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.conn = make_connection(graphname="Cora")
@@ -22,15 +22,11 @@ class TestGDSGraphLoader(unittest.TestCase):
             v_extra_feats=["train_mask", "val_mask", "test_mask"],
             batch_size=1024,
             shuffle=True,
-            filter_by=None,
             output_format="dataframe",
-            add_self_loop=False,
-            loader_id=None,
-            buffer_size=4,
             kafka_address="kafka:9092",
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
-        self.assertEqual(loader.num_batches, 11)
+        self.assertIsNone(loader.num_batches)
 
     def test_iterate_pyg(self):
         loader = GraphLoader(
@@ -40,14 +36,11 @@ class TestGDSGraphLoader(unittest.TestCase):
             v_extra_feats=["train_mask", "val_mask", "test_mask"],
             batch_size=1024,
             shuffle=True,
-            filter_by=None,
             output_format="PyG",
-            add_self_loop=False,
-            loader_id=None,
-            buffer_size=4,
             kafka_address="kafka:9092",
         )
         num_batches = 0
+        batch_sizes = []
         for data in loader:
             # print(num_batches, data)
             self.assertIsInstance(data, pygData)
@@ -56,8 +49,12 @@ class TestGDSGraphLoader(unittest.TestCase):
             self.assertIn("train_mask", data)
             self.assertIn("val_mask", data)
             self.assertIn("test_mask", data)
+            batch_sizes.append(data["edge_index"].shape[1])
             num_batches += 1
         self.assertEqual(num_batches, 11)
+        for i in batch_sizes[:-1]:
+            self.assertEqual(i, 1024)
+        self.assertLessEqual(batch_sizes[-1], 1024)
 
     def test_iterate_df(self):
         loader = GraphLoader(
@@ -67,25 +64,28 @@ class TestGDSGraphLoader(unittest.TestCase):
             v_extra_feats=["train_mask", "val_mask", "test_mask"],
             batch_size=1024,
             shuffle=True,
-            filter_by=None,
             output_format="dataframe",
-            add_self_loop=False,
-            loader_id=None,
-            buffer_size=4,
             kafka_address="kafka:9092",
         )
         num_batches = 0
+        batch_sizes = []
         for data in loader:
-            # print(num_batches, data)
+            # print(num_batches, data, flush=True)
             self.assertIsInstance(data[0], DataFrame)
-            self.assertIsInstance(data[1], DataFrame)
             self.assertIn("x", data[0].columns)
             self.assertIn("y", data[0].columns)
             self.assertIn("train_mask", data[0].columns)
             self.assertIn("val_mask", data[0].columns)
             self.assertIn("test_mask", data[0].columns)
+            self.assertIsInstance(data[1], DataFrame)
+            self.assertIn("source", data[1])
+            self.assertIn("target", data[1])
+            batch_sizes.append(data[1].shape[0])
             num_batches += 1
         self.assertEqual(num_batches, 11)
+        for i in batch_sizes[:-1]:
+            self.assertEqual(i, 1024)
+        self.assertLessEqual(batch_sizes[-1], 1024)
 
     def test_edge_attr(self):
         loader = GraphLoader(
@@ -97,11 +97,7 @@ class TestGDSGraphLoader(unittest.TestCase):
             e_extra_feats=["is_train"],
             batch_size=1024,
             shuffle=True,
-            filter_by=None,
             output_format="PyG",
-            add_self_loop=False,
-            loader_id=None,
-            buffer_size=4,
             kafka_address="kafka:9092",
         )
         num_batches = 0
@@ -207,12 +203,9 @@ class TestGDSGraphLoaderREST(unittest.TestCase):
             shuffle=True,
             filter_by=None,
             output_format="dataframe",
-            add_self_loop=False,
-            loader_id=None,
-            buffer_size=4,
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
-        self.assertEqual(loader.num_batches, 11)
+        self.assertIsNone(loader.num_batches)
 
     def test_iterate_pyg(self):
         loader = GraphLoader(
@@ -222,13 +215,10 @@ class TestGDSGraphLoaderREST(unittest.TestCase):
             v_extra_feats=["train_mask", "val_mask", "test_mask"],
             batch_size=1024,
             shuffle=True,
-            filter_by=None,
             output_format="PyG",
-            add_self_loop=False,
-            loader_id=None,
-            buffer_size=4,
         )
         num_batches = 0
+        batch_sizes = []
         for data in loader:
             # print(num_batches, data)
             self.assertIsInstance(data, pygData)
@@ -238,7 +228,11 @@ class TestGDSGraphLoaderREST(unittest.TestCase):
             self.assertIn("val_mask", data)
             self.assertIn("test_mask", data)
             num_batches += 1
+            batch_sizes.append(data["edge_index"].shape[1])
         self.assertEqual(num_batches, 11)
+        for i in batch_sizes[:-1]:
+            self.assertEqual(i, 1024)
+        self.assertLessEqual(batch_sizes[-1], 1024)
 
     def test_iterate_df(self):
         loader = GraphLoader(
@@ -248,13 +242,10 @@ class TestGDSGraphLoaderREST(unittest.TestCase):
             v_extra_feats=["train_mask", "val_mask", "test_mask"],
             batch_size=1024,
             shuffle=True,
-            filter_by=None,
             output_format="dataframe",
-            add_self_loop=False,
-            loader_id=None,
-            buffer_size=4,
         )
         num_batches = 0
+        batch_sizes = []
         for data in loader:
             # print(num_batches, data)
             self.assertIsInstance(data[0], DataFrame)
@@ -264,8 +255,14 @@ class TestGDSGraphLoaderREST(unittest.TestCase):
             self.assertIn("train_mask", data[0].columns)
             self.assertIn("val_mask", data[0].columns)
             self.assertIn("test_mask", data[0].columns)
+            self.assertIn("source", data[1])
+            self.assertIn("target", data[1])
+            batch_sizes.append(data[1].shape[0])
             num_batches += 1
         self.assertEqual(num_batches, 11)
+        for i in batch_sizes[:-1]:
+            self.assertEqual(i, 1024)
+        self.assertLessEqual(batch_sizes[-1], 1024)
 
     def test_edge_attr(self):
         loader = GraphLoader(
@@ -277,11 +274,7 @@ class TestGDSGraphLoaderREST(unittest.TestCase):
             e_extra_feats=["is_train"],
             batch_size=1024,
             shuffle=True,
-            filter_by=None,
             output_format="PyG",
-            add_self_loop=False,
-            loader_id=None,
-            buffer_size=4
         )
         num_batches = 0
         for data in loader:
@@ -327,11 +320,7 @@ class TestGDSGraphLoaderREST(unittest.TestCase):
             v_extra_feats=["train_mask", "val_mask", "test_mask"],
             batch_size=1024,
             shuffle=True,
-            filter_by=None,
             output_format="spektral",
-            add_self_loop=False,
-            loader_id=None,
-            buffer_size=4,
         )
         num_batches = 0
         for data in loader:
@@ -360,14 +349,10 @@ class TestGDSHeteroGraphLoaderREST(unittest.TestCase):
             v_extra_feats={"v0": ["train_mask", "val_mask", "test_mask"]},
             batch_size=1024,
             shuffle=False,
-            filter_by=None,
             output_format="dataframe",
-            add_self_loop=False,
-            loader_id=None,
-            buffer_size=4,
         )
         self.assertTrue(is_query_installed(self.conn, loader.query_name))
-        self.assertEqual(loader.num_batches, 6)
+        self.assertIsNone(loader.num_batches)
 
     def test_iterate_pyg(self):
         loader = GraphLoader(
@@ -376,26 +361,36 @@ class TestGDSHeteroGraphLoaderREST(unittest.TestCase):
                         "v1": ["x"]},
             v_out_labels={"v0": ["y"]},
             v_extra_feats={"v0": ["train_mask", "val_mask", "test_mask"]},
-            batch_size=1024,
+            batch_size=300,
             shuffle=True,
-            filter_by=None,
             output_format="PyG",
-            add_self_loop=False,
-            loader_id=None,
-            buffer_size=4,
         )
         num_batches = 0
+        batch_sizes = []
         for data in loader:
             # print(num_batches, data)
             self.assertIsInstance(data, pygHeteroData)
-            self.assertIn("x", data["v0"])
-            self.assertIn("y", data["v0"])
-            self.assertIn("train_mask", data["v0"])
-            self.assertIn("val_mask", data["v0"])
-            self.assertIn("test_mask", data["v0"])
-            self.assertIn("x", data["v1"])
+            self.assertTrue("v0" in data.node_types or "v1" in data.node_types)
+            if "v0" in data.node_types:
+                self.assertIn("x", data["v0"])
+                self.assertIn("y", data["v0"])
+                self.assertIn("train_mask", data["v0"])
+                self.assertIn("val_mask", data["v0"])
+                self.assertIn("test_mask", data["v0"])
+            if "v1" in data.node_types:
+                self.assertIn("x", data["v1"])
+            self.assertTrue(('v0', 'v0v0', 'v0') in data.edge_types or ('v1', 'v1v1', 'v1') in data.edge_types)
+            batchsize = 0
+            if ('v0', 'v0v0', 'v0') in data.edge_types:
+                batchsize += data["v0", "v0v0", "v0"].edge_index.shape[1]
+            if ('v1', 'v1v1', 'v1') in data.edge_types:
+                batchsize += data["v1", "v1v1", "v1"].edge_index.shape[1]
+            batch_sizes.append(batchsize)
             num_batches += 1
         self.assertEqual(num_batches, 6)
+        for i in batch_sizes[:-1]:
+            self.assertEqual(i, 300)
+        self.assertLessEqual(batch_sizes[-1], 300)
 
     def test_iterate_df(self):
         loader = GraphLoader(
@@ -404,29 +399,41 @@ class TestGDSHeteroGraphLoaderREST(unittest.TestCase):
                         "v1": ["x"]},
             v_out_labels={"v0": ["y"]},
             v_extra_feats={"v0": ["train_mask", "val_mask", "test_mask"]},
-            batch_size=1024,
+            batch_size=300,
             shuffle=False,
-            filter_by=None,
             output_format="dataframe",
-            add_self_loop=False,
-            loader_id=None,
-            buffer_size=4,
         )
         num_batches = 0
+        batch_sizes = []
         for data in loader:
             # print(num_batches, data)
-            self.assertIsInstance(data[0]["v0"], DataFrame)
-            self.assertIsInstance(data[0]["v1"], DataFrame)
-            self.assertIsInstance(data[1]["v0v0"], DataFrame)
-            self.assertIsInstance(data[1]["v1v1"], DataFrame)
-            self.assertIn("x", data[0]["v0"].columns)
-            self.assertIn("y", data[0]["v0"].columns)
-            self.assertIn("train_mask", data[0]["v0"].columns)
-            self.assertIn("val_mask", data[0]["v0"].columns)
-            self.assertIn("test_mask", data[0]["v0"].columns)
-            self.assertIn("x", data[0]["v1"].columns)
+            self.assertTrue("v0" in data[0] or "v1" in data[0])
+            if "v0" in data[0]:
+                self.assertIsInstance(data[0]["v0"], DataFrame)
+                self.assertIn("x", data[0]["v0"].columns)
+                self.assertIn("y", data[0]["v0"].columns)
+                self.assertIn("train_mask", data[0]["v0"].columns)
+                self.assertIn("val_mask", data[0]["v0"].columns)
+                self.assertIn("test_mask", data[0]["v0"].columns)
+            if "v1" in data[0]:
+                self.assertIsInstance(data[0]["v1"], DataFrame)
+                self.assertIn("x", data[0]["v1"].columns)
+            self.assertTrue("v0v0" in data[1] or "v1v1" in data[1])
+            batchsize = 0
+            if "v0v0" in data[1]:
+                self.assertIsInstance(data[1]["v0v0"], DataFrame)
+                batchsize += data[1]["v0v0"].shape[0]
+                self.assertEqual(data[1]["v0v0"].shape[1], 2)
+            if "v1v1" in data[1]:
+                self.assertIsInstance(data[1]["v1v1"], DataFrame)
+                batchsize += data[1]["v1v1"].shape[0]
+                self.assertEqual(data[1]["v1v1"].shape[1], 2)
+            batch_sizes.append(batchsize)
             num_batches += 1
         self.assertEqual(num_batches, 6)
+        for i in batch_sizes[:-1]:
+            self.assertEqual(i, 300)
+        self.assertLessEqual(batch_sizes[-1], 300)
 
     def test_edge_attr(self):
         loader = GraphLoader(
@@ -437,38 +444,197 @@ class TestGDSHeteroGraphLoaderREST(unittest.TestCase):
             v_extra_feats={"v0": ["train_mask", "val_mask", "test_mask"]},
             e_extra_feats={"v0v0": ["is_train", "is_val"],
                            "v1v1": ["is_train", "is_val"]},
-            batch_size=1024,
+            batch_size=300,
             shuffle=False,
-            filter_by=None,
             output_format="PyG",
-            add_self_loop=False,
-            loader_id=None,
-            buffer_size=4
         )
         num_batches = 0
+        batch_sizes = []
         for data in loader:
             # print(num_batches, data)
             self.assertIsInstance(data, pygHeteroData)
-            self.assertIn("x", data["v0"])
-            self.assertIn("y", data["v0"])
-            self.assertIn("train_mask", data["v0"])
-            self.assertIn("val_mask", data["v0"])
-            self.assertIn("test_mask", data["v0"])
-            self.assertIn("x", data["v1"])
-            self.assertIn("is_train", data["v0v0"])
-            self.assertIn("is_train", data["v1v1"])
-            self.assertIn("is_val", data["v0v0"])
-            self.assertIn("is_val", data["v1v1"])
+            self.assertTrue("v0" in data.node_types or "v1" in data.node_types)
+            if "v0" in data.node_types:
+                self.assertIn("x", data["v0"])
+                self.assertIn("y", data["v0"])
+                self.assertIn("train_mask", data["v0"])
+                self.assertIn("val_mask", data["v0"])
+                self.assertIn("test_mask", data["v0"])
+            if "v1" in data.node_types:
+                self.assertIn("x", data["v1"])
+            self.assertTrue(('v0', 'v0v0', 'v0') in data.edge_types or ('v1', 'v1v1', 'v1') in data.edge_types)
+            batchsize = 0
+            if ('v0', 'v0v0', 'v0') in data.edge_types:
+                self.assertIn("is_train", data["v0", "v0v0", "v0"])
+                self.assertIn("is_val", data["v0", "v0v0", "v0"])
+                batchsize += data["v0", "v0v0", "v0"].edge_index.shape[1]
+            if ('v1', 'v1v1', 'v1') in data.edge_types:
+                self.assertIn("is_train", data["v1", "v1v1", "v1"])
+                self.assertIn("is_val", data["v1", "v1v1", "v1"])
+                batchsize += data["v1", "v1v1", "v1"].edge_index.shape[1]
+            batch_sizes.append(batchsize)
             num_batches += 1
-        self.assertEqual(num_batches, 2)
+        self.assertEqual(num_batches, 6)
+        for i in batch_sizes[:-1]:
+            self.assertEqual(i, 300)
+        self.assertLessEqual(batch_sizes[-1], 300)
+
+
+class TestGDSHeteroGraphLoaderKafka(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.conn = make_connection(graphname="hetero")
+
+    def test_init(self):
+        loader = GraphLoader(
+            graph=self.conn,
+            v_in_feats={"v0": ["x"],
+                        "v1": ["x"]},
+            v_out_labels={"v0": ["y"]},
+            v_extra_feats={"v0": ["train_mask", "val_mask", "test_mask"]},
+            batch_size=1024,
+            shuffle=False,
+            output_format="dataframe",
+            kafka_address="kafka:9092",
+        )
+        self.assertTrue(is_query_installed(self.conn, loader.query_name))
+        self.assertIsNone(loader.num_batches)
+
+    def test_iterate_pyg(self):
+        loader = GraphLoader(
+            graph=self.conn,
+            v_in_feats={"v0": ["x"],
+                        "v1": ["x"]},
+            v_out_labels={"v0": ["y"]},
+            v_extra_feats={"v0": ["train_mask", "val_mask", "test_mask"]},
+            batch_size=300,
+            shuffle=True,
+            output_format="PyG",
+            kafka_address="kafka:9092",
+        )
+        num_batches = 0
+        batch_sizes = []
+        for data in loader:
+            # print(num_batches, data)
+            self.assertIsInstance(data, pygHeteroData)
+            self.assertTrue("v0" in data.node_types or "v1" in data.node_types)
+            if "v0" in data.node_types:
+                self.assertIn("x", data["v0"])
+                self.assertIn("y", data["v0"])
+                self.assertIn("train_mask", data["v0"])
+                self.assertIn("val_mask", data["v0"])
+                self.assertIn("test_mask", data["v0"])
+            if "v1" in data.node_types:
+                self.assertIn("x", data["v1"])
+            self.assertTrue(('v0', 'v0v0', 'v0') in data.edge_types or ('v1', 'v1v1', 'v1') in data.edge_types)
+            batchsize = 0
+            if ('v0', 'v0v0', 'v0') in data.edge_types:
+                batchsize += data["v0", "v0v0", "v0"].edge_index.shape[1]
+            if ('v1', 'v1v1', 'v1') in data.edge_types:
+                batchsize += data["v1", "v1v1", "v1"].edge_index.shape[1]
+            batch_sizes.append(batchsize)
+            num_batches += 1
+        self.assertEqual(num_batches, 6)
+        for i in batch_sizes[:-1]:
+            self.assertEqual(i, 300)
+        self.assertLessEqual(batch_sizes[-1], 300)
+
+    def test_iterate_df(self):
+        loader = GraphLoader(
+            graph=self.conn,
+            v_in_feats={"v0": ["x"],
+                        "v1": ["x"]},
+            v_out_labels={"v0": ["y"]},
+            v_extra_feats={"v0": ["train_mask", "val_mask", "test_mask"]},
+            batch_size=300,
+            shuffle=False,
+            output_format="dataframe",
+            kafka_address="kafka:9092",
+        )
+        num_batches = 0
+        batch_sizes = []
+        for data in loader:
+            # print(num_batches, data)
+            self.assertTrue("v0" in data[0] or "v1" in data[0])
+            if "v0" in data[0]:
+                self.assertIsInstance(data[0]["v0"], DataFrame)
+                self.assertIn("x", data[0]["v0"].columns)
+                self.assertIn("y", data[0]["v0"].columns)
+                self.assertIn("train_mask", data[0]["v0"].columns)
+                self.assertIn("val_mask", data[0]["v0"].columns)
+                self.assertIn("test_mask", data[0]["v0"].columns)
+            if "v1" in data[0]:
+                self.assertIsInstance(data[0]["v1"], DataFrame)
+                self.assertIn("x", data[0]["v1"].columns)
+            self.assertTrue("v0v0" in data[1] or "v1v1" in data[1])
+            batchsize = 0
+            if "v0v0" in data[1]:
+                self.assertIsInstance(data[1]["v0v0"], DataFrame)
+                batchsize += data[1]["v0v0"].shape[0]
+                self.assertEqual(data[1]["v0v0"].shape[1], 2)
+            if "v1v1" in data[1]:
+                self.assertIsInstance(data[1]["v1v1"], DataFrame)
+                batchsize += data[1]["v1v1"].shape[0]
+                self.assertEqual(data[1]["v1v1"].shape[1], 2)
+            batch_sizes.append(batchsize)
+            num_batches += 1
+        self.assertEqual(num_batches, 6)
+        for i in batch_sizes[:-1]:
+            self.assertEqual(i, 300)
+        self.assertLessEqual(batch_sizes[-1], 300)
+
+    def test_edge_attr(self):
+        loader = GraphLoader(
+            graph=self.conn,
+            v_in_feats={"v0": ["x"],
+                        "v1": ["x"]},
+            v_out_labels={"v0": ["y"]},
+            v_extra_feats={"v0": ["train_mask", "val_mask", "test_mask"]},
+            e_extra_feats={"v0v0": ["is_train", "is_val"],
+                           "v1v1": ["is_train", "is_val"]},
+            batch_size=300,
+            shuffle=False,
+            output_format="PyG",
+            kafka_address="kafka:9092",
+        )
+        num_batches = 0
+        batch_sizes = []
+        for data in loader:
+            # print(num_batches, data)
+            self.assertIsInstance(data, pygHeteroData)
+            self.assertTrue("v0" in data.node_types or "v1" in data.node_types)
+            if "v0" in data.node_types:
+                self.assertIn("x", data["v0"])
+                self.assertIn("y", data["v0"])
+                self.assertIn("train_mask", data["v0"])
+                self.assertIn("val_mask", data["v0"])
+                self.assertIn("test_mask", data["v0"])
+            if "v1" in data.node_types:
+                self.assertIn("x", data["v1"])
+            self.assertTrue(('v0', 'v0v0', 'v0') in data.edge_types or ('v1', 'v1v1', 'v1') in data.edge_types)
+            batchsize = 0
+            if ('v0', 'v0v0', 'v0') in data.edge_types:
+                self.assertIn("is_train", data["v0", "v0v0", "v0"])
+                self.assertIn("is_val", data["v0", "v0v0", "v0"])
+                batchsize += data["v0", "v0v0", "v0"].edge_index.shape[1]
+            if ('v1', 'v1v1', 'v1') in data.edge_types:
+                self.assertIn("is_train", data["v1", "v1v1", "v1"])
+                self.assertIn("is_val", data["v1", "v1v1", "v1"])
+                batchsize += data["v1", "v1v1", "v1"].edge_index.shape[1]
+            batch_sizes.append(batchsize)
+            num_batches += 1
+        self.assertEqual(num_batches, 6)
+        for i in batch_sizes[:-1]:
+            self.assertEqual(i, 300)
+        self.assertLessEqual(batch_sizes[-1], 300)
 
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
-    suite.addTest(TestGDSGraphLoader("test_init"))
-    suite.addTest(TestGDSGraphLoader("test_iterate_pyg"))
-    suite.addTest(TestGDSGraphLoader("test_iterate_df"))
-    suite.addTest(TestGDSGraphLoader("test_edge_attr"))
+    suite.addTest(TestGDSGraphLoaderKafka("test_init"))
+    suite.addTest(TestGDSGraphLoaderKafka("test_iterate_pyg"))
+    suite.addTest(TestGDSGraphLoaderKafka("test_iterate_df"))
+    suite.addTest(TestGDSGraphLoaderKafka("test_edge_attr"))
     # suite.addTest(TestGDSGraphLoader("test_sasl_plaintext"))
     # suite.addTest(TestGDSGraphLoader("test_sasl_ssl"))
     suite.addTest(TestGDSGraphLoaderREST("test_init"))
@@ -480,6 +646,10 @@ if __name__ == "__main__":
     suite.addTest(TestGDSHeteroGraphLoaderREST("test_iterate_pyg"))
     suite.addTest(TestGDSHeteroGraphLoaderREST("test_iterate_df"))
     suite.addTest(TestGDSHeteroGraphLoaderREST("test_edge_attr"))
+    suite.addTest(TestGDSHeteroGraphLoaderKafka("test_init"))
+    suite.addTest(TestGDSHeteroGraphLoaderKafka("test_iterate_pyg"))
+    suite.addTest(TestGDSHeteroGraphLoaderKafka("test_iterate_df"))
+    suite.addTest(TestGDSHeteroGraphLoaderKafka("test_edge_attr"))
 
     runner = unittest.TextTestRunner(verbosity=2, failfast=True)
     runner.run(suite)
