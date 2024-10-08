@@ -280,6 +280,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
         
         if not res.get("error"):
+            print(res)
             if setToken:
                 self.apiToken = res["token"]
                 self.authHeader = {'Authorization': "Bearer " + self.apiToken}
