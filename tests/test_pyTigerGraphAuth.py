@@ -69,7 +69,6 @@ class test_pyTigerGraphAuth(unittest.TestCase):
 
     def test_06_refreshToken(self):
         # TG 4.x does not allow refreshing tokens
-        self.conn.getToken(self.conn.createSecret())
         if self.conn._versionGreaterThan4_0(): 
             with self.assertRaises(TigerGraphException) as tge:
                 self.conn.refreshToken("secret1")
@@ -89,7 +88,7 @@ class test_pyTigerGraphAuth(unittest.TestCase):
         res = self.conn.createSecret("secret7", True)
         token = self.conn.getToken(res["secret7"])
         if isinstance(token, str): # handle plaintext tokens from TG 3.x
-            self.assertTrue(self.conn.deleteToken(res["secrety"], token))
+            self.assertTrue(self.conn.deleteToken(res["secret7"], token))
         else:
             self.assertTrue(self.conn.deleteToken(res["secret7"], token[0]))
         self.conn.dropSecret("secret7")
