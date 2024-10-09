@@ -347,7 +347,7 @@ class pyTigerGraphBase(object):
             # This block should only be called once. When using 4.x, using port 9000 should fail so self.restppurl will change to host:14240/restpp
             # ----
             # Changes port to gsql port, adds /restpp to end to url, tries again, saves changes if successful
-            if "9000" in url and ("/restpp" not in url or self.tgCloud):
+            if self.restppPort in url and ("/restpp" not in url or self.tgCloud):
                 newRestppUrl = self.host + ":"+self.gsPort+"/restpp"
                 # In tgcloud /restpp can already be in the restpp url. We want to extract everything after the port or /restpp
                 if self.tgCloud:
