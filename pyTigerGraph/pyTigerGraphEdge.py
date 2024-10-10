@@ -37,9 +37,12 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        ret = []
-        for et in self.getSchema(force=force)["EdgeTypes"]:
-            ret.append(et["Name"])
+        if self._versionGreaterThan4_0():
+            ret = self.getSchema(force=force)["edges"]
+        else:
+            ret = []
+            for et in self.getSchema(force=force)["EdgeTypes"]:
+                ret.append(et["Name"])
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
