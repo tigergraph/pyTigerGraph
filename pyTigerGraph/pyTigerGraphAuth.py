@@ -222,52 +222,35 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
         if self.version:
             s, m, i = self.version.split(".")
         success = False
-
-        if secret and (int(s) < 3 or (int(s) == 3 and int(m) < 5)):
+        
+        if not(secret) or self.graphname:
+            if self.graphname:
+                _json = {"graph": self.graphname}
             try:
-                # /gsql/v1/tokens endpoint only supported on version >=4.1 and replaced /requesttoken
-                _json = {"secret": secret, "graph": self.graphname}
-                if lifetime:
-                    _json["lifetime"] = str(lifetime)
-                res = requests.request("POST", self.gsUrl +
-                    "/gsql/v1/tokens", verify=False, json=_json, headers={"X-User-Agent": "pyTigerGraph"})
+                res = self._post(self.restppUrl+"/requesttoken", authMode="pwd", data=str(_json), resKey="results")
+                mainVer = 3
                 
-                # if /gsql/v1/tokens endpoint doesn't exist then try old endpoint
-                if res.status_code == 404:
-                    res = requests.request("GET", self.restppUrl +
-                        "/requesttoken?secret=" + secret +
-                        ("&lifetime=" + str(lifetime) if lifetime else ""), verify=False)
-                    mainVer = 3 # Can't use _verGreaterThan4_0 to check version since you need to set a token for that
-                else:
-                    mainVer = 4
-                res = json.loads(res.text)
-
-                if not res["error"]:
-                    success = True
+            # The old endpoint doesn't exist (since on TigerGraph Ver >=4.1). Use new endpoint
+            # have to handle it in this order since _req changes the url to the new url path if first request fails
             except Exception as e:
-                raise e
-        elif not(success) and not(secret):
-            _json = {"graph": self.graphname}
-            try:
-                res = self._post(self.gsUrl +
-                    "/gsql/v1/tokens", data=_json, authMode="pwd", jsonData=True, resKey=None)
-                mainVer = 4
-                
-            # The new endpoint doesn't exist (since on TigerGraph Ver <4.1). Use old endpoint
-            except requests.exceptions.HTTPError as e:
-                if e.response.status_code == 404:    
-                    res = self._post(self.restppUrl+"/requesttoken", authMode="pwd", data=str({"graph": self.graphname}), resKey="results")
-                    mainVer = 3
-                if e.response.status_code == 400:
-                    raise TigerGraphException("Error requesting token. Check if the connection's graphname is correct.", 400)
-                else:
-                    raise e
+                try:
+                    res = self._post(self.gsUrl + "/gsql/v1/tokens",
+                                     data=_json,
+                                     authMode="pwd",
+                                     jsonData=True,
+                                     resKey=None)
+                    mainVer = 4
+                except requests.exceptions.HTTPError as e:
+                    if e.response.status_code == 404:
+                        raise TigerGraphException(
+                            "Error requesting token. Check if the connection's graphname is correct and that REST authentication is enabled.",
+                            404
+                        )
+                    else:
+                        raise e
+                pass
             success = True
-        elif not(success) and (int(s) < 3 or (int(s) == 3 and int(m) < 5)):
-            raise TigerGraphException("Cannot request a token with username/password for versions < 3.5.")
-
-
-        if not success and mainVer == 3:
+        elif secret:
             try:
                 data = {"secret": secret}
 
@@ -276,8 +259,24 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
                 res = json.loads(requests.post(self.restppUrl + "/requesttoken",
                     data=json.dumps(data), verify=False).text)
-            except Exception as e:
-                raise e
+                success = True
+                mainVer = 3
+            except Exception as e: # case of less than version 3.5
+                try:
+                    res = requests.request("GET", self.restppUrl +
+                    "/requesttoken?secret=" + secret +
+                    ("&lifetime=" + str(lifetime) if lifetime else ""), verify=False)
+                    mainVer = 3 # Can't use _verGreaterThan4_0 to check version since you need to set a token for that
+                    
+                    res = json.loads(res.text)
+
+                    if not res["error"]:
+                        success = True
+                except:
+                    raise e
+        else:
+            raise TigerGraphException("Cannot request a token with username/password for versions < 3.5.")
+            
 
         
         if not res.get("error"):
@@ -510,5 +509,6 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             logger.info("exit: parseVertices")
 
             return True
+
 
         raise TigerGraphException(res["message"], (res["code"] if "code" in res else None))

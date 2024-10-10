@@ -125,8 +125,8 @@ class pyTigerGraphSchema(pyTigerGraphBase):
 
         if not self.schema or force:
             if self._versionGreaterThan4_0():
-                self.schema = self._get(self.gsUrl + "/gsql/v1/schema/graphs/" + self.graphname,
-                    authMode="pwd")
+                self.schema = self._get(self.gsUrl + "/gsql/v1/schema/graphs?graphName=" + self.graphname,
+                    authMode="pwd", resKey="graphs")[0]
             else:
                 self.schema = self._get(self.gsUrl + "/gsqlserver/gsql/schema?graph=" + self.graphname,
                     authMode="pwd")

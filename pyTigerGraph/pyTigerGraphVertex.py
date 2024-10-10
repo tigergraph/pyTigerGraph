@@ -38,8 +38,11 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             logger.debug("params: " + self._locals(locals()))
 
         ret = []
-        for vt in self.getSchema(force=force)["VertexTypes"]:
-            ret.append(vt["Name"])
+        if self._versionGreaterThan4_0():
+            ret = self.getSchema(force=force)["vertices"]
+        else:
+            for vt in self.getSchema(force=force)["VertexTypes"]:
+                ret.append(vt["Name"])
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
