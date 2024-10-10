@@ -218,7 +218,7 @@ class pyTigerGraphBase(object):
             logger.debug(f"Using auth header: {self.authHeader}") 
             version = self.getVer()
             logger.info(f"Database version: {version}")
-
+            '''
             # Check JWT support for GSQL server
             if self._versionGreaterThan4_0():
                 logger.debug(f"Attempting to get auth info with URL: {self.gsUrl + '/gsql/v1/tokens/check'}")
@@ -228,13 +228,14 @@ class pyTigerGraphBase(object):
             else:
                 logger.debug(f"Attempting to get auth info with URL: {self.gsUrl + '/gsqlserver/gsql/simpleauth'}")
                 self._get(f"{self.gsUrl}/gsqlserver/gsql/simpleauth", authMode="token", resKey=None)
+            '''
         except requests.exceptions.ConnectionError as e:
             logger.error(f"Connection error: {e}.")
-            raise RuntimeError(f"Connection error: {e}.") from e
+            raise TigerGraphException(f"Connection error: "+str(e))
         except Exception as e:
-            message = "The JWT token might be invalid or expired or DB version doesn't support JWT token. Please generate new JWT token or switch to API token or username/password."
+            message = "The JWT token might be invalid or expired or DB version doesn't support JWT token. Please generate new JWT token or switch to API token or username/password. Error: "+str(e)
             logger.error(f"Error occurred: {e}. {message}")
-            raise RuntimeError(message) from e
+            raise TigerGraphException(message) 
 
     def _locals(self, _locals: dict) -> str:
         del _locals["self"]
