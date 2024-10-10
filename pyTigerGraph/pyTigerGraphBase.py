@@ -231,7 +231,7 @@ class pyTigerGraphBase(object):
             '''
         except requests.exceptions.ConnectionError as e:
             logger.error(f"Connection error: {e}.")
-            raise TigerGraphException(f"Connection error: "+str(e))
+            raise TigerGraphException("Connection error: "+str(e))
         except Exception as e:
             message = "The JWT token might be invalid or expired or DB version doesn't support JWT token. Please generate new JWT token or switch to API token or username/password. Error: "+str(e)
             logger.error(f"Error occurred: {e}. {message}")
