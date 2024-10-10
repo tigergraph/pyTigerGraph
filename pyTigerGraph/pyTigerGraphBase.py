@@ -340,7 +340,6 @@ class pyTigerGraphBase(object):
             res = requests.request(method, url, headers=_headers, json=_data, params=params, verify=verify)
         else:
             res = requests.request(method, url, headers=_headers, data=_data, params=params, verify=verify)
-        print(res.text)
         try:
             res.raise_for_status()
         except Exception as e:
