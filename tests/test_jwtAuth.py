@@ -3,7 +3,7 @@ import requests
 import json
 
 from pyTigerGraphUnitTest import make_connection
-from pyTigerGraph import TigerGraphConnection
+from pyTigerGraph import TigerGraphConnection, pyTigerGraphException
 
 
 class TestJWTTokenAuth(unittest.TestCase):
@@ -43,7 +43,7 @@ class TestJWTTokenAuth(unittest.TestCase):
     
 
     def _test_jwtauth_3_9(self):
-        with self.assertRaises(RuntimeError) as context:
+        with self.assertRaises(pyTigerGraphException) as context:
             TigerGraphConnection(
                 host=self.conn.host,
                 jwtToken="fake.JWT.Token"
@@ -79,7 +79,7 @@ class TestJWTTokenAuth(unittest.TestCase):
 
 
     def _test_jwtauth_4_1_fail(self):
-        with self.assertRaises(RuntimeError) as context:
+        with self.assertRaises(pyTigerGraphException) as context:
             TigerGraphConnection(
                 host=self.conn.host,
                 jwtToken="invalid.JWT.Token"
