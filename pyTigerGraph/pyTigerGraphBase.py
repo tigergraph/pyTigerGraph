@@ -218,21 +218,24 @@ class pyTigerGraphBase(object):
             logger.debug(f"Using auth header: {self.authHeader}") 
             version = self.getVer()
             logger.info(f"Database version: {version}")
-
+            '''
             # Check JWT support for GSQL server
             if self._versionGreaterThan4_0():
-                logger.debug(f"Attempting to get auth info with URL: {self.gsUrl + '/gsql/v1/auth/simple'}")
-                self._get(f"{self.gsUrl}/gsql/v1/auth/simple", authMode="token", resKey=None)    
+                logger.debug(f"Attempting to get auth info with URL: {self.gsUrl + '/gsql/v1/tokens/check'}")
+                res = self._post(f"{self.gsUrl}/gsql/v1/tokens/check", authMode="token", resKey=None, data={"token": self.jwtToken}, jsonData=True)
+                if "error" in res and res["error"]:
+                    raise TigerGraphException(res["message"], (res["code"] if "code" in res else None))  
             else:
                 logger.debug(f"Attempting to get auth info with URL: {self.gsUrl + '/gsqlserver/gsql/simpleauth'}")
                 self._get(f"{self.gsUrl}/gsqlserver/gsql/simpleauth", authMode="token", resKey=None)
+            '''
         except requests.exceptions.ConnectionError as e:
             logger.error(f"Connection error: {e}.")
-            raise RuntimeError(f"Connection error: {e}.") from e
+            raise TigerGraphException("Connection error: "+str(e))
         except Exception as e:
-            message = "The JWT token might be invalid or expired or DB version doesn't support JWT token. Please generate new JWT token or switch to API token or username/password."
+            message = "The JWT token might be invalid or expired or DB version doesn't support JWT token. Please generate new JWT token or switch to API token or username/password. Error: "+str(e)
             logger.error(f"Error occurred: {e}. {message}")
-            raise RuntimeError(message) from e
+            raise TigerGraphException(message) 
 
     def _locals(self, _locals: dict) -> str:
         del _locals["self"]
@@ -345,7 +348,7 @@ class pyTigerGraphBase(object):
             # This block should only be called once. When using 4.x, using port 9000 should fail so self.restppurl will change to host:14240/restpp
             # ----
             # Changes port to gsql port, adds /restpp to end to url, tries again, saves changes if successful
-            if "/restpp" not in url or self.tgCloud:
+            if self.restppPort in url and "/gsql" not in url and ("/restpp" not in url or self.tgCloud):
                 newRestppUrl = self.host + ":"+self.gsPort+"/restpp"
                 # In tgcloud /restpp can already be in the restpp url. We want to extract everything after the port or /restpp
                 if self.tgCloud:
