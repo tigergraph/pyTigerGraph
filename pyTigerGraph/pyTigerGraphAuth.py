@@ -223,7 +223,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             s, m, i = self.version.split(".")
         success = False
         
-        if not(secret) or self.graphname:
+        if not(secret) and self.graphname:
             if self.graphname:
                 _json = {"graph": self.graphname}
             try:
