@@ -50,7 +50,11 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             logger.debug("params: " + self._locals(locals()))
 
         data = open(filePath, 'rb').read()
-        return self.runLoadingJobWithData(data, fileTag, jobName, sep, eol, timeout, sizeLimit)
+        res = self.runLoadingJobWithData(data, fileTag, jobName, sep, eol, timeout, sizeLimit)
+
+        logger.info("exit: runLoadingJobWithData")
+                
+        return res
 
     def runLoadingJobWithData(self, data: str, fileTag: str, jobName: str, sep: str = None,
             eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000) -> Union[dict, None]:
@@ -69,7 +73,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
                 params["eol"] = eol
         except OSError as ose:
             logger.error(ose.strerror)
-            logger.info("exit: runLoadingJobWithFile")
+            logger.info("exit: runLoadingJobWithData")
 
             return None
             # TODO Should throw exception instead?
@@ -79,7 +83,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: runLoadingJobWithFile")
+        logger.info("exit: runLoadingJobWithData")
 
         return res
 
