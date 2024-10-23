@@ -5,13 +5,65 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 """
 import logging
 import warnings
-from typing import Union
+from typing import TYPE_CHECKING, Union
+if TYPE_CHECKING:
+    import pandas as pd
+
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
 logger = logging.getLogger(__name__)
 
 
 class pyTigerGraphLoading(pyTigerGraphBase):
+
+    def runLoadingJobWithDF(self, df: 'pd.DataFrame', fileTag: str, jobName: str, sep: str = None,
+            eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000, columns: list = None) -> Union[dict, None]:
+        """Execute a loading job with the given pandas DataFrame with optional column list.
+
+        The data string will be posted to the TigerGraph server and the value of the appropriate
+        FILENAME definition will be updated to point to the data received.
+
+        NOTE: The argument `USING HEADER="true"` in the GSQL loading job may not be enough to
+        load the file correctly. Remove the header from the data file before using this function.
+
+        Args:
+            df:
+                The pandas DateFrame data structure to be loaded.
+            fileTag:
+                The name of file variable in the loading job (DEFINE FILENAME <fileTag>).
+            jobName:
+                The name of the loading job.
+            sep:
+                Data value separator. If your data is JSON, you do not need to specify this
+                parameter. The default separator is a comma `,`.
+            eol:
+                End-of-line character. Only one or two characters are allowed, except for the
+                special case `\\r\\n`. The default value is `\\n`
+            timeout:
+                Timeout in seconds. If set to `0`, use the system-wide endpoint timeout setting.
+            sizeLimit:
+                Maximum size for input file in bytes.
+            columns:
+                The ordered pandas DataFrame columns to be uploaded.
+
+        Endpoint:
+            - `POST /ddl/{graph_name}`
+                See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_a_loading_job[Run a loading job]
+        """
+        logger.info("entry: runLoadingJobWithDF")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        if columns is None:
+            data = df.to_csv(sep = '|', header=False)
+        else:
+            data = df.to_csv(columns = columns, sep = '|', header=False)
+
+        res = self.runLoadingJobWithData(data, fileTag, jobName, sep, eol, timeout, sizeLimit)
+        
+        logger.info("exit: runLoadingJobWithDF")
+        
+        return res
 
     def runLoadingJobWithFile(self, filePath: str, fileTag: str, jobName: str, sep: str = None,
             eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000) -> Union[dict, None]:
