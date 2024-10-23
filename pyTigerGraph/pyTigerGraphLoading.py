@@ -55,9 +55,9 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             logger.debug("params: " + self._locals(locals()))
 
         if columns is None:
-            data = df.to_csv(sep = '|', header=False)
+            data = df.to_csv(sep = sep, header=False)
         else:
-            data = df.to_csv(columns = columns, sep = '|', header=False)
+            data = df.to_csv(columns = columns, sep = sep, header=False)
 
         res = self.runLoadingJobWithData(data, fileTag, jobName, sep, eol, timeout, sizeLimit)
         
