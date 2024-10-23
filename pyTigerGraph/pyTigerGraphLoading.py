@@ -52,7 +52,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         data = open(filePath, 'rb').read()
         res = self.runLoadingJobWithData(data, fileTag, jobName, sep, eol, timeout, sizeLimit)
 
-        logger.info("exit: runLoadingJobWithData")
+        logger.info("exit: runLoadingJobWithFile")
                 
         return res
 
