@@ -88,7 +88,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             - `POST /ddl/{graph_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_a_loading_job[Run a loading job]
         """
-                logger.info("entry: runLoadingJobWithData")
+        logger.info("entry: runLoadingJobWithData")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
