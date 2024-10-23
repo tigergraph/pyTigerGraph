@@ -49,8 +49,16 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
+        data = open(filePath, 'rb').read()
+        return self.runLoadingJobWithData(data, fileTag, jobName, sep, eol, timeout, sizeLimit)
+
+    def runLoadingJobWithData(self, data: str, fileTag: str, jobName: str, sep: str = None,
+            eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000) -> Union[dict, None]:
+        logger.info("entry: runLoadingJobWithData")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
         try:
-            data = open(filePath, 'rb').read()
             params = {
                 "tag": jobName,
                 "filename": fileTag,
