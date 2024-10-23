@@ -210,6 +210,47 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
 
         logger.info("exit: __init__")
 
+    def _set_auth_header(self):
+        """Set the authentication header based on available tokens or credentials."""
+        if self.jwtToken:
+            return {"Authorization": "Bearer " + self.jwtToken}
+        elif self.apiToken:
+            return {"Authorization": "Bearer " + self.apiToken}
+        else:
+            return {"Authorization": "Basic {0}".format(self.base64_credential)}
+
+    def _verify_jwt_token_support(self):
+        try:
+            # Check JWT support for RestPP server
+            logger.debug("Attempting to verify JWT token support with getVer() on RestPP server.")
+            logger.debug(f"Using auth header: {self.authHeader}") 
+            version = self.getVer()
+            logger.info(f"Database version: {version}")
+            '''
+            # Check JWT support for GSQL server
+            if self._versionGreaterThan4_0():
+                logger.debug(f"Attempting to get auth info with URL: {self.gsUrl + '/gsql/v1/tokens/check'}")
+                res = self._post(f"{self.gsUrl}/gsql/v1/tokens/check", authMode="token", resKey=None, data={"token": self.jwtToken}, jsonData=True)
+                if "error" in res and res["error"]:
+                    raise TigerGraphException(res["message"], (res["code"] if "code" in res else None))  
+            else:
+                logger.debug(f"Attempting to get auth info with URL: {self.gsUrl + '/gsqlserver/gsql/simpleauth'}")
+                self._get(f"{self.gsUrl}/gsqlserver/gsql/simpleauth", authMode="token", resKey=None)
+            '''
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"Connection error: {e}.")
+            raise TigerGraphException("Connection error: "+str(e))
+        except Exception as e:
+            message = "The JWT token might be invalid or expired or DB version doesn't support JWT token. Please generate new JWT token or switch to API token or username/password. Error: "+str(e)
+            logger.error(f"Error occurred: {e}. {message}")
+            raise TigerGraphException(message) 
+
+    def _locals(self, _locals: dict) -> str:
+        del _locals["self"]
+        return str(_locals)
+
+        logger.info("exit: __init__")
+
     def _req(self, method: str, url: str, authMode: str = "token", headers: dict = None,
              data: Union[dict, list, str] = None, resKey: str = "results", skipCheck: bool = False,
              params: Union[dict, list, str] = None, strictJson: bool = True, jsonData: bool = False,
@@ -266,7 +307,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
             # This block should only be called once. When using 4.x, using port 9000 should fail so self.restppurl will change to host:14240/restpp
             # ----
             # Changes port to gsql port, adds /restpp to end to url, tries again, saves changes if successful
-            if "/restpp" not in url or self.tgCloud:
+            if self.restppPort in url and "/gsql" not in url and ("/restpp" not in url or self.tgCloud):
                 newRestppUrl = self.host + ":"+self.gsPort+"/restpp"
                 # In tgcloud /restpp can already be in the restpp url. We want to extract everything after the port or /restpp
                 if self.tgCloud:

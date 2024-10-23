@@ -238,3 +238,4 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
         raise TigerGraphException(
             res["message"], (res["code"] if "code" in res else None))
+

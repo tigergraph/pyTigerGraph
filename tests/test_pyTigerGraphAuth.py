@@ -62,7 +62,10 @@ class test_pyTigerGraphAuth(unittest.TestCase):
     def test_05_getToken(self):
         res = self.conn.createSecret("secret5", True)
         token = self.conn.getToken(res["secret5"])
-        self.assertIsInstance(token, tuple)
+        if isinstance(token, str): # handle plaintext tokens from TG 3.x
+            self.assertIsInstance(token, str)
+        else:
+            self.assertIsInstance(token, tuple)
         self.conn.dropSecret("secret5")
 
     '''
@@ -75,19 +78,22 @@ class test_pyTigerGraphAuth(unittest.TestCase):
             self.assertEqual(
                 "Refreshing tokens is only supported on versions of TigerGraph <= 4.0.0.", tge.exception.message)
         else:
-            self.conn.dropSecret("secret6", ignoreErrors=True)
-            res = self.conn.createSecret("secret6", True)
-            token = self.conn.getToken(res["secret6"])
-            refreshed = self.conn.refreshToken(res["secret6"], token[0])
-            self.assertIsInstance(refreshed, tuple)
-            self.conn.dropSecret("secret6")
+            if isinstance(token, str): # handle plaintext tokens from TG 3.x
+                refreshed = self.conn.refreshToken(res["secret6"], token)
+                self.assertIsInstance(refreshed, str)
+            else:
+                refreshed = self.conn.refreshToken(res["secret6"], token[0])
+                self.assertIsInstance(refreshed, tuple)
+                self.conn.dropSecret("secret6")
     '''
-
     def test_07_deleteToken(self):
         self.conn.dropSecret("secret7", ignoreErrors=True)
         res = self.conn.createSecret("secret7", True)
         token = self.conn.getToken(res["secret7"])
-        self.assertTrue(self.conn.deleteToken(res["secret7"], token[0]))
+        if isinstance(token, str): # handle plaintext tokens from TG 3.x
+            self.assertTrue(self.conn.deleteToken(res["secret7"], token))
+        else:
+            self.assertTrue(self.conn.deleteToken(res["secret7"], token[0]))
         self.conn.dropSecret("secret7")
 
 
