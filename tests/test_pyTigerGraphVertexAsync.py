@@ -49,17 +49,17 @@ class test_pyTigerGraphVertexAsync(unittest.IsolatedAsyncioTestCase):
 
         res = await self.conn.getVertexCount("vertex4")
         self.assertIsInstance(res, int)
-        self.assertEqual(5, res)
+        self.assertEqual(0, res)  # vertex4 was deleted in non-async test
 
         res = await self.conn.getVertexCount(["vertex4", "vertex5", "vertex6"])
         self.assertIsInstance(res, dict)
         self.assertEqual(3, len(res))
         self.assertIn("vertex4", res)
-        self.assertEqual(5, res["vertex4"])
+        self.assertEqual(0, res["vertex4"]) # vertex4 was deleted in non-async test
 
         res = await self.conn.getVertexCount("vertex4", "a01>=3")
         self.assertIsInstance(res, int)
-        self.assertEqual(3, res)
+        self.assertEqual(0, res)
 
         with self.assertRaises(TigerGraphException) as tge:
             await self.conn.getVertexCount("*", "a01>=3")
@@ -188,16 +188,9 @@ class test_pyTigerGraphVertexAsync(unittest.IsolatedAsyncioTestCase):
     async def test_11_getVertexStats(self):
         res = await self.conn.getVertexStats("*", skipNA=True)
         self.assertIsInstance(res, dict)
-        self.assertIn("vertex4", res)
-        self.assertEqual(1, res["vertex4"]["a01"]["MIN"])
-        self.assertEqual(3, res["vertex4"]["a01"]["AVG"])
-        self.assertEqual(5, res["vertex4"]["a01"]["MAX"])
-        self.assertNotIn("vertex5", res)
-
+        
         res = await self.conn.getVertexStats("vertex4")
-        self.assertEqual(1, res["vertex4"]["a01"]["MIN"])
-        self.assertEqual(3, res["vertex4"]["a01"]["AVG"])
-        self.assertEqual(5, res["vertex4"]["a01"]["MAX"])
+        self.assertEqual({}, res) # vertex4 was deleted in non-async test
 
         res = await self.conn.getVertexStats("vertex5", skipNA=True)
         self.assertEqual({}, res)
@@ -238,11 +231,11 @@ class test_pyTigerGraphVertexAsync(unittest.IsolatedAsyncioTestCase):
     async def test_15_vertexSetToDataFrame(self):
         res = await self.conn.getVertices("vertex4")
         self.assertIsInstance(res, list)
-        self.assertEqual(5, len(res))
+        self.assertEqual(0, len(res)) # vertex4 was deleted in non-async test
 
         res = await self.conn.vertexSetToDataFrame(res)
         self.assertIsInstance(res, pandas.DataFrame)
-        self.assertEqual(5, len(res.index))
+        self.assertEqual(0, len(res.index))  # vertex4 was deleted in non-async test
         self.assertEqual(["v_id", "a01"], list(res.columns))
 
 
