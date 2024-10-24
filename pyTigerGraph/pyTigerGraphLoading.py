@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class pyTigerGraphLoading(pyTigerGraphBase):
 
-    def runLoadingJobWithDF(self, df: 'pd.DataFrame', fileTag: str, jobName: str, sep: str = None,
+    def runLoadingJobWithDataFrame(self, df: 'pd.DataFrame', fileTag: str, jobName: str, sep: str = None,
             eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000, columns: list = None) -> Union[dict, None]:
         """Execute a loading job with the given pandas DataFrame with optional column list.
 
@@ -50,7 +50,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             - `POST /ddl/{graph_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_a_loading_job[Run a loading job]
         """
-        logger.info("entry: runLoadingJobWithDF")
+        logger.info("entry: runLoadingJobWithDataFrame")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -61,7 +61,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
 
         res = self.runLoadingJobWithData(data, fileTag, jobName, sep, eol, timeout, sizeLimit)
         
-        logger.info("exit: runLoadingJobWithDF")
+        logger.info("exit: runLoadingJobWithDataFrame")
         
         return res
 
