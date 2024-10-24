@@ -168,12 +168,12 @@ class AsyncPyTigerGraphAuth(AsyncPyTigerGraphGSQL):
             try:
                 res = await self._req(method, url, authMode=authMode, data=data, resKey=None, jsonData=True)
                 mainVer = 4
-            except httpx.HTTPError as e:
-                if e.response.status_code in {404, 405}:
+            except:
+                try:
                     res = await self._req(method, alt_url, authMode=authMode, data=alt_data, resKey=None)
                     mainVer = 3
-                else:
-                    raise e
+                except:
+                    raise TigerGraphException("Error requesting token. Check if the connection's graphname is correct.", 400)
 
         # uses mainVer instead of _versionGreaterThan4_0 since you need a token for verson checking
         return res, mainVer

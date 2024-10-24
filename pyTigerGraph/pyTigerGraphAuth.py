@@ -171,15 +171,13 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                 res = self._req(method, url, authMode=authMode,
                                 data=data, resKey=None, jsonData=True)
                 mainVer = 4
-            except requests.exceptions.HTTPError as e:
-                if e.response.status_code in {404, 405}:
+            except:
+                try:
                     res = self._req(
                         method, alt_url, authMode=authMode, data=alt_data, resKey=None)
                     mainVer = 3
-                if e.response.status_code == 400:
+                except Exception as e:
                     raise TigerGraphException("Error requesting token. Check if the connection's graphname is correct.", 400)
-                else:
-                    raise e
 
         # uses mainVer instead of _versionGreaterThan4_0 since you need a token for verson checking
         return res, mainVer
