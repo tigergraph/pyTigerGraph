@@ -9,10 +9,13 @@ try:
     from torch_geometric.nn import to_hetero
     import torch_geometric.nn as gnn
 except:
-    raise Exception("PyTorch Geometric required to use GraphSAGE. Please install PyTorch Geometric")
+    raise Exception(
+        "PyTorch Geometric required to use GraphSAGE. Please install PyTorch Geometric")
+
 
 class BaseGraphSAGEModel(bm.BaseModel):
     """NO DOC."""
+
     def __init__(self, num_layers, out_dim, hidden_dim, dropout=0.0, heterogeneous=None):
         super().__init__()
         self.dropout = dropout
@@ -33,14 +36,17 @@ class BaseGraphSAGEModel(bm.BaseModel):
             x = batch.x.float()
             edge_index = batch.edge_index
         return self.model(x, edge_index)
-    
-    def compute_loss(self, loss_fn = None):
-        raise NotImplementedError("Loss computation not implemented for BaseGraphSAGEModel")
+
+    def compute_loss(self, loss_fn=None):
+        raise NotImplementedError(
+            "Loss computation not implemented for BaseGraphSAGEModel")
+
 
 class GraphSAGEForVertexClassification(BaseGraphSAGEModel):
     """GraphSAGEForVertexClassification
     Use a GraphSAGE model to classify vertices. By default, this model collects `ClassficiationMetrics`, and uses cross entropy as its loss function.
     """
+
     def __init__(self, num_layers: int, out_dim: int, hidden_dim: int, dropout=0.0, heterogeneous=None, class_weights=None):
         """Initialize the GraphSAGE Vertex Classification Model.
         Args:
@@ -87,7 +93,7 @@ class GraphSAGEForVertexClassification(BaseGraphSAGEModel):
             else:
                 return logits
 
-    def compute_loss(self, logits, batch, target_type=None, loss_fn = None):
+    def compute_loss(self, logits, batch, target_type=None, loss_fn=None):
         """Compute loss.
         Args:
             logits (torch.Tensor or dict of torch.Tensor):
@@ -99,26 +105,30 @@ class GraphSAGEForVertexClassification(BaseGraphSAGEModel):
             loss_fn (callable, optional):
                 The function to compute the loss with. Uses cross entropy loss if not defined.
         """
-        if not(loss_fn):
+        if not (loss_fn):
             loss_fn = F.cross_entropy
             if self.heterogeneous:
-                loss = loss_fn(logits[batch[target_type].is_seed], 
-                                    batch[target_type].y[batch[target_type].is_seed].long(),
-                                    self.class_weight)
+                loss = loss_fn(logits[batch[target_type].is_seed],
+                               batch[target_type].y[batch[target_type].is_seed].long(),
+                               self.class_weight)
             else:
-                loss = loss_fn(logits[batch.is_seed], batch.y[batch.is_seed].long(), self.class_weight)
-        else: # can't assume custom loss supports class weights
+                loss = loss_fn(
+                    logits[batch.is_seed], batch.y[batch.is_seed].long(), self.class_weight)
+        else:  # can't assume custom loss supports class weights
             if self.heterogeneous:
-                loss = loss_fn(logits[batch[target_type].is_seed], 
-                                    batch[target_type].y[batch[target_type].is_seed].long())
+                loss = loss_fn(logits[batch[target_type].is_seed],
+                               batch[target_type].y[batch[target_type].is_seed].long())
             else:
-                loss = loss_fn(logits[batch.is_seed], batch.y[batch.is_seed].long())
+                loss = loss_fn(logits[batch.is_seed],
+                               batch.y[batch.is_seed].long())
         return loss
+
 
 class GraphSAGEForVertexRegression(BaseGraphSAGEModel):
     """GraphSAGEForVertexRegression
     Use GraphSAGE for vertex regression tasks. By default, this model collects `RegressionMetrics`, and uses MSE as its loss function.
     """
+
     def __init__(self, num_layers: int, out_dim: int, hidden_dim: int, dropout=0.0, heterogeneous=None):
         """Initialize the GraphSAGE Vertex Regression Model.
         Args:
@@ -163,11 +173,11 @@ class GraphSAGEForVertexRegression(BaseGraphSAGEModel):
             loss_fn (callable, optional):
                 The function to compute the loss with. Uses MSE loss if not defined.
         """
-        if not(loss_fn):
+        if not (loss_fn):
             loss_fn = F.mse_loss
         if self.heterogeneous:
-            loss = loss_fn(logits[target_type][batch[target_type].is_seed], 
-                                   batch[target_type].y[batch[target_type].is_seed])
+            loss = loss_fn(logits[target_type][batch[target_type].is_seed],
+                           batch[target_type].y[batch[target_type].is_seed])
         else:
             loss = loss_fn(logits[batch.is_seed], batch.y[batch.is_seed])
         return loss
@@ -177,7 +187,8 @@ class GraphSAGEForLinkPrediction(BaseGraphSAGEModel):
     """GraphSAGEForLinkPrediction
     By default, this model collects `LinkPredictionMetrics` with k = 10, and uses binary cross entropy as its loss function.
     """
-    def __init__(self, num_layers, embedding_dim, hidden_dim, dropout = 0.0, heterogeneous=None):
+
+    def __init__(self, num_layers, embedding_dim, hidden_dim, dropout=0.0, heterogeneous=None):
         """Initialize the GraphSAGE Link Prediction Model.
         Args:
             num_layers (int):
@@ -219,8 +230,10 @@ class GraphSAGEForLinkPrediction(BaseGraphSAGEModel):
 
     def decode(self, src_z, dest_z, pos_edge_index, neg_edge_index):
         """NO DOC."""
-        edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=-1) # concatenate pos and neg edges
-        logits = (src_z[edge_index[0]] * dest_z[edge_index[1]]).sum(dim=-1)  # dot product 
+        edge_index = torch.cat(
+            [pos_edge_index, neg_edge_index], dim=-1)  # concatenate pos and neg edges
+        logits = (src_z[edge_index[0]] * dest_z[edge_index[1]]
+                  ).sum(dim=-1)  # dot product
         return logits
 
     def get_link_labels(self, pos_edge_index, neg_edge_index):
@@ -233,13 +246,17 @@ class GraphSAGEForLinkPrediction(BaseGraphSAGEModel):
     def generate_edges(self, batch, target_edge_type=None):
         """NO DOC."""
         if self.heterogeneous:
-            pos_edges = batch[target_edge_type].edge_index[:, batch[target_edge_type].is_seed]
-            src_neg_edges = torch.randint(0, batch[target_edge_type[0]].x.shape[0], (pos_edges.shape[1],), dtype=torch.long)
-            dest_neg_edges = torch.randint(0, batch[target_edge_type[-1]].x.shape[0], (pos_edges.shape[1],), dtype=torch.long)
+            pos_edges = batch[target_edge_type].edge_index[:,
+                                                           batch[target_edge_type].is_seed]
+            src_neg_edges = torch.randint(
+                0, batch[target_edge_type[0]].x.shape[0], (pos_edges.shape[1],), dtype=torch.long)
+            dest_neg_edges = torch.randint(
+                0, batch[target_edge_type[-1]].x.shape[0], (pos_edges.shape[1],), dtype=torch.long)
             neg_edges = torch.stack((src_neg_edges, dest_neg_edges))
         else:
             pos_edges = batch.edge_index[:, batch.is_seed]
-            neg_edges = torch.randint(0, batch.x.shape[0], pos_edges.size(), dtype=torch.long)
+            neg_edges = torch.randint(
+                0, batch.x.shape[0], pos_edges.size(), dtype=torch.long)
         return pos_edges, neg_edges
 
     def compute_loss(self, logits, batch, target_type=None, loss_fn=None):
@@ -254,7 +271,7 @@ class GraphSAGEForLinkPrediction(BaseGraphSAGEModel):
             loss_fn (callable, optional):
                 The function to compute the loss with. Uses binary cross entropy loss if not defined.
         """
-        if not(loss_fn):
+        if not (loss_fn):
             loss_fn = F.binary_cross_entropy_with_logits
         loss = loss_fn(logits, batch.y)
         return loss

@@ -1,6 +1,8 @@
 import json
 import unittest
 
+from pyTigerGraph.common.path import _prepare_path_params
+
 from pyTigerGraphUnitTest import make_connection
 
 
@@ -58,9 +60,10 @@ class test_pyTigerGraphPath(unittest.TestCase):
         return sorted(es) == sorted(exp_es)
 
     def test_01_preparePathParams(self):
-        res = self.conn._preparePathParams([("srctype1", 1), ("srctype2", 2), ("srctype3", 3)],
-            [("trgtype1", 1), ("trgtype2", 2), ("trgtype3", 3)], 5,
-            [("srctype1", "a01>10")], [("trgtype1", "a10<20")], True)
+        res = _prepare_path_params([("srctype1", 1), ("srctype2", 2), ("srctype3", 3)],
+                                             [("trgtype1", 1), ("trgtype2", 2),
+                                              ("trgtype3", 3)], 5,
+                                             [("srctype1", "a01>10")], [("trgtype1", "a10<20")], True)
         self.assertIsInstance(res, str)
         res = json.loads(res)
         self.assertEqual(6, len(res))
@@ -76,7 +79,7 @@ class test_pyTigerGraphPath(unittest.TestCase):
         self.assertIn("allShortestPaths", res)
         self.assertTrue(res["allShortestPaths"])
 
-        res = self.conn._preparePathParams([("srct", 1)], [("trgt", 1)])
+        res = _prepare_path_params([("srct", 1)], [("trgt", 1)])
         self.assertEqual(
             '{"sources": [{"type": "srct", "id": 1}], "targets": [{"type": "trgt", "id": 1}]}',
             res
@@ -84,8 +87,10 @@ class test_pyTigerGraphPath(unittest.TestCase):
 
     def test_02_shortestPath(self):
 
-        self.assertEqual(8, self.conn.getVertexCount("vertex4", where="a01>=900"))
-        self.assertEqual(11, self.conn.getEdgeCount("edge6_loop", "vertex4", "vertex4"))
+        self.assertEqual(8, self.conn.getVertexCount(
+            "vertex4", where="a01>=900"))
+        self.assertEqual(11, self.conn.getEdgeCount(
+            "edge6_loop", "vertex4", "vertex4"))
 
         res = self.conn.shortestPath(("vertex4", 10), ("vertex4", 50))
         vs1 = [10, 20, 30, 40, 50]
@@ -99,27 +104,30 @@ class test_pyTigerGraphPath(unittest.TestCase):
              self._check_edges(res[0]["edges"], es2))
         )
 
-        res = self.conn.shortestPath(("vertex4", 10), ("vertex4", 50), allShortestPaths=True)
+        res = self.conn.shortestPath(
+            ("vertex4", 10), ("vertex4", 50), allShortestPaths=True)
         vs3 = [10, 20, 30, 40, 50, 60, 70]
-        es3 = [(10, 20), (20, 30), (30, 40), (40, 50), (10, 60), (60, 70), (70, 40)]
+        es3 = [(10, 20), (20, 30), (30, 40), (40, 50),
+               (10, 60), (60, 70), (70, 40)]
         self.assertTrue(
             (self._check_vertices(res[0]["vertices"], vs3) and
              self._check_edges(res[0]["edges"], es3))
         )
 
-        res = self.conn.shortestPath(("vertex4", 10), ("vertex4", 50), maxLength=3)
+        res = self.conn.shortestPath(
+            ("vertex4", 10), ("vertex4", 50), maxLength=3)
         self.assertEqual([], res[0]["vertices"])
         self.assertEqual([], res[0]["edges"])
 
         res = self.conn.shortestPath(("vertex4", 10), ("vertex4", 50), allShortestPaths=True,
-            vertexFilters=("vertex4", "a01>950"))
+                                     vertexFilters=("vertex4", "a01>950"))
         self.assertTrue(
             (self._check_vertices(res[0]["vertices"], vs1) and
              self._check_edges(res[0]["edges"], es1))
         )
 
         res = self.conn.shortestPath(("vertex4", 10), ("vertex4", 50), allShortestPaths=True,
-            edgeFilters=("edge6_loop", "a01<950"))
+                                     edgeFilters=("edge6_loop", "a01<950"))
         self.assertTrue(
             (self._check_vertices(res[0]["vertices"], vs2) and
              self._check_edges(res[0]["edges"], es2))
@@ -128,7 +136,8 @@ class test_pyTigerGraphPath(unittest.TestCase):
     def test_03_allPaths(self):
         res = self.conn.allPaths(("vertex4", 10), ("vertex4", 50), maxLength=4)
         vs = [10, 20, 30, 40, 50, 60, 70]
-        es = [(10, 20), (20, 30), (30, 40), (40, 50), (10, 60), (60, 70), (70, 40)]
+        es = [(10, 20), (20, 30), (30, 40), (40, 50),
+              (10, 60), (60, 70), (70, 40)]
         self.assertTrue(
             (self._check_vertices(res[0]["vertices"], vs) and
              self._check_edges(res[0]["edges"], es))
@@ -137,7 +146,7 @@ class test_pyTigerGraphPath(unittest.TestCase):
         res = self.conn.allPaths(("vertex4", 10), ("vertex4", 50), maxLength=5)
         vs = [10, 20, 30, 40, 50, 60, 70, 80]
         es = [(10, 20), (20, 30), (30, 40), (40, 50), (10, 60), (60, 70), (70, 40), (70, 80),
-            (80, 40)]
+              (80, 40)]
         self.assertTrue(
             (self._check_vertices(res[0]["vertices"], vs) and
              self._check_edges(res[0]["edges"], es))
@@ -146,14 +155,14 @@ class test_pyTigerGraphPath(unittest.TestCase):
         res = self.conn.allPaths(("vertex4", 10), ("vertex4", 50), maxLength=6)
         vs = [10, 20, 30, 40, 50, 60, 70, 80]
         es = [(10, 20), (20, 30), (30, 40), (40, 50), (10, 60), (60, 70), (70, 40), (70, 80),
-            (80, 40), (30, 60)]
+              (80, 40), (30, 60)]
         self.assertTrue(
             (self._check_vertices(res[0]["vertices"], vs) and
              self._check_edges(res[0]["edges"], es))
         )
 
         res = self.conn.allPaths(("vertex4", 10), ("vertex4", 50), maxLength=5,
-            vertexFilters=("vertex4", "a01>950"))
+                                 vertexFilters=("vertex4", "a01>950"))
         vs = [10, 20, 30, 40, 50]
         es = [(10, 20), (20, 30), (30, 40), (40, 50)]
         self.assertTrue(
@@ -162,7 +171,7 @@ class test_pyTigerGraphPath(unittest.TestCase):
         )
 
         res = self.conn.allPaths(("vertex4", 10), ("vertex4", 50), maxLength=5,
-            edgeFilters=("edge6_loop", "a01<950"))
+                                 edgeFilters=("edge6_loop", "a01<950"))
         vs = [10, 60, 70, 40, 50]
         es = [(10, 60), (60, 70), (70, 40), (40, 50)]
         self.assertTrue(

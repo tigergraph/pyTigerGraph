@@ -5,8 +5,9 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 """
 import logging
 
-from .datasets import Datasets
-from .pyTigerGraphAuth import pyTigerGraphAuth
+from pyTigerGraph.datasets import Datasets
+from pyTigerGraph.common.dataset import _parse_ingest_dataset
+from pyTigerGraph.pyTigerGraphAuth import pyTigerGraphAuth
 
 logger = logging.getLogger(__name__)
 
@@ -75,30 +76,11 @@ class pyTigerGraphDataset(pyTigerGraphAuth):
         if getToken:
             self.getToken(self.createSecret())
 
+        responses = []
         for resp in dataset.run_load_job(self):
-            stats = resp[0]["statistics"]
-            if "vertex" in stats:
-                for vstats in stats["vertex"]:
-                    print(
-                        "Ingested {} objects into VERTEX {}".format(
-                            vstats["validObject"], vstats["typeName"]
-                        ),
-                        flush=True,
-                    )
-            if "edge" in stats:
-                for estats in stats["edge"]:
-                    print(
-                        "Ingested {} objects into EDGE {}".format(
-                            estats["validObject"], estats["typeName"]
-                        ),
-                        flush=True,
-                    )
-            if logger.level == logging.DEBUG:
-                logger.debug(str(resp))
+            responses.append(resp)
 
-        if cleanup:
-            print("---- Cleaning ----", flush=True)
-            dataset.clean_up()
+        _parse_ingest_dataset(responses, cleanup, dataset)
 
         print("---- Finished ingestion ----", flush=True)
         logger.info("exit: ingestDataset")

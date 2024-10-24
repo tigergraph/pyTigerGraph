@@ -18,6 +18,7 @@ import requests
 
 class BaseDataset(ABC):
     "NO DOC"
+
     def __init__(self, name: str = None) -> None:
         self.name = name
         self.ingest_ready = False
@@ -72,7 +73,8 @@ class Datasets(BaseDataset):
                     name, tmp_dir
                 )
             )
-        else:
+
+        if not isdir(pjoin(tmp_dir, name)):
             dataset_url = self.get_dataset_url()
             # Check if it is an in-stock dataset.
             if not dataset_url:
@@ -106,7 +108,8 @@ class Datasets(BaseDataset):
                     with tarfile.open(fileobj=raw, mode="r|gz") as tarobj:
                         tarobj.extractall(path=self.tmp_dir)
             except ImportError:
-                warnings.warn("Cannot import tqdm. Downloading without progress report.")
+                warnings.warn(
+                    "Cannot import tqdm. Downloading without progress report.")
                 with tarfile.open(fileobj=resp.raw, mode="r|gz") as tarobj:
                     tarobj.extractall(path=self.tmp_dir)
                 print("Dataset downloaded.")
@@ -162,4 +165,3 @@ class Datasets(BaseDataset):
         print("Available datasets:")
         for k in resp.json():
             print("- {}".format(k))
-
