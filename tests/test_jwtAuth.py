@@ -4,7 +4,7 @@ import json
 
 from pyTigerGraphUnitTest import make_connection
 from pyTigerGraph import TigerGraphConnection
-from pyTigerGraph.pyTigerGraphException import TigerGraphException
+from pyTigerGraph.common.exception import TigerGraphException
 
 
 class TestJWTTokenAuth(unittest.TestCase):
@@ -25,7 +25,7 @@ class TestJWTTokenAuth(unittest.TestCase):
 
     def _requestJWTToken(self):
         # in >=4.1 API all tokens are JWT tokens
-        if self.conn._versionGreaterThan4_0():
+        if self.conn._version_greater_than_4_0():
             return self.conn.getToken(self.conn.createSecret())[0]
 
         # Define the URL
@@ -69,7 +69,7 @@ class TestJWTTokenAuth(unittest.TestCase):
         self.assertIn("4.1", str(dbversion))
 
         # gsql on port 14240
-        if self.conn._versionGreaterThan4_0():
+        if self.conn._version_greater_than_4_0():
             res = newconn._get(
                 f"{newconn.gsUrl}/gsql/v1/auth/simple", authMode="token", resKey=None)
             res = res['results']
