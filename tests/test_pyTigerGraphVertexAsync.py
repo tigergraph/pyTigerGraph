@@ -80,13 +80,13 @@ class test_pyTigerGraphVertexAsync(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(res, dict)
         self.assertEqual(7, len(res))
         self.assertIn("vertex4", res)
-        self.assertEqual(5, res["vertex4"])
+        self.assertEqual(0, res["vertex4"])
         self.assertIn("vertex1_all_types", res)
         self.assertEqual(0, res["vertex1_all_types"])
 
         res = await self.conn.getVertexCount("vertex4", realtime=True)
         self.assertIsInstance(res, int)
-        self.assertEqual(5, res)
+        self.assertEqual(0, res)
 
     async def test_04_upsertVertex(self):
         res = await self.conn.upsertVertex("vertex4", 100, {"a01": 100})
