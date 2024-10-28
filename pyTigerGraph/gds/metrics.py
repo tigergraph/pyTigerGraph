@@ -10,7 +10,8 @@ import numpy as np
 import warnings
 from typing import Union
 
-__all__ = ["Accumulator", "Accuracy", "BinaryPrecision", "BinaryRecall", "Precision", "Recall"]
+__all__ = ["Accumulator", "Accuracy", "BinaryPrecision",
+           "BinaryRecall", "Precision", "Recall"]
 
 
 class Accumulator:
@@ -112,12 +113,13 @@ class BinaryRecall(Accumulator):
     * Call the update function to add predictions and labels.
     * Get recall score at any point by accessing the value property.
     """
+
     def __init__(self) -> None:
         """NO DOC"""
         super().__init__()
         warnings.warn(
-                "The `BinaryRecall` metric is deprecated; use `Recall` metric instead.",
-                DeprecationWarning)
+            "The `BinaryRecall` metric is deprecated; use `Recall` metric instead.",
+            DeprecationWarning)
 
     def update(self, preds: ndarray, labels: ndarray) -> None:
         """Add predictions and labels to be compared.
@@ -145,6 +147,7 @@ class BinaryRecall(Accumulator):
         else:
             return None
 
+
 class ConfusionMatrix(Accumulator):
     """Confusion Matrix Metric.
     Updates a confusion matrix as new updates occur.
@@ -153,6 +156,7 @@ class ConfusionMatrix(Accumulator):
         num_classes (int):
             Number of classes in your classification task.
     """
+
     def __init__(self, num_classes: int) -> None:
         """Instantiate the Confusion Matrix metric.
         Args:
@@ -175,7 +179,6 @@ class ConfusionMatrix(Accumulator):
             labels
         ), "The lists of predictions and labels must have same length"
 
-
         confusion_mat = np.zeros((self.num_classes, self.num_classes))
         for pair in zip(labels.tolist(), preds.tolist()):
             confusion_mat[int(pair[0]), int(pair[1])] += 1
@@ -190,9 +193,10 @@ class ConfusionMatrix(Accumulator):
                 Consfusion matrix in dataframe form.
         '''
         if self._count > 0:
-            return pd.DataFrame(self._cumsum, columns=["predicted_"+ str(i) for i in range(self.num_classes)], index=["label_"+str(i) for i in range(self.num_classes)])
+            return pd.DataFrame(self._cumsum, columns=["predicted_" + str(i) for i in range(self.num_classes)], index=["label_"+str(i) for i in range(self.num_classes)])
         else:
             return None
+
 
 class Recall(ConfusionMatrix):
     """Recall Metric.
@@ -218,7 +222,7 @@ class Recall(ConfusionMatrix):
             recalls = {}
 
             for c in range(self.num_classes):
-                tp = cm[c,c]
+                tp = cm[c, c]
                 fn = sum(cm[c, :]) - tp
                 recalls[c] = tp/(tp+fn)
             if self.num_classes == 2:
@@ -227,6 +231,7 @@ class Recall(ConfusionMatrix):
                 return recalls
         else:
             return None
+
 
 class BinaryPrecision(Accumulator):
     """DEPRECATED: Binary Precision Metric.
@@ -245,8 +250,8 @@ class BinaryPrecision(Accumulator):
         """NO DOC"""
         super().__init__()
         warnings.warn(
-                "The `BinaryPrecision` metric is deprecated; use `Precision` metric instead.",
-                DeprecationWarning)
+            "The `BinaryPrecision` metric is deprecated; use `Precision` metric instead.",
+            DeprecationWarning)
 
     def update(self, preds: ndarray, labels: ndarray) -> None:
         """Add predictions and labels to be compared.
@@ -274,6 +279,7 @@ class BinaryPrecision(Accumulator):
         else:
             return None
 
+
 class Precision(ConfusionMatrix):
     """Precision Metric.
 
@@ -298,7 +304,7 @@ class Precision(ConfusionMatrix):
             precs = {}
 
             for c in range(self.num_classes):
-                tp = cm[c,c]
+                tp = cm[c, c]
                 fp = sum(cm[:, c]) - tp
                 precs[c] = tp/(tp+fp)
             if self.num_classes == 2:
@@ -308,9 +314,10 @@ class Precision(ConfusionMatrix):
         else:
             return None
 
+
 class MSE(Accumulator):
     """MSE Metrc.
-    
+
     MSE = stem:[\sum(predicted-actual)^2/n]
 
     This metric is for regression tasks, i.e. predicting a n-dimensional vector of float values.
@@ -320,6 +327,7 @@ class MSE(Accumulator):
     * Call the update function to add predictions and labels.
     * Get MSE value at any point by accessing the value property.
     """
+
     def update(self, preds: ndarray, labels: ndarray) -> None:
         """Add predictions and labels to be compared.
 
@@ -346,6 +354,7 @@ class MSE(Accumulator):
         else:
             return None
 
+
 class RMSE(MSE):
     """RMSE Metric.
 
@@ -358,6 +367,7 @@ class RMSE(MSE):
     * Call the update function to add predictions and labels.
     * Get RMSE score at any point by accessing the value property.
     """
+
     def __init__(self):
         """NO DOC"""
         super().__init__()
@@ -373,6 +383,7 @@ class RMSE(MSE):
         else:
             return None
 
+
 class MAE(Accumulator):
     """MAE Metrc.
 
@@ -385,6 +396,7 @@ class MAE(Accumulator):
     * Call the update function to add predictions and labels.
     * Get MAE value at any point by accessing the value property.
     """
+
     def update(self, preds: ndarray, labels: ndarray) -> None:
         """Add predictions and labels to be compared.
 
@@ -411,6 +423,7 @@ class MAE(Accumulator):
         else:
             return None
 
+
 class HitsAtK(Accumulator):
     """Hits@K Metric.
     This metric is used in link prediction tasks, i.e. determining if two vertices have an edge between them.
@@ -425,7 +438,8 @@ class HitsAtK(Accumulator):
         k (int):
             Top k number of entities to compare.
     """
-    def __init__(self, k:int) -> None:
+
+    def __init__(self, k: int) -> None:
         """Instantiate the Hits@K Metric
         Args:
             k (int):
@@ -461,6 +475,7 @@ class HitsAtK(Accumulator):
         else:
             return None
 
+
 class RecallAtK(Accumulator):
     """Recall@K Metric.
     This metric is used in link prediction tasks, i.e. determining if two vertices have an edge between them
@@ -474,7 +489,8 @@ class RecallAtK(Accumulator):
         k (int):
             Top k number of entities to compare.
     """
-    def __init__(self, k:int) -> None:
+
+    def __init__(self, k: int) -> None:
         """Instantiate the Recall@K Metric
         Args:
             k (int):
@@ -510,12 +526,14 @@ class RecallAtK(Accumulator):
         else:
             return None
 
+
 class BaseMetrics():
     """NO DOC"""
+
     def __init__(self):
         """NO DOC"""
         self.reset_metrics()
-    
+
     def reset_metrics(self):
         self.loss = Accumulator()
 
@@ -530,7 +548,8 @@ class ClassificationMetrics(BaseMetrics):
     """Classification Metrics collection.
     Collects Loss, Accuracy, Precision, Recall, and Confusion Matrix Metrics.
     """
-    def __init__(self, num_classes: int=2):
+
+    def __init__(self, num_classes: int = 2):
         """Instantiate the Classification Metrics collection.
         Args:
             num_classes (int):
@@ -560,25 +579,35 @@ class ClassificationMetrics(BaseMetrics):
         pred = out.argmax(dim=1)
         if isinstance(batch, dict):
             if target_type:
-                self.accuracy.update(pred[target_type], batch[target_type]["y"])
-                self.confusion_matrix.update(pred[target_type], batch[target_type]["y"])
-                self.precision.update(pred[target_type], batch[target_type]["y"])
+                self.accuracy.update(
+                    pred[target_type], batch[target_type]["y"])
+                self.confusion_matrix.update(
+                    pred[target_type], batch[target_type]["y"])
+                self.precision.update(
+                    pred[target_type], batch[target_type]["y"])
                 self.recall.update(pred[target_type], batch[target_type]["y"])
             else:
                 self.accuracy.update(pred, batch["y"])
                 self.confusion_matrix.update(pred, batch["y"])
                 self.precision.update(pred, batch["y"])
                 self.recall.update(pred, batch["y"])
-        else: # batch is a PyG Object (has is_seed attribute)
+        else:  # batch is a PyG Object (has is_seed attribute)
             if target_type:
-                self.accuracy.update(pred[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
-                self.confusion_matrix.update(pred[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
-                self.precision.update(pred[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
-                self.recall.update(pred[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
+                self.accuracy.update(
+                    pred[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
+                self.confusion_matrix.update(
+                    pred[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
+                self.precision.update(
+                    pred[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
+                self.recall.update(
+                    pred[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
             else:
-                self.accuracy.update(pred[batch.is_seed], batch.y[batch.is_seed])
-                self.confusion_matrix.update(pred[batch.is_seed], batch.y[batch.is_seed])
-                self.precision.update(pred[batch.is_seed], batch.y[batch.is_seed])
+                self.accuracy.update(
+                    pred[batch.is_seed], batch.y[batch.is_seed])
+                self.confusion_matrix.update(
+                    pred[batch.is_seed], batch.y[batch.is_seed])
+                self.precision.update(
+                    pred[batch.is_seed], batch.y[batch.is_seed])
                 self.recall.update(pred[batch.is_seed], batch.y[batch.is_seed])
 
     def get_metrics(self):
@@ -587,14 +616,17 @@ class ClassificationMetrics(BaseMetrics):
             Dictionary of Accuracy, Precision, Recall, and Confusion Matrix
         """
         super_met = super().get_metrics()
-        metrics = {"accuracy": self.accuracy.value, "precision": self.precision.value, "recall": self.recall.value, "confusion_matrix": self.confusion_matrix.value}
+        metrics = {"accuracy": self.accuracy.value, "precision": self.precision.value,
+                   "recall": self.recall.value, "confusion_matrix": self.confusion_matrix.value}
         metrics.update(super_met)
         return metrics
+
 
 class RegressionMetrics(BaseMetrics):
     """Regression Metrics Collection.
     Collects Loss, MSE, RMSE, and MAE metrics.
     """
+
     def __init__(self):
         """Instantiate the Regression Metrics collection.
         """
@@ -628,9 +660,12 @@ class RegressionMetrics(BaseMetrics):
                 self.mae.update(out, batch["y"])
         else:
             if target_type:
-                self.mse.update(out[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
-                self.rmse.update(out[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
-                self.mae.update(out[batch[target_type].is_seed], batch[target_type].y[batch[target_type].is_seed])
+                self.mse.update(out[batch[target_type].is_seed],
+                                batch[target_type].y[batch[target_type].is_seed])
+                self.rmse.update(out[batch[target_type].is_seed],
+                                 batch[target_type].y[batch[target_type].is_seed])
+                self.mae.update(out[batch[target_type].is_seed],
+                                batch[target_type].y[batch[target_type].is_seed])
             else:
                 self.mse.update(out[batch.is_seed], batch.y[batch.is_seed])
                 self.rmse.update(out[batch.is_seed], batch.y[batch.is_seed])
@@ -654,6 +689,7 @@ class LinkPredictionMetrics(BaseMetrics):
 
     Collects Loss, Recall@K, and Hits@K metrics.
     """
+
     def __init__(self, k):
         """Instantiate the Classification Metrics collection.
         Args:
@@ -693,4 +729,3 @@ class LinkPredictionMetrics(BaseMetrics):
                    "k": self.k}
         metrics.update(super_met)
         return metrics
-

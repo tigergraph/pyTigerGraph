@@ -31,13 +31,14 @@ import warnings
 
 from pyTigerGraph import TigerGraphConnection
 
+
 class AI:
-    def __init__(self, conn: TigerGraphConnection) -> None: 
+    def __init__(self, conn: TigerGraphConnection) -> None:
         """NO DOC: Initiate an AI object. Currently in beta testing.
             Args:
                 conn (TigerGraphConnection):
                     Accept a TigerGraphConnection to run queries with
-                    
+
             Returns:
                 None
         """
@@ -47,7 +48,7 @@ class AI:
             # split scheme and host
             scheme, host = conn.host.split("://")
             self.nlqs_host = scheme + "://copilot-" + host
-        
+
     def configureInquiryAIHost(self, hostname: str):
         """ DEPRECATED: Configure the hostname of the InquiryAI service.
             Not recommended to use. Use configureCoPilotHost() instead.
@@ -56,8 +57,8 @@ class AI:
                     The hostname (and port number) of the InquiryAI serivce.
         """
         warnings.warn(
-                "The `configureInquiryAIHost()` function is deprecated; use `configureCoPilotHost()` function instead.",
-                DeprecationWarning)
+            "The `configureInquiryAIHost()` function is deprecated; use `configureCoPilotHost()` function instead.",
+            DeprecationWarning)
         self.nlqs_host = hostname
 
     def configureCoPilotHost(self, hostname: str):
@@ -96,14 +97,17 @@ class AI:
                 "queries": [query_name]
             }
             url = self.nlqs_host+"/"+self.conn.graphname+"/upsert_from_gsql"
-            return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
+            return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
         else:
             if description is None:
-                raise ValueError("When using TigerGraph 3.x, query descriptions are required parameters.")
+                raise ValueError(
+                    "When using TigerGraph 3.x, query descriptions are required parameters.")
             if docstring is None:
-                raise ValueError("When using TigerGraph 3.x, query docstrings are required parameters.")
+                raise ValueError(
+                    "When using TigerGraph 3.x, query docstrings are required parameters.")
             if param_types is None:
-                raise ValueError("When using TigerGraph 3.x, query parameter types are required parameters.")
+                raise ValueError(
+                    "When using TigerGraph 3.x, query parameter types are required parameters.")
             data = {
                 "function_header": query_name,
                 "description": description,
@@ -112,8 +116,8 @@ class AI:
                 "graphname": self.conn.graphname
             }
             url = self.nlqs_host+"/"+self.conn.graphname+"/register_docs"
-            return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
-    
+            return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
+
     def updateCustomQuery(self, query_name: str, description: str = None, docstring: str = None, param_types: dict = None):
         """ Update a custom query with the InquiryAI service.
             Args:
@@ -142,14 +146,17 @@ class AI:
                 "queries": [query_name]
             }
             url = self.nlqs_host+"/"+self.conn.graphname+"/upsert_from_gsql"
-            return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
+            return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
         else:
             if description is None:
-                raise ValueError("When using TigerGraph 3.x, query descriptions are required parameters.")
+                raise ValueError(
+                    "When using TigerGraph 3.x, query descriptions are required parameters.")
             if docstring is None:
-                raise ValueError("When using TigerGraph 3.x, query docstrings are required parameters.")
+                raise ValueError(
+                    "When using TigerGraph 3.x, query docstrings are required parameters.")
             if param_types is None:
-                raise ValueError("When using TigerGraph 3.x, query parameter types are required parameters.")
+                raise ValueError(
+                    "When using TigerGraph 3.x, query parameter types are required parameters.")
             data = {
                 "function_header": query_name,
                 "description": description,
@@ -160,8 +167,8 @@ class AI:
 
             json_payload = {"id": "", "query_info": data}
             url = self.nlqs_host+"/"+self.conn.graphname+"/upsert_docs"
-            return self.conn._req("POST", url, authMode="pwd", data = json_payload, jsonData=True, resKey=None)
-    
+            return self.conn._req("POST", url, authMode="pwd", data=json_payload, jsonData=True, resKey=None)
+
     def deleteCustomQuery(self, query_name: str):
         """ Delete a custom query with the InquiryAI service.
             Args:
@@ -172,9 +179,9 @@ class AI:
         """
         data = {"ids": [], "expr": "function_header == '"+query_name+"'"}
         url = self.nlqs_host+"/"+self.conn.graphname+"/delete_docs"
-        return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
+        return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
 
-    def retrieveDocs(self, query:str, top_k:int = 3):
+    def retrieveDocs(self, query: str, top_k: int = 3):
         """ Retrieve docs from the vector store.
             Args:
                 query (str):
@@ -188,8 +195,9 @@ class AI:
             "query": query
         }
 
-        url = self.nlqs_host+"/"+self.conn.graphname+"/retrieve_docs?top_k="+str(top_k)
-        return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None, skipCheck=True) 
+        url = self.nlqs_host+"/"+self.conn.graphname + \
+            "/retrieve_docs?top_k="+str(top_k)
+        return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None, skipCheck=True)
 
     def query(self, query):
         """ Query the database with natural language.
@@ -204,8 +212,8 @@ class AI:
         }
 
         url = self.nlqs_host+"/"+self.conn.graphname+"/query"
-        return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
-    
+        return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
+
     def coPilotHealth(self):
         """ Check the health of the CoPilot service.
             Returns:
@@ -213,7 +221,7 @@ class AI:
         """
         url = self.nlqs_host+"/health"
         return self.conn._req("GET", url, authMode="pwd", resKey=None)
-    
+
     def initializeSupportAI(self):
         """ Initialize the SupportAI service.
             Returns:
@@ -221,7 +229,7 @@ class AI:
         """
         url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/initialize"
         return self.conn._req("POST", url, authMode="pwd", resKey=None)
-    
+
     def createDocumentIngest(self, data_source, data_source_config, loader_config, file_format):
         """ Create a document ingest.
             Args:
@@ -244,8 +252,8 @@ class AI:
         }
 
         url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/create_ingest"
-        return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
-    
+        return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
+
     def runDocumentIngest(self, load_job_id, data_source_id, data_path):
         """ Run a document ingest.
             Args:
@@ -264,9 +272,9 @@ class AI:
             "file_path": data_path
         }
         url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/ingest"
-        return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
-    
-    def searchDocuments(self, query, method = "hnswoverlap", method_parameters: dict = {"indices": ["Document", "DocumentChunk", "Entity", "Relationship"], "top_k": 2, "num_hops": 2, "num_seen_min": 2}):
+        return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
+
+    def searchDocuments(self, query, method="hnswoverlap", method_parameters: dict = {"indices": ["Document", "DocumentChunk", "Entity", "Relationship"], "top_k": 2, "num_hops": 2, "num_seen_min": 2}):
         """ Search documents.
             Args:
                 query (str):
@@ -284,9 +292,9 @@ class AI:
             "method_params": method_parameters
         }
         url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/search"
-        return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
-    
-    def answerQuestion(self, query, method = "hnswoverlap", method_parameters: dict = {"indices": ["Document", "DocumentChunk", "Entity", "Relationship"], "top_k": 2, "num_hops": 2, "num_seen_min": 2}):
+        return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
+
+    def answerQuestion(self, query, method="hnswoverlap", method_parameters: dict = {"indices": ["Document", "DocumentChunk", "Entity", "Relationship"], "top_k": 2, "num_hops": 2, "num_seen_min": 2}):
         """ Answer a question.
             Args:
                 query (str):
@@ -304,8 +312,8 @@ class AI:
             "method_params": method_parameters
         }
         url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/answerquestion"
-        return self.conn._req("POST", url, authMode="pwd", data = data, jsonData=True, resKey=None)
-    
+        return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
+
     def forceConsistencyUpdate(self, method="supportai"):
         """ Force a consistency update for SupportAI embeddings.
             Args:
@@ -317,8 +325,7 @@ class AI:
         """
         url = f"{self.nlqs_host}/{self.conn.graphname}/{method}/forceupdate/"
         return self.conn._req("GET", url, authMode="pwd", resKey=None)
-    
-    ''' TODO: Add support in CoPilot
+
     def checkConsistencyProgress(self, method="supportai"):
         """ Check the progress of the consistency update.
             Args:
@@ -330,4 +337,3 @@ class AI:
         """
         url = f"{self.nlqs_host}/{self.conn.graphname}/supportai/consistency_status/{method}"
         return self.conn._req("GET", url, authMode="pwd", resKey=None)
-    '''
