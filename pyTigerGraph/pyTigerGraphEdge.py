@@ -811,7 +811,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                                       targetVertexId, select, where, limit, sort, timeout)
 
     def getEdgesByType(self, edgeType: str, fmt: str = "py", withId: bool = True,
-                       withType: bool = False) -> Union[dict, str, 'pd.DataFrame']:
+                       withType: bool = False, limit:int = None) -> Union[dict, str, 'pd.DataFrame']:
         """Retrieves edges of the given edge type regardless the source vertex.
 
         Args:
@@ -827,12 +827,13 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                 be included in the dataframe?
             withType:
                 (When the output format is "df") should the edge type be included in the dataframe?
+            limit:
+                Maximum number of edge instances to be returned. Default is None (no limit).
+                **Note:** The limit is applied after retrieving the edges, so the load on the database is not reduced.
 
         Returns:
             The details of the edge instances of the given edge type as dictionary, JSON or pandas
             DataFrame.
-
-        TODO Add limit parameter
         """
         logger.info("entry: getEdgesByType")
         if logger.level == logging.DEBUG:
@@ -847,8 +848,10 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         sourceVertexType = self.getEdgeSourceVertexType(edgeType)
         queryText = _prep_get_edges_by_type(self.graphname, sourceVertexType, edgeType)
         ret = self.runInterpretedQuery(queryText)
-
-        ret = ret[0]["edges"]
+        if limit:
+            ret = ret[0]["edges"][:limit]
+        else:
+            ret = ret[0]["edges"]
 
         if fmt == "json":
             ret = json.dumps(ret)
