@@ -21,7 +21,8 @@ from pyTigerGraph.common.vertex import (
     _prep_get_vertices_by_id,
     _parse_get_vertex_stats,
     _prep_del_vertices,
-    _prep_del_vertices_by_id
+    _prep_del_vertices_by_id,
+    _prep_del_vertices_by_type
 )
 
 from pyTigerGraph.common.schema import _upsert_attrs
@@ -744,10 +745,13 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         if ack.lower() not in ["none", "all"]:
             raise TigerGraphException("Invalid value for ack parameter. Use 'none' or 'all'.", None)
 
-        url = self.restppUrl + "/graph/" + self.graphname + "/vertices/" + vertexType + "?ack=" + ack.lower()
-        if permanent:
-            url += "&permanent=true"
-
+        url = _prep_del_vertices_by_type(
+            restppUrl=self.restppUrl,
+            graphname=self.graphname,
+            vertexType=vertexType,
+            ack=ack,
+            permanent=permanent
+        )
         ret = self._delete(url)["deleted_vertices"]
 
         logger.debug("return: " + str(ret))

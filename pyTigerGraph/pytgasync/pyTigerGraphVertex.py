@@ -20,12 +20,14 @@ from pyTigerGraph.common.vertex import (
     _prep_get_vertices_by_id,
     _parse_get_vertex_stats,
     _prep_del_vertices,
-    _prep_del_vertices_by_id
+    _prep_del_vertices_by_id,
+    _prep_del_vertices_by_type
 )
 
 from pyTigerGraph.common.schema import _upsert_attrs
 from pyTigerGraph.common.vertex import vertexSetToDataFrame as _vS2DF
 from pyTigerGraph.common.util import _safe_char
+from pyTigerGraph.common.exception import TigerGraphException
 
 from pyTigerGraph.pytgasync.pyTigerGraphSchema import AsyncPyTigerGraphSchema
 from pyTigerGraph.pytgasync.pyTigerGraphUtils import AsyncPyTigerGraphUtils
@@ -724,10 +726,49 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema):
 
         return ret
 
-    # def delVerticesByType(self, vertexType: str, permanent: bool = False):
-    # TODO Implementation
-    # TODO DELETE /graph/{graph_name}/delete_by_type/vertices/{vertex_type}/
-    # TODO Maybe call it truncateVertex[Type] or delAllVertices?
+    async def delVerticesByType(self, vertexType: str, permanent: bool = False, ack: str = "none") -> int:
+        """Deletes all vertices of the specified type.
+
+        Args:
+            vertexType:
+                The name of the vertex type.
+            permanent:
+                If true, the deleted vertex IDs can never be inserted back, unless the graph is
+                dropped or the graph store is cleared.
+            ack:
+                If the parameter is set to "none", the delete operation doesn’t need to get acknowledgment from any GPE.
+                If it is set to "all" (default), the operation needs to get acknowledgment from all GPEs.
+                Other values will raise an error.
+
+        Returns:
+            A single number of vertices deleted.
+
+        Usage:
+        ```py
+        conn.delVerticesByType("Person")
+        ```
+        """
+
+        logger.info("entry: delVerticesByType")
+        logger.debug("params: " + str(locals()))
+        if ack.lower() not in ["none", "all"]:
+            raise TigerGraphException("Invalid value for ack parameter. Use 'none' or 'all'.", None)
+
+        url = _prep_del_vertices_by_type(
+            restppUrl=self.restppUrl,
+            graphname=self.graphname,
+            vertexType=vertexType,
+            ack=ack,
+            permanent=permanent
+        )
+
+        ret = await self._delete(url)["deleted_vertices"]
+
+        logger.debug("return: " + str(ret))
+        logger.info("exit: delVerticesByType")
+
+        return ret
+
 
     # TODO GET /deleted_vertex_check/{graph_name}
 

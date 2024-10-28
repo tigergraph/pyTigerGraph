@@ -139,6 +139,17 @@ def _prep_del_vertices_by_id(restppUrl: str, graphname: str,
         url2 += ("&" if url2 else "?") + "timeout=" + str(timeout)
     return url1, url2, vids
 
+def _prep_del_vertices_by_type(restppUrl: str,
+                               graphname: str,
+                               vertexType: str,
+                               ack: str,
+                               permanent: bool):
+    '''url builder for delVerticesByType()'''
+    url = restppUrl + "/graph/" + graphname + "/vertices/" + vertexType + "?ack=" + ack.lower()
+    if permanent:
+        url += "&permanent=true"
+    return url
+
 def vertexSetToDataFrame(vertexSet: list, withId: bool = True,
                             withType: bool = False) -> 'pd.DataFrame':
     """Converts a vertex set to Pandas DataFrame.
