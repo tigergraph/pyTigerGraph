@@ -435,7 +435,7 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery):
                 ```
                 {"visits": (1482, "+"), "max_duration": (371, "max")}
                 ```
-                For valid values of `<operator>` see https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#operation-codes .
+                For valid values of `<operator>` see https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#operation-codes.
 
         Returns:
             A single number of accepted (successfully upserted) edges (0 or 1).
@@ -467,7 +467,7 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery):
         return ret
 
     async def upsertEdges(self, sourceVertexType: str, edgeType: str, targetVertexType: str,
-                          edges: list) -> int:
+                          edges: list, atomic: bool = False) -> int:
         """Upserts multiple edges (of the same type).
 
         Args:
@@ -494,6 +494,11 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery):
                 ]
                 ```
                 For valid values of `<operator>` see https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints#operation-codes .
+            atomic:
+                The request is an atomic transaction. An atomic transaction means that updates to
+                the database contained in the request are all-or-nothing: either all changes are
+                successful, or none are successful. This uses the `gsql-atomic-level` header, and sets
+                the value to `atomic` if `True`, and `nonatomic` if `False`. Default is `False`.
 
         Returns:
             A single number of accepted (successfully upserted) edges (0 or positive integer).
@@ -524,6 +529,11 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery):
                                  edgeType=edgeType,
                                  targetVertexType=targetVertexType,
                                  edges=edges)
+
+        headers = {}
+        if atomic:
+            headers["gsql-atomic-level"] = "atomic"
+
         ret = await self._req("POST", self.restppUrl + "/graph/" + self.graphname, data=data)
         ret = ret[0]["accepted_edges"]
 
@@ -535,7 +545,7 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery):
 
     async def upsertEdgeDataFrame(self, df: 'pd.DataFrame', sourceVertexType: str, edgeType: str,
                                   targetVertexType: str, from_id: str = "", to_id: str = "",
-                                  attributes: dict = None) -> int:
+                                  attributes: dict = None, atomic: bool = False) -> int:
         """Upserts edges from a Pandas DataFrame.
 
         Args:
@@ -558,6 +568,11 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery):
                 the dataframe and target is the attribute name on the edge. When omitted,
                 all columns would be upserted with their current names. In this case column names
                 must match the edges's attribute names.
+            atomic:
+                The request is an atomic transaction. An atomic transaction means that updates to
+                the database contained in the request are all-or-nothing: either all changes are
+                successful, or none are successful. This uses the `gsql-atomic-level` header, and sets
+                the value to `atomic` if `True`, and `nonatomic` if `False`. Default is `False`.
 
         Returns:
             The number of edges upserted.
@@ -567,7 +582,7 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery):
             logger.debug("params: " + self._locals(locals()))
 
         json_up = _prep_upsert_edge_dataframe(df, from_id, to_id, attributes)
-        ret = await self.upsertEdges(sourceVertexType, edgeType, targetVertexType, json_up)
+        ret = await self.upsertEdges(sourceVertexType, edgeType, targetVertexType, json_up, atomic=atomic)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))

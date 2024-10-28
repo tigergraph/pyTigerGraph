@@ -493,7 +493,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         return ret
 
     def upsertEdges(self, sourceVertexType: str, edgeType: str, targetVertexType: str,
-                    edges: list, vertexMustExist=False) -> int:
+                    edges: list, vertexMustExist=False, atomic: bool = False) -> int:
         """Upserts multiple edges (of the same type).
 
         Args:
@@ -523,6 +523,11 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                 ```
                 #operation-codes .
                 For valid values of `<operator>` see https://docs.tigergraph.com/dev/restpp-api/built-in-endpoints
+            atomic:
+                The request is an atomic transaction. An atomic transaction means that updates to
+                the database contained in the request are all-or-nothing: either all changes are
+                successful, or none are successful. This uses the `gsql-atomic-level` header, and sets
+                the value to `atomic` if `True`, and `nonatomic` if `False`. Default is `False`.
 
         Returns:
             A single number of accepted (successfully upserted) edges (0 or positive integer).
@@ -552,7 +557,10 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                                   edgeType=edgeType,
                                   targetVertexType=targetVertexType,
                                   edges=edges)
-        ret = self._req("POST", self.restppUrl + "/graph/" + self.graphname, data=data)[0][
+        header = {}
+        if atomic:
+            header = {"gsql-atomic-level": "atomic"}
+        ret = self._req("POST", self.restppUrl + "/graph/" + self.graphname, data=data, headers=header)[0][
             "accepted_edges"]
 
         data = {sourceVertexType: {}}
@@ -601,7 +609,8 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
 
     def upsertEdgeDataFrame(self, df: 'pd.DataFrame', sourceVertexType: str, edgeType: str,
                             targetVertexType: str, from_id: str = "", to_id: str = "",
-                            attributes: dict = None, vertexMustExist: bool = False) -> int:
+                            attributes: dict = None, vertexMustExist: bool = False,
+                            atomic: bool = False) -> int:
         """Upserts edges from a Pandas DataFrame.
 
         Args:
@@ -624,6 +633,11 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                 the dataframe and target is the attribute name on the edge. When omitted,
                 all columns would be upserted with their current names. In this case column names
                 must match the edges's attribute names.
+            atomic:
+                The request is an atomic transaction. An atomic transaction means that updates to
+                the database contained in the request are all-or-nothing: either all changes are
+                successful, or none are successful. This uses the `gsql-atomic-level` header, and sets
+                the value to `atomic` if `True`, and `nonatomic` if `False`. Default is `False`.
 
         Returns:
             The number of edges upserted.
@@ -656,6 +670,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             targetVertexType,
             json_up,
             vertexMustExist=vertexMustExist,
+            atomic=atomic
         )
 
         if logger.level == logging.DEBUG:

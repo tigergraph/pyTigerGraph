@@ -241,7 +241,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         return ret
 
-    def upsertVertices(self, vertexType: str, vertices: list) -> int:
+    def upsertVertices(self, vertexType: str, vertices: list, atomic: bool = False) -> int:
         """Upserts multiple vertices (of the same type).
 
         See the description of ``upsertVertex`` for generic information.
@@ -272,6 +272,11 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
                 ----
 
                 For valid values of `<operator>` see xref:tigergraph-server:API:built-in-endpoints.adoc#_operation_codes[Operation codes].
+            atomic:
+                The request is an atomic transaction. An atomic transaction means that updates to
+                the database contained in the request are all-or-nothing: either all changes are
+                successful, or none are successful. This uses the `gsql-atomic-level` header, and sets
+                the value to `atomic` if `True`, and `nonatomic` if `False`. Default is `False`.
 
         Returns:
             A single number of accepted (successfully upserted) vertices (0 or positive integer).
@@ -283,6 +288,10 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         logger.info("entry: upsertVertices")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
+        
+        headers = {}
+        if atomic:
+            headers["gsql-atomic-level"] = "atomic"
 
         data = {}
         for v in vertices:
@@ -291,7 +300,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         data = json.dumps({"vertices": {vertexType: data}})
 
         ret = self._req("POST", self.restppUrl + "/graph/" +
-                        self.graphname, data=data)[0]["accepted_vertices"]
+                        self.graphname, data=data, headers=headers)[0]["accepted_vertices"]
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -300,7 +309,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         return ret
 
     def upsertVertexDataFrame(self, df: 'pd.DataFrame', vertexType: str, v_id: bool = None,
-                              attributes: dict = None) -> int:
+                              attributes: dict = None, atomic: bool = False) -> int:
         """Upserts vertices from a Pandas DataFrame.
 
         Args:
@@ -316,6 +325,11 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
                 the dataframe and target is the attribute name in the graph vertex. When omitted,
                 all columns would be upserted with their current names. In this case column names
                 must match the vertex's attribute names.
+            atomic:
+                The request is an atomic transaction. An atomic transaction means that updates to
+                the database contained in the request are all-or-nothing: either all changes are
+                successful, or none are successful. This uses the `gsql-atomic-level` header, and sets
+                the value to `atomic` if `True`, and `nonatomic` if `False`. Default is `False`.
 
         Returns:
             The number of vertices upserted.
@@ -326,7 +340,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         json_up = _prep_upsert_vertex_dataframe(
             df=df, v_id=v_id, attributes=attributes)
-        ret = self.upsertVertices(vertexType=vertexType, vertices=json_up)
+        ret = self.upsertVertices(vertexType=vertexType, vertices=json_up, atomic=atomic)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))

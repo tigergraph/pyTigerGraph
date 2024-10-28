@@ -95,7 +95,8 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
             atomic:
                 The request is an atomic transaction. An atomic transaction means that updates to
                 the database contained in the request are all-or-nothing: either all changes are
-                successful, or none are successful.
+                successful, or none are successful. This uses the `gsql-atomic-level` header, and sets
+                the value to `atomic` if `True`, and `nonatomic` if `False`.
             ackAll:
                 If `True`, the request will return after all GPE instances have acknowledged the
                 POST. Otherwise, the request will return immediately after RESTPP processes the POST.
