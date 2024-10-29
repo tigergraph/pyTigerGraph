@@ -4,7 +4,7 @@ import unittest
 import pandas
 from pyTigerGraphUnitTest import make_connection
 
-from pyTigerGraph.pyTigerGraphException import TigerGraphException
+from pyTigerGraph.common.exception import TigerGraphException
 
 
 class test_pyTigerGraphVertex(unittest.TestCase):
@@ -17,7 +17,7 @@ class test_pyTigerGraphVertex(unittest.TestCase):
         self.assertIsInstance(res, list)
         self.assertEqual(7, len(res))
         exp = ["vertex1_all_types", "vertex2_primary_key", "vertex3_primary_key_composite",
-            "vertex4", "vertex5", "vertex6", "vertex7"]
+               "vertex4", "vertex5", "vertex6", "vertex7"]
         self.assertEqual(exp, res)
 
     def test_02_getVertexType(self):
@@ -64,12 +64,13 @@ class test_pyTigerGraphVertex(unittest.TestCase):
         with self.assertRaises(TigerGraphException) as tge:
             self.conn.getVertexCount("*", "a01>=3")
         self.assertEqual("VertexType cannot be \"*\" if where condition is specified.",
-            tge.exception.message)
+                         tge.exception.message)
 
         with self.assertRaises(TigerGraphException) as tge:
-            self.conn.getVertexCount(["vertex4", "vertex5", "vertex6"], "a01>=3")
+            self.conn.getVertexCount(
+                ["vertex4", "vertex5", "vertex6"], "a01>=3")
         self.assertEqual("VertexType cannot be a list if where condition is specified.",
-            tge.exception.message)
+                         tge.exception.message)
 
         with self.assertRaises(TigerGraphException) as tge:
             self.conn.getVertexCount("non_existing_vertex_type")
@@ -94,11 +95,13 @@ class test_pyTigerGraphVertex(unittest.TestCase):
         self.assertEqual(1, res)
 
         with self.assertRaises(TigerGraphException) as tge:
-            self.conn.upsertVertex("non_existing_vertex_type", 100, {"a01": 100})
+            self.conn.upsertVertex(
+                "non_existing_vertex_type", 100, {"a01": 100})
         self.assertEqual("REST-30200", tge.exception.code)
 
         with self.assertRaises(TigerGraphException) as tge:
-            self.conn.upsertVertex("vertex4", 100, {"non_existing_vertex_attribute": 100})
+            self.conn.upsertVertex(
+                "vertex4", 100, {"non_existing_vertex_attribute": 100})
         self.assertEqual("REST-30200", tge.exception.code)
 
     def test_05_upsertVertices(self):
@@ -116,7 +119,8 @@ class test_pyTigerGraphVertex(unittest.TestCase):
         self.assertIsInstance(res, list)
         v = {}
         for r in res:
-            if "v_id" in r and r["v_id"] == '100':  # v_id value is returned as str, not int
+            # v_id value is returned as str, not int
+            if "v_id" in r and r["v_id"] == '100':
                 v = r
         self.assertNotEqual({}, v)
         self.assertIn("attributes", v)
@@ -137,14 +141,14 @@ class test_pyTigerGraphVertex(unittest.TestCase):
 
     def test_07_getVertices(self):
         res = self.conn.getVertices("vertex4", select="a01", where="a01>1,a01<5", sort="-a01",
-            limit=2)
+                                    limit=2)
         self.assertIsInstance(res, list)
         self.assertEqual(2, len(res))
         self.assertEqual(4, res[0]["attributes"]["a01"])
         self.assertEqual(3, res[1]["attributes"]["a01"])
 
         res = self.conn.getVertices("vertex4", select="a01", where="a01>1,a01<5", sort="-a01",
-            limit=2, fmt="json")
+                                    limit=2, fmt="json")
         self.assertIsInstance(res, str)
         res = json.loads(res)
         self.assertIsInstance(res, list)
@@ -153,19 +157,20 @@ class test_pyTigerGraphVertex(unittest.TestCase):
         self.assertEqual(3, res[1]["attributes"]["a01"])
 
         res = self.conn.getVertices("vertex4", select="a01", where="a01>1,a01<5", sort="-a01",
-            limit=2, fmt="df")
+                                    limit=2, fmt="df")
         self.assertIsInstance(res, pandas.DataFrame)
         self.assertEqual(2, len(res.index))
 
     def test_08_getVertexDataFrame(self):
         res = self.conn.getVertexDataFrame("vertex4", select="a01", where="a01>1,a01<5",
-            sort="-a01",
-            limit=2)
+                                           sort="-a01",
+                                           limit=2)
         self.assertIsInstance(res, pandas.DataFrame)
         self.assertEqual(2, len(res.index))
 
     def test_09_getVerticesById(self):
-        res = self.conn.getVerticesById("vertex4", [1, 3, 5], select="a01")  # select is ignored
+        res = self.conn.getVerticesById(
+            "vertex4", [1, 3, 5], select="a01")  # select is ignored
         self.assertIsInstance(res, list)
         self.assertEqual(3, len(res))
 
@@ -237,7 +242,7 @@ class test_pyTigerGraphVertex(unittest.TestCase):
         res = self.conn.vertexSetToDataFrame(res)
         self.assertIsInstance(res, pandas.DataFrame)
         self.assertEqual(5, len(res.index))
-        self.assertEqual(["v_id","a01"], list(res.columns))
+        self.assertEqual(["v_id", "a01"], list(res.columns))
 
     def test_16_delVerticesByType(self):
         res = self.conn.delVerticesByType("vertex4")

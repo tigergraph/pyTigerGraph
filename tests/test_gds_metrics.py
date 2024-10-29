@@ -2,17 +2,17 @@ import unittest
 
 import numpy as np
 from pyTigerGraph.gds.metrics import (Accumulator,
-                                    Accuracy, 
-                                    BinaryPrecision, 
-                                    BinaryRecall, 
-                                    Recall, 
-                                    Precision,
-                                    MSE,
-                                    RMSE,
-                                    MAE,
-                                    HitsAtK,
-                                    RecallAtK,
-                                    ConfusionMatrix)
+                                      Accuracy,
+                                      BinaryPrecision,
+                                      BinaryRecall,
+                                      Recall,
+                                      Precision,
+                                      MSE,
+                                      RMSE,
+                                      MAE,
+                                      HitsAtK,
+                                      RecallAtK,
+                                      ConfusionMatrix)
 
 
 class TestGDSAccumulator(unittest.TestCase):
@@ -86,6 +86,7 @@ class TestGDSBinaryPrecision(unittest.TestCase):
         measure.update(preds, truth)
         self.assertEqual(measure.value, 0.5)
 
+
 class TestGDSRecall(unittest.TestCase):
     def test_init(self):
         measure = Recall(num_classes=2)
@@ -119,6 +120,7 @@ class TestGDSPrecision(unittest.TestCase):
         measure.update(preds, truth)
         self.assertEqual(measure.value, 0.5)
 
+
 class TestGDSMSE(unittest.TestCase):
     def test_init(self):
         measure = MSE()
@@ -134,6 +136,7 @@ class TestGDSMSE(unittest.TestCase):
         truth = np.array([1, 0.5, 0])
         measure.update(preds, truth)
         self.assertEqual(measure.value, 0.15)
+
 
 class TestGDSRMSE(unittest.TestCase):
     def test_init(self):
@@ -168,6 +171,7 @@ class TestGDSMAE(unittest.TestCase):
         measure.update(preds, truth)
         self.assertEqual(measure.value, 0.3)
 
+
 class TestGDSHitsAtK(unittest.TestCase):
     def test_init(self):
         measure = HitsAtK(k=1)
@@ -183,6 +187,7 @@ class TestGDSHitsAtK(unittest.TestCase):
         truth = np.array([1, 0.5, 0])
         measure.update(preds, truth)
         self.assertEqual(measure.value, 0.5)
+
 
 class TestGDSRecallAtK(unittest.TestCase):
     def test_init(self):
@@ -200,6 +205,7 @@ class TestGDSRecallAtK(unittest.TestCase):
         measure.update(preds, truth)
         self.assertEqual(measure.value, 1/3)
 
+
 class TestGDSConfusionMatrix(unittest.TestCase):
     def test_init(self):
         measure = ConfusionMatrix(num_classes=2)
@@ -210,22 +216,23 @@ class TestGDSConfusionMatrix(unittest.TestCase):
         preds = np.array([1, 1])
         truth = np.array([1, 0])
         measure.update(preds, truth)
-        self.assertEqual(measure.value.values[1,1], 1)
+        self.assertEqual(measure.value.values[1, 1], 1)
         preds = np.array([1, 1])
         truth = np.array([1, 0])
         measure.update(preds, truth)
-        self.assertEqual(measure.value.values[1,1], 2)
+        self.assertEqual(measure.value.values[1, 1], 2)
 
     def test_update_multiclass(self):
         measure = ConfusionMatrix(num_classes=4)
         preds = np.array([1, 1, 3, 2])
         truth = np.array([1, 0, 3, 0])
         measure.update(preds, truth)
-        self.assertEqual(measure.value.values[3,3], 1)
+        self.assertEqual(measure.value.values[3, 3], 1)
         preds = np.array([1, 1])
         truth = np.array([1, 0])
         measure.update(preds, truth)
-        self.assertEqual(measure.value.values[1,1], 2)
+        self.assertEqual(measure.value.values[1, 1], 2)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2, failfast=True)

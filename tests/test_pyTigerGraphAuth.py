@@ -2,7 +2,7 @@ import unittest
 
 from pyTigerGraphUnitTest import make_connection
 
-from pyTigerGraph.pyTigerGraphException import TigerGraphException
+from pyTigerGraph.common.exception import TigerGraphException
 
 
 class test_pyTigerGraphAuth(unittest.TestCase):
@@ -40,7 +40,8 @@ class test_pyTigerGraphAuth(unittest.TestCase):
 
         with self.assertRaises(TigerGraphException) as tge:
             self.conn.createSecret("secret1")
-        self.assertEqual("The secret with alias secret1 already exists.", tge.exception.message)
+        self.assertEqual(
+            "The secret with alias secret1 already exists.", tge.exception.message)
 
     def test_04_dropSecret(self):
         res = self.conn.showSecrets()
@@ -70,13 +71,13 @@ class test_pyTigerGraphAuth(unittest.TestCase):
     '''
     def test_06_refreshToken(self):
         # TG 4.x does not allow refreshing tokens
-        if self.conn._versionGreaterThan4_0(): 
+        self.conn.getToken(self.conn.createSecret())
+        if self.conn._version_greater_than_4_0():
             with self.assertRaises(TigerGraphException) as tge:
                 self.conn.refreshToken("secret1")
-            self.assertEqual("Refreshing tokens is only supported on versions of TigerGraph <= 4.0.0.", tge.exception.message)
+            self.assertEqual(
+                "Refreshing tokens is only supported on versions of TigerGraph <= 4.0.0.", tge.exception.message)
         else:
-            res = self.conn.createSecret("secret6", True)
-            token = self.conn.getToken(res["secret6"])
             if isinstance(token, str): # handle plaintext tokens from TG 3.x
                 refreshed = self.conn.refreshToken(res["secret6"], token)
                 self.assertIsInstance(refreshed, str)
@@ -86,6 +87,7 @@ class test_pyTigerGraphAuth(unittest.TestCase):
                 self.conn.dropSecret("secret6")
     '''
     def test_07_deleteToken(self):
+        self.conn.dropSecret("secret7", ignoreErrors=True)
         res = self.conn.createSecret("secret7", True)
         token = self.conn.getToken(res["secret7"])
         if isinstance(token, str): # handle plaintext tokens from TG 3.x
@@ -93,6 +95,7 @@ class test_pyTigerGraphAuth(unittest.TestCase):
         else:
             self.assertTrue(self.conn.deleteToken(res["secret7"], token[0]))
         self.conn.dropSecret("secret7")
+
 
 if __name__ == '__main__':
     unittest.main()

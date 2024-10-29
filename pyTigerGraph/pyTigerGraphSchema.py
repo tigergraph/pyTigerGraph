@@ -6,8 +6,13 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 import json
 import logging
 import re
+
 from typing import Union
 
+from pyTigerGraph.common.schema import (
+    _prep_upsert_data,
+    _prep_get_endpoints
+)
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
 logger = logging.getLogger(__name__)
@@ -27,78 +32,18 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         """
         logger.info("entry: _getUDTs")
 
-        if self._versionGreaterThan4_0():
+        if self._version_greater_than_4_0():
             res = self._get(self.gsUrl + "/gsql/v1/udt/tuples?graph=" + self.graphname,
-            authMode="pwd")
-        else:    
+                            authMode="pwd")
+        else:
             res = self._get(self.gsUrl + "/gsqlserver/gsql/udtlist?graph=" + self.graphname,
-                authMode="pwd")
+                            authMode="pwd")
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
         logger.info("exit: _getUDTs")
 
         return res
-
-    def _getAttrType(self, attrType: dict) -> str:
-        """Returns attribute data type in simple format.
-
-        Args:
-            attribute:
-                The details of the attribute's data type.
-
-        Returns:
-            Either "(scalar_type)" or "(complex_type, scalar_type)" string.
-        """
-        ret = attrType["Name"]
-        if "KeyTypeName" in attrType:
-            ret += "(" + attrType["KeyTypeName"] + "," + attrType["ValueTypeName"] + ")"
-        elif "ValueTypeName" in attrType:
-            ret += "(" + attrType["ValueTypeName"] + ")"
-
-        return ret
-
-    def _upsertAttrs(self, attributes: dict) -> dict:
-        """Transforms attributes (provided as a table) into a hierarchy as expected by the upsert
-            functions.
-
-        Args:
-            attributes: A dictionary of attribute/value pairs (with an optional operator) in this
-                format:
-                    {<attribute_name>: <attribute_value>|(<attribute_name>, <operator>), …}
-
-        Returns:
-            A dictionary in this format:
-                {
-                    <attribute_name>: {"value": <attribute_value>},
-                    <attribute_name>: {"value": <attribute_value>, "op": <operator>}
-                }
-
-        Documentation:
-            xref:tigergraph-server:API:built-in-endpoints.adoc#operation-codes[Operation codes]
-        """
-        logger.info("entry: _upsertAttrs")
-        if logger.level == logging.DEBUG:
-            logger.debug("params: " + self._locals(locals()))
-
-        if not isinstance(attributes, dict):
-            return {}
-            # TODO Should return something else or raise exception?
-        vals = {}
-        for attr in attributes:
-            val = attributes[attr]
-            if isinstance(val, tuple):
-                vals[attr] = {"value": val[0], "op": val[1]}
-            elif isinstance(val, dict):
-                vals[attr] = {"value": {"keylist": list(val.keys()), "valuelist": list(val.values())}}
-            else:
-                vals[attr] = {"value": val}
-
-        if logger.level == logging.DEBUG:
-            logger.debug("return: " + str(vals))
-        logger.info("exit: _upsertAttrs")
-
-        return vals
 
     def getSchema(self, udts: bool = True, force: bool = False) -> dict:
         """Retrieves the schema metadata (of all vertex and edge type and, if not disabled, the
@@ -124,12 +69,12 @@ class pyTigerGraphSchema(pyTigerGraphBase):
             logger.debug("params: " + self._locals(locals()))
 
         if not self.schema or force:
-            if self._versionGreaterThan4_0():
+            if self._version_greater_than_4_0():
                 self.schema = self._get(self.gsUrl + "/gsql/v1/schema/graphs/" + self.graphname,
-                    authMode="pwd")
+                                        authMode="pwd")
             else:
                 self.schema = self._get(self.gsUrl + "/gsqlserver/gsql/schema?graph=" + self.graphname,
-                    authMode="pwd")
+                                        authMode="pwd")
         if udts and ("UDTs" not in self.schema or force):
             self.schema["UDTs"] = self._getUDTs()
 
@@ -140,8 +85,8 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         return self.schema
 
     def upsertData(self, data: Union[str, object], atomic: bool = False, ackAll: bool = False,
-            newVertexOnly: bool = False, vertexMustExist: bool = False,
-            updateVertexOnly: bool = False) -> dict:
+                   newVertexOnly: bool = False, vertexMustExist: bool = False,
+                   updateVertexOnly: bool = False) -> dict:
         """Upserts data (vertices and edges) from a JSON file or a file with equivalent object structure.
 
         Args:
@@ -150,7 +95,8 @@ class pyTigerGraphSchema(pyTigerGraphBase):
             atomic:
                 The request is an atomic transaction. An atomic transaction means that updates to
                 the database contained in the request are all-or-nothing: either all changes are
-                successful, or none are successful.
+                successful, or none are successful. This uses the `gsql-atomic-level` header, and sets
+                the value to `atomic` if `True`, and `nonatomic` if `False`. Default is `False`.
             ackAll:
                 If `True`, the request will return after all GPE instances have acknowledged the
                 POST. Otherwise, the request will return immediately after RESTPP processes the POST.
@@ -176,23 +122,11 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        if not isinstance(data, str):
-            data = json.dumps(data)
-        headers = {}
-        if atomic:
-            headers["gsql-atomic-level"] = "atomic"
-        params = {}
-        if ackAll:
-            params["ack"] = "all"
-        if newVertexOnly:
-            params["new_vertex_only"] = True
-        if vertexMustExist:
-            params["vertex_must_exist"] = True
-        if updateVertexOnly:
-            params["update_vertex_only"] = True
+        data, headers, params = _prep_upsert_data(data=data, atomic=atomic, ackAll=ackAll, newVertexOnly=newVertexOnly,
+                                                       vertexMustExist=vertexMustExist, updateVertexOnly=updateVertexOnly)
 
         res = self._post(self.restppUrl + "/graph/" + self.graphname, headers=headers, data=data,
-            params=params)[0]
+                         params=params)[0]
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -201,7 +135,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         return res
 
     def getEndpoints(self, builtin: bool = False, dynamic: bool = False,
-            static: bool = False) -> dict:
+                     static: bool = False) -> dict:
         """Lists the REST++ endpoints and their parameters.
 
         Args:
@@ -222,30 +156,29 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        ret = {}
-        if not (builtin or dynamic or static):
-            bui = dyn = sta = True
-        else:
-            bui = builtin
-            dyn = dynamic
-            sta = static
-        url = self.restppUrl + "/endpoints/" + self.graphname + "?"
+        bui, dyn, sta, url, ret = _prep_get_endpoints(
+            restppUrl=self.restppUrl,
+            graphname=self.graphname,
+            builtin=builtin,
+            dynamic=dynamic,
+            static=static
+        )
         if bui:
             eps = {}
-            res = self._get(url + "builtin=true", resKey="")
+            res = self._req("GET", url + "builtin=true", resKey="")
             for ep in res:
                 if not re.search(" /graph/", ep) or re.search(" /graph/{graph_name}/", ep):
                     eps[ep] = res[ep]
             ret.update(eps)
         if dyn:
             eps = {}
-            res = self._get(url + "dynamic=true", resKey="")
+            res = self._req("GET", url + "dynamic=true", resKey="")
             for ep in res:
                 if re.search("^GET /query/" + self.graphname, ep):
                     eps[ep] = res[ep]
             ret.update(eps)
         if sta:
-            ret.update(self._get(url + "static=true", resKey=""))
+            ret.update(self._req("GET", url + "static=true", resKey=""))
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))

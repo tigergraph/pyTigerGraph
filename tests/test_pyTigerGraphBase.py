@@ -3,7 +3,7 @@ import unittest
 
 from pyTigerGraphUnitTest import make_connection
 
-from pyTigerGraph.pyTigerGraphException import TigerGraphException
+from pyTigerGraph.common.exception import TigerGraphException
 
 
 class test_pyTigerGraphBase(unittest.TestCase):
@@ -56,17 +56,17 @@ class test_pyTigerGraphBase(unittest.TestCase):
             "results": {}
         }
 
-        self.conn._errorCheck(json_ok1)
-        self.conn._errorCheck(json_ok2)
-        self.conn._errorCheck(json_ok3)
-        self.conn._errorCheck(json_ok4)
+        self.conn._error_check(json_ok1)
+        self.conn._error_check(json_ok2)
+        self.conn._error_check(json_ok3)
+        self.conn._error_check(json_ok4)
 
         with self.assertRaises(TigerGraphException) as tge:
-            res = self.conn._errorCheck(json_not_ok1)
+            res = self.conn._error_check(json_not_ok1)
         self.assertEqual("error message", tge.exception.message)
 
         with self.assertRaises(TigerGraphException) as tge:
-            res = self.conn._errorCheck(json_not_ok2)
+            res = self.conn._error_check(json_not_ok2)
         self.assertEqual("JB-007", tge.exception.code)
 
     def test_01_req(self):
@@ -83,14 +83,16 @@ class test_pyTigerGraphBase(unittest.TestCase):
         self.assertEqual(exp, res)
 
         data = json.dumps({"function": "stat_vertex_attr", "type": "vertex4"})
-        exp = [{'attributes': {'a01': {'AVG': 3, 'MAX': 5, 'MIN': 1}}, 'v_type': 'vertex4'}]
-        res = self.conn._post(self.conn.restppUrl + "/builtins/" + self.conn.graphname, data=data)
+        exp = [
+            {'attributes': {'a01': {'AVG': 3, 'MAX': 5, 'MIN': 1}}, 'v_type': 'vertex4'}]
+        res = self.conn._post(self.conn.restppUrl +
+                              "/builtins/" + self.conn.graphname, data=data)
         self.assertEqual(exp, res)
 
     def test_04_delete(self):
         with self.assertRaises(TigerGraphException) as tge:
             res = self.conn._delete(self.conn.restppUrl + "/graph/" + self.conn.graphname +
-                "/vertices/non_existent_vertex_type/1")
+                                    "/vertices/non_existent_vertex_type/1")
         self.assertEqual("REST-30000", tge.exception.code)
 
 

@@ -5,10 +5,12 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 """
 import logging
 import warnings
+
 from typing import TYPE_CHECKING, Union
 if TYPE_CHECKING:
     import pandas as pd
 
+from pyTigerGraph.common.loading import _prep_run_loading_job_with_file
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
 logger = logging.getLogger(__name__)
@@ -66,7 +68,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         return res
 
     def runLoadingJobWithFile(self, filePath: str, fileTag: str, jobName: str, sep: str = None,
-            eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000) -> Union[dict, None]:
+                              eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000) -> Union[dict, None]:
         """Execute a loading job with the referenced file.
 
         The file will first be uploaded to the TigerGraph server and the value of the appropriate
@@ -101,7 +103,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        data = open(filePath, 'rb').read()
+        data = _prep_run_loading_job_with_file(filePath)
         res = self.runLoadingJobWithData(data, fileTag, jobName, sep, eol, timeout, sizeLimit)
 
         logger.info("exit: runLoadingJobWithFile")
@@ -144,24 +146,23 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        try:
-            params = {
-                "tag": jobName,
-                "filename": fileTag,
-            }
-            if sep is not None:
-                params["sep"] = sep
-            if eol is not None:
-                params["eol"] = eol
-        except OSError as ose:
-            logger.error(ose.strerror)
+        if not data or not jobName or not fileTag:
+            # invalid inputs
+            logger.error("Invalid data or params")
             logger.info("exit: runLoadingJobWithData")
-
             return None
-            # TODO Should throw exception instead?
 
-        res = self._post(self.restppUrl + "/ddl/" + self.graphname, params=params, data=data,
-            headers={"RESPONSE-LIMIT": str(sizeLimit), "GSQL-TIMEOUT": str(timeout)})
+        params = {
+            "tag": jobName,
+            "filename": fileTag,
+        }
+        if sep is not None:
+            params["sep"] = sep
+        if eol is not None:
+            params["eol"] = eol
+
+        res = self._req("POST", self.restppUrl + "/ddl/" + self.graphname, params=params, data=data,
+                        headers={"RESPONSE-LIMIT": str(sizeLimit), "GSQL-TIMEOUT": str(timeout)})
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -170,7 +171,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         return res
 
     def uploadFile(self, filePath, fileTag, jobName="", sep=None, eol=None, timeout=16000,
-            sizeLimit=128000000) -> dict:
+                   sizeLimit=128000000) -> dict:
         """DEPRECATED
 
         Use `runLoadingJobWithFile()` instead.

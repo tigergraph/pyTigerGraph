@@ -23,17 +23,17 @@ if not sys.warnoptions:
 # TODO Proper deprecation handling; import deprecation?
 
 class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT,
-    pyTigerGraphLoading, pyTigerGraphPath, pyTigerGraphDataset, object):
+                           pyTigerGraphLoading, pyTigerGraphPath, pyTigerGraphDataset, object):
     """Python wrapper for TigerGraph's REST++ and GSQL APIs"""
 
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
-            gsqlSecret: str = "", username: str = "tigergraph", password: str = "tigergraph",
-            tgCloud: bool = False, restppPort: Union[int, str] = "9000",
-            gsPort: Union[int, str] = "14240", gsqlVersion: str = "", version: str = "",
-            apiToken: str = "", useCert: bool = None, certPath: str = None, debug: bool = None,
-            sslPort: Union[int, str] = "443", gcp: bool = False, jwtToken: str = ""):
+                 gsqlSecret: str = "", username: str = "tigergraph", password: str = "tigergraph",
+                 tgCloud: bool = False, restppPort: Union[int, str] = "9000",
+                 gsPort: Union[int, str] = "14240", gsqlVersion: str = "", version: str = "",
+                 apiToken: str = "", useCert: bool = None, certPath: str = None, debug: bool = None,
+                 sslPort: Union[int, str] = "443", gcp: bool = False, jwtToken: str = ""):
         super().__init__(host, graphname, gsqlSecret, username, password, tgCloud, restppPort,
-            gsPort, gsqlVersion, version, apiToken, useCert, certPath, debug, sslPort, gcp, jwtToken)
+                         gsPort, gsqlVersion, version, apiToken, useCert, certPath, debug, sslPort, gcp, jwtToken)
 
         self.gds = None
         self.ai = None
