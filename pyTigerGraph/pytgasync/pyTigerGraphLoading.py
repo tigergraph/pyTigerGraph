@@ -16,7 +16,7 @@ from pyTigerGraph.pytgasync.pyTigerGraphBase import AsyncPyTigerGraphBase
 logger = logging.getLogger(__name__)
 
 
-class pyTigerGraphLoading(pyTigerGraphBase):
+class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
 
     async def runLoadingJobWithDataFrame(self, df: 'pd.DataFrame', fileTag: str, jobName: str, sep: str = None,
             eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000, columns: list = None) -> Union[dict, None]:
