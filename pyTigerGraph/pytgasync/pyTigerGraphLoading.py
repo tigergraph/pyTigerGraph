@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
 
     async def runLoadingJobWithDataFrame(self, df: 'pd.DataFrame', fileTag: str, jobName: str, sep: str = None,
-            eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000, columns: list = None) -> Union[dict, None]:
+                                         eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000, columns: list = None) -> Union[dict, None]:
         """Execute a loading job with the given pandas DataFrame with optional column list.
 
         The data string will be posted to the TigerGraph server and the value of the appropriate
@@ -62,13 +62,13 @@ class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
             data = df.to_csv(columns = columns, sep = sep, header=False)
 
         res = await self.runLoadingJobWithData(data, fileTag, jobName, sep, eol, timeout, sizeLimit)
-        
+
         logger.info("exit: runLoadingJobWithDataFrame")
-        
+
         return res
 
     async def runLoadingJobWithFile(self, filePath: str, fileTag: str, jobName: str, sep: str = None,
-                              eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000) -> Union[dict, None]:
+                                    eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000) -> Union[dict, None]:
         """Execute a loading job with the referenced file.
 
         The file will first be uploaded to the TigerGraph server and the value of the appropriate
@@ -107,11 +107,11 @@ class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
         res = await self.runLoadingJobWithData(data, fileTag, jobName, sep, eol, timeout, sizeLimit)
 
         logger.info("exit: runLoadingJobWithFile")
-                
+
         return res
 
     async def runLoadingJobWithData(self, data: str, fileTag: str, jobName: str, sep: str = None,
-            eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000) -> Union[dict, None]:
+                                    eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000) -> Union[dict, None]:
         """Execute a loading job with the given data string.
 
         The data string will be posted to the TigerGraph server and the value of the appropriate
@@ -162,7 +162,7 @@ class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
             params["eol"] = eol
 
         res = await self._req("POST", self.restppUrl + "/ddl/" + self.graphname, params=params, data=data,
-                        headers={"RESPONSE-LIMIT": str(sizeLimit), "GSQL-TIMEOUT": str(timeout)})
+                              headers={"RESPONSE-LIMIT": str(sizeLimit), "GSQL-TIMEOUT": str(timeout)})
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -171,7 +171,7 @@ class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
         return res
 
     async def uploadFile(self, filePath, fileTag, jobName="", sep=None, eol=None, timeout=16000,
-                   sizeLimit=128000000) -> dict:
+                         sizeLimit=128000000) -> dict:
         """DEPRECATED
 
         Use `runLoadingJobWithFile()` instead.
