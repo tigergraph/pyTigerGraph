@@ -8,22 +8,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def _prep_run_loading_job_with_file(filePath, jobName, fileTag, sep, eol):
+def _prep_run_loading_job_with_file(filePath):
     '''read file contents for runLoadingJobWithFile()'''
     try:
         data = open(filePath, 'rb').read()
-        params = {
-            "tag": jobName,
-            "filename": fileTag,
-        }
-        if sep is not None:
-            params["sep"] = sep
-        if eol is not None:
-            params["eol"] = eol
-        return data, params
+        return data
     except OSError as ose:
         logger.error(ose.strerror)
         logger.info("exit: runLoadingJobWithFile")
 
-        return None, None
+        return None
         # TODO Should throw exception instead?
