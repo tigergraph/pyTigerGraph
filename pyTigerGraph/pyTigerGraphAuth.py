@@ -166,18 +166,24 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             if _method:
                 method = _method
 
-            # Try using TG 4.1 endpoint first, if url not found then try <4.1 endpoint
+            # Try using TG 3.x endpoint first, if url not found then try <4.1 endpoint
             try:
-                res = self._req(method, url, authMode=authMode,
-                                data=data, resKey=None, jsonData=True)
-                mainVer = 4
+                res = self._req(
+                        method, alt_url, authMode=authMode, data=alt_data, resKey=None)
+                mainVer = 3
             except:
                 try:
-                    res = self._req(
-                        method, alt_url, authMode=authMode, data=alt_data, resKey=None)
-                    mainVer = 3
-                except Exception as e:
-                    raise TigerGraphException("Error requesting token. Check if the connection's graphname is correct.", 400)
+                    res = self._req(method, url, authMode=authMode,
+                                data=data, resKey=None, jsonData=True)
+                    mainVer = 4
+                except requests.exceptions.HTTPError as e:
+                    if e.response.status_code == 404:
+                        raise TigerGraphException(
+                            "Error requesting token. Check if the connection's graphname is correct and that REST authentication is enabled.",
+                            404
+                        )
+                    else:
+                        raise e
 
         # uses mainVer instead of _versionGreaterThan4_0 since you need a token for verson checking
         return res, mainVer
