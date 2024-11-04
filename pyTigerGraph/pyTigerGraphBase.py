@@ -517,6 +517,20 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         logger.info("exit: getVer")
 
         return ret
+    
+    def customizeHeader(self, timeout:int = 16_000, responseSize:int = 3.2e+7):
+        """Method to configure the request header.
+
+        Args:
+            tiemout (int, optional):
+                The timeout value desired in milliseconds. Defaults to 16,000 ms (16 sec)
+            responseSize:
+                The size of the response in bytes. Defaults to 3.2E7 bytes (32 MB).
+
+        Returns:
+            Nothing. Sets `responseConfigHeader` class attribute.
+        """
+        self.responseConfigHeader = {"GSQL-TIMEOUT": str(timeout), "RESPONSE-LIMIT": str(responseSize)}
 
     def _version_greater_than_4_0(self) -> bool:
         """Gets if the TigerGraph database version is greater than 4.0 using gerVer().
