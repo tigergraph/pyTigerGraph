@@ -192,6 +192,41 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                  secret: str = None,
                  setToken: bool = True,
                  lifetime: int = None) -> Union[Tuple[str, str], str]:
+        """Requests an authorization token.
+
+        This function returns a token only if REST++ authentication is enabled. If not, an exception
+        will be raised.
+        See https://docs.tigergraph.com/admin/admin-guide/user-access-management/user-privileges-and-authentication#rest-authentication
+
+        Args:
+            secret (str, Optional):
+                The secret (string) generated in GSQL using `CREATE SECRET`.
+                See https://docs.tigergraph.com/tigergraph-server/current/user-access/managing-credentials#_create_a_secret
+            setToken (bool, Optional):
+                Set the connection's API token to the new value (default: `True`).
+            lifetime (int, Optional):
+                Duration of token validity (in seconds, default 30 days = 2,592,000 seconds).
+
+        Returns:
+            If your TigerGraph instance is running version <=3.10, the return value is 
+            a tuple of `(<token>, <expiration_timestamp_unixtime>, <expiration_timestamp_ISO8601>)`.
+            The return value can be ignored, as the token is automatically set for the connection after this call.
+
+            If your TigerGraph instance is running version 4.0, the return value is a tuple of `(<token>, <expiration_timestamp_with_local_time>).
+
+            [NOTE]
+            The expiration timestamp's time zone might be different from your computer's local time
+            zone.
+
+        Raises:
+            `TigerGraphException` if REST++ authentication is not enabled or if an authentication
+            error occurred.
+
+        Endpoint:
+            - `POST /requesttoken` (In TigerGraph versions 3.x)
+                See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_request_a_token
+            - `POST /gsql/v1/tokens` (In TigerGraph versions 4.x)
+        """
         logger.info("entry: getToken")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
@@ -209,6 +244,44 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
         return token
 
     def refreshToken(self, secret: str = None, setToken: bool = True, lifetime: int = None, token: str = None) -> Union[Tuple[str, str], str]:
+        """Extends a token's lifetime.
+
+        This function works only if REST++ authentication is enabled. If not, an exception will be
+        raised.
+        See https://docs.tigergraph.com/admin/admin-guide/user-access-management/user-privileges-and-authentication#rest-authentication
+
+        Args:
+            secret:
+                The secret (string) generated in GSQL using `CREATE SECRET`.
+                See https://docs.tigergraph.com/tigergraph-server/current/user-access/managing-credentials#_create_a_secret
+            token:
+                The token requested earlier. If not specified, refreshes current connection's token.
+            lifetime:
+                Duration of token validity (in seconds, default 30 days = 2,592,000 seconds) from
+                current system timestamp.
+
+        Returns:
+            A tuple of `(<token>, <expiration_timestamp_unixtime>, <expiration_timestamp_ISO8601>)`.
+            The return value can be ignored. /
+            New expiration timestamp will be now + lifetime seconds, _not_ current expiration
+            timestamp + lifetime seconds.
+
+            [NOTE]
+            The expiration timestamp's time zone might be different from your computer's local time
+            zone.
+
+
+        Raises:
+            `TigerGraphException` if REST++ authentication is not enabled, if an authentication error
+            occurs, or if calling while using TigerGraph 4.x.
+
+        Note:
+            Not avaliable on TigerGraph version 4.x
+
+        Endpoint:
+            - `PUT /requesttoken`
+                See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_refresh_a_token
+        """
         logger.info("entry: refreshToken")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
@@ -229,6 +302,35 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
         return newToken
 
     def deleteToken(self, secret: str, token: str = None, skipNA: bool = False) -> bool:
+        """Deletes a token.
+
+        This function works only if REST++ authentication is enabled. If not, an exception will be
+        raised.
+        See https://docs.tigergraph.com/tigergraph-server/current/user-access/enabling-user-authentication#_enable_restpp_authentication
+
+        Args:
+            secret:
+                The secret (string) generated in GSQL using `CREATE SECRET`.
+                See https://docs.tigergraph.com/tigergraph-server/current/user-access/managing-credentials#_create_a_secret
+            token:
+                The token requested earlier. If not specified, deletes current connection's token,
+                so be careful.
+            skipNA:
+                Don't raise an exception if the specified token does not exist.
+
+        Returns:
+            `True`, if deletion was successful, or if the token did not exist but `skipNA` was
+            `True`.
+
+        Raises:
+            `TigerGraphException` if REST++ authentication is not enabled or an authentication error
+            occurred, for example if the specified token does not exist.
+
+        Endpoint:
+            - `DELETE /requesttoken` (In TigerGraph version 3.x)
+                See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_delete_a_token
+            - `DELETE /gsql/v1/tokens` (In TigerGraph version 4.x)
+        """
         if not token:
             token = self.apiToken
         res, _ = self._token(secret, None, token, "DELETE")

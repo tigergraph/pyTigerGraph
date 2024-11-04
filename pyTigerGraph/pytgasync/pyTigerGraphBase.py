@@ -1,3 +1,31 @@
+"""`AsyncTigerGraphConnection`
+
+A TigerGraphConnection object provides the HTTP(S) communication used by all other modules.
+This object is the **asynchronous** version of the connection object. If you want to use pyTigerGraph in an synchronous
+environment, use the `TigerGraphConnection` object.
+
+The `AsyncTigerGraphConnection` object is the main object that you will interact with when using pyTigerGraph.
+It provides the same core functionality as the synchronous `TigerGraphConnection` object, but with asynchronous methods.
+
+**Note:** `AsyncTigerGraphConnection` does not currently support the GDS or TigerGraph CoPilot APIs found in the synchronous version.
+
+To test your connection, you can use the `echo()` method. This method sends a simple request to the server and returns the response.
+
+```python
+from pyTigerGraph import TigerGraphConnection
+
+conn = AsyncTigerGraphConnection(
+    host="http://localhost",
+    graphname="MyGraph",
+    username="tigergraph",
+    password="tigergraph")
+
+resp = await conn.echo()
+
+print(resp)
+```
+"""
+
 import json
 import logging
 import httpx
@@ -326,6 +354,20 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
         logger.info("exit: getVer")
 
         return ret
+    
+    async def customizeHeader(self, timeout:int = 16_000, responseSize:int = 3.2e+7):
+        """Method to configure the request header.
+
+        Args:
+            tiemout (int, optional):
+                The timeout value desired in milliseconds. Defaults to 16,000 ms (16 sec)
+            responseSize:
+                The size of the response in bytes. Defaults to 3.2E7 bytes (32 MB).
+
+        Returns:
+            Nothing. Sets `responseConfigHeader` class attribute.
+        """
+        self.responseConfigHeader = {"GSQL-TIMEOUT": str(timeout), "RESPONSE-LIMIT": str(responseSize)}
 
     async def _version_greater_than_4_0(self) -> bool:
         """Gets if the TigerGraph database version is greater than 4.0 using gerVer().
