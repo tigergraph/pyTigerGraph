@@ -437,6 +437,7 @@ class Graph():
             self.setUpConn(conn, db_rep)
 
     def setUpConn(self, conn, db_rep):
+        """NO DOC: function to set up the connection"""
         self.graphname = db_rep["GraphName"]
         for v_type in db_rep["VertexTypes"]:
             vert = make_dataclass(v_type["Name"],
