@@ -327,7 +327,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
 
         return ret
     
-    def customizeHeader(self, timeout:int = 16_000, responseSize:int = 3.2e+7):
+    async def customizeHeader(self, timeout:int = 16_000, responseSize:int = 3.2e+7):
         """Method to configure the request header.
 
         Args:
