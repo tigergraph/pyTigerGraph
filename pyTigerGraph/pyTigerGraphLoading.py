@@ -161,8 +161,13 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         if eol is not None:
             params["eol"] = eol
 
-        res = self._req("POST", self.restppUrl + "/ddl/" + self.graphname, params=params, data=data,
-                        headers={"RESPONSE-LIMIT": str(sizeLimit), "GSQL-TIMEOUT": str(timeout)})
+        if isinstance(data, str):
+            data = data.encode("utf-8")
+            res = self._req("POST", self.restppUrl + "/ddl/" + self.graphname, params=params, data=data,
+                            headers={"Content-Type": "application/x-www-form-urlencoded; Charset=utf-8", "RESPONSE-LIMIT": str(sizeLimit), "GSQL-TIMEOUT": str(timeout)})
+        else:
+            res = self._req("POST", self.restppUrl + "/ddl/" + self.graphname, params=params, data=data,
+                            headers={"RESPONSE-LIMIT": str(sizeLimit), "GSQL-TIMEOUT": str(timeout)})
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
