@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, Any, List, Tuple
 if TYPE_CHECKING:
     from ..pyTigerGraph import TigerGraphConnection
 
-from ..pyTigerGraphException import TigerGraphException
+from ..common.exception import TigerGraphException
 import json
 import re
 import time

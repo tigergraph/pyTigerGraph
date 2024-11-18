@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 import numpy as np
 import pandas as pd
 
-from ..pyTigerGraphException import TigerGraphException
+from ..common.exception import TigerGraphException
 from .utilities import install_query_file, random_string, add_attribute
 
 __all__ = ["VertexLoader", "EdgeLoader", "NeighborLoader", "GraphLoader", "EdgeNeighborLoader", "NodePieceLoader", "HGTLoader"]
