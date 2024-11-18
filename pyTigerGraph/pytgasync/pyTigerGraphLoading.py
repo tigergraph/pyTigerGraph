@@ -10,7 +10,17 @@ from typing import TYPE_CHECKING, Union
 if TYPE_CHECKING:
     import pandas as pd
 
-from pyTigerGraph.common.loading import _prep_run_loading_job_with_file
+from pyTigerGraph.common.loading import (
+    _prep_run_loading_job_with_file,
+    _prep_loading_job_url,
+    _prep_loading_job_info,
+    _prep_run_loading_job,
+    _prep_abort_loading_jobs,
+    _prep_abort_one_loading_job,
+    _prep_resume_loading_job,
+    _prep_get_loading_job_status,
+    _prep_get_loading_jobs_status
+)
 from pyTigerGraph.pytgasync.pyTigerGraphBase import AsyncPyTigerGraphBase
 
 logger = logging.getLogger(__name__)
@@ -188,3 +198,283 @@ class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
         return await self.runLoadingJobWithFile(filePath, fileTag, jobName, sep, eol, timeout, sizeLimit)
 
     # TODO POST /restpploader/{graph_name}
+    async def getLoadingJobs(self) -> dict:
+        """Get a list of all loading jobs for the current graph.
+
+        Endpoint:
+            - `GET /gsql/v1/loading-jobs?graph=<graph_name>`
+                See xref:tigergraph-server:API:gsql-endpoints.adoc#_get_loading_job_names[Get loading jobs]
+        """
+        logger.info("entry: getLoadingJobs")
+
+        logger.debug("params: " + self._locals(locals()))
+
+        url = _prep_loading_job_url(self.gsUrl, self.graphname)
+
+        res = await self._req("GET", url)
+
+        logger.debug("return: " + str(res))
+        logger.info("exit: getLoadingJobs")
+
+        return res
+    
+    async def createLoadingJob(self, job_definition: str) -> dict:
+        """Create a new loading job with the given definition.
+
+        Args:
+            job_definition:
+                The definition of the loading job in GSQL DDL format.
+
+        Endpoint:
+            - `POST /gsql/v1/loading-jobs?graph=<graph_name>`
+                See xref:tigergraph-server:API:gsql-endpoints.adoc#_create_loading_job[Create a loading job]
+        """
+        logger.info("entry: createLoadingJob")
+
+        logger.debug("params: " + self._locals(locals()))
+
+        url = _prep_loading_job_url(self.gsUrl, self.graphname)
+
+        res = self._req("POST", url, data=job_definition)
+
+        logger.debug("return: " + str(res))
+        logger.info("exit: createLoadingJob")
+
+        return res
+    
+    async def updateLoadingJob(self, job_definition: str) -> dict:
+        """Update an existing loading job with the given definition.
+
+        Args:
+            job_definition:
+                The definition of the loading job in GSQL DDL format.
+
+        Endpoint:
+            - `PUT /gsql/v1/loading-jobs/<job_name>?graph=<graph_name>`
+                See xref:tigergraph-server:API:gsql-endpoints.adoc#_upload_a_loading_job[Upload a loading job]
+        """
+        logger.info("entry: updateLoadingJob")
+
+        logger.debug("params: " + self._locals(locals()))
+
+        url = _prep_loading_job_url(self.gsUrl, self.graphname)
+
+        res = await self._req("PUT", url, data=job_definition)
+
+        logger.debug("return: " + str(res))
+        logger.info("exit: updateLoadingJob")
+
+        return res
+    
+    async def getLoadingJobInfo(self, jobName: str, verbose: bool = False) -> dict:
+        """Get information about the specified loading job.
+
+        Args:
+            jobName:
+                The name of the loading job.
+            verbose:
+                If `True`, return verbose information about the job.
+
+        Endpoint:
+            - `GET /gsql/v1/loading-jobs/<job_name>?graph=<graph_name>`
+                See xref:tigergraph-server:API:gsql-endpoints.adoc#_get_loading_job_info[Get loading job info]
+        """
+        logger.info("entry: getLoadingJobInfo")
+
+        logger.debug("params: " + self._locals(locals()))
+
+        url = _prep_loading_job_info(self.gsUrl, jobName, self.graphname, verbose)
+
+        res = await self._req("GET", url)
+
+        logger.debug("return: " + str(res))
+        logger.info("exit: getLoadingJobInfo")
+
+        return res
+
+    async def runLoadingJob(self, jobName: str, data_source_config: dict, sys_data_root: str = None,
+                      verbose: bool = False, dryrun: bool = False, interval: int = None,
+                      maxNumError: int = None, maxPercentError: float = None) -> dict:
+        """Run the specified loading job with the given data source configuration.
+
+        Args:
+            jobName:
+                The name of the loading job.
+            data_source_config:
+                The data source configuration in dictionary format.
+            sys_data_root:
+                The system data root.
+            verbose:
+                If `True`, return verbose information about the job.
+            dryrun:
+                If `True`, run the job in dry-run mode.
+            interval:
+                The interval in seconds between each batch of data.
+            maxNumError:
+                The maximum number of errors allowed.
+            maxPercentError:
+                The maximum percentage of errors allowed.
+
+        Endpoint:
+            - `POST /gsql/v1/loading-jobs/run?graph=<graph_name>`
+                See xref:tigergraph-server:API:gsql-endpoints.adoc#_run_loading_job[Run a loading job]
+        """
+        logger.info("entry: runLoadingJob")
+        logger.debug("params: " + self._locals(locals()))
+
+        url, data = _prep_run_loading_job(self.gsUrl, self.graphname, jobName, data_source_config, sys_data_root, verbose, dryrun, interval, maxNumError, maxPercentError)
+
+        res = await self._req("POST", url, data=data)
+
+        logger.debug("return: " + str(res))
+        logger.info("exit: runLoadingJob")
+
+        return res
+    
+    async def dropLoadingJob(self, jobName: str) -> dict:
+        """Drop the specified loading job.
+
+        Args:
+            jobName:
+                The name of the loading job.
+
+        Endpoint:
+            - `DELETE /gsql/v1/loading-jobs/<job_name>?graph=<graph_name>`
+                See xref:tigergraph-server:API:gsql-endpoints.adoc#_drop_a_loading_job[Drop a loading job]
+        """
+        logger.info("entry: dropLoadingJob")
+
+        logger.debug("params: " + self._locals(locals()))
+
+        url = _prep_loading_job_info(self.gsUrl, jobName, self.graphname)
+
+        res = await self._req("DELETE", url)
+
+        logger.debug("return: " + str(res))
+        logger.info("exit: dropLoadingJob")
+
+        return res
+    
+    async def abortLoadingJobs(self, jobIds: list[str], pauseJob: bool = False) -> dict:
+        """Abort the specified loading jobs.
+
+        Args:
+            jobIds:
+                A list of job IDs to abort.
+            pauseJob:
+                If `True`, pause the job instead of aborting it.
+
+        Endpoint:
+            - `POST /gsql/v1/loading-jobs/abort?graph=<graph_name>`
+                See xref:tigergraph-server:API:gsql-endpoints.adoc#_abort_loading_jobs[Abort loading jobs]
+        """
+        logger.info("entry: abortLoadingJobs")
+
+        logger.debug("params: " + self._locals(locals()))
+
+        url = _prep_abort_loading_jobs(self.gsUrl, self.graphname, jobIds, pauseJob)
+
+        res = await self._req("GET", url)
+
+        logger.debug("return: " + str(res))
+        logger.info("exit: abortLoadingJobs")
+
+        return res
+    
+    async def abortLoadingJob(self, jobId: str, pauseJob: bool = False) -> dict:
+        """Abort the specified loading job.
+
+        Args:
+            jobId:
+                The ID of the job to abort.
+            pauseJob:
+                If `True`, pause the job instead of aborting it.
+
+        Endpoint:
+            - `POST /gsql/v1/loading-jobs/abort?graph=<graph_name>`
+                See xref:tigergraph-server:API:gsql-endpoints.adoc#_abort_one_loading_job
+        """
+        logger.info("entry: abortLoadingJob")
+
+        logger.debug("params: " + self._locals(locals()))
+
+        url = _prep_abort_one_loading_job(self.gsUrl, self.graphname, jobId, pauseJob)
+
+        res = await self._req("GET", url)
+
+        logger.debug("return: " + str(res))
+        logger.info("exit: abortLoadingJob")
+
+        return res
+    
+    async def resumeLoadingJob(self, jobId: str) -> dict:
+        """Resume the specified loading job.
+
+        Args:
+            jobId:
+                The ID of the job to resume.
+
+        Endpoint:
+            - `POST /gsql/v1/loading-jobs/resume?graph=<graph_name>`
+                See xref:tigergraph-server:API:gsql-endpoints.adoc#_resume_loading_job
+        """
+        logger.info("entry: resumeLoadingJob")
+
+        logger.debug("params: " + self._locals(locals()))
+
+        url = _prep_resume_loading_job(self.gsUrl, jobId)
+
+        res = await self._req("GET", url)
+
+        logger.debug("return: " + str(res))
+        logger.info("exit: resumeLoadingJob")
+
+        return res
+    
+    async def getLoadingJobsStatus(self, jobIds: list[str]) -> dict:
+        """Get the status of the specified loading jobs.
+
+        Args:
+            jobIds:
+                A list of job IDs to get the status of.
+
+        Endpoint:
+            - `GET /gsql/v1/loading-jobs/status?graph=<graph_name>`
+                See xref:tigergraph-server:API:gsql-endpoints.adoc#_get_loading_job_status[Get loading job status]
+        """
+        logger.info("entry: getLoadingJobsStatus")
+
+        logger.debug("params: " + self._locals(locals()))
+
+        url = _prep_get_loading_jobs_status(self.gsUrl, self.graphname, jobIds)
+
+        res = await self._req("GET", url)
+
+        logger.debug("return: " + str(res))
+        logger.info("exit: getLoadingJobsStatus")
+
+        return res
+    
+    async def getLoadingJobStatus(self, jobId: str) -> dict:
+        """Get the status of the specified loading job.
+
+        Args:
+            jobId:
+                The ID of the job to get the status of.
+
+        Endpoint:
+            - `GET /gsql/v1/loading-jobs/status/<job_id>?graph=<graph_name>`
+                See xref:tigergraph-server:API:gsql-endpoints.adoc#_get_one_loading_job_status[Get one loading job status]
+        """
+        logger.info("entry: getLoadingJobStatus")
+
+        logger.debug("params: " + self._locals(locals()))
+
+        url = _prep_get_loading_job_status(self.gsUrl, self.graphname, jobId)
+
+        res = await self._req("GET", url)
+
+        logger.debug("return: " + str(res))
+        logger.info("exit: getLoadingJobStatus")
+
+        return res
