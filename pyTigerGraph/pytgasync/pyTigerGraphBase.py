@@ -133,7 +133,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
         _headers, _data, verify = self._prep_req(
             authMode, headers, url, method, data)
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=None) as client:
             if jsonData:
                 res = await client.request(method, url, headers=_headers, json=_data, params=params)
             else:
@@ -161,7 +161,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
                 else:
                     url = newRestppUrl + '/' + \
                         '/'.join(url.split(':')[2].split('/')[1:])
-                async with httpx.AsyncClient() as client:
+                async with httpx.AsyncClient(timeout=None) as client:
                     if jsonData:
                         res = await client.request(method, url, headers=_headers, json=_data, params=params)
                     else:
