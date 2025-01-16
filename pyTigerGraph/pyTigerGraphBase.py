@@ -186,7 +186,10 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         restppPort = str(restppPort)
         gsPort = str(gsPort)
         sslPort = str(sslPort)
-        if (self.tgCloud and (restppPort == "9000" or restppPort == "443")) or (restppPort == gsPort):
+        if restppPort == gsPort:
+            self.restppPort = restppPort
+            self.restppUrl = self.host + ":" + restppPort + "/restpp"
+        elif (self.tgCloud and (restppPort == "9000" or restppPort == "443")):
             if restppPort == gsPort:
                 sslPort = gsPort
             self.restppPort = sslPort
