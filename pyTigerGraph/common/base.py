@@ -168,14 +168,18 @@ class PyTigerGraphCore(object):
 
         restppPort = str(restppPort)
         sslPort = str(sslPort)
-        if self.tgCloud and (restppPort == "9000" or restppPort == "443"):
+        gsPort = str(gsPort)
+        if restppPort == gsPort:
+            self.restppPort = restppPort
+            self.restppUrl = self.host + ":" + restppPort + "/restpp"
+        elif self.tgCloud and (restppPort == "9000" or restppPort == "443"):
             self.restppPort = sslPort
             self.restppUrl = self.host + ":" + sslPort + "/restpp"
         else:
             self.restppPort = restppPort
             self.restppUrl = self.host + ":" + self.restppPort
+            
         self.gsPort = ""
-        gsPort = str(gsPort)
         if self.tgCloud and (gsPort == "14240" or gsPort == "443"):
             self.gsPort = sslPort
             self.gsUrl = self.host + ":" + sslPort

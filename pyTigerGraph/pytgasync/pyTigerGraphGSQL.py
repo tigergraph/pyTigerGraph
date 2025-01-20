@@ -55,8 +55,7 @@ class AsyncPyTigerGraphGSQL(AsyncPyTigerGraphBase):
                                   authMode="pwd", resKey=None, skipCheck=True,
                                   jsonResponse=False,
                                   headers={"Content-Type": "text/plain"})
-
-        except httpx.HTTPError as e:
+        except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
                 res = await self._req("POST",
                                       self.gsUrl + "/gsqlserver/gsql/file",
