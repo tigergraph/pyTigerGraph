@@ -95,6 +95,8 @@ def _prep_token_request(restppUrl: str,
         if token:
             data["tokens"] = token
             alt_data["token"] = token
+        if graphname:
+            alt_data["graph"] = graphname
         if secret:
             authMode = "None"
             data["secret"] = secret
