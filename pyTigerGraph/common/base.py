@@ -348,6 +348,9 @@ class PyTigerGraphCore(object):
 
             return res
 
+        if resKey not in res:
+            resKey = resKey.replace("_", "")
+            logger.info("Removed _ from resKey")
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res[resKey]))
         logger.info("exit: _req (resKey)")
