@@ -83,14 +83,15 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        et = await self.getVertexType(vertexType)
+        vt = await self.getVertexType(vertexType)
         ret = []
 
-        for at in et["Attributes"]:
-            at["AttributeType"]["AttributeType"] = at["AttributeType"].pop("Name")
-            ret.append(
-                (at["AttributeName"], at["AttributeType"])
-            )
+        if "Attributes" in vt:
+            for at in vt["Attributes"]:
+                at["AttributeType"]["AttributeType"] = at["AttributeType"].pop("Name")
+                ret.append(
+                    (at["AttributeName"], at["AttributeType"])
+                )
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -117,13 +118,14 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        et = await self.getVertexType(vertexType)
+        vt = await self.getVertexType(vertexType)
         ret = []
 
-        for vt in et["EmbeddingAttributes"]:
-            ret.append(
-                (vt["Name"], vt)
-            )
+        if "EmbeddingAttributes" in vt:
+            for et in vt["EmbeddingAttributes"]:
+                ret.append(
+                    (et["Name"], et)
+                )
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -131,7 +133,7 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema):
 
         return ret
 
-    async def getVectorStatus(self, vertexType: str, vectorAttr: str = "") -> bool:
+    async def getVectorStatus(self, vertexType: str, vectorName: str = "") -> bool:
         """Check the rebuild status of the vertex type or the embedding attribute
 
         Args:
