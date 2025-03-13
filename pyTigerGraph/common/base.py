@@ -271,7 +271,8 @@ class PyTigerGraphCore(object):
         if "error" in res and res["error"] and res["error"] != "false":
             # Endpoint might return string "false" rather than Boolean false
             raise TigerGraphException(
-                res["message"], (res["code"] if "code" in res else None))
+                res["message"], (res["code"] if "code" in res else None)
+            )
         return False
 
     def _prep_req(self, authMode, headers, url, method, data):

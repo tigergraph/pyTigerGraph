@@ -87,14 +87,77 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema):
         ret = []
 
         for at in et["Attributes"]:
+            at["AttributeType"]["AttributeType"] = at["AttributeType"].pop("Name")
             ret.append(
-                (at["AttributeName"], self._getAttrType(at["AttributeType"])))
+                (at["AttributeName"], at["AttributeType"])
+            )
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
         logger.info("exit: getAttributes")
 
         return ret
+
+    async def getVertexVectors(self, vertexType: str) -> list:
+        """Returns the names and types of the embedding attributes of the vertex type.
+
+        Args:
+            vertexType:
+                The name of the vertex type.
+
+        Returns:
+            A list of (vector_name, vector_type) tuples.
+            The format of vector_type is one of
+             - "scalar_type"
+             - "complex_type(scalar_type)"
+             - "map_type(key_type,value_type)"
+            and it is a string.
+        """
+        logger.info("entry: getVertexVectors")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        et = await self.getVertexType(vertexType)
+        ret = []
+
+        for vt in et["EmbeddingAttributes"]:
+            ret.append(
+                (vt["Name"], vt)
+            )
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: getVertexVectors")
+
+        return ret
+
+    async def getVectorStatus(self, vertexType: str, vectorAttr: str = "") -> bool:
+        """Check the rebuild status of the vertex type or the embedding attribute
+
+        Args:
+            vertexType:
+                The name of the vertex type.
+            vectorAttr:
+                The name of the vector attribute, optional.
+
+        Returns:
+            a bool indicates whether vector rebuild is done or not
+
+        Endpoint:
+            - `GET /vector/status/{graph_name}/{vertex_type}/[{vector_name}]`
+        """
+        logger.info("entry: getVectorStatus")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        ret = await self._req("GET", self.restppUrl + "/vector/status/" +
+                        self.graphname + "/" + vertexType + "/" + vectorName)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: getVectorStatus")
+
+        return len(ret["NeedRebuildServers"]) == 0
 
     async def getVertexType(self, vertexType: str, force: bool = False) -> dict:
         """Returns the details of the specified vertex type.
@@ -222,7 +285,7 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema):
                 ```
                 Example:
                 ```
-                    {"name": "Thorin", points: (10, "+"), "bestScore": (67, "max")}
+                    {"name": "Thorin", points: (10, "+"), "bestScore": (83, "max"), "embedding": [0.1, -0.2, 3.1e-2]}
                 ```
                 For valid values of `<operator>` see xref:tigergraph-server:API:built-in-endpoints.adoc#_operation_codes[Operation codes].
 
@@ -275,7 +338,8 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema):
                 ----
                 [
                     (2, {"name": "Balin", "points": (10, "+"), "bestScore": (67, "max")}),
-                    (3, {"name": "Dwalin", "points": (7, "+"), "bestScore": (35, "max")})
+                    (3, {"name": "Dwalin", "points": (7, "+"), "bestScore": (35, "max")}),
+                    (4, {"name": "Thorin", points: (10, "+"), "bestScore": (83, "max"), "embedding": [0.1, -0.2, 3.1e-2]})
                 ]
                 ----
 
