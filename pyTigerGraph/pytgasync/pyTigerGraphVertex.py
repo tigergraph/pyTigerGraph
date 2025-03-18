@@ -139,7 +139,7 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema):
         Args:
             vertexType:
                 The name of the vertex type.
-            vectorAttr:
+            vectorName:
                 The name of the vector attribute, optional.
 
         Returns:

@@ -129,13 +129,13 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         return ret
 
-    def getVectorStatus(self, vertexType: str, vectorAttr: str = "") -> bool:
+    def getVectorStatus(self, vertexType: str, vectorName: str = "") -> bool:
         """Check the rebuild status of the vertex type or the embedding attribute
 
         Args:
             vertexType:
                 The name of the vertex type.
-            vectorAttr:
+            vectorName:
                 The name of the vector attribute, optional.
 
         Returns:
