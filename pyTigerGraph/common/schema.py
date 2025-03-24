@@ -23,10 +23,10 @@ def _get_attr_type(attrType: dict) -> str:
     """
     ret = attrType["Name"]
     if "KeyTypeName" in attrType:
-        ret += "(" + attrType["KeyTypeName"] + \
-            "," + attrType["ValueTypeName"] + ")"
+        ret += "<" + attrType["KeyTypeName"] + \
+            "," + attrType["ValueTypeName"] + ">"
     elif "ValueTypeName" in attrType:
-        ret += "(" + attrType["ValueTypeName"] + ")"
+        ret += "<" + attrType["ValueTypeName"] + ">"
 
     return ret
 

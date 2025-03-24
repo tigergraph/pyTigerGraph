@@ -25,7 +25,7 @@ from pyTigerGraph.common.vertex import (
     _prep_del_vertices_by_type
 )
 
-from pyTigerGraph.common.schema import _upsert_attrs
+from pyTigerGraph.common.schema import _upsert_attrs, _get_attr_type
 from pyTigerGraph.common.util import _safe_char
 from pyTigerGraph.common.vertex import vertexSetToDataFrame as _vS2DF
 
@@ -85,9 +85,8 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         ret = []
 
         for at in et["Attributes"]:
-            at["AttributeType"]["AttributeType"] = at["AttributeType"].pop("Name")
             ret.append(
-                (at["AttributeName"], at["AttributeType"])
+                (at["AttributeName"], _get_attr_type(at["AttributeType"]))
             )
 
         if logger.level == logging.DEBUG:
