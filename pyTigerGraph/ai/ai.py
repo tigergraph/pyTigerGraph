@@ -254,7 +254,7 @@ class AI:
         url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/create_ingest"
         return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
 
-    def runDocumentIngest(self, load_job_id, data_source_id, data_path):
+    def runDocumentIngest(self, load_job_id, data_source_id, data_path, data_source="remote"):
         """ Run a document ingest.
             Args:
                 load_job_id (str):
@@ -266,13 +266,16 @@ class AI:
             Returns:
                 JSON response from the document ingest.
         """
-        data = {
-            "load_job_id": load_job_id,
-            "data_source_id": data_source_id,
-            "file_path": data_path
-        }
-        url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/ingest"
-        return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
+        if data_source.lower() == "local" or data_path.startswith(("/", ".", "~")) :
+            return self.conn.runLoadingJobWithFile(data_path, data_source_id, load_job_id)
+        else:
+            data = {
+                "load_job_id": load_job_id,
+                "data_source_id": data_source_id,
+                "file_path": data_path
+            }
+            url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/ingest"
+            return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
 
     def searchDocuments(self, query, method="hnswoverlap", method_parameters: dict = {"indices": ["Document", "DocumentChunk", "Entity", "Relationship"], "top_k": 2, "num_hops": 2, "num_seen_min": 2}):
         """ Search documents.
