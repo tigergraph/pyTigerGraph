@@ -44,6 +44,7 @@ class AI:
         """
         self.conn = conn
         self.nlqs_host = None
+        self.aiserver = "supportai"
         if conn.tgCloud:
             # split scheme and host
             scheme, host = conn.host.split("://")
@@ -69,6 +70,16 @@ class AI:
                     The hostname (and port number) of the CoPilot serivce.
         """
         self.nlqs_host = hostname
+
+    def configureServerHost(self, hostname: str, aiserver: str):
+        """ Configure the hostname of the AI service.
+            Not necessary if using TigerGraph AI on TigerGraph Cloud.
+            Args:
+                hostname (str):
+                    The hostname (and port number) of the CoPilot serivce.
+        """
+        self.nlqs_host = hostname
+        self.aiserver = aiserver
 
     def registerCustomQuery(self, query_name: str, description: str = None, docstring: str = None, param_types: dict = None):
         """ Register a custom query with the InquiryAI service.
@@ -227,7 +238,22 @@ class AI:
             Returns:
                 JSON response from the SupportAI service.
         """
-        url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/initialize"
+        return self.initializeAIServer("supportai")
+
+    def initializeGraphAI(self):
+        """ Initialize the GraphAI service.
+            Returns:
+                JSON response from the GraphAI service.
+        """
+        return self.initializeAIServer("graphai")
+
+    def initializeAIServer(self, server="supportai"):
+        """ Initialize the given service.
+            Returns:
+                JSON response from the given service.
+        """
+        self.aiserver = server
+        url = f"{self.nlqs_host}/{self.conn.graphname}/{self.aiserver}/initialize"
         return self.conn._req("POST", url, authMode="pwd", resKey=None)
 
     def createDocumentIngest(self, data_source, data_source_config, loader_config, file_format):
@@ -251,7 +277,7 @@ class AI:
             "file_format": file_format
         }
 
-        url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/create_ingest"
+        url = f"{self.nlqs_host}/{self.conn.graphname}/{self.aiserver}/create_ingest"
         return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
 
     def runDocumentIngest(self, load_job_id, data_source_id, data_path, data_source="remote"):
@@ -274,7 +300,7 @@ class AI:
                 "data_source_id": data_source_id,
                 "file_path": data_path
             }
-            url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/ingest"
+            url = f"{self.nlqs_host}/{self.conn.graphname}/{self.aiserver}/ingest"
             return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
 
     def searchDocuments(self, query, method="hnswoverlap", method_parameters: dict = {"indices": ["Document", "DocumentChunk", "Entity", "Relationship"], "top_k": 2, "num_hops": 2, "num_seen_min": 2}):
