@@ -308,12 +308,17 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         _headers, _data, verify = self._prep_req(
             authMode, headers, url, method, data)
 
+        if "GSQL-TIMEOUT" in _headers:
+            http_timeout = (10, int(int(_headers["GSQL-TIMEOUT"])/1000) + 10)
+        else:
+            http_timeout = None
+
         if jsonData:
             res = requests.request(
-                method, url, headers=_headers, json=_data, params=params, verify=verify)
+                method, url, headers=_headers, json=_data, params=params, verify=verify, timeout=http_timeout)
         else:
             res = requests.request(
-                method, url, headers=_headers, data=_data, params=params, verify=verify)
+                method, url, headers=_headers, data=_data, params=params, verify=verify, timeout=http_timeout)
 
         try:
             if not skipCheck and not (200 <= res.status_code < 300):

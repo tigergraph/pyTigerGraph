@@ -133,11 +133,16 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
         _headers, _data, verify = self._prep_req(
             authMode, headers, url, method, data)
 
+        if "GSQL-TIMEOUT" in _headers:
+            http_timeout = (10, int(_headers["GSQL-TIMEOUT"]/1000) + 10)
+        else:
+            http_timeout = None
+
         async with httpx.AsyncClient(timeout=None) as client:
             if jsonData:
-                res = await client.request(method, url, headers=_headers, json=_data, params=params)
+                res = await client.request(method, url, headers=_headers, json=_data, params=params, timeout=http_timeout)
             else:
-                res = await client.request(method, url, headers=_headers, data=_data, params=params)
+                res = await client.request(method, url, headers=_headers, data=_data, params=params, timeout=http_timeout)
 
         try:
             if not skipCheck and not (200 <= res.status_code < 300) and res.status_code != 404:
