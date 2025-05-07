@@ -5,9 +5,11 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 """
 import json
 import logging
+import re
 
 from datetime import datetime
 from typing import TYPE_CHECKING, Union, Optional
+import pandas as pd
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -102,13 +104,74 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
 
         return ret
 
-    # TODO installQueries()
-    #   POST /gsql/queries/install
-    #   xref:tigergraph-server:API:built-in-endpoints.adoc#_install_a_query[Install a query]
+    def installQueries(self, queries: Union[str, list], flag: Union[str, list] = None) -> str:
+        """Installs one or more queries.
 
-    # TODO checkQueryInstallationStatus()
-    #   GET /gsql/queries/install/{request_id}
-    #   xref:tigergraph-server:API:built-in-endpoints.adoc#_check_query_installation_status[Check query installation status]
+        Args:
+            queries:
+                A single query string or a list of query strings to install. Use '*' or 'all' to install all queries.
+            flag:
+                Method to install queries.
+                - '-single' Install the query in single gpr mode. 
+                - '-legacy' Install the query in UDF mode.
+                - '-debug' Present results contains debug info.
+                - '-cost' Present results contains performance consumption.
+                - '-force' Install the query even if it already installed.
+
+        Returns:
+            The response from the server.
+
+        Endpoints:
+            GET /gsql/queries/install
+            See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_install_a_query
+        """
+        logger.info("entry: installQueries")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+ 
+        params = {}
+        if isinstance(queries, list):
+            queries = ",".join(queries)
+        params["queries"] = queries
+
+        if flag:
+            if isinstance(flag, list):
+                flag = ",".join(flag)
+            params["flag"] = flag
+
+        ret = self._req("POST", self.gsUrl + "/gsql/v1/queries/install", params=params, resKey="requestId")
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: installQueries")
+
+        return ret
+
+    def checkQueryInstallationStatus(self, requestId: str) -> dict:
+        """Checks the status of query installation.
+
+        Args:
+            requestId:
+                The request ID returned from installQueries.
+
+        Returns:
+            A dictionary containing the installation status.
+
+        Endpoints:
+            GET /gsql/queries/install/{request_id}
+            See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_check_query_installation_status
+        """
+        logger.info("entry: checkQueryInstallationStatus")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        ret = self._req("GET", self.gsUrl + "/gsql/v1/queries/install&requestid=" + requestId, authMode="pwd")
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(ret))
+        logger.info("exit: checkQueryInstallationStatus")
+
+        return ret
 
     def runInstalledQuery(self, queryName: str, params: Union[str, dict] = None,
                           timeout: int = None, sizeLimit: int = None, usePost: bool = False, runAsync: bool = False,

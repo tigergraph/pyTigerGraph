@@ -158,6 +158,98 @@ class test_pyTigerGraphQuery(unittest.TestCase):
             self.assertEqual(
                 "This function is only supported on versions of TigerGraph >= 4.0.0.", tge.exception.message)
 
+    def test_installQueries(self):
+        # First create the queries using gsql
+        queries = [
+            """
+            CREATE QUERY test_install_query() {
+                PRINT "Hello World";
+            }
+            """,
+            """
+            CREATE QUERY test_install_query1() {
+                PRINT "Hello World 1";
+            }
+            """,
+            """
+            CREATE QUERY test_install_query2() {
+                PRINT "Hello World 2";
+            }
+            """,
+            """
+            CREATE QUERY test_install_query_with_flag() {
+                PRINT "Hello World";
+            }
+            """,
+            """
+            CREATE QUERY test_install_query_with_multiple_flags() {
+                PRINT "Hello World";
+            }
+            """
+        ]
+        
+        # Create all queries first
+        for query in queries:
+            self.conn.gsql(query)
+
+        # Test installing a single query
+        requestId = self.conn.installQueries("test_install_query")
+        self.assertIsInstance(requestId, str)
+        
+        # Check installation status
+        status = self.conn.checkQueryInstallationStatus(requestId)
+        self.assertIn("status", status)
+        self.assertEqual(status["status"], "success")
+
+        # Test installing multiple queries
+        requestId = self.conn.installQueries(["test_install_query1", "test_install_query2"])
+        self.assertIsInstance(requestId, str)
+        
+        # Check installation status
+        status = self.conn.checkQueryInstallationStatus(requestId)
+        self.assertIn("status", status)
+        self.assertEqual(status["status"], "success")
+
+        # Test installing with flags
+        requestId = self.conn.installQueries("test_install_query_with_flag", flag="-force")
+        self.assertIsInstance(requestId, str)
+        
+        # Check installation status
+        status = self.conn.checkQueryInstallationStatus(requestId)
+        self.assertIn("status", status)
+        self.assertEqual(status["status"], "success")
+
+        # Test installing with multiple flags
+        requestId = self.conn.installQueries("test_install_query_with_multiple_flags", flag=["-force", "-debug"])
+        self.assertIsInstance(requestId, str)
+        
+        # Check installation status
+        status = self.conn.checkQueryInstallationStatus(requestId)
+        self.assertIn("status", status)
+        self.assertEqual(status["status"], "success")
+
+        # Test installing all queries
+        requestId = self.conn.installQueries("all")
+        self.assertIsInstance(requestId, str)
+        
+        # Check installation status
+        status = self.conn.checkQueryInstallationStatus(requestId)
+        self.assertIn("status", status)
+        self.assertEqual(status["status"], "success")
+
+        # Test installing all queries with asterisk
+        requestId = self.conn.installQueries("*")
+        self.assertIsInstance(requestId, str)
+        
+        # Check installation status
+        status = self.conn.checkQueryInstallationStatus(requestId)
+        self.assertIn("status", status)
+        self.assertEqual(status["status"], "success")
+
+        # Test invalid query name
+        with self.assertRaises(ValueError):
+            self.conn.installQueries("non_existent_query")
+
 
 if __name__ == '__main__':
     unittest.main()
