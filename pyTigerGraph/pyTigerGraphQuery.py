@@ -5,11 +5,9 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 """
 import json
 import logging
-import re
 
 from datetime import datetime
 from typing import TYPE_CHECKING, Union, Optional
-import pandas as pd
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -122,14 +120,15 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
             The response from the server.
 
         Endpoints:
-            GET /gsql/queries/install
+            GET /gsql/v1/queries/install
             See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_install_a_query
         """
         logger.info("entry: installQueries")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
- 
+
         params = {}
+        params["graph"] = self.graphname
         if isinstance(queries, list):
             queries = ",".join(queries)
         params["queries"] = queries
@@ -139,7 +138,7 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
                 flag = ",".join(flag)
             params["flag"] = flag
 
-        ret = self._req("POST", self.gsUrl + "/gsql/v1/queries/install", params=params, resKey="requestId")
+        ret = self._req("GET", self.gsUrl + "/gsql/v1/queries/install", params=params, resKey="message")
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))

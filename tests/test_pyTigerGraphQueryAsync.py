@@ -196,58 +196,28 @@ class test_pyTigerGraphQueryAsync(unittest.IsolatedAsyncioTestCase):
             await self.conn.gsql(query)
 
         # Test installing a single query
-        requestId = await self.conn.installQueries("test_install_query_async")
-        self.assertIsInstance(requestId, str)
+        result = await self.conn.installQueries("test_install_query_async")
+        self.assertIn("SUCCESS", result)
         
-        # Check installation status
-        status = await self.conn.checkQueryInstallationStatus(requestId)
-        self.assertIn("status", status)
-        self.assertEqual(status["status"], "success")
-
         # Test installing multiple queries
-        requestId = await self.conn.installQueries(["test_install_query1_async", "test_install_query2_async"])
-        self.assertIsInstance(requestId, str)
-        
-        # Check installation status
-        status = await self.conn.checkQueryInstallationStatus(requestId)
-        self.assertIn("status", status)
-        self.assertEqual(status["status"], "success")
+        result = await self.conn.installQueries(["test_install_query1_async", "test_install_query2_async"])
+        self.assertIn("SUCCESS", result)
 
         # Test installing with flags
-        requestId = await self.conn.installQueries("test_install_query_with_flag_async", flag="-force")
-        self.assertIsInstance(requestId, str)
-        
-        # Check installation status
-        status = await self.conn.checkQueryInstallationStatus(requestId)
-        self.assertIn("status", status)
-        self.assertEqual(status["status"], "success")
+        result = await self.conn.installQueries("test_install_query_with_flag_async", flag="-force")
+        self.assertIn("SUCCESS", result)
 
         # Test installing with multiple flags
-        requestId = await self.conn.installQueries("test_install_query_with_multiple_flags_async", flag=["-force", "-debug"])
-        self.assertIsInstance(requestId, str)
-        
-        # Check installation status
-        status = await self.conn.checkQueryInstallationStatus(requestId)
-        self.assertIn("status", status)
-        self.assertEqual(status["status"], "success")
+        result = await self.conn.installQueries("test_install_query_with_multiple_flags_async", flag=["-force", "-debug"])
+        self.assertIn("SUCCESS", result)
 
         # Test installing all queries
-        requestId = await self.conn.installQueries("all")
-        self.assertIsInstance(requestId, str)
-        
-        # Check installation status
-        status = await self.conn.checkQueryInstallationStatus(requestId)
-        self.assertIn("status", status)
-        self.assertEqual(status["status"], "success")
+        result = await self.conn.installQueries("all")
+        self.assertIn("SUCCESS", result)
 
         # Test installing all queries with asterisk
-        requestId = await self.conn.installQueries("*")
-        self.assertIsInstance(requestId, str)
-        
-        # Check installation status
-        status = await self.conn.checkQueryInstallationStatus(requestId)
-        self.assertIn("status", status)
-        self.assertEqual(status["status"], "success")
+        result = await self.conn.installQueries("*")
+        self.assertIn("SUCCESS", result)
 
         # Test invalid query name
         with self.assertRaises(ValueError):

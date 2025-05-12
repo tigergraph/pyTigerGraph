@@ -4,10 +4,9 @@ The functions on this page run installed or interpret queries in TigerGraph.
 All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object].
 """
 import logging
-import re
+import time
 
 from typing import TYPE_CHECKING, Union, Optional
-import pandas as pd
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -117,14 +116,15 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
             The response from the server.
 
         Endpoints:
-            GET /gsql/queries/install
+            GET /gsql/v1/queries/install
             See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_install_a_query
         """
         logger.info("entry: installQueries")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
- 
+
         params = {}
+        params["graph"] = self.graphname
         if isinstance(queries, list):
             queries = ",".join(queries)
         params["queries"] = queries
@@ -134,7 +134,16 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
                 flag = ",".join(flag)
             params["flag"] = flag
 
-        ret = await self._req("POST", self.gsUrl + "/gsql/v1/queries/install", params=params, resKey="requestId")
+        request_id = await self._req("GET", self.gsUrl + "/gsql/v1/queries/install", params=params, resKey="requestId")
+
+        ret = None
+        while not ret:
+            ret = await self._req("GET", self.gsUrl + "/gsql/v1/queries/install/" + str(request_id), resKey="message")
+            if "SUCCESS" in ret or "FAILED" in ret:
+                break
+            else:
+                ret = None
+            time.sleep(1)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
