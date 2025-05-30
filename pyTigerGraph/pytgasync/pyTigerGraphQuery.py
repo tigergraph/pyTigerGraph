@@ -134,12 +134,12 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
                 flag = ",".join(flag)
             params["flag"] = flag
 
-        request_id = await self._req("GET", self.gsUrl + "/gsql/v1/queries/install", params=params, resKey="requestId")
+        request_id = await self._req("GET", self.gsUrl + "/gsql/v1/queries/install", params=params, authMode="pwd", resKey="requestId")
 
         ret = None
         while not ret:
-            ret = await self._req("GET", self.gsUrl + "/gsql/v1/queries/install/" + str(request_id), resKey="message")
-            if "SUCCESS" in ret or "FAILED" in ret:
+            ret = await self._req("GET", self.gsUrl + "/gsql/v1/queries/install/" + str(request_id), authMode="pwd", resKey="")
+            if "SUCCESS" in ret["message"] or "FAILED" in ret["message"]:
                 break
             else:
                 ret = None
@@ -151,8 +151,8 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         return ret
 
-    async def checkQueryInstallationStatus(self, requestId: str) -> dict:
-        """Checks the status of query installation.
+    async def getQueryInstallationStatus(self, requestId: str) -> dict:
+        """Get the status of query installation.
 
         Args:
             requestId:
@@ -165,7 +165,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
             GET /gsql/queries/install/{request_id}
             See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_check_query_installation_status
         """
-        logger.info("entry: checkQueryInstallationStatus")
+        logger.info("entry: getQueryInstallationStatus")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -173,7 +173,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: checkQueryInstallationStatus")
+        logger.info("exit: getQueryInstallationStatus")
 
         return ret
 

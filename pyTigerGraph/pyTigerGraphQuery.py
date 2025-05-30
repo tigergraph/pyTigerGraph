@@ -138,7 +138,7 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
                 flag = ",".join(flag)
             params["flag"] = flag
 
-        ret = self._req("GET", self.gsUrl + "/gsql/v1/queries/install", params=params, resKey="message")
+        ret = self._req("GET", self.gsUrl + "/gsql/v1/queries/install", params=params, authMode="pwd", resKey="")
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -146,7 +146,7 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
 
         return ret
 
-    def checkQueryInstallationStatus(self, requestId: str) -> dict:
+    def getQueryInstallationStatus(self, requestId: str) -> dict:
         """Checks the status of query installation.
 
         Args:
@@ -160,15 +160,15 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
             GET /gsql/queries/install/{request_id}
             See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_check_query_installation_status
         """
-        logger.info("entry: checkQueryInstallationStatus")
+        logger.info("entry: getQueryInstallationStatus")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        ret = self._req("GET", self.gsUrl + "/gsql/v1/queries/install&requestid=" + requestId, authMode="pwd")
+        ret = self._req("GET", self.gsUrl + "/gsql/v1/queries/install&requestid=" + requestId, authMode="pwd", resKey="")
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: checkQueryInstallationStatus")
+        logger.info("exit: getQueryInstallationStatus")
 
         return ret
 

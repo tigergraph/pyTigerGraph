@@ -197,54 +197,54 @@ class test_pyTigerGraphQuery(unittest.TestCase):
         self.assertIsInstance(requestId, str)
         
         # Check installation status
-        status = self.conn.checkQueryInstallationStatus(requestId)
-        self.assertIn("status", status)
-        self.assertEqual(status["status"], "success")
+        status = self.conn.getQueryInstallationStatus(requestId)
+        self.assertIn("message", status)
+        self.assertIn(status["message"], "success")
 
         # Test installing multiple queries
         requestId = self.conn.installQueries(["test_install_query1", "test_install_query2"])
         self.assertIsInstance(requestId, str)
         
         # Check installation status
-        status = self.conn.checkQueryInstallationStatus(requestId)
-        self.assertIn("status", status)
-        self.assertEqual(status["status"], "success")
+        status = self.conn.getQueryInstallationStatus(requestId)
+        self.assertIn("message", status)
+        self.assertIn(status["message"], "SUCCESS")
 
         # Test installing with flags
         requestId = self.conn.installQueries("test_install_query_with_flag", flag="-force")
         self.assertIsInstance(requestId, str)
         
         # Check installation status
-        status = self.conn.checkQueryInstallationStatus(requestId)
-        self.assertIn("status", status)
-        self.assertEqual(status["status"], "success")
+        status = self.conn.getQueryInstallationStatus(requestId)
+        self.assertIn("message", status)
+        self.assertIn(status["message"], "SUCCESS")
 
         # Test installing with multiple flags
         requestId = self.conn.installQueries("test_install_query_with_multiple_flags", flag=["-force", "-debug"])
         self.assertIsInstance(requestId, str)
         
         # Check installation status
-        status = self.conn.checkQueryInstallationStatus(requestId)
-        self.assertIn("status", status)
-        self.assertEqual(status["status"], "success")
+        status = self.conn.getQueryInstallationStatus(requestId)
+        self.assertIn("message", status)
+        self.assertIn(status["message"], "SUCCESS")
 
         # Test installing all queries
         requestId = self.conn.installQueries("all")
         self.assertIsInstance(requestId, str)
         
         # Check installation status
-        status = self.conn.checkQueryInstallationStatus(requestId)
-        self.assertIn("status", status)
-        self.assertEqual(status["status"], "success")
+        status = self.conn.getQueryInstallationStatus(requestId)
+        self.assertIn("message", status)
+        self.assertIn(status["message"], "SUCCESS")
 
         # Test installing all queries with asterisk
         requestId = self.conn.installQueries("*")
         self.assertIsInstance(requestId, str)
         
         # Check installation status
-        status = self.conn.checkQueryInstallationStatus(requestId)
-        self.assertIn("status", status)
-        self.assertEqual(status["status"], "success")
+        status = self.conn.getQueryInstallationStatus(requestId)
+        self.assertIn("message", status)
+        self.assertIn(status["message"], "SUCCESS")
 
         # Test invalid query name
         with self.assertRaises(ValueError):
