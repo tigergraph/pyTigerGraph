@@ -134,7 +134,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
             authMode, headers, url, method, data)
 
         if "GSQL-TIMEOUT" in _headers:
-            http_timeout = (10, int(_headers["GSQL-TIMEOUT"]/1000) + 10)
+            http_timeout = (10, int(int(_headers["GSQL-TIMEOUT"])/1000) + 10)
         else:
             http_timeout = None
 
