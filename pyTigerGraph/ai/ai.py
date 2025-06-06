@@ -294,7 +294,7 @@ class AI:
             url = f"{self.nlqs_host}/{self.conn.graphname}/{self.server_mode}/ingest"
             return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
 
-    def searchDocuments(self, query, method="hnswoverlap", method_parameters: dict = {"indices": ["Document", "DocumentChunk", "Entity", "Relationship"], "top_k": 2, "num_hops": 2, "num_seen_min": 2}):
+    def searchDocuments(self, query, method="hybrid", method_parameters: dict = {"indices": ["Document", "DocumentChunk", "Entity", "Relationship"], "top_k": 2, "num_hops": 2, "num_seen_min": 2}):
         """ Search documents.
             Args:
                 query (str):
@@ -314,7 +314,7 @@ class AI:
         url = self.nlqs_host+"/"+self.conn.graphname+"/"+self.server_mode+"/search"
         return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
 
-    def answerQuestion(self, query, method="hnswoverlap", method_parameters: dict = {"indices": ["Document", "DocumentChunk", "Entity", "Relationship"], "top_k": 2, "num_hops": 2, "num_seen_min": 2}):
+    def answerQuestion(self, query, method="hybrid", method_parameters: dict = {"indices": ["Document", "DocumentChunk", "Entity", "Relationship"], "top_k": 2, "num_hops": 2, "num_seen_min": 2}):
         """ Answer a question.
             Args:
                 query (str):
@@ -334,7 +334,7 @@ class AI:
         url = self.nlqs_host+"/"+self.conn.graphname+"/"+self.server_mode+"/answerquestion"
         return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
 
-    def forceConsistencyUpdate(self, server=""):
+    def forceConsistencyUpdate(self, method=""):
         """ Force a consistency update for SupportAI embeddings.
             Args:
                 method (str):
@@ -342,11 +342,11 @@ class AI:
             Returns:
                 JSON response from the consistency update.
         """
-        method = server if server else self.server_mode
-        url = f"{self.nlqs_host}/{self.conn.graphname}/{method}/forceupdate"
+        server = method if method else self.server_mode
+        url = f"{self.nlqs_host}/{self.conn.graphname}/{server}/forceupdate"
         return self.conn._req("GET", url, authMode="pwd", resKey=None)
 
-    def checkConsistencyProgress(self, server=""):
+    def checkConsistencyProgress(self, method=""):
         """ Check the progress of the consistency update.
             Args:
                 method (str):
@@ -354,6 +354,6 @@ class AI:
             Returns:
                 JSON response from the consistency update progress.
         """
-        method = server if server else self.server_mode
-        url = f"{self.nlqs_host}/{self.conn.graphname}/{method}/consistency_status"
+        server = method if method else self.server_mode
+        url = f"{self.nlqs_host}/{self.conn.graphname}/{server}/consistency_status"
         return self.conn._req("GET", url, authMode="pwd", resKey=None)
