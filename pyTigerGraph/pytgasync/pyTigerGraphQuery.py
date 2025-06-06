@@ -122,6 +122,12 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
         logger.info("entry: installQueries")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
+        self.ver = await self.getVer()
+        major_ver, minor_ver, patch_ver = self.ver.split(".")
+        if int(major_ver) < 4 or int(major_ver) == 4 and int(minor_ver) == 0:
+            logger.info("exit: installQueries")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.1.0.", 0)
 
         params = {}
         params["graph"] = self.graphname
@@ -143,7 +149,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
                 break
             else:
                 ret = None
-            time.sleep(1)
+            await asyncio.sleep(1)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -168,8 +174,14 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
         logger.info("entry: getQueryInstallationStatus")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
+        self.ver = await self.getVer()
+        major_ver, minor_ver, patch_ver = self.ver.split(".")
+        if int(major_ver) < 4 or int(major_ver) == 4 and int(minor_ver) == 0:
+            logger.info("exit: getQueryInstallationStatus")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.1.0.", 0)
 
-        ret = await self._req("GET", self.gsUrl + "/gsql/v1/queries/install&requestid=" + requestId, authMode="pwd")
+        ret = await self._req("GET", self.gsUrl + "/gsql/v1/queries/install/" + requestId, authMode="pwd", resKey="")
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))

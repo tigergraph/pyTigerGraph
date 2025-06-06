@@ -1,8 +1,8 @@
 """AI Submodule
-The AI submodule is used to interact with the TigerGraph CoPilot service.
-It allows users to register custom queries, run natural language queries, and interact with the CoPilot service.
+The AI submodule is used to interact with the TigerGraph GraphRAG service.
+It allows users to register custom queries, run natural language queries, and interact with the GraphRAG service.
 
-To use the AI submodule, you must first create a TigerGraphConnection object, and verify that you have a TigerGraph CoPilot service running.
+To use the AI submodule, you must first create a TigerGraphConnection object, and verify that you have a TigerGraph GraphRAG service running.
 
 For example, to use the AI submodule, you can run the following code:
 
@@ -19,12 +19,12 @@ conn = TigerGraphConnection(
 
 conn.getToken()
 
-conn.ai.configureCoPilotHost(hostname="http://COPILOT_ADDRESS")
+conn.ai.configureGraphRAGHost(hostname="http://GRAPHRAG_ADDRESS")
 
 conn.ai.query("How many servers are there?")
 ----
 
-For a more detailed and varied examples, see the demo notebooks in the (TigerGraph CoPilot GitHub repository)[https://github.com/tigergraph/CoPilot/tree/main/copilot/docs/notebooks].
+For a more detailed and varied examples, see the demo notebooks in the (TigerGraph GraphRAG GitHub repository)[https://github.com/tigergraph/graphrag/tree/main/graphrag/docs/notebooks].
 """
 
 import warnings
@@ -44,42 +44,33 @@ class AI:
         """
         self.conn = conn
         self.nlqs_host = None
-        self.aiserver = "supportai"
+        self.server_mode = "graphrag"
         if conn.tgCloud:
             # split scheme and host
             scheme, host = conn.host.split("://")
-            self.nlqs_host = scheme + "://copilot-" + host
+            self.nlqs_host = scheme + "://graphrag-" + host
 
-    def configureInquiryAIHost(self, hostname: str):
-        """ DEPRECATED: Configure the hostname of the InquiryAI service.
-            Not recommended to use. Use configureCoPilotHost() instead.
+    def configureGraphRAGHost(self, hostname: str):
+        """ Configure the hostname of the GraphRAG service.
+            Not necessary if using TigerGraph GraphRAG on TigerGraph Cloud.
             Args:
                 hostname (str):
-                    The hostname (and port number) of the InquiryAI serivce.
-        """
-        warnings.warn(
-            "The `configureInquiryAIHost()` function is deprecated; use `configureCoPilotHost()` function instead.",
-            DeprecationWarning)
-        self.nlqs_host = hostname
-
-    def configureCoPilotHost(self, hostname: str):
-        """ Configure the hostname of the CoPilot service.
-            Not necessary if using TigerGraph CoPilot on TigerGraph Cloud.
-            Args:
-                hostname (str):
-                    The hostname (and port number) of the CoPilot serivce.
+                    The hostname (and port number) of the GraphRAG serivce.
         """
         self.nlqs_host = hostname
+        self.server_mode = "graphrag"
 
-    def configureServerHost(self, hostname: str, aiserver: str):
+    def configureServerHost(self, hostname: str, server: str):
         """ Configure the hostname of the AI service.
             Not necessary if using TigerGraph AI on TigerGraph Cloud.
             Args:
                 hostname (str):
-                    The hostname (and port number) of the CoPilot serivce.
+                    The hostname (and port number) of the GraphRAG serivce.
+                server (str):
+                    The service mode of the GraphRAG serivce.
         """
         self.nlqs_host = hostname
-        self.aiserver = aiserver
+        self.server_mode = server
 
     def registerCustomQuery(self, query_name: str, description: str = None, docstring: str = None, param_types: dict = None):
         """ Register a custom query with the InquiryAI service.
@@ -225,10 +216,10 @@ class AI:
         url = self.nlqs_host+"/"+self.conn.graphname+"/query"
         return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
 
-    def coPilotHealth(self):
-        """ Check the health of the CoPilot service.
+    def healthCheck(self):
+        """ Check the health of the GraphRAG service.
             Returns:
-                JSON response from the CoPilot service.
+                JSON response from the GraphRAG service.
         """
         url = self.nlqs_host+"/health"
         return self.conn._req("GET", url, authMode="pwd", resKey=None)
@@ -238,22 +229,22 @@ class AI:
             Returns:
                 JSON response from the SupportAI service.
         """
-        return self.initializeAIServer("supportai")
+        return self.initializeServer("supportai")
 
-    def initializeGraphAI(self):
+    def initializeGraphRAG(self):
         """ Initialize the GraphAI service.
             Returns:
                 JSON response from the GraphAI service.
         """
-        return self.initializeAIServer("graphai")
+        return self.initializeServer("graphrag")
 
-    def initializeAIServer(self, server="supportai"):
+    def initializeServer(self, server="graphrag"):
         """ Initialize the given service.
             Returns:
                 JSON response from the given service.
         """
-        self.aiserver = server
-        url = f"{self.nlqs_host}/{self.conn.graphname}/{self.aiserver}/initialize"
+        self.server_mode = server
+        url = f"{self.nlqs_host}/{self.conn.graphname}/{self.server_mode}/initialize"
         return self.conn._req("POST", url, authMode="pwd", resKey=None)
 
     def createDocumentIngest(self, data_source, data_source_config, loader_config, file_format):
@@ -277,7 +268,7 @@ class AI:
             "file_format": file_format
         }
 
-        url = f"{self.nlqs_host}/{self.conn.graphname}/{self.aiserver}/create_ingest"
+        url = f"{self.nlqs_host}/{self.conn.graphname}/{self.server_mode}/create_ingest"
         return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
 
     def runDocumentIngest(self, load_job_id, data_source_id, data_path, data_source="remote"):
@@ -300,10 +291,10 @@ class AI:
                 "data_source_id": data_source_id,
                 "file_path": data_path
             }
-            url = f"{self.nlqs_host}/{self.conn.graphname}/{self.aiserver}/ingest"
+            url = f"{self.nlqs_host}/{self.conn.graphname}/{self.server_mode}/ingest"
             return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
 
-    def searchDocuments(self, query, method="hnswoverlap", method_parameters: dict = {"indices": ["Document", "DocumentChunk", "Entity", "Relationship"], "top_k": 2, "num_hops": 2, "num_seen_min": 2}):
+    def searchDocuments(self, query, method="hybrid", method_parameters: dict = {"indices": ["Document", "DocumentChunk", "Entity", "Relationship"], "top_k": 2, "num_hops": 2, "num_seen_min": 2}):
         """ Search documents.
             Args:
                 query (str):
@@ -320,10 +311,10 @@ class AI:
             "method": method,
             "method_params": method_parameters
         }
-        url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/search"
+        url = self.nlqs_host+"/"+self.conn.graphname+"/"+self.server_mode+"/search"
         return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
 
-    def answerQuestion(self, query, method="hnswoverlap", method_parameters: dict = {"indices": ["Document", "DocumentChunk", "Entity", "Relationship"], "top_k": 2, "num_hops": 2, "num_seen_min": 2}):
+    def answerQuestion(self, query, method="hybrid", method_parameters: dict = {"indices": ["Document", "DocumentChunk", "Entity", "Relationship"], "top_k": 2, "num_hops": 2, "num_seen_min": 2}):
         """ Answer a question.
             Args:
                 query (str):
@@ -340,29 +331,29 @@ class AI:
             "method": method,
             "method_params": method_parameters
         }
-        url = self.nlqs_host+"/"+self.conn.graphname+"/supportai/answerquestion"
+        url = self.nlqs_host+"/"+self.conn.graphname+"/"+self.server_mode+"/answerquestion"
         return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
 
-    def forceConsistencyUpdate(self, method="supportai"):
+    def forceConsistencyUpdate(self, method=""):
         """ Force a consistency update for SupportAI embeddings.
             Args:
                 method (str):
                     The doc initialization method to run
-                    Currentlty only "supportai" is supported in CoPilot v0.9.
             Returns:
                 JSON response from the consistency update.
         """
-        url = f"{self.nlqs_host}/{self.conn.graphname}/{method}/forceupdate/"
+        server = method if method else self.server_mode
+        url = f"{self.nlqs_host}/{self.conn.graphname}/{server}/forceupdate"
         return self.conn._req("GET", url, authMode="pwd", resKey=None)
 
-    def checkConsistencyProgress(self, method="supportai"):
+    def checkConsistencyProgress(self, method=""):
         """ Check the progress of the consistency update.
             Args:
                 method (str):
                     The doc initialization method to check or run.
-                    Currentlty only "supportai" is supported in CoPilot v0.9.
             Returns:
                 JSON response from the consistency update progress.
         """
-        url = f"{self.nlqs_host}/{self.conn.graphname}/supportai/consistency_status/{method}"
+        server = method if method else self.server_mode
+        url = f"{self.nlqs_host}/{self.conn.graphname}/{server}/consistency_status"
         return self.conn._req("GET", url, authMode="pwd", resKey=None)

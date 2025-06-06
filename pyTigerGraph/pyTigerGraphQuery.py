@@ -126,6 +126,12 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
         logger.info("entry: installQueries")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
+        self.ver = self.getVer()
+        major_ver, minor_ver, patch_ver = self.ver.split(".")
+        if int(major_ver) < 4 or int(major_ver) == 4 and int(minor_ver) == 0:
+            logger.info("exit: installQueries")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.1.0.", 0)
 
         params = {}
         params["graph"] = self.graphname
@@ -163,8 +169,14 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
         logger.info("entry: getQueryInstallationStatus")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
+        self.ver = self.getVer()
+        major_ver, minor_ver, patch_ver = self.ver.split(".")
+        if int(major_ver) < 4 or int(major_ver) == 4 and int(minor_ver) == 0:
+            logger.info("exit: getQueryInstallationStatus")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.1.0.", 0)
 
-        ret = self._req("GET", self.gsUrl + "/gsql/v1/queries/install&requestid=" + requestId, authMode="pwd", resKey="")
+        ret = self._req("GET", self.gsUrl + "/gsql/v1/queries/install/" + requestId, authMode="pwd", resKey="")
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))

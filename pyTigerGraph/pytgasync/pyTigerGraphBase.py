@@ -7,7 +7,7 @@ environment, use the `TigerGraphConnection` object.
 The `AsyncTigerGraphConnection` object is the main object that you will interact with when using pyTigerGraph.
 It provides the same core functionality as the synchronous `TigerGraphConnection` object, but with asynchronous methods.
 
-**Note:** `AsyncTigerGraphConnection` does not currently support the GDS or TigerGraph CoPilot APIs found in the synchronous version.
+**Note:** `AsyncTigerGraphConnection` does not currently support the GDS or TigerGraph GraphRAG APIs found in the synchronous version.
 
 To test your connection, you can use the `echo()` method. This method sends a simple request to the server and returns the response.
 
