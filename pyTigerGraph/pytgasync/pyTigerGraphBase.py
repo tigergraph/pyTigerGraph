@@ -16,7 +16,7 @@ from pyTigerGraph import TigerGraphConnection
 
 conn = AsyncTigerGraphConnection(
     host="http://localhost",
-    graphname="MyGraph",
+    graphname="",
     username="tigergraph",
     password="tigergraph")
 
@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 class AsyncPyTigerGraphBase(PyTigerGraphCore):
-    def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
+    def __init__(self, host: str = "http://127.0.0.1", graphname: str = "",
                  gsqlSecret: str = "", username: str = "tigergraph", password: str = "tigergraph",
                  tgCloud: bool = False, restppPort: Union[int, str] = "9000",
                  gsPort: Union[int, str] = "14240", gsqlVersion: str = "", version: str = "",
@@ -130,8 +130,8 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
         Returns:
             The (relevant part of the) response from the request (as a dictionary).
         """
-        _headers, _data, verify = self._prep_req(
-            authMode, headers, url, method, data)
+        # Deprecated: authMode
+        _headers, _data, verify = self._prep_req(headers, url, method, data)
 
         if "GSQL-TIMEOUT" in _headers:
             http_timeout = (10, int(int(_headers["GSQL-TIMEOUT"])/1000) + 10)

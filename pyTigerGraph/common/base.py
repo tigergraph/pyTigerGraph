@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 class PyTigerGraphCore(object):
-    def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
+    def __init__(self, host: str = "http://127.0.0.1", graphname: str = "",
                  gsqlSecret: str = "", username: str = "tigergraph", password: str = "tigergraph",
                  tgCloud: bool = False, restppPort: Union[int, str] = "9000",
                  gsPort: Union[int, str] = "14240", gsqlVersion: str = "", version: str = "",
@@ -110,7 +110,8 @@ class PyTigerGraphCore(object):
         self.base64_credential = base64.b64encode(
             "{0}:{1}".format(self.username, self.password).encode("utf-8")).decode("utf-8")
 
-        self.authHeader = self._set_auth_header()
+        # Detect auth mode automatically by checking if jwtToken or apiToken is provided
+        self.authHeader, self.authMode = self._set_auth_header()
 
         # TODO Eliminate version and use gsqlVersion only, meaning TigerGraph server version
         if gsqlVersion:
@@ -179,7 +180,7 @@ class PyTigerGraphCore(object):
             self.restppPort = restppPort
             self.restppUrl = self.host + ":" + self.restppPort
             
-        self.gsPort = ""
+        self.gsPort = gsPort
         if self.tgCloud and (gsPort == "14240" or gsPort == "443"):
             self.gsPort = sslPort
             self.gsUrl = self.host + ":" + sslPort
@@ -216,11 +217,11 @@ class PyTigerGraphCore(object):
     def _set_auth_header(self):
         """Set the authentication header based on available tokens or credentials."""
         if self.jwtToken:
-            return {"Authorization": "Bearer " + self.jwtToken}
+            return {"Authorization": "Bearer " + self.jwtToken}, "token"
         elif self.apiToken:
-            return {"Authorization": "Bearer " + self.apiToken}
+            return {"Authorization": "Bearer " + self.apiToken}, "token"
         else:
-            return {"Authorization": "Basic {0}".format(self.base64_credential)}
+            return {"Authorization": "Basic {0}".format(self.base64_credential)}, "pwd"
 
     def _verify_jwt_token_support(self):
         try:
@@ -275,7 +276,7 @@ class PyTigerGraphCore(object):
             )
         return False
 
-    def _prep_req(self, authMode, headers, url, method, data):
+    def _prep_req(self, headers, url, method, data):
         logger.info("entry: _req")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
@@ -283,31 +284,24 @@ class PyTigerGraphCore(object):
         _headers = {}
 
         # If JWT token is provided, always use jwtToken as token
-        if authMode == "token":
-            if isinstance(self.jwtToken, str) and self.jwtToken.strip() != "":
-                token = self.jwtToken
-            elif isinstance(self.apiToken, tuple):
-                token = self.apiToken[0]
-            elif isinstance(self.apiToken, str) and self.apiToken.strip() != "":
-                token = self.apiToken
-            else:
-                token = None
+        if isinstance(self.jwtToken, str) and self.jwtToken.strip() != "":
+            token = self.jwtToken
+        elif isinstance(self.apiToken, tuple):
+            token = self.apiToken[0]
+        elif isinstance(self.apiToken, str) and self.apiToken.strip() != "":
+            token = self.apiToken
+        else:
+            token = None
 
-            if token:
-                self.authHeader = {'Authorization': "Bearer " + token}
-                _headers = self.authHeader
-            else:
-                self.authHeader = {
-                    'Authorization': 'Basic {0}'.format(self.base64_credential)}
-                _headers = self.authHeader
-                authMode = 'pwd'
-
-        if authMode == "pwd":
-            if self.jwtToken:
-                _headers = {'Authorization': "Bearer " + self.jwtToken}
-            else:
-                _headers = {'Authorization': 'Basic {0}'.format(
-                    self.base64_credential)}
+        if token:
+            self.authHeader = {'Authorization': "Bearer " + token}
+            _headers = self.authHeader
+            self.authMode = "token"
+        else:
+            self.authHeader = {
+                'Authorization': 'Basic {0}'.format(self.base64_credential)}
+            _headers = self.authHeader
+            self.authMode = 'pwd'
 
         if headers:
             _headers.update(headers)

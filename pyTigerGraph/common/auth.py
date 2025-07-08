@@ -83,7 +83,7 @@ def _prep_token_request(restppUrl: str,
     else:
         method = "POST"
         url = gsUrl + "/gsql/v1/tokens"  # used for TG 4.x
-        data = {"graph": graphname}
+        data = {"graph": graphname} if graphname else {}
 
         # alt_url and alt_data used to construct the method and url for functions run in TG version 3.x
         alt_url = restppUrl+"/requesttoken"  # used for TG 3.x

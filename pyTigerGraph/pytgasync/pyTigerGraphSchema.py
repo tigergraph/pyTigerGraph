@@ -223,7 +223,7 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: getSchema")
+        logger.info("exit: upsertData")
 
         return res
 
