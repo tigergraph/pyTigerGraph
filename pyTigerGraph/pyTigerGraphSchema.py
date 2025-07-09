@@ -104,77 +104,29 @@ class pyTigerGraphSchema(pyTigerGraphBase):
 
         try:
             # Run the interpreted query
-            result = self.runInterpretedQuery(query_text)
+            if self._version_greater_than_4_0():
+                ret = self._req("POST", self.gsUrl + "/gsql/v1/queries/interpret",
+                                params={}, data=query_text, authMode="pwd", resKey="version",
+                                headers={'Content-Type': 'text/plain'})
+            else:
+                ret = self._req("POST", self.gsUrl + "/gsqlserver/interpreted_query", data=query_text,
+                                params={}, authMode="pwd", resKey="version")
 
-            # Parse the JSON result to extract schema version
-            if isinstance(result, list) and len(result) > 0:
-                # Look for version information in the result
-                for item in result:
-                    if isinstance(item, dict):
-                        # Check if this item contains version information
-                        if "version" in item:
-                            version_info = item["version"]
-                            if isinstance(version_info, dict) and "schema" in version_info:
-                                schema_version = version_info["schema"]
-                                # Convert to integer
-                                try:
-                                    schema_version_int = int(schema_version)
-                                    if logger.level == logging.DEBUG:
-                                        logger.debug("return: " + str(schema_version_int))
-                                    logger.info("exit: getSchemaVer")
-                                    return schema_version_int
-                                except (ValueError, TypeError):
-                                    logger.warning(f"Schema version '{schema_version}' could not be converted to integer")
-                                    return None
-                        # Also check if the item itself contains schema version directly
-                        elif "schema" in item:
-                            schema_version = item["schema"]
-                            try:
-                                schema_version_int = int(schema_version)
-                                if logger.level == logging.DEBUG:
-                                    logger.debug("return: " + str(schema_version_int))
-                                logger.info("exit: getSchemaVer")
-                                return schema_version_int
-                            except (ValueError, TypeError):
-                                logger.warning(f"Schema version '{schema_version}' could not be converted to integer")
-                                return None
-            elif isinstance(result, dict):
-                # Handle case where result is a dictionary
-                if "version" in result:
-                    version_info = result["version"]
-                    if isinstance(version_info, dict) and "schema" in version_info:
-                        schema_version = version_info["schema"]
-                        try:
-                            schema_version_int = int(schema_version)
-                            if logger.level == logging.DEBUG:
-                                logger.debug("return: " + str(schema_version_int))
-                            logger.info("exit: getSchemaVer")
-                            return schema_version_int
-                        except (ValueError, TypeError):
-                            logger.warning(f"Schema version '{schema_version}' could not be converted to integer")
-                            return None
-                elif "schema" in result:
-                    schema_version = result["schema"]
-                    try:
-                        schema_version_int = int(schema_version)
-                        if logger.level == logging.DEBUG:
-                            logger.debug("return: " + str(schema_version_int))
-                        logger.info("exit: getSchemaVer")
-                        return schema_version_int
-                    except (ValueError, TypeError):
-                        logger.warning(f"Schema version '{schema_version}' could not be converted to integer")
-                        return None
-
-            # If schema version not found in the expected format, return a default or raise exception
-            logger.warning("Schema version not found in query result")
-            if logger.level == logging.DEBUG:
-                logger.debug("return: None")
-            logger.info("exit: getSchemaVer")
-            return None
+            schema_version_int = None
+            if isinstance(ret, dict) and "schema" in ret:
+                schema_version = ret["schema"]
+                try:
+                    schema_version_int = int(schema_version)
+                except (ValueError, TypeError):
+                    logger.warning(f"Schema version '{schema_version}' could not be converted to integer")
+            if schema_version_int is None:
+                logger.warning("Schema version not found in query result")
+            logger.info("exit: _get_schema_ver")
+            return schema_version_int
 
         except Exception as e:
             logger.error(f"Error getting schema version: {str(e)}")
-            raise TigerGraphException(f"Failed to get schema version: {str(e)}")
+            raise Exception(f"Failed to get schema version: {str(e)}")
 
     def upsertData(self, data: Union[str, object], atomic: bool = False, ackAll: bool = False,
                    newVertexOnly: bool = False, vertexMustExist: bool = False,

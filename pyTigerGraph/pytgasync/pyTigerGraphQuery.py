@@ -4,7 +4,7 @@ The functions on this page run installed or interpret queries in TigerGraph.
 All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object].
 """
 import logging
-import time
+import asyncio
 
 from typing import TYPE_CHECKING, Union, Optional
 
