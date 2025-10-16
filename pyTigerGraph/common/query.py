@@ -54,7 +54,7 @@ def _parse_query_parameters(params: dict) -> str:
         "key": [([p_id1, p_id2, ...], "vtype"), ...]
         I.e. multiple primary IDs of the same vertex type
     """
-    logger.info("entry: _parseQueryParameters")
+    logger.debug("entry: _parseQueryParameters")
     logger.debug("params: " + str(params))
 
     ret = ""
@@ -73,10 +73,10 @@ def _parse_query_parameters(params: dict) -> str:
                 if isinstance(vv, tuple):
                     if len(vv) == 2 and isinstance(vv[1], str):
                         ret += k + "[" + str(i) + "]=" + _safe_char(vv[0]) + "&" + \
-                            k + "[" + str(i) + "].type=" + vv[1] + "&"
+                            k + "[" + str(i) + "].type=" + _safe_char(vv[1]) + "&"
                     else:
                         raise TigerGraphException(
-                            "Invalid parameter value: (vertex_primary_id , vertex_type)"
+                            "Invalid parameter value: (vertex_primary_id, vertex_type)"
                             " was expected.")
                 else:
                     ret += k + "=" + _safe_char(vv) + "&"
@@ -86,11 +86,12 @@ def _parse_query_parameters(params: dict) -> str:
                 _safe_char(v.strftime("%Y-%m-%d %H:%M:%S")) + "&"
         else:
             ret += k + "=" + _safe_char(v) + "&"
-    ret = ret[:-1]
+    if not ret:
+        ret = ret[:-1]
 
     if logger.level == logging.DEBUG:
         logger.debug("return: " + str(ret))
-    logger.info("exit: _parseQueryParameters")
+    logger.debug("exit: _parseQueryParameters")
 
     return ret
 

@@ -62,7 +62,7 @@ class AsyncPyTigerGraphPath(AsyncPyTigerGraphBase):
             - `POST /shortestpath/{graphName}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_find_shortest_path[Find the shortest path].
         """
-        logger.info("entry: shortestPath")
+        logger.debug("entry: shortestPath")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -72,7 +72,7 @@ class AsyncPyTigerGraphPath(AsyncPyTigerGraphBase):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: shortestPath")
+        logger.debug("exit: shortestPath")
 
         return ret
 
@@ -117,7 +117,7 @@ class AsyncPyTigerGraphPath(AsyncPyTigerGraphBase):
             - `POST /allpaths/{graphName}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_find_all_paths[Find all paths]
         """
-        logger.info("entry: allPaths")
+        logger.debug("entry: allPaths")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -127,6 +127,6 @@ class AsyncPyTigerGraphPath(AsyncPyTigerGraphBase):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: allPaths")
+        logger.debug("exit: allPaths")
 
         return ret

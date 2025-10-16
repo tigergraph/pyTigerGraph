@@ -85,7 +85,7 @@ class PyTigerGraphCore(object):
             TigerGraphException: In case on invalid URL scheme.
 
         """
-        logger.info("entry: __init__")
+        logger.debug("entry: __init__")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -212,7 +212,7 @@ class PyTigerGraphCore(object):
 
         self.asynchronous = False
 
-        logger.info("exit: __init__")
+        logger.debug("exit: __init__")
 
     def _set_auth_header(self):
         """Set the authentication header based on available tokens or credentials."""
@@ -277,7 +277,7 @@ class PyTigerGraphCore(object):
         return False
 
     def _prep_req(self, headers, url, method, data):
-        logger.info("entry: _req")
+        logger.debug("entry: _req")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -339,7 +339,7 @@ class PyTigerGraphCore(object):
         if not resKey:
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(res))
-            logger.info("exit: _req (no resKey)")
+            logger.debug("exit: _req (no resKey)")
 
             return res
 
@@ -348,7 +348,7 @@ class PyTigerGraphCore(object):
             logger.info("Removed _ from resKey")
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res[resKey]))
-        logger.info("exit: _req (resKey)")
+        logger.debug("exit: _req (resKey)")
 
         return res[resKey]
 

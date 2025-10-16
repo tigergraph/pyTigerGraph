@@ -49,7 +49,7 @@ def _upsert_attrs(attributes: dict) -> dict:
     Documentation:
         xref:tigergraph-server:API:built-in-endpoints.adoc#operation-codes[Operation codes]
     """
-    logger.info("entry: _upsertAttrs")
+    logger.debug("entry: _upsertAttrs")
     logger.debug("params: " + str(locals()))
 
     if not isinstance(attributes, dict):
@@ -68,7 +68,7 @@ def _upsert_attrs(attributes: dict) -> dict:
 
     if logger.level == logging.DEBUG:
         logger.debug("return: " + str(vals))
-    logger.info("exit: _upsertAttrs")
+    logger.debug("exit: _upsertAttrs")
 
     return vals
 

@@ -22,7 +22,7 @@ class AsyncPyTigerGraphUDT(AsyncPyTigerGraphSchema):
         Returns:
             The list of names of UDTs (defined in the global scope, i.e. not in queries).
         """
-        logger.info("entry: getUDTs")
+        logger.debug("entry: getUDTs")
 
         ret = []
         for udt in await self._getUDTs():
@@ -30,7 +30,7 @@ class AsyncPyTigerGraphUDT(AsyncPyTigerGraphSchema):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getUDTs")
+        logger.debug("exit: getUDTs")
 
         return ret
 
@@ -47,7 +47,7 @@ class AsyncPyTigerGraphUDT(AsyncPyTigerGraphSchema):
             The metadata (the details of the fields) of the UDT.
 
         """
-        logger.info("entry: getUDT")
+        logger.debug("entry: getUDT")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -57,12 +57,12 @@ class AsyncPyTigerGraphUDT(AsyncPyTigerGraphSchema):
 
                 if logger.level == logging.DEBUG:
                     logger.debug("return: " + str(ret))
-                logger.info("exit: getUDT (found)")
+                logger.debug("exit: getUDT (found)")
 
                 return ret
 
         if logger.level == logging.DEBUG:
             logger.warning("UDT `" + udtName + "` was not found")
-        logger.info("exit: getUDT (not found)")
+        logger.debug("exit: getUDT (not found)")
 
         return []  # UDT was not found

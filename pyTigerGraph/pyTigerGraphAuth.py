@@ -37,7 +37,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             This function returns the masked version of the secret. The original value of the secret cannot
             be retrieved after creation.
         """
-        logger.info("entry: getSecrets")
+        logger.debug("entry: getSecrets")
 
         res = self.gsql("""
             USE GRAPH {}
@@ -46,7 +46,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getSecrets")
+        logger.debug("exit: getSecrets")
 
         return ret
 
@@ -83,7 +83,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             internal processes of granting access to TigerGraph instances. Normally, this function
             should not be necessary and should not be executable by generic users.
         """
-        logger.info("entry: createSecret")
+        logger.debug("entry: createSecret")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -104,7 +104,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(secret))
-        logger.info("exit: createSecret")
+        logger.debug("exit: createSecret")
 
         return secret
 
@@ -122,7 +122,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                 `TigerGraphException` if a non-existent secret is attempted to be dropped (unless
                 `ignoreErrors` is `True`). Re-raises other exceptions.
         """
-        logger.info("entry: dropSecret")
+        logger.debug("entry: dropSecret")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -139,7 +139,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: dropSecret")
+        logger.debug("exit: dropSecret")
 
         return res
 
@@ -227,7 +227,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                 See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_request_a_token
             - `POST /gsql/v1/tokens` (In TigerGraph versions 4.x)
         """
-        logger.info("entry: getToken")
+        logger.debug("entry: getToken")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -241,7 +241,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
         self.authHeader = auth_header
         self.authMode = "token"
 
-        logger.info("exit: getToken")
+        logger.debug("exit: getToken")
         return token
 
     def refreshToken(self, secret: str = None, setToken: bool = True, lifetime: int = None, token: str = None) -> Union[Tuple[str, str], str]:
@@ -283,12 +283,12 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             - `PUT /requesttoken`
                 See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_refresh_a_token
         """
-        logger.info("entry: refreshToken")
+        logger.debug("entry: refreshToken")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
         if self._version_greater_than_4_0():
-            logger.info("exit: refreshToken")
+            logger.debug("exit: refreshToken")
             raise TigerGraphException(
                 "Refreshing tokens is only supported on versions of TigerGraph <= 4.0.0.", 0)
 
@@ -298,7 +298,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
         newToken = _parse_token_response(res, setToken, mainVer, self.base64_credential)
 
-        logger.info("exit: refreshToken")
+        logger.debug("exit: refreshToken")
 
         return newToken
 
@@ -339,7 +339,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
         if not res["error"] or (res["code"] == "REST-3300" and skipNA):
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(True))
-            logger.info("exit: deleteToken")
+            logger.debug("exit: deleteToken")
 
             return True
 

@@ -63,7 +63,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             - `POST /ddl/{graph_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_a_loading_job[Run a loading job]
         """
-        logger.info("entry: runLoadingJobWithDataFrame")
+        logger.debug("entry: runLoadingJobWithDataFrame")
 
         logger.debug("params: " + self._locals(locals()))
 
@@ -74,7 +74,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
 
         res = self.runLoadingJobWithData(data, fileTag, jobName, sep, eol, timeout, sizeLimit)
 
-        logger.info("exit: runLoadingJobWithDataFrame")
+        logger.debug("exit: runLoadingJobWithDataFrame")
 
         return res
 
@@ -110,14 +110,14 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             - `POST /ddl/{graph_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_a_loading_job[Run a loading job]
         """
-        logger.info("entry: runLoadingJobWithFile")
+        logger.debug("entry: runLoadingJobWithFile")
 
         logger.debug("params: " + self._locals(locals()))
 
         data = _prep_run_loading_job_with_file(filePath)
         res = self.runLoadingJobWithData(data, fileTag, jobName, sep, eol, timeout, sizeLimit)
 
-        logger.info("exit: runLoadingJobWithFile")
+        logger.debug("exit: runLoadingJobWithFile")
 
         return res
 
@@ -153,14 +153,14 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             - `POST /ddl/{graph_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_a_loading_job[Run a loading job]
         """
-        logger.info("entry: runLoadingJobWithData")
+        logger.debug("entry: runLoadingJobWithData")
 
         logger.debug("params: " + self._locals(locals()))
 
         if not data or not jobName or not fileTag:
             # invalid inputs
             logger.error("Invalid data or params")
-            logger.info("exit: runLoadingJobWithData")
+            logger.debug("exit: runLoadingJobWithData")
             return None
 
         params = {
@@ -181,7 +181,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
                             headers={"RESPONSE-LIMIT": str(sizeLimit), "GSQL-TIMEOUT": str(timeout)})
 
         logger.debug("return: " + str(res))
-        logger.info("exit: runLoadingJobWithData")
+        logger.debug("exit: runLoadingJobWithData")
 
         return res
 
@@ -206,7 +206,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             - `GET /gsql/v1/loading-jobs?graph=<graph_name>`
                 See xref:tigergraph-server:API:gsql-endpoints.adoc#_get_loading_job_names[Get loading jobs]
         """
-        logger.info("entry: getLoadingJobs")
+        logger.debug("entry: getLoadingJobs")
 
         logger.debug("params: " + self._locals(locals()))
 
@@ -215,7 +215,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         res = self._req("GET", url)
 
         logger.debug("return: " + str(res))
-        logger.info("exit: getLoadingJobs")
+        logger.debug("exit: getLoadingJobs")
 
         return res
     
@@ -230,7 +230,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             - `POST /gsql/v1/loading-jobs?graph=<graph_name>`
                 See xref:tigergraph-server:API:gsql-endpoints.adoc#_create_loading_job[Create a loading job]
         """
-        logger.info("entry: createLoadingJob")
+        logger.debug("entry: createLoadingJob")
 
         logger.debug("params: " + self._locals(locals()))
 
@@ -239,7 +239,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         res = self._req("POST", url, data=job_definition)
 
         logger.debug("return: " + str(res))
-        logger.info("exit: createLoadingJob")
+        logger.debug("exit: createLoadingJob")
 
         return res
     
@@ -254,7 +254,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             - `PUT /gsql/v1/loading-jobs/<job_name>?graph=<graph_name>`
                 See xref:tigergraph-server:API:gsql-endpoints.adoc#_upload_a_loading_job[Upload a loading job]
         """
-        logger.info("entry: updateLoadingJob")
+        logger.debug("entry: updateLoadingJob")
 
         logger.debug("params: " + self._locals(locals()))
 
@@ -263,7 +263,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         res = self._req("PUT", url, data=job_definition)
 
         logger.debug("return: " + str(res))
-        logger.info("exit: updateLoadingJob")
+        logger.debug("exit: updateLoadingJob")
 
         return res
     
@@ -280,7 +280,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             - `GET /gsql/v1/loading-jobs/<job_name>?graph=<graph_name>`
                 See xref:tigergraph-server:API:gsql-endpoints.adoc#_get_loading_job_info[Get loading job info]
         """
-        logger.info("entry: getLoadingJobInfo")
+        logger.debug("entry: getLoadingJobInfo")
 
         logger.debug("params: " + self._locals(locals()))
 
@@ -289,7 +289,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         res = self._req("GET", url)
 
         logger.debug("return: " + str(res))
-        logger.info("exit: getLoadingJobInfo")
+        logger.debug("exit: getLoadingJobInfo")
 
         return res
 
@@ -320,7 +320,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             - `POST /gsql/v1/loading-jobs/run?graph=<graph_name>`
                 See xref:tigergraph-server:API:gsql-endpoints.adoc#_run_loading_job[Run a loading job]
         """
-        logger.info("entry: runLoadingJob")
+        logger.debug("entry: runLoadingJob")
         logger.debug("params: " + self._locals(locals()))
 
         url, data = _prep_run_loading_job(self.gsUrl, self.graphname, jobName, data_source_config, sys_data_root, verbose, dryrun, interval, maxNumError, maxPercentError)
@@ -328,7 +328,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         res = self._req("POST", url, data=data)
 
         logger.debug("return: " + str(res))
-        logger.info("exit: runLoadingJob")
+        logger.debug("exit: runLoadingJob")
 
         return res
     
@@ -343,7 +343,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             - `DELETE /gsql/v1/loading-jobs/<job_name>?graph=<graph_name>`
                 See xref:tigergraph-server:API:gsql-endpoints.adoc#_drop_a_loading_job[Drop a loading job]
         """
-        logger.info("entry: dropLoadingJob")
+        logger.debug("entry: dropLoadingJob")
 
         logger.debug("params: " + self._locals(locals()))
 
@@ -352,7 +352,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         res = self._req("DELETE", url)
 
         logger.debug("return: " + str(res))
-        logger.info("exit: dropLoadingJob")
+        logger.debug("exit: dropLoadingJob")
 
         return res
     
@@ -369,7 +369,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             - `POST /gsql/v1/loading-jobs/abort?graph=<graph_name>`
                 See xref:tigergraph-server:API:gsql-endpoints.adoc#_abort_loading_jobs[Abort loading jobs]
         """
-        logger.info("entry: abortLoadingJobs")
+        logger.debug("entry: abortLoadingJobs")
 
         logger.debug("params: " + self._locals(locals()))
 
@@ -378,7 +378,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         res = self._req("GET", url)
 
         logger.debug("return: " + str(res))
-        logger.info("exit: abortLoadingJobs")
+        logger.debug("exit: abortLoadingJobs")
 
         return res
     
@@ -395,7 +395,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             - `POST /gsql/v1/loading-jobs/abort?graph=<graph_name>`
                 See xref:tigergraph-server:API:gsql-endpoints.adoc#_abort_one_loading_job
         """
-        logger.info("entry: abortLoadingJob")
+        logger.debug("entry: abortLoadingJob")
 
         logger.debug("params: " + self._locals(locals()))
 
@@ -404,7 +404,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         res = self._req("GET", url)
 
         logger.debug("return: " + str(res))
-        logger.info("exit: abortLoadingJob")
+        logger.debug("exit: abortLoadingJob")
 
         return res
     
@@ -419,7 +419,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             - `POST /gsql/v1/loading-jobs/resume?graph=<graph_name>`
                 See xref:tigergraph-server:API:gsql-endpoints.adoc#_resume_loading_job
         """
-        logger.info("entry: resumeLoadingJob")
+        logger.debug("entry: resumeLoadingJob")
 
         logger.debug("params: " + self._locals(locals()))
 
@@ -428,7 +428,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         res = self._req("GET", url)
 
         logger.debug("return: " + str(res))
-        logger.info("exit: resumeLoadingJob")
+        logger.debug("exit: resumeLoadingJob")
 
         return res
     
@@ -443,7 +443,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             - `GET /gsql/v1/loading-jobs/status?graph=<graph_name>`
                 See xref:tigergraph-server:API:gsql-endpoints.adoc#_get_loading_job_status[Get loading job status]
         """
-        logger.info("entry: getLoadingJobsStatus")
+        logger.debug("entry: getLoadingJobsStatus")
 
         logger.debug("params: " + self._locals(locals()))
 
@@ -452,7 +452,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         res = self._req("GET", url)
 
         logger.debug("return: " + str(res))
-        logger.info("exit: getLoadingJobsStatus")
+        logger.debug("exit: getLoadingJobsStatus")
 
         return res
     
@@ -467,7 +467,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
             - `GET /gsql/v1/loading-jobs/status/<job_id>?graph=<graph_name>`
                 See xref:tigergraph-server:API:gsql-endpoints.adoc#_get_one_loading_job_status[Get one loading job status]
         """
-        logger.info("entry: getLoadingJobStatus")
+        logger.debug("entry: getLoadingJobStatus")
 
         logger.debug("params: " + self._locals(locals()))
 
@@ -476,6 +476,6 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         res = self._req("GET", url)
 
         logger.debug("return: " + str(res))
-        logger.info("exit: getLoadingJobStatus")
+        logger.debug("exit: getLoadingJobStatus")
 
         return res

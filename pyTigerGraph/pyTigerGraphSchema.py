@@ -31,7 +31,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
             GET /gsqlserver/gsql/udtlist (In TigerGraph versions 3.x)
             GET /gsql/v1/udt/tuples (In TigerGraph versions 4.x)
         """
-        logger.info("entry: _getUDTs")
+        logger.debug("entry: _getUDTs")
 
         if self._version_greater_than_4_0():
             res = self._get(self.gsUrl + "/gsql/v1/udt/tuples?graph=" + self.graphname,
@@ -42,7 +42,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: _getUDTs")
+        logger.debug("exit: _getUDTs")
 
         return res
 
@@ -65,7 +65,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_show_graph_schema_metadata[Show graph schema metadata]
             - `GET /gsql/v1/schema/graphs/{graph_name}` (In TigerGraph version 4.x)
         """
-        logger.info("entry: getSchema")
+        logger.debug("entry: getSchema")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -81,7 +81,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(self.schema))
-        logger.info("exit: getSchema")
+        logger.debug("exit: getSchema")
 
         return self.schema
 
@@ -95,7 +95,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
             - `POST /gsqlserver/interpreted_query` (In TigerGraph versions 3.x)
             - `POST /gsql/v1/queries/interpret` (In TigerGraph versions 4.x)
         """
-        logger.info("entry: getSchemaVer")
+        logger.debug("entry: getSchemaVer")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -121,7 +121,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
                     logger.warning(f"Schema version '{schema_version}' could not be converted to integer")
             if schema_version_int is None:
                 logger.warning("Schema version not found in query result")
-            logger.info("exit: _get_schema_ver")
+            logger.debug("exit: _get_schema_ver")
             return schema_version_int
 
         except Exception as e:
@@ -162,7 +162,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
             - `POST /graph/{graph_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_upsert_data_to_graph[Upsert data to graph]
         """
-        logger.info("entry: upsertData")
+        logger.debug("entry: upsertData")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -174,7 +174,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: upsertData")
+        logger.debug("exit: upsertData")
 
         return res
 
@@ -196,7 +196,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
             - `GET /endpoints/{graph_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_list_all_endpoints[List all endpoints]
         """
-        logger.info("entry: getEndpoints")
+        logger.debug("entry: getEndpoints")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -226,7 +226,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getEndpoints")
+        logger.debug("exit: getEndpoints")
 
         return ret
 

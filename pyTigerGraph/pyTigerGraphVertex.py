@@ -48,7 +48,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         Returns:
             The list of vertex types defined in the current graph.
         """
-        logger.info("entry: getVertexTypes")
+        logger.debug("entry: getVertexTypes")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -58,7 +58,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getVertexTypes")
+        logger.debug("exit: getVertexTypes")
 
         return ret
 
@@ -77,7 +77,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
              - "map_type(key_type,value_type)"
             and it is a string.
         """
-        logger.info("entry: getVertexAttrs")
+        logger.debug("entry: getVertexAttrs")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -91,7 +91,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getVertexAttrs")
+        logger.debug("exit: getVertexAttrs")
 
         return ret
 
@@ -110,7 +110,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
              - "map_type(key_type,value_type)"
             and it is a string.
         """
-        logger.info("entry: getVertexVectors")
+        logger.debug("entry: getVertexVectors")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -124,7 +124,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getVertexVectors")
+        logger.debug("exit: getVertexVectors")
 
         return ret
 
@@ -143,7 +143,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         Endpoint:
             - `GET /vector/status/{graph_name}/{vertex_type}/[{vector_name}]`
         """
-        logger.info("entry: getVectorStatus")
+        logger.debug("entry: getVectorStatus")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -152,7 +152,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getVectorStatus")
+        logger.debug("exit: getVectorStatus")
 
         return len(ret["NeedRebuildServers"]) == 0
 
@@ -169,7 +169,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         Returns:
             The metadata of the vertex type.
         """
-        logger.info("entry: getVertexType")
+        logger.debug("entry: getVertexType")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -177,12 +177,12 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             if vt["Name"] == vertexType:
                 if logger.level == logging.DEBUG:
                     logger.debug("return: " + str(vt))
-                logger.info("exit: getVertexType (found)")
+                logger.debug("exit: getVertexType (found)")
 
                 return vt
 
         logger.warning("Vertex type `" + vertexType + "` was not found.")
-        logger.info("exit: getVertexType (not found)")
+        logger.debug("exit: getVertexType (not found)")
 
         return {}  # Vertex type was not found
 
@@ -223,7 +223,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             - `POST /builtins`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_built_in_functions_on_graph[Run built-in functions]
         """
-        logger.info("entry: getVertexCount")
+        logger.debug("entry: getVertexCount")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -240,7 +240,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(res))
-            logger.info("exit: getVertexCount (1)")
+            logger.debug("exit: getVertexCount (1)")
 
             return res
 
@@ -252,7 +252,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getVertexCount (2)")
+        logger.debug("exit: getVertexCount (2)")
 
         return ret
 
@@ -288,7 +288,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             - `POST /graph/{graph_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_upsert_data_to_graph[Upsert data to graph]
         """
-        logger.info("entry: upsertVertex")
+        logger.debug("entry: upsertVertex")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -300,7 +300,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: upsertVertex")
+        logger.debug("exit: upsertVertex")
 
         return ret
 
@@ -349,7 +349,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             - `POST /graph/{graph_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_upsert_data_to_graph[Upsert data to graph]
         """
-        logger.info("entry: upsertVertices")
+        logger.debug("entry: upsertVertices")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
         
@@ -368,7 +368,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: upsertVertices")
+        logger.debug("exit: upsertVertices")
 
         return ret
 
@@ -398,7 +398,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         Returns:
             The number of vertices upserted.
         """
-        logger.info("entry: upsertVertexDataFrame")
+        logger.debug("entry: upsertVertexDataFrame")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -408,7 +408,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: upsertVertexDataFrame")
+        logger.debug("exit: upsertVertexDataFrame")
 
         return ret
 
@@ -457,7 +457,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             - `GET /graph/{graph_name}/vertices/{vertex_type}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_list_vertices[List vertices]
         """
-        logger.info("entry: getVertices")
+        logger.debug("entry: getVertices")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -479,7 +479,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getVertices")
+        logger.debug("exit: getVertices")
 
         return ret
 
@@ -516,7 +516,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             The (selected) details of the (matching) vertex instances (sorted, limited) as pandas
             DataFrame.
         """
-        logger.info("entry: getVertexDataFrame")
+        logger.debug("entry: getVertexDataFrame")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -525,7 +525,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getVertexDataFrame")
+        logger.debug("exit: getVertexDataFrame")
 
         return ret
 
@@ -576,7 +576,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         TODO Find out how/if select and timeout can be specified
         """
-        logger.info("entry: getVerticesById")
+        logger.debug("entry: getVerticesById")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -598,7 +598,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getVerticesById")
+        logger.debug("exit: getVerticesById")
 
         return ret
 
@@ -619,7 +619,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         Returns:
             The (selected) details of the (matching) vertex instances as pandas DataFrame.
         """
-        logger.info("entry: getVertexDataFrameById")
+        logger.debug("entry: getVertexDataFrameById")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -628,7 +628,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getVertexDataFrameById")
+        logger.debug("exit: getVertexDataFrameById")
 
         return ret
 
@@ -662,7 +662,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             - `POST /builtins/{graph_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_built_in_functions_on_graph[Run built-in functions]
         """
-        logger.info("entry: getVertexStats")
+        logger.debug("entry: getVertexStats")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -685,7 +685,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getVertexStats")
+        logger.debug("exit: getVertexStats")
 
         return ret
 
@@ -727,7 +727,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             - `DELETE /graph/{graph_name}/vertices/{vertex_type}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_delete_vertices[Delete vertices]
         """
-        logger.info("entry: delVertices")
+        logger.debug("entry: delVertices")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -745,7 +745,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: delVertices")
+        logger.debug("exit: delVertices")
 
         return ret
 
@@ -771,7 +771,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             - `DELETE /graph/{graph_name}/vertices/{vertex_type}/{vertex_id}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_delete_a_vertex[Delete a vertex]
         """
-        logger.info("entry: delVerticesById")
+        logger.debug("entry: delVerticesById")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -790,7 +790,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: delVerticesById")
+        logger.debug("exit: delVerticesById")
 
         return ret
     
@@ -817,7 +817,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         ```
         """
 
-        logger.info("entry: delVerticesByType")
+        logger.debug("entry: delVerticesByType")
         logger.debug("params: " + str(locals()))
         if ack.lower() not in ["none", "all"]:
             raise TigerGraphException("Invalid value for ack parameter. Use 'none' or 'all'.", None)
@@ -832,7 +832,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         ret = self._delete(url)["deleted_vertices"]
 
         logger.debug("return: " + str(ret))
-        logger.info("exit: delVerticesByType")
+        logger.debug("exit: delVerticesByType")
 
         return ret
 
@@ -852,7 +852,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         Returns:
             The vertex set as a pandas DataFrame.
         """
-        logger.info("entry: vertexSetToDataFrame")
+        logger.debug("entry: vertexSetToDataFrame")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -860,6 +860,6 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: vertexSetToDataFrame")
+        logger.debug("exit: vertexSetToDataFrame")
 
         return ret

@@ -191,7 +191,7 @@ def vertexSetToDataFrame(vertexSet: list, withId: bool = True,
         A pandas DataFrame containing the vertex attributes (and optionally the vertex primary
         ID and type).
     """
-    logger.info("entry: vertexSetToDataFrame")
+    logger.debug("entry: vertexSetToDataFrame")
     logger.debug("params: " + str(locals()))
 
     try:
@@ -212,6 +212,6 @@ def vertexSetToDataFrame(vertexSet: list, withId: bool = True,
 
     if logger.level == logging.DEBUG:
         logger.debug("return: " + str(ret))
-    logger.info("exit: vertexSetToDataFrame")
+    logger.debug("exit: vertexSetToDataFrame")
 
     return ret

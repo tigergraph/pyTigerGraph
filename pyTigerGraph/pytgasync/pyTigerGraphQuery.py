@@ -85,7 +85,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
              Modify to return only installed ones
         TODO Return with query name as key rather than REST endpoint as key?
         """
-        logger.info("entry: getInstalledQueries")
+        logger.debug("entry: getInstalledQueries")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -94,7 +94,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getInstalledQueries")
+        logger.debug("exit: getInstalledQueries")
 
         return ret
 
@@ -119,13 +119,13 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
             GET /gsql/v1/queries/install
             See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_install_a_query
         """
-        logger.info("entry: installQueries")
+        logger.debug("entry: installQueries")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
         self.ver = await self.getVer()
         major_ver, minor_ver, patch_ver = self.ver.split(".")
         if int(major_ver) < 4 or int(major_ver) == 4 and int(minor_ver) == 0:
-            logger.info("exit: installQueries")
+            logger.debug("exit: installQueries")
             raise TigerGraphException(
                 "This function is only supported on versions of TigerGraph >= 4.1.0.", 0)
 
@@ -153,7 +153,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: installQueries")
+        logger.debug("exit: installQueries")
 
         return ret
 
@@ -171,13 +171,13 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
             GET /gsql/queries/install/{request_id}
             See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_check_query_installation_status
         """
-        logger.info("entry: getQueryInstallationStatus")
+        logger.debug("entry: getQueryInstallationStatus")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
         self.ver = await self.getVer()
         major_ver, minor_ver, patch_ver = self.ver.split(".")
         if int(major_ver) < 4 or int(major_ver) == 4 and int(minor_ver) == 0:
-            logger.info("exit: getQueryInstallationStatus")
+            logger.debug("exit: getQueryInstallationStatus")
             raise TigerGraphException(
                 "This function is only supported on versions of TigerGraph >= 4.1.0.", 0)
 
@@ -185,7 +185,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getQueryInstallationStatus")
+        logger.debug("exit: getQueryInstallationStatus")
 
         return ret
 
@@ -254,7 +254,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
             - `POST /query/{graph_name}/{query_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_an_installed_query_post[Run an installed query (POST)]
         """
-        logger.info("entry: runInstalledQuery")
+        logger.debug("entry: runInstalledQuery")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -267,7 +267,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(ret))
-            logger.info("exit: runInstalledQuery (POST)")
+            logger.debug("exit: runInstalledQuery (POST)")
 
             return ret
         else:
@@ -278,7 +278,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(ret))
-            logger.info("exit: runInstalledQuery (GET)")
+            logger.debug("exit: runInstalledQuery (GET)")
 
             return ret
 
@@ -359,7 +359,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
         TODO Add "GSQL-TIMEOUT: <timeout value in ms>" and "RESPONSE-LIMIT: <size limit in byte>"
             plus parameters if applicable to interpreted queries (see runInstalledQuery() above)
         """
-        logger.info("entry: runInterpretedQuery")
+        logger.debug("entry: runInterpretedQuery")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -378,7 +378,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: runInterpretedQuery")
+        logger.debug("exit: runInterpretedQuery")
 
         return ret
 
@@ -436,7 +436,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
             - `GET /statistics/{graph_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_show_query_performance[Show query performance]
         """
-        logger.info("entry: getStatistics")
+        logger.debug("entry: getStatistics")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -446,7 +446,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getStatistics")
+        logger.debug("exit: getStatistics")
 
         return ret
 
@@ -468,11 +468,11 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
             - `PUT /gsqlserver/gsql/description?graph={graph_name}` (In TigerGraph version 4.0)
             - `PUT /gsql/v1/description?graph={graph_name}` (In TigerGraph versions >4.0)
         """
-        logger.info("entry: describeQuery")
+        logger.debug("entry: describeQuery")
         self.ver = await self.getVer()
         major_ver, minor_ver, patch_ver = self.ver.split(".")
         if int(major_ver) < 4:
-            logger.info("exit: describeQuery")
+            logger.debug("exit: describeQuery")
             raise TigerGraphException(
                 "This function is only supported on versions of TigerGraph >= 4.0.0.", 0)
 
@@ -496,7 +496,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: describeQuery")
+        logger.debug("exit: describeQuery")
 
         return res
 
@@ -516,11 +516,11 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
             - `GET /gsqlserver/gsql/description?graph={graph_name}` (In TigerGraph version 4.0)
             - `GET /gsql/v1/description?graph={graph_name}` (In TigerGraph versions >4.0)
         """
-        logger.info("entry: getQueryDescription")
+        logger.debug("entry: getQueryDescription")
         self.ver = await self.getVer()
         major_ver, minor_ver, patch_ver = self.ver.split(".")
         if int(major_ver) < 4:
-            logger.info("exit: getQueryDescription")
+            logger.debug("exit: getQueryDescription")
             raise TigerGraphException(
                 "This function is only supported on versions of TigerGraph >= 4.0.0.", 0)
 
@@ -558,11 +558,11 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
             - `DELETE /gsqlserver/gsql/description?graph={graph_name}` (In TigerGraph version 4.0)
             - `DELETE /gsql/v1/description?graph={graph_name}` (In TigerGraph versions >4.0)
         """
-        logger.info("entry: dropQueryDescription")
+        logger.debug("entry: dropQueryDescription")
         self.ver = await self.getVer()
         major_ver, minor_ver, patch_ver = self.ver.split(".")
         if int(major_ver) < 4:
-            logger.info("exit: describeQuery")
+            logger.debug("exit: describeQuery")
             raise TigerGraphException(
                 "This function is only supported on versions of TigerGraph >= 4.0.0.", 0)
 
@@ -581,6 +581,6 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: dropQueryDescription")
+        logger.debug("exit: dropQueryDescription")
 
         return res

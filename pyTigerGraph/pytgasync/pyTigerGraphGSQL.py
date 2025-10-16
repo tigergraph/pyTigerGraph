@@ -89,7 +89,7 @@ class AsyncPyTigerGraphGSQL(AsyncPyTigerGraphBase):
             - `GET /gsqlserver/gsql/userdefinedfunction?filename={ExprFunctions or ExprUtil}` (In TigerGraph versions 3.x)
             - `GET /gsql/v1/udt/files/{ExprFunctions or ExprUtil}` (In TigerGraph versions 4.x)
         """
-        logger.info("entry: getUDF")
+        logger.debug("entry: getUDF")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 

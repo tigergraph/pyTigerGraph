@@ -40,7 +40,7 @@ def _parse_create_secret(response: str, alias: str = "", withAlias: bool = False
         if not withAlias:
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(secret))
-            logger.info("exit: createSecret (withAlias")
+            logger.debug("exit: createSecret (withAlias")
 
             return secret
 
@@ -49,7 +49,7 @@ def _parse_create_secret(response: str, alias: str = "", withAlias: bool = False
 
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(ret))
-            logger.info("exit: createSecret (alias)")
+            logger.debug("exit: createSecret (alias)")
 
             return ret
 

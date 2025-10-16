@@ -207,7 +207,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
         Returns:
             The (relevant part of the) response from the request (as a dictionary).
        """
-        logger.info("entry: _get")
+        logger.debug("entry: _get")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -215,7 +215,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: _get")
+        logger.debug("exit: _get")
 
         return res
 
@@ -244,7 +244,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
         Returns:
             The (relevant part of the) response from the request (as a dictionary).
         """
-        logger.info("entry: _post")
+        logger.debug("entry: _post")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -252,7 +252,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: _post")
+        logger.debug("exit: _post")
 
         return res
 
@@ -268,7 +268,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
         Returns:
             The response from the request (as a dictionary).
         """
-        logger.info("entry: _put")
+        logger.debug("entry: _put")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -276,7 +276,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: _put")
+        logger.debug("exit: _put")
 
         return res
 
@@ -292,7 +292,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
         Returns:
             The response from the request (as a dictionary).
         """
-        logger.info("entry: _delete")
+        logger.debug("entry: _delete")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -300,7 +300,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: _delete")
+        logger.debug("exit: _delete")
 
         return res
 
@@ -320,7 +320,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
             - `GET /version`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_show_component_versions[Show component versions]
         """
-        logger.info("entry: getVersion")
+        logger.debug("entry: getVersion")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
         response = await self._get(self.restppUrl+"/version", strictJson=False, resKey="message")
@@ -328,7 +328,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(components))
-        logger.info("exit: getVersion")
+        logger.debug("exit: getVersion")
         return components
 
     async def getVer(self, component: str = "product", full: bool = False) -> str:
@@ -348,7 +348,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
         Raises:
             `TigerGraphException` if invalid/non-existent component is specified.
         """
-        logger.info("entry: getVer")
+        logger.debug("entry: getVer")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
         version = await self.getVersion()
@@ -356,7 +356,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getVer")
+        logger.debug("exit: getVer")
 
         return ret
     

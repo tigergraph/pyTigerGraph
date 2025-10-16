@@ -33,7 +33,7 @@ class AsyncPyTigerGraphDataset(AsyncPyTigerGraphAuth):
                 Whether or not to get auth token from the database. This is required
                 when auth token is enabled for the database. Defaults to False.
         """
-        logger.info("entry: ingestDataset")
+        logger.debug("entry: ingestDataset")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -86,7 +86,7 @@ class AsyncPyTigerGraphDataset(AsyncPyTigerGraphAuth):
         _parse_ingest_dataset(responses, cleanup, dataset)
 
         print("---- Finished ingestion ----", flush=True)
-        logger.info("exit: ingestDataset")
+        logger.debug("exit: ingestDataset")
 
     async def check_exist_graphs(self, name: str) -> bool:
         "NO DOC"
