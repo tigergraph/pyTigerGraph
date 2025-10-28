@@ -73,7 +73,7 @@ def _parse_query_parameters(params: dict) -> str:
                 if isinstance(vv, tuple):
                     if len(vv) == 2 and isinstance(vv[1], str):
                         ret += k + "[" + str(i) + "]=" + _safe_char(vv[0]) + "&" + \
-                            k + "[" + str(i) + "].type=" + _safe_char(vv[1]) + "&"
+                            k + "[" + str(i) + "].type=" + vv[1] + "&"
                     else:
                         raise TigerGraphException(
                             "Invalid parameter value: (vertex_primary_id, vertex_type)"
@@ -86,7 +86,7 @@ def _parse_query_parameters(params: dict) -> str:
                 _safe_char(v.strftime("%Y-%m-%d %H:%M:%S")) + "&"
         else:
             ret += k + "=" + _safe_char(v) + "&"
-    if not ret:
+    if ret:
         ret = ret[:-1]
 
     if logger.level == logging.DEBUG:

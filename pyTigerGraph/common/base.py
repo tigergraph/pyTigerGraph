@@ -111,7 +111,7 @@ class PyTigerGraphCore(object):
             "{0}:{1}".format(self.username, self.password).encode("utf-8")).decode("utf-8")
 
         # Detect auth mode automatically by checking if jwtToken or apiToken is provided
-        self.authHeader, self.authMode = self._set_auth_header()
+        self.authHeader = self._set_auth_header()
 
         # TODO Eliminate version and use gsqlVersion only, meaning TigerGraph server version
         if gsqlVersion:
@@ -217,11 +217,14 @@ class PyTigerGraphCore(object):
     def _set_auth_header(self):
         """Set the authentication header based on available tokens or credentials."""
         if self.jwtToken:
-            return {"Authorization": "Bearer " + self.jwtToken}, "token"
+            self.authMode = "token"
+            return {"Authorization": "Bearer " + self.jwtToken}
         elif self.apiToken:
-            return {"Authorization": "Bearer " + self.apiToken}, "token"
+            self.authMode = "token"
+            return {"Authorization": "Bearer " + self.apiToken}
         else:
-            return {"Authorization": "Basic {0}".format(self.base64_credential)}, "pwd"
+            self.authMode = "pwd"
+            return {"Authorization": "Basic {0}".format(self.base64_credential)}
 
     def _verify_jwt_token_support(self):
         try:
@@ -277,7 +280,7 @@ class PyTigerGraphCore(object):
         return False
 
     def _prep_req(self, headers, url, method, data):
-        logger.debug("entry: _req")
+        logger.debug("entry: _prep_req")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -322,10 +325,12 @@ class PyTigerGraphCore(object):
             verify = True
 
         _headers.update({"X-User-Agent": "pyTigerGraph"})
+        logger.debug("exit: _prep_req")
 
         return _headers, _data, verify
 
     def _parse_req(self, res, jsonResponse, strictJson, skipCheck, resKey):
+        logger.debug("entry: _parse_req")
         if jsonResponse:
             try:
                 res = json.loads(res.text, strict=strictJson)
@@ -339,7 +344,7 @@ class PyTigerGraphCore(object):
         if not resKey:
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(res))
-            logger.debug("exit: _req (no resKey)")
+            logger.debug("exit: _parse_req (no resKey)")
 
             return res
 
@@ -348,7 +353,7 @@ class PyTigerGraphCore(object):
             logger.info("Removed _ from resKey")
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res[resKey]))
-        logger.debug("exit: _req (resKey)")
+        logger.debug("exit: _parse_req (resKey)")
 
         return res[resKey]
 

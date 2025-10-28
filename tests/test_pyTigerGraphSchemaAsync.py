@@ -375,6 +375,162 @@ class test_pyTigerGraphSchemaAsync(unittest.IsolatedAsyncioTestCase):
         res = await self.conn.getEndpoints(dynamic=True)
         self.assertEqual(4, len(res))
 
+    async def test_createGlobalVertices(self):
+        """Test createGlobalVertices function with GSQL commands."""
+        # Test single GSQL command
+        gsql_command = "CREATE VERTEX TestVertex1 (PRIMARY_ID id UINT, name STRING)"
+        res = await self.conn.createGlobalVertices(gsql_command)
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+        self.assertIn("message", res)
+
+        # Test multiple GSQL commands
+        gsql_commands = [
+            "CREATE VERTEX TestVertex2 (PRIMARY_ID id UINT, name STRING)",
+            "CREATE VERTEX TestVertex3 (PRIMARY_ID id UINT, age UINT)"
+        ]
+        res = await self.conn.createGlobalVertices(gsql_commands)
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+        self.assertIn("message", res)
+
+        # Test invalid input
+        with self.assertRaises(Exception):
+            await self.conn.createGlobalVertices("INVALID COMMAND")
+
+    async def test_createGlobalVerticesJson(self):
+        """Test createGlobalVerticesJson function with JSON configuration."""
+        # Test single vertex config
+        vertex_config = {
+            "Config": {
+                "STATS": "OUTDEGREE_BY_EDGETYPE"
+            },
+            "Attributes": [
+                {
+                    "AttributeType": {
+                        "Name": "STRING"
+                    },
+                    "AttributeName": "name"
+                }
+            ],
+            "PrimaryId": {
+                "AttributeType": {
+                    "Name": "UINT"
+                },
+                "AttributeName": "user_id"
+            },
+            "Name": "TestJsonVertex1"
+        }
+        res = await self.conn.createGlobalVerticesJson(vertex_config)
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+        self.assertIn("message", res)
+
+        # Test multiple vertex configs
+        vertices_config = [
+            {
+                "Config": {
+                    "STATS": "OUTDEGREE_BY_EDGETYPE"
+                },
+                "Attributes": [
+                    {
+                        "AttributeType": {
+                            "Name": "STRING"
+                        },
+                        "AttributeName": "name"
+                    }
+                ],
+                "PrimaryId": {
+                    "AttributeType": {
+                        "Name": "UINT"
+                    },
+                    "AttributeName": "user_id"
+                },
+                "Name": "TestJsonVertex2"
+            },
+            {
+                "Config": {
+                    "STATS": "OUTDEGREE_BY_EDGETYPE"
+                },
+                "Attributes": [
+                    {
+                        "AttributeType": {
+                            "Name": "STRING"
+                        },
+                        "AttributeName": "name"
+                    }
+                ],
+                "PrimaryId": {
+                    "AttributeType": {
+                        "Name": "UINT"
+                    },
+                    "AttributeName": "user_id"
+                },
+                "Name": "TestJsonVertex3"
+            }
+        ]
+        res = await self.conn.createGlobalVerticesJson(vertices_config)
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+        self.assertIn("message", res)
+
+        # Test invalid input - missing required fields
+        invalid_config = {
+            "Name": "InvalidVertex"
+            # Missing PrimaryId and Attributes
+        }
+        with self.assertRaises(Exception):
+            await self.conn.createGlobalVerticesJson(invalid_config)
+
+    async def test_addGlobalVerticesToGraph(self):
+        """Test addGlobalVerticesToGraph function."""
+        # Test single vertex name
+        res = await self.conn.addGlobalVerticesToGraph("TestVertex1")
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+        self.assertIn("message", res)
+
+        # Test multiple vertex names
+        res = await self.conn.addGlobalVerticesToGraph(["TestVertex2", "TestVertex3"])
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+        self.assertIn("message", res)
+
+        # Test with specific target graph
+        res = await self.conn.addGlobalVerticesToGraph(["TestVertex1"], target_graph="testGraph")
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+        self.assertIn("message", res)
+
+        # Test invalid input
+        with self.assertRaises(Exception):
+            await self.conn.addGlobalVerticesToGraph(123)  # Should be string or list
+
+    async def test_rebuildGraphEngine(self):
+        """Test rebuildGraphEngine function."""
+        # Test basic rebuild
+        res = await self.conn.rebuildGraphEngine()
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+        self.assertIn("message", res)
+
+        # Test with parameters
+        res = await self.conn.rebuildGraphEngine(
+            threadnum=2,
+            vertextype="TestVertex1",
+            path="/tmp/test_rebuild",
+            force=True
+        )
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+        self.assertIn("message", res)
+
+        # Test with segid parameter
+        res = await self.conn.rebuildGraphEngine(segid=1)
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+        self.assertIn("message", res)
+
 
 if __name__ == '__main__':
     unittest.main()

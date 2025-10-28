@@ -231,4 +231,212 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
 
         return ret
 
-    # TODO GET /rebuildnow/{graph_name}
+    async def createGlobalVertices(self, gsql_commands: Union[str, list]) -> dict:
+        """Creates global vertices using GSQL commands.
+
+        Args:
+            gsql_commands (str or list):
+                GSQL CREATE VERTEX statement(s). Can be a single string or list of strings.
+
+        Returns:
+            The response from the database containing the creation result.
+
+        Endpoints:
+            - `POST /gsql/v1/schema/vertices` (In TigerGraph versions >= 4.0)
+        """
+        logger.debug("entry: createGlobalVertices")
+        if not await self._version_greater_than_4_0():
+            logger.debug("exit: createGlobalVertices")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        # Handle single command
+        if isinstance(gsql_commands, str):
+            gsql_commands = [gsql_commands]
+        elif not isinstance(gsql_commands, list):
+            raise TigerGraphException("gsql_commands must be a string or list of strings.", 0)
+
+        if not gsql_commands:
+            raise TigerGraphException("gsql_commands cannot be empty.", 0)
+
+        # Validate that all commands are CREATE VERTEX statements
+        for cmd in gsql_commands:
+            if not cmd.strip().upper().startswith("CREATE VERTEX"):
+                raise TigerGraphException(f"Invalid GSQL command: {cmd}. Must be a CREATE VERTEX statement.", 0)
+
+        data = {"gsql": gsql_commands}
+        params = {"gsql": "true"}
+        res = await self._req("POST", self.gsUrl+"/gsql/v1/schema/vertices",
+                             params=params, data=data, authMode="pwd", resKey="",
+                             headers={'Content-Type': 'application/json'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: createGlobalVertices")
+
+        return res
+
+    async def createGlobalVerticesJson(self, vertices_config: Union[dict, list]) -> dict:
+        """Creates global vertices using JSON configuration.
+
+        Args:
+            vertices_config (dict or list):
+                JSON configuration for vertex creation. Can be a single vertex config dict
+                or a list of vertex config dicts. Each vertex config should include:
+                - Name: Vertex type name
+                - PrimaryId: Primary ID configuration with AttributeType and AttributeName
+                - Attributes: List of attribute configurations
+                - Config: Optional configuration (e.g., STATS)
+
+        Returns:
+            The response from the database containing the creation result.
+
+        Endpoints:
+            - `POST /gsql/v1/schema/vertices` (In TigerGraph versions >= 4.0)
+        """
+        logger.debug("entry: createGlobalVerticesJson")
+        if not await self._version_greater_than_4_0():
+            logger.debug("exit: createGlobalVerticesJson")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        # Handle single vertex config
+        if isinstance(vertices_config, dict):
+            vertices_config = [vertices_config]
+        elif not isinstance(vertices_config, list):
+            raise TigerGraphException("vertices_config must be a dict or list of dicts.", 0)
+
+        if not vertices_config:
+            raise TigerGraphException("vertices_config cannot be empty.", 0)
+
+        # Validate vertex configurations
+        for i, vertex_config in enumerate(vertices_config):
+            if not isinstance(vertex_config, dict):
+                raise TigerGraphException(f"Vertex config at index {i} must be a dict.", 0)
+
+            required_fields = ["Name", "PrimaryId", "Attributes"]
+            for field in required_fields:
+                if field not in vertex_config:
+                    raise TigerGraphException(f"Vertex config at index {i} missing required field: {field}", 0)
+
+        data = {"createVertices": vertices_config}
+        res = await self._req("POST", self.gsUrl+"/gsql/v1/schema/vertices",
+                             data=data, authMode="pwd", resKey="",
+                             headers={'Content-Type': 'application/json'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: createGlobalVerticesJson")
+
+        return res
+
+    async def addGlobalVerticesToGraph(self, vertex_names: Union[str, list], target_graph: str = None) -> dict:
+        """Adds existing global vertices to a local graph.
+
+        Args:
+            vertex_names (str or list):
+                Name(s) of the global vertices to add to the graph. Can be a single
+                vertex name string or a list of vertex names.
+            target_graph (str, optional):
+                The graph to which the global vertices should be added. If not provided,
+                uses the current connection's graphname.
+
+        Returns:
+            The response from the database containing the addition result.
+
+        Endpoints:
+            - `POST /gsql/v1/schema/vertices` (In TigerGraph versions >= 4.0) 
+        """
+        logger.debug("entry: addGlobalVerticesToGraph")
+        if not await self._version_greater_than_4_0():
+            logger.debug("exit: addGlobalVerticesToGraph")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        # Handle single vertex name
+        if isinstance(vertex_names, str):
+            vertex_names = [vertex_names]
+        elif not isinstance(vertex_names, list):
+            raise TigerGraphException("vertex_names must be a string or list of strings.", 0)
+
+        if not vertex_names:
+            raise TigerGraphException("vertex_names cannot be empty.", 0)
+
+        # Validate that all items are strings
+        for i, name in enumerate(vertex_names):
+            if not isinstance(name, str):
+                raise TigerGraphException(f"Vertex name at index {i} must be a string.", 0)
+
+        # Use target_graph or current graphname
+        graph_name = target_graph if target_graph is not None else self.graphname
+
+        data = {"addVertices": vertex_names}
+        params = {"graph": graph_name}
+        res = await self._req("POST", self.gsUrl+"/gsql/v1/schema/vertices",
+                             params=params, data=data, authMode="pwd", resKey="",
+                             headers={'Content-Type': 'application/json'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: addGlobalVerticesToGraph")
+
+        return res
+
+    async def rebuildGraphEngine(self, threadnum: int = None, vertextype: str = None, 
+                               segid: int = None, path: str = None, force: bool = None) -> dict:
+        """Rebuilds the graph engine.
+
+        When new data is being loaded into the graph (such as new vertices or edges),
+        the data is initially stored in memory before being saved permanently to disk.
+        TigerGraph runs a rebuild of the Graph Processing Engine (GPE) to commit the
+        data in memory to disk.
+
+        Args:
+            threadnum (int, optional):
+                Number of threads used to execute the rebuild. If not specified,
+                the number specified in the .tg.cfg file will be used (default: 3).
+            vertextype (str, optional):
+                Vertex type to perform the rebuild for. If not provided, the rebuild
+                will be run for all vertex types.
+            segid (int, optional):
+                Segment ID of the segments to rebuild. If not provided, all segments
+                will be rebuilt.
+            path (str, optional):
+                Path to save the summary of the rebuild to. If not provided, the
+                default path is /tmp/rebuildnow.
+            force (bool, optional):
+                Boolean value that indicates whether to perform rebuilds for segments
+                for which there are no records of new data.
+
+        Returns:
+            The response from the database containing the rebuild result.
+
+        Endpoints:
+            - `GET /restpp/rebuildnow/{graph_name}` (In TigerGraph versions >= 4.0)
+        """
+        logger.debug("entry: rebuildGraphEngine")
+        if not await self._version_greater_than_4_0():
+            logger.debug("exit: rebuildGraphEngine")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        params = {}
+        if threadnum is not None:
+            params["threadnum"] = threadnum
+        if vertextype is not None:
+            params["vertextype"] = vertextype
+        if segid is not None:
+            params["segid"] = segid
+        if path is not None:
+            params["path"] = path
+        if force is not None:
+            params["force"] = force
+
+        res = await self._req("GET", self.restppUrl+"/rebuildnow/"+self.graphname,
+                             params=params, authMode="pwd", resKey="")
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: rebuildGraphEngine")
+
+        return res

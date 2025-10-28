@@ -223,6 +223,85 @@ class test_pyTigerGraphQueryAsync(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValueError):
             await self.conn.installQueries("non_existent_query")
 
+    async def test_getQueryContent(self):
+        """Test getQueryContent function."""
+        # Test getting content of an existing query
+        res = await self.conn.getQueryContent("query1")
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+
+    async def test_createQuery(self):
+        """Test createQuery function."""
+        # Test creating a simple query
+        query_text = """
+        CREATE QUERY testCreateQuery() FOR GRAPH $graphname {
+            PRINT "Hello World";
+        }
+        """
+        res = await self.conn.createQuery(query_text)
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+        self.assertIn("message", res)
+
+    async def test_dropQueries(self):
+        """Test dropQueries function."""
+        # Test dropping a single query
+        res = await self.conn.dropQueries("testCreateQuery")
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+
+        # Test dropping multiple queries
+        res = await self.conn.dropQueries(["testQuery1", "testQuery2"])
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+
+        # Test invalid input
+        with self.assertRaises(Exception):
+            await self.conn.dropQueries(123)  # Should be string or list
+
+    async def test_listQueryNames(self):
+        """Test listQueryNames function."""
+        res = await self.conn.listQueryNames()
+        self.assertIsInstance(res, list)
+
+    async def test_checkQuerySemantic(self):
+        """Test checkQuerySemantic function."""
+        # Test valid query
+        valid_query = """
+        CREATE QUERY testSemanticQuery() {
+            PRINT "Hello World";
+        }
+        """
+        res = await self.conn.checkQuerySemantic(valid_query)
+        self.assertIsInstance(res, dict)
+        self.assertIn("warnings", res)
+        self.assertIn("errors", res)
+
+        # Test invalid query
+        invalid_query = "INVALID GSQL SYNTAX"
+        res = await self.conn.checkQuerySemantic(invalid_query)
+        self.assertIsInstance(res, dict)
+        self.assertIn("warnings", res)
+        self.assertIn("errors", res)
+
+    async def test_getQueryInfo(self):
+        """Test getQueryInfo function."""
+        # Test getting info for all queries
+        res = await self.conn.getQueryInfo()
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+        self.assertIn("results", res)
+
+        # Test getting info for specific query
+        res = await self.conn.getQueryInfo(queryName="query1")
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+
+        # Test getting info with status filter
+        res = await self.conn.getQueryInfo(status="VALID")
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+
 
 if __name__ == '__main__':
     unittest.main()
