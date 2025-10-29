@@ -143,10 +143,10 @@ class AsyncPyTigerGraphAuth(AsyncPyTigerGraphGSQL):
 
         return res
 
-    async def _token(self, secret: str = None, lifetime: int = None, token=None, _method=None) -> Union[tuple, str]:
+    async def _token(self, secret: str = None, lifetime: int = None, token=None, _method=None, for_graph: bool = True) -> Union[tuple, str]:
         method, url, alt_url, authMode, data, alt_data = _prep_token_request(self.restppUrl,
                                                                              self.gsUrl,
-                                                                             self.graphname,
+                                                                             self.graphname if for_graph else None,
                                                                              secret=secret,
                                                                              lifetime=lifetime,
                                                                              token=token)
@@ -178,12 +178,12 @@ class AsyncPyTigerGraphAuth(AsyncPyTigerGraphGSQL):
         # uses mainVer instead of _versionGreaterThan4_0 since you need a token for verson checking
         return res, mainVer
 
-    async def getToken(self, secret: str = None, setToken: bool = True, lifetime: int = None) -> Union[tuple, str]:
+    async def getToken(self, secret: str = None, setToken: bool = True, lifetime: int = None, for_graph: bool = True) -> Union[tuple, str]:
         logger.debug("entry: getToken")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        res, mainVer = await self._token(secret, lifetime)
+        res, mainVer = await self._token(secret, lifetime, for_graph=for_graph)
         token, auth_header = _parse_token_response(res,
                                                    setToken,
                                                    mainVer,
@@ -229,3 +229,44 @@ class AsyncPyTigerGraphAuth(AsyncPyTigerGraphGSQL):
 
         raise TigerGraphException(
             res["message"], (res["code"] if "code" in res else None))
+
+    async def checkJwtToken(self, token: str = None) -> dict:
+        """Check JWT token validity.
+
+        Check if a JWT token is valid or not.
+
+        Args:
+            token (str, optional):
+                The JWT token to check. If not provided, uses the current connection's token.
+
+        Returns:
+            dict: The response from the database containing the token validation result.
+
+        Endpoints:
+            - `POST /gsql/v1/tokens/check` (In TigerGraph versions >= 4.0)
+        """
+        logger.debug("entry: checkJwtToken")
+        if not await self._version_greater_than_4_0():
+            logger.debug("exit: checkJwtToken")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        if token is None:
+            token = self.apiToken
+
+        if not token:
+            raise TigerGraphException("No token provided and no token is currently set.", 0)
+
+        data = {"token": token}
+        res = await self._req("POST", self.gsUrl+"/gsql/v1/tokens/check",
+                             data=data, authMode="pwd", resKey="",
+                             headers={'Content-Type': 'application/json'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: checkJwtToken")
+
+        return res

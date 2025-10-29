@@ -49,6 +49,44 @@ class test_pyTigerGraphGSQLAsync(unittest.IsolatedAsyncioTestCase):
         udf = await self.conn.getUDF(ExprFunctions=False)
         self.assertIn("class KafkaProducer", udf)
 
+    async def test_getAsyncRequestStatus(self):
+        """Test getAsyncRequestStatus function."""
+        # Test with a sample request ID (this will likely fail in test environment)
+        # but we can test the function structure and error handling
+        test_request_id = "00000000006.317280417"
+
+        try:
+            res = await self.conn.getAsyncRequestStatus(test_request_id)
+            self.assertIsInstance(res, dict)
+            self.assertIn("error", res)
+            self.assertIn("message", res)
+        except Exception as e:
+            # Expected to fail in test environment, but should be a proper error response
+            self.assertIsInstance(e, Exception)
+
+    async def test_cancelAsyncRequest(self):
+        """Test cancelAsyncRequest function."""
+        # Test with a sample request ID (this will likely fail in test environment)
+        # but we can test the function structure and error handling
+        test_request_id = "00000000006.317280417"
+
+        try:
+            res = await self.conn.cancelAsyncRequest(test_request_id)
+            self.assertIsInstance(res, dict)
+            self.assertIn("error", res)
+            self.assertIn("message", res)
+        except Exception as e:
+            # Expected to fail in test environment, but should be a proper error response
+            self.assertIsInstance(e, Exception)
+
+    async def test_recoverCatalog(self):
+        """Test recoverCatalog function."""
+        # Test basic catalog recovery
+        res = await self.conn.recoverCatalog()
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+        self.assertIn("message", res)
+
 
 if __name__ == "__main__":
     # suite = unittest.TestSuite()

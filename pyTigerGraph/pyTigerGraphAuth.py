@@ -143,10 +143,10 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
         return res
 
-    def _token(self, secret: str = None, lifetime: int = None, token: str = None, _method: str = None) -> Union[tuple, str]:
+    def _token(self, secret: str = None, lifetime: int = None, token: str = None, _method: str = None, for_graph: bool = True) -> Union[tuple, str]:
         method, url, alt_url, authMode, data, alt_data = _prep_token_request(self.restppUrl,
                                                                              self.gsUrl,
-                                                                             self.graphname,
+                                                                             None if for_graph else self.graphname,
                                                                              self.version,
                                                                              secret,
                                                                              lifetime,
@@ -191,7 +191,8 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
     def getToken(self,
                  secret: str = None,
                  setToken: bool = True,
-                 lifetime: int = None) -> Union[Tuple[str, str], str]:
+                 lifetime: int = None,
+                 for_graph: bool = True) -> Union[Tuple[str, str], str]:
         """Requests an authorization token.
 
         This function returns a token only if REST++ authentication is enabled. If not, an exception
@@ -345,4 +346,45 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
         raise TigerGraphException(
             res["message"], (res["code"] if "code" in res else None))
+
+    def checkJwtToken(self, token: str = None) -> dict:
+        """Check JWT token validity.
+
+        Check if a JWT token is valid or not.
+
+        Args:
+            token (str, optional):
+                The JWT token to check. If not provided, uses the current connection's token.
+
+        Returns:
+            dict: The response from the database containing the token validation result.
+
+        Endpoints:
+            - `POST /gsql/v1/tokens/check` (In TigerGraph versions >= 4.0)
+        """
+        logger.debug("entry: checkJwtToken")
+        if not self._version_greater_than_4_0():
+            logger.debug("exit: checkJwtToken")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        if token is None:
+            token = self.apiToken
+
+        if not token:
+            raise TigerGraphException("No token provided and no token is currently set.", 0)
+
+        data = {"token": token}
+        res = self._post(self.gsUrl+"/gsql/v1/tokens/check",
+                        data=data, authMode="pwd", resKey="",
+                        headers={'Content-Type': 'application/json'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: checkJwtToken")
+
+        return res
 

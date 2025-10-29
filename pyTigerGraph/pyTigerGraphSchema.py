@@ -381,61 +381,32 @@ class pyTigerGraphSchema(pyTigerGraphBase):
 
         return res
 
-    def rebuildGraphEngine(self, threadnum: int = None, vertextype: str = None, 
-                          segid: int = None, path: str = None, force: bool = None) -> dict:
-        """Rebuilds the graph engine.
+    def validateGraphSchema(self) -> dict:
+        """Validate graph schema.
 
-        When new data is being loaded into the graph (such as new vertices or edges),
-        the data is initially stored in memory before being saved permanently to disk.
-        TigerGraph runs a rebuild of the Graph Processing Engine (GPE) to commit the
-        data in memory to disk.
+        Check that the current graph schema is valid.
 
         Args:
-            threadnum (int, optional):
-                Number of threads used to execute the rebuild. If not specified,
-                the number specified in the .tg.cfg file will be used (default: 3).
-            vertextype (str, optional):
-                Vertex type to perform the rebuild for. If not provided, the rebuild
-                will be run for all vertex types.
-            segid (int, optional):
-                Segment ID of the segments to rebuild. If not provided, all segments
-                will be rebuilt.
-            path (str, optional):
-                Path to save the summary of the rebuild to. If not provided, the
-                default path is /tmp/rebuildnow.
-            force (bool, optional):
-                Boolean value that indicates whether to perform rebuilds for segments
-                for which there are no records of new data.
+            None
 
         Returns:
-            The response from the database containing the rebuild result.
+            dict: The response from the database containing the schema validation result.
 
         Endpoints:
-            - `GET /restpp/rebuildnow/{graph_name}` (In TigerGraph versions >= 4.0)
+            - `POST /gsql/v1/schema/check` (In TigerGraph versions >= 4.0)
         """
-        logger.debug("entry: rebuildGraphEngine")
+        logger.debug("entry: validateGraphSchema")
         if not self._version_greater_than_4_0():
-            logger.debug("exit: rebuildGraphEngine")
+            logger.debug("exit: validateGraphSchema")
             raise TigerGraphException(
                 "This function is only supported on versions of TigerGraph >= 4.0.", 0)
 
-        params = {}
-        if threadnum is not None:
-            params["threadnum"] = threadnum
-        if vertextype is not None:
-            params["vertextype"] = vertextype
-        if segid is not None:
-            params["segid"] = segid
-        if path is not None:
-            params["path"] = path
-        if force is not None:
-            params["force"] = force
-
-        res = self._get(self.restppUrl+"/rebuildnow/"+self.graphname,
-                       params=params, authMode="pwd", resKey="")
+        res = self._post(self.gsUrl+"/gsql/v1/schema/check",
+                        authMode="pwd", resKey="",
+                        headers={'Content-Type': 'text/plain'})
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.debug("exit: rebuildGraphEngine")
+        logger.debug("exit: validateGraphSchema")
 
         return res

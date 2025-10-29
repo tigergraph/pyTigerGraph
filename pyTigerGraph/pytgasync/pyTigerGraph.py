@@ -3,6 +3,7 @@ import warnings
 from typing import TYPE_CHECKING, Union
 
 import urllib3
+import asyncio
 
 from pyTigerGraph.pytgasync.pyTigerGraphVertex import AsyncPyTigerGraphVertex
 from pyTigerGraph.pytgasync.pyTigerGraphDataset import AsyncPyTigerGraphDataset
