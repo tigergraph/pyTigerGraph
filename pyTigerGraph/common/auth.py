@@ -113,7 +113,9 @@ def _parse_token_response(response: dict,
                           mainVer: int,
                           base64_credential: str) -> Tuple[Union[Tuple[str, str], str], dict]:
     if not response.get("error"):
-        token = response["token"]
+        # Note that /requesttoken has sightly different response using username-password pair.
+        # See https://docs.tigergraph.com/tigergraph-server/3.10/api/built-in-endpoints#_request_a_token
+        token = response.get("results", response)["token"]
         if setToken:
             apiToken = token
             authHeader = {'Authorization': "Bearer " + apiToken}
