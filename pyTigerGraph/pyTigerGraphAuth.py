@@ -213,7 +213,6 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             logger.debug("exit: createSecret")
             return secret
         except Exception as e:
-            print(e)
             # For older versions, use GSQL command
             res = self.gsql("""
                 USE GRAPH {}
