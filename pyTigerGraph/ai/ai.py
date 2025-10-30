@@ -297,6 +297,9 @@ class AI:
             if not data_source and "data_source" in load_job_info:
                 data_source = load_job_info["data_source"]
 
+        if not load_job_id or not data_path or not data_source_id and not load_job_info:
+            raise ValueError("load_job_id and data_path are required, one of data_source_id or load_job_info must be provided.")
+
         if data_source.lower() == "local" and data_path.startswith(("/", ".", "~")) :
             return self.conn.runLoadingJobWithFile(data_path, data_source_id, load_job_id)
         else:
