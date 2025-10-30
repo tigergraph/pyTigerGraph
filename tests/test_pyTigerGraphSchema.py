@@ -496,7 +496,7 @@ class test_pyTigerGraphSchema(unittest.TestCase):
         self.assertIn("message", res)
 
         # Test with specific target graph
-        res = self.conn.addGlobalVerticesToGraph(["TestVertex1"], target_graph="testGraph")
+        res = self.conn.addGlobalVerticesToGraph(["TestVertex1"], target_graph=self.conn.graphname)
         self.assertIsInstance(res, dict)
         self.assertIn("error", res)
         self.assertIn("message", res)
@@ -513,10 +513,10 @@ class test_pyTigerGraphSchema(unittest.TestCase):
         self.assertIn("error", res)
         self.assertIn("message", res)
 
-        # Test with parameters
+        # Test with parameters (use existing vertex type from testserver.gsql)
         res = self.conn.rebuildGraphEngine(
             threadnum=2,
-            vertextype="TestVertex1",
+            vertextype="vertex4",
             path="/tmp/test_rebuild",
             force=True
         )

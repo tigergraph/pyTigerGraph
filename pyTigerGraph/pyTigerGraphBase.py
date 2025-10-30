@@ -178,13 +178,12 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         Returns:
             The (relevant part of the) response from the request (as a dictionary).
         """
-        # Deprecated: authMode
-        _headers, _data, verify = self._prep_req(headers, url, method, data)
+        _headers, _data, verify = self._prep_req(authMode, headers, url, method, data)
 
         if "GSQL-TIMEOUT" in _headers:
-            http_timeout = (10, int(int(_headers["GSQL-TIMEOUT"])/1000) + 10)
+            http_timeout = (30, int(int(_headers["GSQL-TIMEOUT"])/1000) + 30)
         else:
-            http_timeout = None
+            http_timeout = (30, None)
 
         if jsonData:
             res = requests.request(
@@ -438,11 +437,27 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
 
         Returns:
             Boolean of whether databse version is greater than 4.0.
+
+        Note:
+            The result is cached to avoid repeated server calls. The cache is cleared
+            when the connection object is recreated.
         """
-        version = self.getVer().split('.')
-        if version[0] >= "4" and version[1] > "0":
-            return True
-        return False
+        # Use cached value if available
+        if hasattr(self, '_cached_version_greater_than_4_0'):
+            return self._cached_version_greater_than_4_0
+
+        # Cache not set, fetch version and cache the result
+        try:
+            version = self.getVer().split('.')
+        except TigerGraphException as e:
+            if e.code == "REST-10016":
+                self.getToken()
+                version = self.getVer().split('.')
+            else:
+                raise e
+        result = version[0] >= "4" and version[1] > "0"
+        self._cached_version_greater_than_4_0 = result
+        return result
 
     def _validate_graphname(self, operation_name=""):
         """Validate that graphname is set for operations that require it."""

@@ -217,13 +217,10 @@ class PyTigerGraphCore(object):
     def _set_auth_header(self):
         """Set the authentication header based on available tokens or credentials."""
         if self.jwtToken:
-            self.authMode = "token"
             return {"Authorization": "Bearer " + self.jwtToken}
         elif self.apiToken:
-            self.authMode = "token"
             return {"Authorization": "Bearer " + self.apiToken}
         else:
-            self.authMode = "pwd"
             return {"Authorization": "Basic {0}".format(self.base64_credential)}
 
     def _verify_jwt_token_support(self):
@@ -279,7 +276,7 @@ class PyTigerGraphCore(object):
             )
         return False
 
-    def _prep_req(self, headers, url, method, data):
+    def _prep_req(self, authMode, headers, url, method, data):
         logger.debug("entry: _prep_req")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
@@ -287,24 +284,31 @@ class PyTigerGraphCore(object):
         _headers = {}
 
         # If JWT token is provided, always use jwtToken as token
-        if isinstance(self.jwtToken, str) and self.jwtToken.strip() != "":
-            token = self.jwtToken
-        elif isinstance(self.apiToken, tuple):
-            token = self.apiToken[0]
-        elif isinstance(self.apiToken, str) and self.apiToken.strip() != "":
-            token = self.apiToken
-        else:
-            token = None
+        if authMode == "token":
+            if isinstance(self.jwtToken, str) and self.jwtToken.strip() != "":
+                token = self.jwtToken
+            elif isinstance(self.apiToken, tuple):
+                token = self.apiToken[0]
+            elif isinstance(self.apiToken, str) and self.apiToken.strip() != "":
+                token = self.apiToken
+            else:
+                token = None
 
-        if token:
-            self.authHeader = {'Authorization': "Bearer " + token}
-            _headers = self.authHeader
-            self.authMode = "token"
+            if token:
+                self.authHeader = {'Authorization': "Bearer " + token}
+                _headers = self.authHeader
+            else:
+                self.authHeader = {
+                    'Authorization': 'Basic {0}'.format(self.base64_credential)}
+                _headers = self.authHeader
+                self.authMode = "pwd"
         else:
-            self.authHeader = {
-                'Authorization': 'Basic {0}'.format(self.base64_credential)}
-            _headers = self.authHeader
-            self.authMode = 'pwd'
+            if self.jwtToken:
+                _headers = {'Authorization': "Bearer " + self.jwtToken}
+            else:
+                _headers = {'Authorization': 'Basic {0}'.format(
+                    self.base64_credential)}
+                self.authMode = "pwd"
 
         if headers:
             _headers.update(headers)

@@ -277,7 +277,8 @@ class test_pyTigerGraphQuery(unittest.TestCase):
         self.assertIsInstance(res, dict)
         self.assertIn("error", res)
 
-        # Test dropping multiple queries
+        # Test dropping multiple queries (use queries that don't exist to test error handling)
+        # This should return an error response but still be a valid dict
         res = self.conn.dropQueries(["testQuery1", "testQuery2"])
         self.assertIsInstance(res, dict)
         self.assertIn("error", res)

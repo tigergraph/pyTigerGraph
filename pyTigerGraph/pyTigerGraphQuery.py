@@ -464,7 +464,6 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
             if params:
                 if isinstance(params, dict):
                     params = _parse_query_parameters(params)
-                logger.info("params: " + params)
             ret = self._req("GET", self.restppUrl + "/query/" + self.graphname + "/" + queryName,
                             params=params, headers=headers, resKey=res_key)
 

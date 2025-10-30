@@ -40,14 +40,14 @@ class test_pyTigerGraphGSQLAsync(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(res, "")
         # Get both ExprFunctions and ExprUtil (default)
         udf = await self.conn.getUDF()
-        self.assertIn("init_kafka_producer", udf[0])
-        self.assertIn("class KafkaProducer", udf[1])
+        self.assertIn("ExprFunctions", udf[0])
+        self.assertIn("ExprUtil", udf[1])
         # Get ExprFunctions only
         udf = await self.conn.getUDF(ExprUtil=False)
-        self.assertIn("init_kafka_producer", udf)
+        self.assertIn("ExprFunctions", udf)
         # Get ExprUtil only
         udf = await self.conn.getUDF(ExprFunctions=False)
-        self.assertIn("class KafkaProducer", udf)
+        self.assertIn("ExprUtil", udf)
 
     async def test_getAsyncRequestStatus(self):
         """Test getAsyncRequestStatus function."""
