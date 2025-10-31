@@ -4,7 +4,7 @@ The functions on this page run installed or interpret queries in TigerGraph.
 All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object].
 """
 import logging
-import time
+import asyncio
 
 from typing import TYPE_CHECKING, Union, Optional
 
@@ -68,6 +68,202 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
         else:
             TigerGraphException(res["message"], res["code"])
 
+    async def getQueryContent(self, queryName: str) -> dict:
+        """Returns the content/source code of a query.
+
+        Args:
+            queryName (str):
+                Name of the query to get content of.
+
+        Returns:
+            The response from the database containing the query content.
+
+        Endpoints:
+            - `GET /gsql/v1/queries/{queryName}` (In TigerGraph versions >= 4.0)
+        """
+        logger.debug("entry: getQueryContent")
+        if not await self._version_greater_than_4_0():
+            logger.debug("exit: getQueryContent")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        params = {"graph": self.graphname}
+        res = await self._req("GET", self.gsUrl+"/gsql/v1/queries/"+queryName,
+                             params=params, authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: getQueryContent")
+
+        return res
+
+    async def createQuery(self, queryText: str) -> dict:
+        """Creates a query in the graph.
+
+        Args:
+            queryText (str):
+                The text of the GSQL query to create. Must be in the format:
+                "create query queryName (...) FOR GRAPH graphName { ... }"
+
+        Returns:
+            The response from the database containing the creation result.
+
+        Endpoints:
+            - `POST /gsql/v1/queries` (In TigerGraph versions >= 4.0)
+        """
+        logger.debug("entry: createQuery")
+        if not await self._version_greater_than_4_0():
+            logger.debug("exit: createQuery")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        # Replace graphname placeholders
+        queryText = queryText.replace("$graphname", self.graphname)
+        queryText = queryText.replace("@graphname@", self.graphname)
+
+        params = {"graph": self.graphname}
+        res = await self._req("POST", self.gsUrl+"/gsql/v1/queries",
+                             params=params, data=queryText, authMode="pwd",
+                             headers={'Content-Type': 'text/plain'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: createQuery")
+
+        return res
+
+    async def dropQueries(self, queryName: Union[str, list]) -> dict:
+        """Drops one or more queries from the graph.
+
+        Args:
+            queryName (str or list):
+                Name of the query to drop, or list of query names to drop.
+
+        Returns:
+            The response from the database containing the drop result.
+
+        Endpoints:
+            - `DELETE /gsql/v1/queries/{queryName}` (In TigerGraph versions >= 4.0)
+        """
+        logger.debug("entry: dropQueries")
+        if not await self._version_greater_than_4_0():
+            logger.debug("exit: dropQueries")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        # Handle single query name
+        if isinstance(queryName, str):
+            params = {"graph": self.graphname}
+            res = await self._req("DELETE", self.gsUrl+"/gsql/v1/queries/"+queryName,
+                                 params=params, authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
+        # Handle list of query names
+        elif isinstance(queryName, list):
+            if not queryName:
+                raise TigerGraphException("Query name list cannot be empty.", 0)
+
+            params = {"graph": self.graphname, "query": queryName}
+            res = await self._req("DELETE", self.gsUrl+"/gsql/v1/queries",
+                                 params=params, authMode="pwd", resKey="")
+        else:
+            raise TigerGraphException("queryName must be a string or list of strings.", 0)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: dropQueries")
+
+        return res
+
+    async def checkQuerySemantic(self, queryCode: str) -> dict:
+        """Performs a semantic check of a query.
+
+        Args:
+            queryCode (str):
+                The GSQL query code to check for semantic errors.
+
+        Returns:
+            The response from the database containing the semantic check result.
+
+        Endpoints:
+            - `POST /gsql/v1/internal/check/query` (In TigerGraph versions >= 4.0)
+        """
+        logger.debug("entry: checkQuerySemantic")
+        if not await self._version_greater_than_4_0():
+            logger.debug("exit: checkQuerySemantic")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        data = {"code": queryCode}
+        res = await self._req("POST", self.gsUrl+"/gsql/v1/internal/check/query",
+                             data=data, authMode="pwd", resKey="",
+                             headers={'Content-Type': 'application/json'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: checkQuerySemantic")
+
+        return res
+
+    async def getQueryInfo(self, queryName: str = None, status: str = None) -> dict:
+        """Gets query information for the graph.
+
+        Args:
+            queryName (str, optional):
+                The specific query name to get information for. If None, returns info for all queries.
+            status (str, optional):
+                Filter queries by status (e.g., "VALID", "INVALID", "INSTALLING").
+
+        Returns:
+            The response from the database containing query information.
+
+        Endpoints:
+            - `GET /gsql/v1/queries/info` (In TigerGraph versions >= 4.0)
+        """
+        logger.debug("entry: getQueryInfo")
+        if not await self._version_greater_than_4_0():
+            logger.debug("exit: getQueryInfo")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        params = {"graph": self.graphname}
+        if queryName is not None:
+            params["query"] = queryName
+        if status is not None:
+            params["status"] = status
+
+        res = await self._req("GET", self.gsUrl+"/gsql/v1/queries/info",
+                             params=params, authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: getQueryInfo")
+
+        return res
+
+    async def listQueryNames(self) -> list:
+        """Lists all query names of a graph.
+
+        Returns:
+            The response from the database containing the list of query names.
+
+        Endpoints:
+            - `GET /gsql/v1/queries` (In TigerGraph versions >= 4.0)
+        """
+        logger.debug("entry: listQueryNames")
+        if not await self._version_greater_than_4_0():
+            logger.debug("exit: listQueryNames")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        params = {"graph": self.graphname}
+        res = await self._req("GET", self.gsUrl+"/gsql/v1/queries",
+                             params=params, authMode="pwd", headers={'Content-Type': 'application/json'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: listQueryNames")
+
+        return res
+
     async def getInstalledQueries(self, fmt: str = "py") -> Union[dict, str, 'pd.DataFrame']:
         """Returns a list of installed queries.
 
@@ -85,7 +281,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
              Modify to return only installed ones
         TODO Return with query name as key rather than REST endpoint as key?
         """
-        logger.info("entry: getInstalledQueries")
+        logger.debug("entry: getInstalledQueries")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -94,7 +290,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getInstalledQueries")
+        logger.debug("exit: getInstalledQueries")
 
         return ret
 
@@ -119,13 +315,13 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
             GET /gsql/v1/queries/install
             See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_install_a_query
         """
-        logger.info("entry: installQueries")
+        logger.debug("entry: installQueries")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
         self.ver = await self.getVer()
         major_ver, minor_ver, patch_ver = self.ver.split(".")
         if int(major_ver) < 4 or int(major_ver) == 4 and int(minor_ver) == 0:
-            logger.info("exit: installQueries")
+            logger.debug("exit: installQueries")
             raise TigerGraphException(
                 "This function is only supported on versions of TigerGraph >= 4.1.0.", 0)
 
@@ -153,7 +349,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: installQueries")
+        logger.debug("exit: installQueries")
 
         return ret
 
@@ -171,13 +367,13 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
             GET /gsql/queries/install/{request_id}
             See https://docs.tigergraph.com/tigergraph-server/current/api/built-in-endpoints#_check_query_installation_status
         """
-        logger.info("entry: getQueryInstallationStatus")
+        logger.debug("entry: getQueryInstallationStatus")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
         self.ver = await self.getVer()
         major_ver, minor_ver, patch_ver = self.ver.split(".")
         if int(major_ver) < 4 or int(major_ver) == 4 and int(minor_ver) == 0:
-            logger.info("exit: getQueryInstallationStatus")
+            logger.debug("exit: getQueryInstallationStatus")
             raise TigerGraphException(
                 "This function is only supported on versions of TigerGraph >= 4.1.0.", 0)
 
@@ -185,7 +381,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getQueryInstallationStatus")
+        logger.debug("exit: getQueryInstallationStatus")
 
         return ret
 
@@ -254,7 +450,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
             - `POST /query/{graph_name}/{query_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_run_an_installed_query_post[Run an installed query (POST)]
         """
-        logger.info("entry: runInstalledQuery")
+        logger.debug("entry: runInstalledQuery")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -267,18 +463,23 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(ret))
-            logger.info("exit: runInstalledQuery (POST)")
+            logger.debug("exit: runInstalledQuery (POST)")
 
             return ret
         else:
-            if isinstance(params, dict):
-                params = _parse_query_parameters(params)
-            ret = await self._req("GET", self.restppUrl + "/query/" + self.graphname + "/" + queryName,
-                                  params=params, headers=headers, resKey=res_key)
+            # for params contains spaces, we need to append to url directly to keep %20 format
+            if params:
+                if isinstance(params, dict):
+                    params = _parse_query_parameters(params)
+                ret = await self._req("GET", self.restppUrl + "/query/" + self.graphname + "/" + queryName + "?" + str(params),
+                                  headers=headers, resKey=res_key)
+            else:
+                ret = await self._req("GET", self.restppUrl + "/query/" + self.graphname + "/" + queryName,
+                                  headers=headers, resKey=res_key)
 
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(ret))
-            logger.info("exit: runInstalledQuery (GET)")
+            logger.debug("exit: runInstalledQuery (GET)")
 
             return ret
 
@@ -359,7 +560,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
         TODO Add "GSQL-TIMEOUT: <timeout value in ms>" and "RESPONSE-LIMIT: <size limit in byte>"
             plus parameters if applicable to interpreted queries (see runInstalledQuery() above)
         """
-        logger.info("entry: runInterpretedQuery")
+        logger.debug("entry: runInterpretedQuery")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -378,7 +579,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: runInterpretedQuery")
+        logger.debug("exit: runInterpretedQuery")
 
         return ret
 
@@ -436,7 +637,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
             - `GET /statistics/{graph_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_show_query_performance[Show query performance]
         """
-        logger.info("entry: getStatistics")
+        logger.debug("entry: getStatistics")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -446,11 +647,31 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getStatistics")
+        logger.debug("exit: getStatistics")
 
         return ret
 
     async def describeQuery(self, queryName: str, queryDescription: str, parameterDescriptions: dict = {}):
+        """DEPRECATED: Use updateQueryDescription() instead. Add a query description and parameter descriptions. Only supported on versions of TigerGraph >= 4.0.0.
+
+        Args:
+            queryName:
+                The name of the query to describe.
+            queryDescription:
+                A description of the query.
+            parameterDescriptions (optional):
+                A dictionary of parameter descriptions. The keys are the parameter names and the values are the descriptions.
+
+        Returns:
+            The response from the database.
+
+        Endpoints:
+            - `PUT /gsqlserver/gsql/description?graph={graph_name}` (In TigerGraph version 4.0)
+            - `PUT /gsql/v1/description?graph={graph_name}` (In TigerGraph versions >4.0)
+        """
+        return await self.updateQueryDescription(queryName, queryDescription, parameterDescriptions)
+
+    async def updateQueryDescription(self, queryName: str, queryDescription: str, parameterDescriptions: dict = {}):
         """Add a query description and parameter descriptions. Only supported on versions of TigerGraph >= 4.0.0.
 
         Args:
@@ -468,11 +689,11 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
             - `PUT /gsqlserver/gsql/description?graph={graph_name}` (In TigerGraph version 4.0)
             - `PUT /gsql/v1/description?graph={graph_name}` (In TigerGraph versions >4.0)
         """
-        logger.info("entry: describeQuery")
+        logger.debug("entry: updateQueryDescription")
         self.ver = await self.getVer()
         major_ver, minor_ver, patch_ver = self.ver.split(".")
         if int(major_ver) < 4:
-            logger.info("exit: describeQuery")
+            logger.debug("exit: updateQueryDescription")
             raise TigerGraphException(
                 "This function is only supported on versions of TigerGraph >= 4.0.0.", 0)
 
@@ -496,7 +717,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: describeQuery")
+        logger.debug("exit: updateQueryDescription")
 
         return res
 
@@ -516,11 +737,11 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
             - `GET /gsqlserver/gsql/description?graph={graph_name}` (In TigerGraph version 4.0)
             - `GET /gsql/v1/description?graph={graph_name}` (In TigerGraph versions >4.0)
         """
-        logger.info("entry: getQueryDescription")
+        logger.debug("entry: getQueryDescription")
         self.ver = await self.getVer()
         major_ver, minor_ver, patch_ver = self.ver.split(".")
         if int(major_ver) < 4:
-            logger.info("exit: getQueryDescription")
+            logger.debug("exit: getQueryDescription")
             raise TigerGraphException(
                 "This function is only supported on versions of TigerGraph >= 4.0.0.", 0)
 
@@ -558,11 +779,11 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
             - `DELETE /gsqlserver/gsql/description?graph={graph_name}` (In TigerGraph version 4.0)
             - `DELETE /gsql/v1/description?graph={graph_name}` (In TigerGraph versions >4.0)
         """
-        logger.info("entry: dropQueryDescription")
+        logger.debug("entry: dropQueryDescription")
         self.ver = await self.getVer()
         major_ver, minor_ver, patch_ver = self.ver.split(".")
         if int(major_ver) < 4:
-            logger.info("exit: describeQuery")
+            logger.debug("exit: describeQuery")
             raise TigerGraphException(
                 "This function is only supported on versions of TigerGraph >= 4.0.0.", 0)
 
@@ -581,6 +802,6 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: dropQueryDescription")
+        logger.debug("exit: dropQueryDescription")
 
         return res

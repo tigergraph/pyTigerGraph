@@ -36,7 +36,7 @@ class AsyncPyTigerGraphUtils(AsyncPyTigerGraphBase):
             - `POST /echo`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_echo[Echo]
         """
-        logger.info("entry: echo")
+        logger.debug("entry: echo")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -45,7 +45,7 @@ class AsyncPyTigerGraphUtils(AsyncPyTigerGraphBase):
 
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(ret))
-            logger.info("exit: echo (POST)")
+            logger.debug("exit: echo (POST)")
 
             return ret
 
@@ -53,7 +53,7 @@ class AsyncPyTigerGraphUtils(AsyncPyTigerGraphBase):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: echo (GET)")
+        logger.debug("exit: echo (GET)")
 
         return ret
 
@@ -64,14 +64,14 @@ class AsyncPyTigerGraphUtils(AsyncPyTigerGraphBase):
             Returns license details. For an evaluation/trial deployment, returns an information message and -1 remaining days.
 
         """
-        logger.info("entry: getLicenseInfo")
+        logger.debug("entry: getLicenseInfo")
 
         res = await self._req("GET", self.restppUrl + "/showlicenseinfo", resKey="", skipCheck=True)
         ret = _parse_get_license_info(res)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getLicenseInfo")
+        logger.debug("exit: getLicenseInfo")
 
         return ret
 

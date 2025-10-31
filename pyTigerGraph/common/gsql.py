@@ -56,7 +56,7 @@ def _parse_gsql(res, query: str, graphname: str = None, options=None):
 
     if logger.level == logging.DEBUG:
         logger.debug("return: " + str(ret))
-    logger.info("exit: gsql (success)")
+    logger.debug("exit: gsql (success)")
 
     return string_without_ansi
 

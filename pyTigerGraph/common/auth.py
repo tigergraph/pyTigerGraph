@@ -40,7 +40,7 @@ def _parse_create_secret(response: str, alias: str = "", withAlias: bool = False
         if not withAlias:
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(secret))
-            logger.info("exit: createSecret (withAlias")
+            logger.debug("exit: createSecret (withAlias")
 
             return secret
 
@@ -49,7 +49,7 @@ def _parse_create_secret(response: str, alias: str = "", withAlias: bool = False
 
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(ret))
-            logger.info("exit: createSecret (alias)")
+            logger.debug("exit: createSecret (alias)")
 
             return ret
 
@@ -61,7 +61,7 @@ def _parse_create_secret(response: str, alias: str = "", withAlias: bool = False
 
 def _prep_token_request(restppUrl: str,
                         gsUrl: str,
-                        graphname: str,
+                        graphname: str = None,
                         version: str = None,
                         secret: str = None,
                         lifetime: int = None,
@@ -83,7 +83,7 @@ def _prep_token_request(restppUrl: str,
     else:
         method = "POST"
         url = gsUrl + "/gsql/v1/tokens"  # used for TG 4.x
-        data = {"graph": graphname}
+        data = {"graph": graphname} if graphname else {}
 
         # alt_url and alt_data used to construct the method and url for functions run in TG version 3.x
         alt_url = restppUrl+"/requesttoken"  # used for TG 3.x
@@ -113,7 +113,9 @@ def _parse_token_response(response: dict,
                           mainVer: int,
                           base64_credential: str) -> Tuple[Union[Tuple[str, str], str], dict]:
     if not response.get("error"):
-        token = response["token"]
+        # Note that /requesttoken has sightly different response using username-password pair.
+        # See https://docs.tigergraph.com/tigergraph-server/3.10/api/built-in-endpoints#_request_a_token
+        token = response.get("results", response)["token"]
         if setToken:
             apiToken = token
             authHeader = {'Authorization': "Bearer " + apiToken}
@@ -125,7 +127,7 @@ def _parse_token_response(response: dict,
         if response.get("expiration"):
             # On >=4.1 the format for the date of expiration changed. Convert back to old format
             # Can't use self._versionGreaterThan4_0 since you need a token for that
-            if mainVer == 4:
+            if mainVer >= 4:
                 return (token, response.get("expiration")), authHeader
             else:
                 return (token, response.get("expiration"), \

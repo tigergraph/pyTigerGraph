@@ -14,6 +14,7 @@ from pyTigerGraph.common.schema import (
     _prep_upsert_data,
     _prep_get_endpoints
 )
+from pyTigerGraph.common.exception import TigerGraphException
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
             GET /gsqlserver/gsql/udtlist (In TigerGraph versions 3.x)
             GET /gsql/v1/udt/tuples (In TigerGraph versions 4.x)
         """
-        logger.info("entry: _getUDTs")
+        logger.debug("entry: _getUDTs")
 
         if await self._version_greater_than_4_0():
             res = await self._req("GET", self.gsUrl + "/gsql/v1/udt/tuples?graph=" + self.graphname,
@@ -41,7 +42,7 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: _getUDTs")
+        logger.debug("exit: _getUDTs")
 
         return res
 
@@ -64,7 +65,7 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_show_graph_schema_metadata[Show graph schema metadata]
             - `GET /gsql/v1/schema/graphs/{graph_name}`
         """
-        logger.info("entry: getSchema")
+        logger.debug("entry: getSchema")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -80,9 +81,52 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(self.schema))
-        logger.info("exit: getSchema")
+        logger.debug("exit: getSchema")
 
         return self.schema
+
+    async def getSchemaVer(self) -> int:
+        """Retrieves the schema version of the graph by running an interpreted query.
+
+        Returns:
+            The schema version as an integer.
+
+        Endpoint:
+            - `POST /gsqlserver/interpreted_query` (In TigerGraph versions 3.x)
+            - `POST /gsql/v1/queries/interpret` (In TigerGraph versions 4.x)
+        """
+        logger.debug("entry: getSchemaVer")
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        # Create the interpreted query to get schema version
+        query_text = f'INTERPRET QUERY () FOR GRAPH {self.graphname} {{ PRINT "OK"; }}'
+
+        try:
+            # Run the interpreted query
+            if await self._version_greater_than_4_0():
+                ret = await self._req("POST", self.gsUrl + "/gsql/v1/queries/interpret",
+                                params={}, data=query_text, authMode="pwd", resKey="version",
+                                headers={'Content-Type': 'text/plain'})
+            else:
+                ret = await self._req("POST", self.gsUrl + "/gsqlserver/interpreted_query", data=query_text,
+                                params={}, authMode="pwd", resKey="version")
+
+            schema_version_int = None
+            if isinstance(ret, dict) and "schema" in ret:
+                schema_version = ret["schema"]
+                try:
+                    schema_version_int = int(schema_version)
+                except (ValueError, TypeError):
+                    logger.warning(f"Schema version '{schema_version}' could not be converted to integer")
+            if schema_version_int is None:
+                logger.warning("Schema version not found in query result")
+            logger.debug("exit: _get_schema_ver")
+            return schema_version_int
+
+        except Exception as e:
+            logger.error(f"Error getting schema version: {str(e)}")
+            raise Exception(f"Failed to get schema version: {str(e)}")
 
     async def upsertData(self, data: Union[str, object], atomic: bool = False, ackAll: bool = False,
                          newVertexOnly: bool = False, vertexMustExist: bool = False,
@@ -118,7 +162,7 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
             - `POST /graph/{graph_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_upsert_data_to_graph[Upsert data to graph]
         """
-        logger.info("entry: upsertData")
+        logger.debug("entry: upsertData")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -131,7 +175,7 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: getSchema")
+        logger.debug("exit: upsertData")
 
         return res
 
@@ -153,7 +197,7 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
             - `GET /endpoints/{graph_name}`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_list_all_endpoints[List all endpoints]
         """
-        logger.info("entry: getEndpoints")
+        logger.debug("entry: getEndpoints")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -183,8 +227,187 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getEndpoints")
+        logger.debug("exit: getEndpoints")
 
         return ret
 
-    # TODO GET /rebuildnow/{graph_name}
+    async def createGlobalVertices(self, gsql_commands: Union[str, list]) -> dict:
+        """Creates global vertices using GSQL commands.
+
+        Args:
+            gsql_commands (str or list):
+                GSQL CREATE VERTEX statement(s). Can be a single string or list of strings.
+
+        Returns:
+            The response from the database containing the creation result.
+
+        Endpoints:
+            - `POST /gsql/v1/schema/vertices` (In TigerGraph versions >= 4.0)
+        """
+        logger.debug("entry: createGlobalVertices")
+        if not await self._version_greater_than_4_0():
+            logger.debug("exit: createGlobalVertices")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        # Handle single command
+        if isinstance(gsql_commands, str):
+            gsql_commands = [gsql_commands]
+        elif not isinstance(gsql_commands, list):
+            raise TigerGraphException("gsql_commands must be a string or list of strings.", 0)
+
+        if not gsql_commands:
+            raise TigerGraphException("gsql_commands cannot be empty.", 0)
+
+        # Validate that all commands are CREATE VERTEX statements
+        for cmd in gsql_commands:
+            if not cmd.strip().upper().startswith("CREATE VERTEX"):
+                raise TigerGraphException(f"Invalid GSQL command: {cmd}. Must be a CREATE VERTEX statement.", 0)
+
+        data = {"gsql": gsql_commands}
+        params = {"gsql": "true"}
+        res = await self._req("POST", self.gsUrl+"/gsql/v1/schema/vertices",
+                             params=params, data=data, authMode="pwd", resKey="",
+                             headers={'Content-Type': 'application/json'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: createGlobalVertices")
+
+        return res
+
+    async def createGlobalVerticesJson(self, vertices_config: Union[dict, list]) -> dict:
+        """Creates global vertices using JSON configuration.
+
+        Args:
+            vertices_config (dict or list):
+                JSON configuration for vertex creation. Can be a single vertex config dict
+                or a list of vertex config dicts. Each vertex config should include:
+                - Name: Vertex type name
+                - PrimaryId: Primary ID configuration with AttributeType and AttributeName
+                - Attributes: List of attribute configurations
+                - Config: Optional configuration (e.g., STATS)
+
+        Returns:
+            The response from the database containing the creation result.
+
+        Endpoints:
+            - `POST /gsql/v1/schema/vertices` (In TigerGraph versions >= 4.0)
+        """
+        logger.debug("entry: createGlobalVerticesJson")
+        if not await self._version_greater_than_4_0():
+            logger.debug("exit: createGlobalVerticesJson")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        # Handle single vertex config
+        if isinstance(vertices_config, dict):
+            vertices_config = [vertices_config]
+        elif not isinstance(vertices_config, list):
+            raise TigerGraphException("vertices_config must be a dict or list of dicts.", 0)
+
+        if not vertices_config:
+            raise TigerGraphException("vertices_config cannot be empty.", 0)
+
+        # Validate vertex configurations
+        for i, vertex_config in enumerate(vertices_config):
+            if not isinstance(vertex_config, dict):
+                raise TigerGraphException(f"Vertex config at index {i} must be a dict.", 0)
+
+            required_fields = ["Name", "PrimaryId", "Attributes"]
+            for field in required_fields:
+                if field not in vertex_config:
+                    raise TigerGraphException(f"Vertex config at index {i} missing required field: {field}", 0)
+
+        data = {"createVertices": vertices_config}
+        res = await self._req("POST", self.gsUrl+"/gsql/v1/schema/vertices",
+                             data=data, authMode="pwd", resKey="",
+                             headers={'Content-Type': 'application/json'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: createGlobalVerticesJson")
+
+        return res
+
+    async def addGlobalVerticesToGraph(self, vertex_names: Union[str, list], target_graph: str = None) -> dict:
+        """Adds existing global vertices to a local graph.
+
+        Args:
+            vertex_names (str or list):
+                Name(s) of the global vertices to add to the graph. Can be a single
+                vertex name string or a list of vertex names.
+            target_graph (str, optional):
+                The graph to which the global vertices should be added. If not provided,
+                uses the current connection's graphname.
+
+        Returns:
+            The response from the database containing the addition result.
+
+        Endpoints:
+            - `POST /gsql/v1/schema/vertices` (In TigerGraph versions >= 4.0) 
+        """
+        logger.debug("entry: addGlobalVerticesToGraph")
+        if not await self._version_greater_than_4_0():
+            logger.debug("exit: addGlobalVerticesToGraph")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        # Handle single vertex name
+        if isinstance(vertex_names, str):
+            vertex_names = [vertex_names]
+        elif not isinstance(vertex_names, list):
+            raise TigerGraphException("vertex_names must be a string or list of strings.", 0)
+
+        if not vertex_names:
+            raise TigerGraphException("vertex_names cannot be empty.", 0)
+
+        # Validate that all items are strings
+        for i, name in enumerate(vertex_names):
+            if not isinstance(name, str):
+                raise TigerGraphException(f"Vertex name at index {i} must be a string.", 0)
+
+        # Use target_graph or current graphname
+        graph_name = target_graph if target_graph is not None else self.graphname
+
+        data = {"addVertices": vertex_names}
+        params = {"graph": graph_name}
+        res = await self._req("POST", self.gsUrl+"/gsql/v1/schema/vertices",
+                             params=params, data=data, authMode="pwd", resKey="",
+                             headers={'Content-Type': 'application/json'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: addGlobalVerticesToGraph")
+
+        return res
+
+    async def validateGraphSchema(self) -> dict:
+        """Validate graph schema.
+
+        Check that the current graph schema is valid.
+
+        Args:
+            None
+
+        Returns:
+            dict: The response from the database containing the schema validation result.
+
+        Endpoints:
+            - `POST /gsql/v1/schema/check` (In TigerGraph versions >= 4.0)
+        """
+        logger.debug("entry: validateGraphSchema")
+        if not await self._version_greater_than_4_0():
+            logger.debug("exit: validateGraphSchema")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        res = await self._req("POST", self.gsUrl+"/gsql/v1/schema/check",
+                             authMode="pwd", resKey="",
+                             headers={'Content-Type': 'text/plain'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: validateGraphSchema")
+
+        return res

@@ -26,7 +26,7 @@ class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT
                            pyTigerGraphLoading, pyTigerGraphPath, pyTigerGraphDataset, object):
     """Python wrapper for TigerGraph's REST++ and GSQL APIs"""
 
-    def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
+    def __init__(self, host: str = "http://127.0.0.1", graphname: str = "",
                  gsqlSecret: str = "", username: str = "tigergraph", password: str = "tigergraph",
                  tgCloud: bool = False, restppPort: Union[int, str] = "9000",
                  gsPort: Union[int, str] = "14240", gsqlVersion: str = "", version: str = "",

@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 class PyTigerGraphCore(object):
-    def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
+    def __init__(self, host: str = "http://127.0.0.1", graphname: str = "",
                  gsqlSecret: str = "", username: str = "tigergraph", password: str = "tigergraph",
                  tgCloud: bool = False, restppPort: Union[int, str] = "9000",
                  gsPort: Union[int, str] = "14240", gsqlVersion: str = "", version: str = "",
@@ -85,7 +85,7 @@ class PyTigerGraphCore(object):
             TigerGraphException: In case on invalid URL scheme.
 
         """
-        logger.info("entry: __init__")
+        logger.debug("entry: __init__")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -110,6 +110,7 @@ class PyTigerGraphCore(object):
         self.base64_credential = base64.b64encode(
             "{0}:{1}".format(self.username, self.password).encode("utf-8")).decode("utf-8")
 
+        # Detect auth mode automatically by checking if jwtToken or apiToken is provided
         self.authHeader = self._set_auth_header()
 
         # TODO Eliminate version and use gsqlVersion only, meaning TigerGraph server version
@@ -179,7 +180,7 @@ class PyTigerGraphCore(object):
             self.restppPort = restppPort
             self.restppUrl = self.host + ":" + self.restppPort
             
-        self.gsPort = ""
+        self.gsPort = gsPort
         if self.tgCloud and (gsPort == "14240" or gsPort == "443"):
             self.gsPort = sslPort
             self.gsUrl = self.host + ":" + sslPort
@@ -211,7 +212,7 @@ class PyTigerGraphCore(object):
 
         self.asynchronous = False
 
-        logger.info("exit: __init__")
+        logger.debug("exit: __init__")
 
     def _set_auth_header(self):
         """Set the authentication header based on available tokens or credentials."""
@@ -276,7 +277,7 @@ class PyTigerGraphCore(object):
         return False
 
     def _prep_req(self, authMode, headers, url, method, data):
-        logger.info("entry: _req")
+        logger.debug("entry: _prep_req")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -300,14 +301,14 @@ class PyTigerGraphCore(object):
                 self.authHeader = {
                     'Authorization': 'Basic {0}'.format(self.base64_credential)}
                 _headers = self.authHeader
-                authMode = 'pwd'
-
-        if authMode == "pwd":
+                self.authMode = "pwd"
+        else:
             if self.jwtToken:
                 _headers = {'Authorization': "Bearer " + self.jwtToken}
             else:
                 _headers = {'Authorization': 'Basic {0}'.format(
                     self.base64_credential)}
+                self.authMode = "pwd"
 
         if headers:
             _headers.update(headers)
@@ -328,10 +329,12 @@ class PyTigerGraphCore(object):
             verify = True
 
         _headers.update({"X-User-Agent": "pyTigerGraph"})
+        logger.debug("exit: _prep_req")
 
         return _headers, _data, verify
 
     def _parse_req(self, res, jsonResponse, strictJson, skipCheck, resKey):
+        logger.debug("entry: _parse_req")
         if jsonResponse:
             try:
                 res = json.loads(res.text, strict=strictJson)
@@ -345,7 +348,7 @@ class PyTigerGraphCore(object):
         if not resKey:
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(res))
-            logger.info("exit: _req (no resKey)")
+            logger.debug("exit: _parse_req (no resKey)")
 
             return res
 
@@ -354,7 +357,7 @@ class PyTigerGraphCore(object):
             logger.info("Removed _ from resKey")
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res[resKey]))
-        logger.info("exit: _req (resKey)")
+        logger.debug("exit: _parse_req (resKey)")
 
         return res[resKey]
 

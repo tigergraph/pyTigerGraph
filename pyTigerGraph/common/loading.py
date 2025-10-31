@@ -15,7 +15,7 @@ def _prep_run_loading_job_with_file(filePath):
         return data
     except OSError as ose:
         logger.error(ose.strerror)
-        logger.info("exit: runLoadingJobWithFile")
+        logger.debug("exit: runLoadingJobWithFile")
 
         return None
         # TODO Should throw exception instead?

@@ -247,7 +247,7 @@ class AI:
         url = f"{self.nlqs_host}/{self.conn.graphname}/{self.server_mode}/initialize"
         return self.conn._req("POST", url, authMode="pwd", resKey=None)
 
-    def createDocumentIngest(self, data_source, data_source_config, loader_config, file_format):
+    def createDocumentIngest(self, data_source="", data_source_config={}, loader_config={}, file_format=""):
         """ Create a document ingest.
             Args:
                 data_source (str):
@@ -271,7 +271,7 @@ class AI:
         url = f"{self.nlqs_host}/{self.conn.graphname}/{self.server_mode}/create_ingest"
         return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
 
-    def runDocumentIngest(self, load_job_id, data_source_id, data_path, data_source="remote"):
+    def runDocumentIngest(self, load_job_id="", data_source_id="", data_path="", data_source="", load_job_info: dict = None):
         """ Run a document ingest.
             Args:
                 load_job_id (str):
@@ -280,17 +280,38 @@ class AI:
                     The data source ID of the document ingest.
                 data_path (str):
                     The data path of the document ingest.
+                data_source (str):
+                    The data source of the document ingest.
+                load_job_info (dict):
+                    The information of the load job.
             Returns:
                 JSON response from the document ingest.
         """
-        if data_source.lower() == "local" or data_path.startswith(("/", ".", "~")) :
+        if load_job_info:
+            if not load_job_id and "load_job_id" in load_job_info:
+                load_job_id = load_job_info["load_job_id"]
+            if not data_source_id and "data_source_id" in load_job_info:
+                data_source_id = load_job_info["data_source_id"]
+            if not data_path and "data_path" in load_job_info:
+                data_path = load_job_info["data_path"]
+            if not data_source and "data_source" in load_job_info:
+                data_source = load_job_info["data_source"]
+
+        if not load_job_id or not data_path or not data_source_id and not load_job_info:
+            raise ValueError("load_job_id and data_path are required, one of data_source_id or load_job_info must be provided.")
+
+        if data_source.lower() == "local" and data_path.startswith(("/", ".", "~")) :
             return self.conn.runLoadingJobWithFile(data_path, data_source_id, load_job_id)
         else:
             data = {
                 "load_job_id": load_job_id,
-                "data_source_id": data_source_id,
                 "file_path": data_path
             }
+            if load_job_info:
+                data["load_job_info"] = load_job_info
+            if data_source_id:
+                data["data_source_id"] = data_source_id
+
             url = f"{self.nlqs_host}/{self.conn.graphname}/{self.server_mode}/ingest"
             return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)
 

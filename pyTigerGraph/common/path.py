@@ -60,7 +60,7 @@ def _prepare_path_params(sourceVertices: Union[dict, tuple, list],
         Returns:
             A list of vertices in the format required by the path finding endpoints.
         """
-        logger.info("entry: parseVertices")
+        logger.debug("entry: parseVertices")
         logger.debug("params: " + str(locals))
 
         ret = []
@@ -78,7 +78,7 @@ def _prepare_path_params(sourceVertices: Union[dict, tuple, list],
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: parseVertices")
+        logger.debug("exit: parseVertices")
 
         return ret
 
@@ -94,7 +94,7 @@ def _prepare_path_params(sourceVertices: Union[dict, tuple, list],
         Returns:
             A list of filters in the format required by the path finding endpoints.
         """
-        logger.info("entry: parseFilters")
+        logger.debug("entry: parseFilters")
         logger.debug("params: " + str(locals()))
 
         ret = []
@@ -111,11 +111,11 @@ def _prepare_path_params(sourceVertices: Union[dict, tuple, list],
                 logger.warning("Invalid filter type or value: " + str(f))
 
         logger.debug("return: " + str(ret))
-        logger.info("exit: parseFilters")
+        logger.debug("exit: parseFilters")
 
         return ret
 
-    logger.info("entry: _preparePathParams")
+    logger.debug("entry: _preparePathParams")
     logger.debug("params: " + str(locals()))
 
     # Assembling the input payload
@@ -136,6 +136,6 @@ def _prepare_path_params(sourceVertices: Union[dict, tuple, list],
     ret = json.dumps(data)
 
     logger.debug("return: " + str(ret))
-    logger.info("exit: _preparePathParams")
+    logger.debug("exit: _preparePathParams")
 
     return ret

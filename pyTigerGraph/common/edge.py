@@ -25,7 +25,7 @@ def _parse_get_edge_source_vertex_type(edgeTypeDetails):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getEdgeSourceVertexType (single source)")
+        logger.debug("exit: getEdgeSourceVertexType (single source)")
 
         return ret
 
@@ -38,7 +38,7 @@ def _parse_get_edge_source_vertex_type(edgeTypeDetails):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(vts))
-        logger.info("exit: getEdgeSourceVertexType (multi source)")
+        logger.debug("exit: getEdgeSourceVertexType (multi source)")
 
         return vts
     else:
@@ -57,7 +57,7 @@ def _parse_get_edge_target_vertex_type(edgeTypeDetails):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getEdgeTargetVertexType (single target)")
+        logger.debug("exit: getEdgeTargetVertexType (single target)")
 
         return ret
 
@@ -70,7 +70,7 @@ def _parse_get_edge_target_vertex_type(edgeTypeDetails):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(vts))
-        logger.info("exit: getEdgeTargetVertexType (multi target)")
+        logger.debug("exit: getEdgeTargetVertexType (multi target)")
 
         return vts
     else:
@@ -126,7 +126,7 @@ def _parse_get_edge_count_from(res, edgeType):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getEdgeCountFrom (single edge type)")
+        logger.debug("exit: getEdgeCountFrom (single edge type)")
 
         return ret
 
@@ -447,7 +447,7 @@ def edgeSetToDataFrame(edgeSet: list,
         ID or source and target vertices, and the edge type.
 
     """
-    logger.info("entry: edgeSetToDataFrame")
+    logger.debug("entry: edgeSetToDataFrame")
     logger.debug("params: " + str(locals()))
 
     try:
@@ -469,6 +469,6 @@ def edgeSetToDataFrame(edgeSet: list,
 
     if logger.level == logging.DEBUG:
         logger.debug("return: " + str(ret))
-    logger.info("exit: edgeSetToDataFrame")
+    logger.debug("exit: edgeSetToDataFrame")
 
     return ret

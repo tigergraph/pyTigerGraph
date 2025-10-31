@@ -83,7 +83,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
         Endpoints:
             - `PUT /gsqlserver/gsql/userdefinedfunction?filename={ExprFunctions or ExprUtil}"` (In TigerGraph versions 3.x)
         """
-        logger.info("entry: installUDF")
+        logger.debug("entry: installUDF")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -136,7 +136,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: 0")
-        logger.info("exit: installUDF")
+        logger.debug("exit: installUDF")
 
         return 0
 
@@ -161,7 +161,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             - `GET /gsqlserver/gsql/userdefinedfunction?filename={ExprFunctions or ExprUtil}` (In TigerGraph versions 3.x)
             - `GET /gsql/v1/udt/files/{ExprFunctions or ExprUtil}` (In TigerGraph versions 4.x)
         """
-        logger.info("entry: getUDF")
+        logger.debug("entry: getUDF")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -180,3 +180,318 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             responses[file_name] = resp
 
         return _parse_get_udf(responses, json_out=json_out)
+
+    def getAsyncRequestStatus(self, requestId: str) -> dict:
+        """Check status of asynchronous request with requestId.
+
+        Args:
+            requestId (str):
+                The request ID of the asynchronous statement to check.
+
+        Returns:
+            dict: The response from the database containing the statement status.
+
+        Endpoints:
+            - `GET /gsql/v1/statements/{requestId}` (In TigerGraph versions >= 4.0)
+        """
+        logger.debug("entry: getAsyncRequestStatus")
+        if not self._version_greater_than_4_0():
+            logger.debug("exit: getAsyncRequestStatus")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        res = self._get(self.gsUrl+"/gsql/v1/statements/"+requestId,
+                       authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: getAsyncRequestStatus")
+
+        return res
+
+    def cancelAsyncRequest(self, requestId: str) -> dict:
+        """Cancel an asynchronous request with requestId.
+
+        Args:
+            requestId (str):
+                The request ID of the asynchronous statement to cancel.
+
+        Returns:
+            dict: The response from the database containing the cancellation result.
+
+        Endpoints:
+            - `PUT /gsql/v1/statements/{requestId}/cancel` (In TigerGraph versions >= 4.0)
+        """
+        logger.debug("entry: cancelAsyncRequest")
+        if not self._version_greater_than_4_0():
+            logger.debug("exit: cancelAsyncRequest")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        res = self._put(self.gsUrl+"/gsql/v1/statements/"+requestId+"/cancel",
+                       authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: cancelAsyncRequest")
+
+        return res
+
+    def recoverCatalog(self) -> dict:
+        """Recover gdict catalog.
+
+        Args:
+            None
+
+        Returns:
+            dict: The response from the database containing the recovery result.
+
+        Endpoints:
+            - `POST /gsql/v1/schema/recover` (In TigerGraph versions >= 4.0)
+        """
+        logger.debug("entry: recoverCatalog")
+        if not self._version_greater_than_4_0():
+            logger.debug("exit: recoverCatalog")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        res = self._post(self.gsUrl+"/gsql/v1/schema/recover",
+                        authMode="pwd", resKey="", headers={'Content-Type': 'text/plain'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: recoverCatalog")
+
+        return res
+
+    def clearGraphStore(self) -> dict:
+        """Clear graph store.
+
+        This endpoint permanently deletes all the data out of the graph store (database),
+        for all graphs. It does not delete the database schema, nor does it delete queries
+        or loading jobs. It is equivalent to the GSQL command CLEAR GRAPH STORE.
+
+        WARNING: This operation is not reversible. The deleted data cannot be recovered.
+
+        Args:
+            None
+
+        Returns:
+            dict: The response from the database containing the clear operation result.
+
+        Endpoints:
+            - `GET /gsql/v1/clear-store` (In TigerGraph versions >= 4.0)
+        """
+        logger.debug("entry: clearGraphStore")
+        if not self._version_greater_than_4_0():
+            logger.debug("exit: clearGraphStore")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        res = self._get(self.gsUrl+"/gsql/v1/clear-store",
+                       authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: clearGraphStore")
+
+        return res
+
+    def dropAll(self) -> dict:
+        """Drop all.
+
+        This endpoint drops all graphs, vertices, edges, queries, and loading jobs
+        from the database. This operation is equivalent to dropping everything
+        and starting fresh.
+
+        WARNING: This operation is not reversible. The deleted data cannot be recovered.
+
+        Args:
+            None
+
+        Returns:
+            dict: The response from the database containing the drop operation result.
+
+        Endpoints:
+            - `GET /gsql/v1/drop-all` (In TigerGraph versions >= 4.0)
+        """
+        logger.debug("entry: dropAll")
+        if not self._version_greater_than_4_0():
+            logger.debug("exit: dropAll")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        res = self._get(self.gsUrl+"/gsql/v1/drop-all",
+                       authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: dropAll")
+
+        return res
+
+    def exportDatabase(self, path: str, graphNames: list = None, schema: bool = False,
+                      template: bool = False, data: bool = False, users: bool = False,
+                      password: str = None, separator: str = "\u001d", eol: str = "\u001c") -> dict:
+        """Export database.
+
+        Args:
+            path (str):
+                The path where the database export will be saved.
+            graphNames (list, optional):
+                List of graph names to export. Defaults to ["*"] for all graphs.
+            schema (bool, optional):
+                Whether to export schema. Defaults to False.
+            template (bool, optional):
+                Whether to export templates. Defaults to False.
+            data (bool, optional):
+                Whether to export data. Defaults to False.
+            users (bool, optional):
+                Whether to export users. Defaults to False.
+            password (str, optional):
+                Password for the export operation.
+            separator (str, optional):
+                Field separator character. Defaults to "\u001d".
+            eol (str, optional):
+                End of line character. Defaults to "\u001c".
+
+        Returns:
+            dict: The response from the database containing the export operation result.
+
+        Endpoints:
+            - `POST /gsql/v1/db-export` (In TigerGraph versions >= 4.0)
+        """
+        logger.debug("entry: exportDatabase")
+        if not self._version_greater_than_4_0():
+            logger.debug("exit: exportDatabase")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        if graphNames is None:
+            graphNames = ["*"]
+
+        data = {
+            "path": path,
+            "graphNames": graphNames,
+            "schema": schema,
+            "template": template,
+            "data": data,
+            "users": users,
+            "separator": separator,
+            "eol": eol
+        }
+
+        if password is None:
+            password = self.password
+
+        if password is not None:
+            data["password"] = password
+
+        res = self._post(self.gsUrl+"/gsql/v1/db-export",
+                        data=data, authMode="pwd", resKey="",
+                        headers={'Content-Type': 'application/json'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: exportDatabase")
+
+        return res
+
+    def importDatabase(self, path: str, graphNames: list = None, keepUsers: bool = False,
+                      password: str = None) -> dict:
+        """Import database.
+
+        Args:
+            path (str):
+                The path where the database import will be loaded from.
+            graphNames (list, optional):
+                List of graph names to import. Defaults to ["*"] for all graphs.
+            keepUsers (bool, optional):
+                Whether to keep existing users. Defaults to False.
+            password (str, optional):
+                Password for the import operation.
+
+        Returns:
+            dict: The response from the database containing the import operation result.
+
+        Endpoints:
+            - `POST /gsql/v1/db-import` (In TigerGraph versions >= 4.0)
+        """
+        logger.debug("entry: importDatabase")
+        if not self._version_greater_than_4_0():
+            logger.debug("exit: importDatabase")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        if graphNames is None:
+            graphNames = ["*"]
+
+        data = {
+            "path": path,
+            "graphNames": graphNames,
+            "keepUsers": keepUsers
+        }
+
+        if password is None:
+            password = self.password
+
+        if password is not None:
+            data["password"] = password
+
+        res = self._post(self.gsUrl+"/gsql/v1/db-import",
+                        data=data, authMode="pwd", resKey="",
+                        headers={'Content-Type': 'application/json'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: importDatabase")
+
+        return res
+
+    def getGSQLVersion(self, verbose: bool = False) -> dict:
+        """Get GSQL version information.
+
+        Args:
+            verbose (bool, optional):
+                Whether to return detailed version information. Defaults to False.
+
+        Returns:
+            dict: The response from the database containing the GSQL version information.
+
+        Endpoints:
+            - `GET /gsql/v1/version` (In TigerGraph versions >= 4.0)
+        """
+        logger.debug("entry: getGSQLVersion")
+        if not self._version_greater_than_4_0():
+            logger.debug("exit: getGSQLVersion")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("params: " + self._locals(locals()))
+
+        params = {}
+        if verbose:
+            params["verbose"] = verbose
+
+        res = self._get(self.gsUrl+"/gsql/v1/version",
+                       params=params, authMode="pwd", resKey="",
+                       headers={'Content-Type': 'text/plain'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: getGSQLVersion")
+
+        return res

@@ -13,7 +13,7 @@ from pyTigerGraph import TigerGraphConnection
 
 conn = TigerGraphConnection(
     host="http://localhost",
-    graphname="MyGraph",
+    graphname="your_graph_name",
     username="tigergraph",
     password="tigergraph")
 
@@ -64,7 +64,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
                 protocol (http:// or https://). If `certPath` is `None` and the protocol is https,
                 a self-signed certificate will be used.
             graphname:
-                The default graph for running queries.
+                The graph name for running queries. **Required** - must be specified.
             gsqlSecret:
                 The secret key for GSQL. See https://docs.tigergraph.com/tigergraph-server/current/user-access/managing-credentials#_secrets.
             username:
@@ -102,144 +102,17 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
             TigerGraphException: In case on invalid URL scheme.
 
         """
-        logger.info("entry: __init__")
-        if logger.level == logging.DEBUG:
-            logger.debug("params: " + self._locals(locals()))
+        super().__init__(host=host, graphname=graphname, gsqlSecret=gsqlSecret,
+                         username=username, password=password, tgCloud=tgCloud,
+                         restppPort=restppPort, gsPort=gsPort, gsqlVersion=gsqlVersion,
+                         version=version, apiToken=apiToken, useCert=useCert, certPath=certPath,
+                         debug=debug, sslPort=sslPort, gcp=gcp, jwtToken=jwtToken)
 
-        inputHost = urlparse(host)
-        if inputHost.scheme not in ["http", "https"]:
-            raise TigerGraphException("Invalid URL scheme. Supported schemes are http and https.",
-                                      "E-0003")
-        self.netloc = inputHost.netloc
-        self.host = "{0}://{1}".format(inputHost.scheme, self.netloc)
-        if gsqlSecret != "":
-            self.username = "__GSQL__secret"
-            self.password = gsqlSecret
-        else:
-            self.username = username
-            self.password = password
-        self.graphname = graphname
-        self.responseConfigHeader = {}
-        self.awsIamHeaders = {}
-
-        self.jwtToken = jwtToken
-        self.apiToken = apiToken
-        self.base64_credential = base64.b64encode(
-            "{0}:{1}".format(self.username, self.password).encode("utf-8")).decode("utf-8")
-
-        self.authHeader = self._set_auth_header()
-
-        # TODO Eliminate version and use gsqlVersion only, meaning TigerGraph server version
-        if gsqlVersion:
-            self.version = gsqlVersion
-        elif version:
+        if graphname == "MyGraph":
             warnings.warn(
-                "The `version` parameter is deprecated; use the `gsqlVersion` parameter instead.",
-                DeprecationWarning)
-            self.version = version
-        else:
-            self.version = ""
-
-        if debug is not None:
-            warnings.warn(
-                "The `debug` parameter is deprecated; configure standard logging in your app.",
-                DeprecationWarning)
-        if not debug:
-            sys.excepthook = excepthook  # TODO Why was this necessary? Can it be removed?
-            sys.tracebacklimit = None
-
-        self.schema = None
-
-        # TODO Remove useCert parameter
-        if useCert is not None:
-            warnings.warn(
-                "The `useCert` parameter is deprecated; the need for a CA certificate is now determined by URL scheme.",
-                DeprecationWarning)
-        if inputHost.scheme == "http":
-            self.downloadCert = False
-            self.useCert = False
-            self.certPath = ""
-        elif inputHost.scheme == "https":
-            if not certPath:
-                self.downloadCert = True
-            else:
-                self.downloadCert = False
-            self.useCert = True
-            self.certPath = certPath
-        self.sslPort = str(sslPort)
-
-        # TODO Remove gcp parameter
-        if gcp:
-            warnings.warn("The `gcp` parameter is deprecated.",
-                          DeprecationWarning)
-        self.tgCloud = tgCloud or gcp
-        if "tgcloud" in self.netloc.lower():
-            try:  # If get request succeeds, using TG Cloud instance provisioned after 6/20/2022
-                self._get(self.host + "/api/ping", resKey="message")
-                self.tgCloud = True
-            # If get request fails, using TG Cloud instance provisioned before 6/20/2022, before new firewall config
-            except requests.exceptions.RequestException:
-                self.tgCloud = False
-            except TigerGraphException:
-                raise (TigerGraphException("Incorrect graphname."))
-
-        restppPort = str(restppPort)
-        gsPort = str(gsPort)
-        sslPort = str(sslPort)
-        if restppPort == gsPort:
-            self.restppPort = restppPort
-            self.restppUrl = self.host + ":" + restppPort + "/restpp"
-        elif (self.tgCloud and (restppPort == "9000" or restppPort == "443")):
-            if restppPort == gsPort:
-                sslPort = gsPort
-            self.restppPort = sslPort
-            self.restppUrl = self.host + ":" + sslPort + "/restpp"
-        else:
-            self.restppPort = restppPort
-            self.restppUrl = self.host + ":" + self.restppPort
-        
-        self.gsPort = gsPort
-        if self.tgCloud and (gsPort == "14240" or gsPort == "443"):
-            self.gsPort = sslPort
-            self.gsUrl = self.host + ":" + sslPort
-        else:
-            self.gsPort = gsPort
-            self.gsUrl = self.host + ":" + self.gsPort
-        self.url = ""
-
-        if self.username.startswith("arn:aws:iam::"):
-            import boto3
-            from botocore.awsrequest import AWSRequest
-            from botocore.auth import SigV4Auth
-            # Prepare a GetCallerIdentity request.
-            request = AWSRequest(
-                method="POST",
-                url="https://sts.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15",
-                headers={
-                    'Host': 'sts.amazonaws.com'
-                })
-            # Get headers
-            SigV4Auth(boto3.Session().get_credentials(),
-                      "sts", "us-east-1").add_auth(request)
-            self.awsIamHeaders["X-Amz-Date"] = request.headers["X-Amz-Date"]
-            self.awsIamHeaders["X-Amz-Security-Token"] = request.headers["X-Amz-Security-Token"]
-            self.awsIamHeaders["Authorization"] = request.headers["Authorization"]
-
-        if self.jwtToken:
-            self._verify_jwt_token_support()
-
-        self.asynchronous = False
-
-        logger.info("exit: __init__")
-
-    def _set_auth_header(self):
-        """Set the authentication header based on available tokens or credentials."""
-        if self.jwtToken:
-            return {"Authorization": "Bearer " + self.jwtToken}
-        elif self.apiToken:
-            return {"Authorization": "Bearer " + self.apiToken}
-        else:
-            return {"Authorization": "Basic {0}".format(self.base64_credential)}
+                "The default graphname 'MyGraph' is deprecated. Please explicitly specify your graph name.",
+                DeprecationWarning
+            )
 
     def _verify_jwt_token_support(self):
         try:
@@ -271,7 +144,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         del _locals["self"]
         return str(_locals)
 
-        logger.info("exit: __init__")
+        logger.debug("exit: __init__")
 
     def _req(self, method: str, url: str, authMode: str = "token", headers: dict = None,
              data: Union[dict, list, str] = None, resKey: str = "results", skipCheck: bool = False,
@@ -305,13 +178,12 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         Returns:
             The (relevant part of the) response from the request (as a dictionary).
         """
-        _headers, _data, verify = self._prep_req(
-            authMode, headers, url, method, data)
+        _headers, _data, verify = self._prep_req(authMode, headers, url, method, data)
 
         if "GSQL-TIMEOUT" in _headers:
-            http_timeout = (10, int(int(_headers["GSQL-TIMEOUT"])/1000) + 10)
+            http_timeout = (30, int(int(_headers["GSQL-TIMEOUT"])/1000) + 30)
         else:
-            http_timeout = None
+            http_timeout = (30, None)
 
         if jsonData:
             res = requests.request(
@@ -361,6 +233,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
                 self.restppUrl = newRestppUrl
                 self.restppPort = self.gsPort
             else:
+                e.add_note(f"headers: {_headers}")
                 raise e
 
         return self._parse_req(res, jsonResponse, strictJson, skipCheck, resKey)
@@ -387,7 +260,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         Returns:
             The (relevant part of the) response from the request (as a dictionary).
        """
-        logger.info("entry: _get")
+        logger.debug("entry: _get")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -396,7 +269,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: _get")
+        logger.debug("exit: _get")
 
         return res
 
@@ -425,7 +298,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         Returns:
             The (relevant part of the) response from the request (as a dictionary).
         """
-        logger.info("entry: _post")
+        logger.debug("entry: _post")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -434,7 +307,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: _post")
+        logger.debug("exit: _post")
 
         return res
 
@@ -450,7 +323,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         Returns:
             The response from the request (as a dictionary).
         """
-        logger.info("entry: _put")
+        logger.debug("entry: _put")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -459,7 +332,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: _put")
+        logger.debug("exit: _put")
 
         return res
 
@@ -475,7 +348,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         Returns:
             The response from the request (as a dictionary).
         """
-        logger.info("entry: _delete")
+        logger.debug("entry: _delete")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -484,7 +357,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: _delete")
+        logger.debug("exit: _delete")
 
         return res
     
@@ -504,7 +377,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
             - `GET /version`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_show_component_versions[Show component versions]
         """
-        logger.info("entry: getVersion")
+        logger.debug("entry: getVersion")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
         response = self._get(self.restppUrl+"/version",
@@ -513,7 +386,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(components))
-        logger.info("exit: getVersion")
+        logger.debug("exit: getVersion")
         return components
 
     def getVer(self, component: str = "product", full: bool = False) -> str:
@@ -533,7 +406,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         Raises:
             `TigerGraphException` if invalid/non-existent component is specified.
         """
-        logger.info("entry: getVer")
+        logger.debug("entry: getVer")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
         version = self.getVersion()
@@ -541,7 +414,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getVer")
+        logger.debug("exit: getVer")
 
         return ret
     
@@ -564,8 +437,32 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
 
         Returns:
             Boolean of whether databse version is greater than 4.0.
+
+        Note:
+            The result is cached to avoid repeated server calls. The cache is cleared
+            when the connection object is recreated.
         """
-        version = self.getVer().split('.')
-        if version[0] >= "4" and version[1] > "0":
-            return True
-        return False
+        # Use cached value if available
+        if hasattr(self, '_cached_version_greater_than_4_0'):
+            return self._cached_version_greater_than_4_0
+
+        # Cache not set, fetch version and cache the result
+        try:
+            version = self.getVer().split('.')
+        except TigerGraphException as e:
+            if e.code == "REST-10016":
+                self.getToken()
+                version = self.getVer().split('.')
+            else:
+                raise e
+        result = version[0] >= "4" and version[1] > "0"
+        self._cached_version_greater_than_4_0 = result
+        return result
+
+    def _validate_graphname(self, operation_name=""):
+        """Validate that graphname is set for operations that require it."""
+        if not self.graphname:
+            raise TigerGraphException(
+                f"Graph name is required for {operation_name}. Please specify graphname when creating the connection.",
+                "E-0004"
+            )

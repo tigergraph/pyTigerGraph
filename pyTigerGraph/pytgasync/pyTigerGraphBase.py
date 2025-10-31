@@ -16,7 +16,7 @@ from pyTigerGraph import TigerGraphConnection
 
 conn = AsyncTigerGraphConnection(
     host="http://localhost",
-    graphname="MyGraph",
+    graphname="",
     username="tigergraph",
     password="tigergraph")
 
@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 class AsyncPyTigerGraphBase(PyTigerGraphCore):
-    def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
+    def __init__(self, host: str = "http://127.0.0.1", graphname: str = "",
                  gsqlSecret: str = "", username: str = "tigergraph", password: str = "tigergraph",
                  tgCloud: bool = False, restppPort: Union[int, str] = "9000",
                  gsPort: Union[int, str] = "14240", gsqlVersion: str = "", version: str = "",
@@ -130,13 +130,12 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
         Returns:
             The (relevant part of the) response from the request (as a dictionary).
         """
-        _headers, _data, verify = self._prep_req(
-            authMode, headers, url, method, data)
+        _headers, _data, verify = self._prep_req(authMode, headers, url, method, data)
 
         if "GSQL-TIMEOUT" in _headers:
-            http_timeout = (10, int(int(_headers["GSQL-TIMEOUT"])/1000) + 10)
+            http_timeout = (30, int(int(_headers["GSQL-TIMEOUT"])/1000) + 30)
         else:
-            http_timeout = None
+            http_timeout = (30, None)
 
         async with httpx.AsyncClient(timeout=None) as client:
             if jsonData:
@@ -207,7 +206,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
         Returns:
             The (relevant part of the) response from the request (as a dictionary).
        """
-        logger.info("entry: _get")
+        logger.debug("entry: _get")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -215,7 +214,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: _get")
+        logger.debug("exit: _get")
 
         return res
 
@@ -244,7 +243,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
         Returns:
             The (relevant part of the) response from the request (as a dictionary).
         """
-        logger.info("entry: _post")
+        logger.debug("entry: _post")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -252,7 +251,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: _post")
+        logger.debug("exit: _post")
 
         return res
 
@@ -268,7 +267,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
         Returns:
             The response from the request (as a dictionary).
         """
-        logger.info("entry: _put")
+        logger.debug("entry: _put")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -276,7 +275,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: _put")
+        logger.debug("exit: _put")
 
         return res
 
@@ -292,7 +291,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
         Returns:
             The response from the request (as a dictionary).
         """
-        logger.info("entry: _delete")
+        logger.debug("entry: _delete")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
@@ -300,7 +299,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
-        logger.info("exit: _delete")
+        logger.debug("exit: _delete")
 
         return res
 
@@ -320,7 +319,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
             - `GET /version`
                 See xref:tigergraph-server:API:built-in-endpoints.adoc#_show_component_versions[Show component versions]
         """
-        logger.info("entry: getVersion")
+        logger.debug("entry: getVersion")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
         response = await self._get(self.restppUrl+"/version", strictJson=False, resKey="message")
@@ -328,7 +327,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(components))
-        logger.info("exit: getVersion")
+        logger.debug("exit: getVersion")
         return components
 
     async def getVer(self, component: str = "product", full: bool = False) -> str:
@@ -348,7 +347,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
         Raises:
             `TigerGraphException` if invalid/non-existent component is specified.
         """
-        logger.info("entry: getVer")
+        logger.debug("entry: getVer")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
         version = await self.getVersion()
@@ -356,7 +355,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
-        logger.info("exit: getVer")
+        logger.debug("exit: getVer")
 
         return ret
     
@@ -379,9 +378,25 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
 
         Returns:
             Boolean of whether databse version is greater than 4.0.
+
+        Note:
+            The result is cached to avoid repeated server calls. The cache is cleared
+            when the connection object is recreated.
         """
-        version = await self.getVer()
+        # Use cached value if available
+        if hasattr(self, '_cached_version_greater_than_4_0'):
+            return self._cached_version_greater_than_4_0
+
+        # Cache not set, fetch version and cache the result
+        try:
+            version = self.getVer().split('.')
+        except TigerGraphException as e:
+            if e.code == "REST-10016":
+                self.getToken()
+                version = self.getVer().split('.')
+            else:
+                raise e
         version = version.split('.')
-        if version[0] >= "4" and version[1] > "0":
-            return True
-        return False
+        result = version[0] >= "4" and version[1] > "0"
+        self._cached_version_greater_than_4_0 = result
+        return result

@@ -250,6 +250,86 @@ class test_pyTigerGraphQuery(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.conn.installQueries("non_existent_query")
 
+    def test_getQueryContent(self):
+        """Test getQueryContent function."""
+        # Test getting content of an existing query
+        res = self.conn.getQueryContent("query1")
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+
+    def test_createQuery(self):
+        """Test createQuery function."""
+        # Test creating a simple query
+        query_text = """
+        CREATE QUERY testCreateQuery() FOR GRAPH $graphname {
+            PRINT "Hello World";
+        }
+        """
+        res = self.conn.createQuery(query_text)
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+        self.assertIn("message", res)
+
+    def test_dropQueries(self):
+        """Test dropQueries function."""
+        # Test dropping a single query
+        res = self.conn.dropQueries("testCreateQuery")
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+
+        # Test dropping multiple queries (use queries that don't exist to test error handling)
+        # This should return an error response but still be a valid dict
+        res = self.conn.dropQueries(["testQuery1", "testQuery2"])
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+
+        # Test invalid input
+        with self.assertRaises(Exception):
+            self.conn.dropQueries(123)  # Should be string or list
+
+    def test_listQueryNames(self):
+        """Test listQueryNames function."""
+        res = self.conn.listQueryNames()
+        self.assertIsInstance(res, list)
+
+    def test_checkQuerySemantic(self):
+        """Test checkQuerySemantic function."""
+        # Test valid query
+        valid_query = """
+        CREATE QUERY testSemanticQuery() {
+            PRINT "Hello World";
+        }
+        """
+        res = self.conn.checkQuerySemantic(valid_query)
+        self.assertIsInstance(res, dict)
+        self.assertIn("warnings", res)
+        self.assertIn("errors", res)
+
+        # Test invalid query
+        invalid_query = "INVALID GSQL SYNTAX"
+        res = self.conn.checkQuerySemantic(invalid_query)
+        self.assertIsInstance(res, dict)
+        self.assertIn("warnings", res)
+        self.assertIn("errors", res)
+
+    def test_getQueryInfo(self):
+        """Test getQueryInfo function."""
+        # Test getting info for all queries
+        res = self.conn.getQueryInfo()
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+        self.assertIn("results", res)
+
+        # Test getting info for specific query
+        res = self.conn.getQueryInfo(queryName="query1")
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+
+        # Test getting info with status filter
+        res = self.conn.getQueryInfo(status="VALID")
+        self.assertIsInstance(res, dict)
+        self.assertIn("error", res)
+
 
 if __name__ == '__main__':
     unittest.main()
