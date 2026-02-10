@@ -49,7 +49,7 @@ def _prep_run_loading_job(gsUrl: str,
     '''url builder for runLoadingJob()'''
     url = gsUrl + "/gsql/v1/loading-jobs/run?graph=" + graphname
     data = {}
-    
+
     data["name"] = jobName
     data["dataSources"] = [data_source_config]
 
@@ -65,7 +65,7 @@ def _prep_run_loading_job(gsUrl: str,
         data["maxNumError"] = maxNumError
     if maxPercentError:
         data["maxPercentError"] = maxPercentError
-    
+
     return url, data
 
 def _prep_abort_loading_jobs(gsUrl: str, graphname: str, jobIds: list[str], pauseJob: bool):

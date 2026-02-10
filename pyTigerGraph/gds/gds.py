@@ -46,7 +46,7 @@ class GDS:
             Args:
                 conn (TigerGraphConnection):
                     Accept a TigerGraphConnection to run queries with
-                    
+
             Returns:
                 None
         """
@@ -231,7 +231,7 @@ class GDS:
         If specify both parameters, `batch_size` takes priority. 
         . It picks a specified number (`num_neighbors`) of neighbors of each seed at random.
         . It picks the same number of neighbors for each neighbor, and repeats this process until it finished performing a specified number of hops (`num_hops`).
-        
+
         This generates one subgraph. 
         As you loop through this data loader, every vertex will at some point be chosen as a seed and you will get the subgraph
         expanded from the seeds. 
@@ -949,7 +949,7 @@ class GDS:
         If specify both parameters, `batch_size` takes priority. 
         . Starting from the vertices attached to the seed edges, it picks a specified number (`num_neighbors`) of neighbors of each vertex at random.
         . It picks the same number of neighbors for each neighbor, and repeats this process until it finished performing a specified number of hops (`num_hops`).
-        
+
         This generates one subgraph. 
         As you loop through this data loader, every edge will at some point be chosen as a seed and you will get the subgraph
         expanded from the seeds. 
@@ -1379,7 +1379,7 @@ class GDS:
         If specify both parameters, `batch_size` takes priority. 
         . It picks a specified number of neighbors of each type (as specified by the dict `num_neighbors`) of each seed at random.
         . It picks the specified number of neighbors of every type for each neighbor, and repeats this process until it finished performing a specified number of hops (`num_hops`).
-        
+
         This generates one subgraph. 
         As you loop through this data loader, every vertex will at some point be chosen as a seed and you will get the subgraph
         expanded from the seeds. 
@@ -1565,7 +1565,7 @@ class GDS:
             if reinstall_query:
                 loader.reinstall_query()
             return loader
-    
+
     def featurizer(
         self,
         repo: str = None, 
@@ -1650,7 +1650,7 @@ class GDS:
         Make sure to create the appropriate attributes in the graph before using these functions.
 
         Usage:
-            
+
             * A random 60% of edges will have their attribute "attr_name" set to True, and 
             others False. `attr_name` can be any attribute that exists in the database (same below).
             Example:

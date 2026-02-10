@@ -142,7 +142,7 @@ class RandomVertexSplitter(BaseRandomSplitter):
         v_types (List[str], optional):
             List of vertex types to split. If not provided, all vertex types are used.
         timeout (int, optional):
-            Timeout value for the operation. Defaults to 600000.
+            Timeout value for the operation in milliseconds. Defaults to 600000 (10 minutes).
     """
 
     def __init__(
@@ -229,7 +229,7 @@ class RandomEdgeSplitter(BaseRandomSplitter):
         e_types (List[str], optional):
             List of edge types to split. If not provided, all edge types are used.
         timeout (int, optional):
-            Timeout value for the operation. Defaults to 600000.
+            Timeout value for the operation in milliseconds. Defaults to 600000 (10 minutes).
     """
 
     def __init__(

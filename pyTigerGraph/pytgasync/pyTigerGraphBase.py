@@ -34,6 +34,7 @@ from typing import Union
 from urllib.parse import urlparse
 
 from pyTigerGraph.common.base import PyTigerGraphCore
+from pyTigerGraph.common.exception import TigerGraphException
 
 logger = logging.getLogger(__name__)
 
@@ -358,7 +359,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
         logger.debug("exit: getVer")
 
         return ret
-    
+
     async def customizeHeader(self, timeout:int = 16_000, responseSize:int = 3.2e+7):
         """Method to configure the request header.
 
@@ -389,14 +390,13 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
 
         # Cache not set, fetch version and cache the result
         try:
-            version = self.getVer().split('.')
+            version = (await self.getVer()).split('.')
         except TigerGraphException as e:
             if e.code == "REST-10016":
-                self.getToken()
-                version = self.getVer().split('.')
+                await self.getToken()
+                version = (await self.getVer()).split('.')
             else:
                 raise e
-        version = version.split('.')
         result = version[0] >= "4" and version[1] > "0"
         self._cached_version_greater_than_4_0 = result
         return result

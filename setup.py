@@ -51,6 +51,15 @@ setup(
         'validators',
         'requests',
         'httpx'],
+    extras_require={
+        "gds": ["pandas", "kafka-python", "numpy", "tqdm"],
+        "mcp": ["mcp>=1.0.0", "pydantic>=2.0.0", "click", "python-dotenv>=1.0.0"],
+    },
+    entry_points={
+        "console_scripts": [
+            "tigergraph-mcp=pyTigerGraph.mcp.main:main",
+        ],
+    },
     classifiers=[
         # 3 - Alpha, 4 - Beta or 5 - Production/Stable
         'Development Status :: 5 - Production/Stable',
@@ -66,9 +75,6 @@ setup(
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
     ],
-    extras_require={
-        "gds": ["pandas", "kafka-python", "numpy", "tqdm"],
-    },
     project_urls={
         "Bug Reports": "https://github.com/tigergraph/pyTigerGraph/issues",
         "Source": "https://github.com/tigergraph/pyTigerGraph",

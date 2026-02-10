@@ -159,11 +159,11 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
         # Handle list of query names
         elif isinstance(queryName, list):
             if not queryName:
-                raise TigerGraphException("Query name list cannot be empty.", 0)
+                raise TigerGraphException("Query name list cannot be empty.", 0) 
 
             params = {"graph": self.graphname, "query": queryName}
             res = await self._req("DELETE", self.gsUrl+"/gsql/v1/queries",
-                                 params=params, authMode="pwd", resKey="")
+                                 params=params, authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
         else:
             raise TigerGraphException("queryName must be a string or list of strings.", 0)
 

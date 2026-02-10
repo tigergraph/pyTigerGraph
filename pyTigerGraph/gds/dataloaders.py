@@ -676,7 +676,7 @@ class BaseLoader:
                 logger.error("Error parsing data: {}".format(raw))
                 logger.error("Parameters:\n  in_format={}\n  out_format={}\n  v_in_feats={}\n  v_out_labels={}\n  v_extra_feats={}\n  v_attr_types={}\n  e_in_feats={}\n  e_out_labels={}\n  e_extra_feats={}\n  e_attr_types={}\n  delimiter={}\n".format(
                     in_format, out_format, v_in_feats, v_out_labels, v_extra_feats, v_attr_types, e_in_feats, e_out_labels, e_extra_feats, e_attr_types, delimiter))
-                
+
             in_q.task_done()
 
     @staticmethod
@@ -766,7 +766,7 @@ class BaseLoader:
                         data = graph.ndata
 
             data[feat_name] = attr_to_tensor(attr_names, attr_types, attr_df)
-        
+
         def add_sep_attr(attr_names: list, attr_types: dict, attr_df: pd.DataFrame, 
                          graph, is_hetero: bool, mode: str,
                          target: 'Literal["edge", "vertex"]', vetype: str = None) -> None:
@@ -864,7 +864,7 @@ class BaseLoader:
                         )
                     elif mode == "spektral":
                         data[col] = attr_df[col].astype(dtype)
-        
+
         # Read in vertex and edge CSVs as dataframes              
         vertices, edges = None, None
         if in_format == "vertex":
@@ -1422,7 +1422,7 @@ class BaseLoader:
                         for attr in attr_names
                     )
         return print_attr
-    
+
     def metadata(self, additional_v_types=None, additional_e_types=None) -> Tuple[list, list]:
         v_types = self._vtypes
         if additional_v_types:
@@ -1439,7 +1439,7 @@ class BaseLoader:
             elif isinstance(additional_e_types, tuple):
                 edges.append(additional_e_types)
         return (v_types, edges)
-    
+
     def fetch(self, payload: dict) -> None:
         """Fetch the specific data instances for inference/prediction.
 
@@ -2478,7 +2478,7 @@ class VertexLoader(BaseLoader):
         self._exit_event = Event()
 
         self._start_request(False, "vertex")
-            
+
         # Start reading thread.
         if not self.is_hetero:
             v_attr_types = next(iter(self._v_schema.values()))
@@ -3513,7 +3513,7 @@ class NodePieceLoader(BaseLoader):
             for tok in self.baseTokens + ancs:
                 self.idToIdx[str(tok)] = self.curIdx
                 self.curIdx += 1
-            
+
         self.num_tokens = len(self.idToIdx.keys())
 
     def saveTokens(self, filename) -> None:
@@ -3670,7 +3670,7 @@ class NodePieceLoader(BaseLoader):
         self._exit_event = Event()
 
         self._start_request(False, "vertex")
-            
+
         # Start reading thread.
         if not self.is_hetero:
             v_attr_types = next(iter(self._v_schema.values()))
@@ -3782,7 +3782,7 @@ class NodePieceLoader(BaseLoader):
         resp = self._graph.runInstalledQuery(
             self.query_name, params=_payload, timeout=self.timeout, usePost=True
         )
-       
+
 
 class HGTLoader(BaseLoader):
     """HGTLoader

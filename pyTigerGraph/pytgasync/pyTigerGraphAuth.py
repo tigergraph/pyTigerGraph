@@ -382,7 +382,7 @@ class AsyncPyTigerGraphAuth(AsyncPyTigerGraphGSQL):
                                                    mainVer,
                                                    self.base64_credential
                                                   )
-        
+
         self.apiToken = token
         self.authHeader = auth_header
         self.authMode = "token"

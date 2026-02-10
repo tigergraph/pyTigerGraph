@@ -352,7 +352,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         logger.debug("entry: upsertVertices")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
-        
+
         headers = {}
         if atomic:
             headers["gsql-atomic-level"] = "atomic"
@@ -793,7 +793,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         logger.debug("exit: delVerticesById")
 
         return ret
-    
+
     def delVerticesByType(self, vertexType: str, permanent: bool = False, ack: str = "none") -> int:
         """Deletes all vertices of the specified type.
 
