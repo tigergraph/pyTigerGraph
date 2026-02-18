@@ -222,7 +222,7 @@ async def get_vector_index_status(
                 status_msg = "Success: Vector index is ready for queries."
             else:
                 status = "Rebuild_processing"
-                status_msg = f"⏳ Vector index is still rebuilding on {len(need_rebuild)} server(s)."
+                status_msg = f"Vector index is still rebuilding on {len(need_rebuild)} server(s)."
 
             message = f"{status_msg}\n\nStatus: {status}\nDetails:\n{json.dumps(result, indent=2)}"
         else:

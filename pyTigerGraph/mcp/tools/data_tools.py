@@ -72,7 +72,6 @@ class CreateLoadingJobToolInput(BaseModel):
     """Input schema for creating a loading job."""
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     job_name: str = Field(..., description="Name for the loading job.")
-    job_name: str = Field(..., description="Name for the loading job.")
     files: List[FileConfig] = Field(
         ..., 
         description="List of file configurations. Each file must have a 'file_alias' and 'node_mappings' and/or 'edge_mappings'. Example: [{'file_alias': 'f1', 'node_mappings': [...]}]"
@@ -327,12 +326,12 @@ async def create_loading_job(
                 "gsql_script": gsql_script,
                 "result": result
             },
-            suggestions=[
+            suggestions=[s for s in [
                 f"Run the job: run_loading_job_with_file(job_name='{job_name}', ...)" if not run_job else "Job already executed",
                 "List all jobs: get_loading_jobs()",
                 f"Get status: get_loading_job_status(job_name='{job_name}')" if not drop_after_run else None,
                 "Tip: Loading jobs are the recommended way to bulk-load data"
-            ],
+            ] if s is not None],
             metadata={
                 "graph_name": conn.graphname,
                 "operation_type": "DDL"

@@ -177,8 +177,10 @@ PRINT @@catCount;
 ### Find connected vertices (1-hop)
 ```gsql
 SetAccum<STRING> @@results;
-Result = SELECT t FROM SourceType:s -(EdgeType:e)- TargetType:t
-WHERE s.id == "some_id"
+SetAccum<VERTEX> @@seeds;
+@@seeds += to_vertex("some_id", "SourceType");
+seed = {@@seeds};
+Result = SELECT t FROM seed:s -(EdgeType:e)- TargetType:t
 ACCUM @@results += t.id;
 PRINT @@results;
 ```
@@ -205,8 +207,10 @@ PRINT @@matched;
 ### Multi-hop traversal
 ```gsql
 SetAccum<STRING> @@results;
-Result = SELECT v3 FROM Type1:v1 -(Edge1)- Type2:v2 -(Edge2)- Type3:v3
-WHERE v1.id == "start_id"
+SetAccum<VERTEX> @@seeds;
+@@seeds += to_vertex("start_id", "Type1");
+seed = {@@seeds};
+Result = SELECT v3 FROM seed:v1 -(Edge1)- Type2:v2 -(Edge2)- Type3:v3
 ACCUM @@results += v3.id
 LIMIT 50;
 PRINT @@results;

@@ -5,13 +5,10 @@
 # Permission is granted to use, copy, modify, and distribute this software
 # under the License. The software is provided "AS IS", without warranty.
 
-"""Enhanced node operation tools for MCP - Example of improved LLM usability.
+"""Node operation tools for MCP.
 
-This is an example showing how to enhance existing tools with:
-- Better descriptions with examples
-- Structured responses
-- Contextual suggestions
-- Error recovery hints
+Provides tools for creating, reading, updating, and deleting vertices (nodes)
+in TigerGraph graphs with structured responses and contextual suggestions.
 """
 
 import json
@@ -98,7 +95,7 @@ add_node_tool = Tool(
         "3. Call 'get_node' to verify the vertex was created\n"
         "4. Use 'add_edge' to connect this vertex to others\n\n"
         
-        "**Tip: Tips:**\n"
+        "**Tips:**\n"
         "  • For multiple vertices: Use 'add_nodes' instead (more efficient)\n"
         "  • Primary key is required (usually the 'id' attribute)\n"
         "  • Attribute names must match the schema exactly (case-sensitive)\n"
@@ -199,18 +196,33 @@ class AddNodesToolInput(BaseModel):
             "Tip: Use 'describe_graph' to see available types."
         )
     )
+
+    vertex_id: str = Field(
+        "id",
+        description=(
+            "Name of the primary key field in the vertex dictionaries.\n"
+            "This tells the tool which field contains the vertex ID.\n"
+            "Default: 'id'. Set to match your schema's primary key name.\n"
+            "Examples: 'id', 'ACCOUNT_ID', 'TX_ID'"
+        )
+    )
     vertices: List[Dict[str, Any]] = Field(
         ...,
         description=(
-            "List of vertices to add. Each vertex must contain:\n"
-            "  - Primary key (usually 'id' or 'vertex_id')\n"
-            "  - Other attributes matching the schema\n\n"
-            "Example:\n"
+            "List of vertices to add. Each vertex must contain the primary key field "
+            "(specified by 'vertex_id' parameter) and other attributes matching the schema.\n\n"
+            "Example with default vertex_id='id':\n"
             "```json\n"
             "[\n"
             '  {"id": "user1", "name": "Alice", "age": 30},\n'
-            '  {"id": "user2", "name": "Bob", "age": 25},\n'
-            '  {"id": "user3", "name": "Carol", "age": 35}\n'
+            '  {"id": "user2", "name": "Bob", "age": 25}\n'
+            "]\n"
+            "```\n\n"
+            "Example with vertex_id='ACCOUNT_ID':\n"
+            "```json\n"
+            "[\n"
+            '  {"ACCOUNT_ID": 1001, "COUNTRY": "US", "ACCOUNT_TYPE": "savings"},\n'
+            '  {"ACCOUNT_ID": 1002, "COUNTRY": "UK", "ACCOUNT_TYPE": "checking"}\n'
             "]\n"
             "```\n\n"
             "Note: All vertices will be processed in a single batch operation for efficiency."
@@ -249,14 +261,16 @@ add_nodes_tool = Tool(
         "4. Call 'get_vertex_count' to verify loading\n"
         "5. Use 'add_edges' to create relationships\n\n"
         
-        "**Tip: Tips:**\n"
-        "  • Each vertex must include the primary key (usually 'id' or 'vertex_id')\n"
+        "**Tips:**\n"
+        "  • Set 'vertex_id' to match your schema's primary key name (default: 'id')\n"
+        "  • For SARGraph: vertex_id='ACCOUNT_ID' for Account vertices\n"
         "  • All vertices must be the same type\n"
         "  • For very large datasets (>10K vertices), consider using loading jobs\n"
         "  • Batch size: 1000-5000 vertices per call is optimal\n\n"
         
         "**Warning: Common Mistakes:**\n"
         "  • Missing primary key in one or more vertices\n"
+        "  • Using wrong vertex_id name (check schema with describe_graph)\n"
         "  • Mixing different vertex types in one call\n"
         "  • Attribute name typos (must match schema exactly)\n"
         "  • Wrong data types (e.g., string instead of int)"
@@ -268,6 +282,7 @@ add_nodes_tool = Tool(
 async def add_nodes(
     vertex_type: str,
     vertices: List[Dict[str, Any]],
+    vertex_id: str = "id",
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Add multiple nodes to the graph with progress tracking."""
@@ -281,18 +296,17 @@ async def add_nodes(
         
         for i, v in enumerate(vertices):
             try:
-                # Try to extract vertex ID
-                vid = v.get("id") or v.get("vertex_id")
-                if not vid:
+                vid = v.get(vertex_id)
+                if vid is None:
                     failed_vertices.append({
                         "index": i,
-                        "reason": "Missing primary key ('id' or 'vertex_id')",
+                        "reason": f"Missing primary key '{vertex_id}'",
                         "vertex": v
                     })
                     continue
                 
-                # Extract attributes (exclude id fields)
-                attrs = {k: val for k, val in v.items() if k not in ["id", "vertex_id"]}
+                # Extract attributes (exclude primary key field)
+                attrs = {k: val for k, val in v.items() if k != vertex_id}
                 vertex_data.append((vid, attrs))
                 
             except Exception as e:
@@ -315,7 +329,7 @@ async def add_nodes(
             summary = f"Warning: Added {success_count}/{total_count} vertices of type '{vertex_type}' (some failed)"
             suggestions = [
                 f"Check the {len(failed_vertices)} failed vertices for missing or invalid fields",
-                "Ensure all vertices have primary key ('id' or 'vertex_id')",
+                f"Ensure all vertices have primary key field '{vertex_id}'",
                 "Verify attribute names match the schema exactly"
             ]
         else:

@@ -7,8 +7,6 @@
 
 """Statistics tools for MCP."""
 
-import json
-import logging
 from typing import List, Optional
 from pydantic import BaseModel, Field
 from mcp.types import Tool, TextContent
@@ -17,8 +15,6 @@ from ..tool_names import TigerGraphToolName
 from ..connection_manager import get_connection
 from ..response_formatter import format_success, format_error
 from pyTigerGraph.common.exception import TigerGraphException
-
-logger = logging.getLogger(__name__)
 
 
 class GetVertexCountToolInput(BaseModel):
@@ -66,16 +62,11 @@ async def get_vertex_count(
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Get vertex count."""
-    logger.debug(f"get_vertex_count called with vertex_type={vertex_type}, graph_name={graph_name}")
     try:
-        logger.debug("Step 1: Getting connection...")
         conn = get_connection(graph_name=graph_name)
-        logger.debug(f"Step 2: Connection obtained, graphname={conn.graphname}")
 
         if vertex_type:
-            logger.debug(f"Step 3: Getting vertex count for type '{vertex_type}'...")
             count = await conn.getVertexCount(vertex_type)
-            logger.debug(f"Step 4: Vertex count retrieved: {count}")
             
             return format_success(
                 operation="get_vertex_count",
@@ -91,16 +82,11 @@ async def get_vertex_count(
                 metadata={"graph_name": conn.graphname}
             )
         else:
-            logger.debug("Step 3: Getting all vertex types...")
             vertex_types = await conn.getVertexTypes()
-            logger.debug(f"Step 4: Found {len(vertex_types)} vertex types: {vertex_types}")
             counts = {}
             for vtype in vertex_types:
-                logger.debug(f"Step 5: Getting count for vertex type '{vtype}'...")
                 counts[vtype] = await conn.getVertexCount(vtype)
-                logger.debug(f"Step 6: Count for '{vtype}': {counts[vtype]}")
             total = sum(counts.values())
-            logger.debug(f"Step 7: Total count calculated: {total}")
             
             return format_success(
                 operation="get_vertex_count",
@@ -116,10 +102,7 @@ async def get_vertex_count(
                 ],
                 metadata={"graph_name": conn.graphname}
             )
-        logger.debug("Step 8: Successfully completed get_vertex_count")
     except TigerGraphException as e:
-        logger.exception("TigerGraphException caught in get_vertex_count")
-        logger.debug(f"Exception type: {type(e)}, has message: {hasattr(e, 'message')}, has code: {hasattr(e, 'code')}")
         error_msg = e.message if hasattr(e, 'message') else str(e)
         error_code = f" (Code: {e.code})" if hasattr(e, 'code') and e.code else ""
         return format_error(
@@ -131,8 +114,6 @@ async def get_vertex_count(
             }
         )
     except Exception as e:
-        logger.exception(f"Exception caught in get_vertex_count: {type(e).__name__}: {str(e)}")
-        logger.debug(f"Exception type: {type(e)}, Exception class name: {type(e).__name__}")
         return format_error(
             operation="get_vertex_count",
             error=e,
@@ -148,16 +129,11 @@ async def get_edge_count(
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Get edge count."""
-    logger.debug(f"get_edge_count called with edge_type={edge_type}, graph_name={graph_name}")
     try:
-        logger.debug("Step 1: Getting connection...")
         conn = get_connection(graph_name=graph_name)
-        logger.debug(f"Step 2: Connection obtained, graphname={conn.graphname}")
 
         if edge_type:
-            logger.debug(f"Step 3: Getting edge count for type '{edge_type}'...")
             count = await conn.getEdgeCount(edge_type)
-            logger.debug(f"Step 4: Edge count retrieved: {count}")
             
             return format_success(
                 operation="get_edge_count",
@@ -170,16 +146,11 @@ async def get_edge_count(
                 metadata={"graph_name": conn.graphname}
             )
         else:
-            logger.debug("Step 3: Getting all edge types...")
             edge_types = await conn.getEdgeTypes()
-            logger.debug(f"Step 4: Found {len(edge_types)} edge types: {edge_types}")
             counts = {}
             for etype in edge_types:
-                logger.debug(f"Step 5: Getting count for edge type '{etype}'...")
                 counts[etype] = await conn.getEdgeCount(etype)
-                logger.debug(f"Step 6: Count for '{etype}': {counts[etype]}")
             total = sum(counts.values())
-            logger.debug(f"Step 7: Total count calculated: {total}")
             
             return format_success(
                 operation="get_edge_count",
@@ -195,10 +166,7 @@ async def get_edge_count(
                 ],
                 metadata={"graph_name": conn.graphname}
             )
-        logger.debug("Step 8: Successfully completed get_edge_count")
     except TigerGraphException as e:
-        logger.exception("TigerGraphException caught in get_edge_count")
-        logger.debug(f"Exception type: {type(e)}, has message: {hasattr(e, 'message')}, has code: {hasattr(e, 'code')}")
         error_msg = e.message if hasattr(e, 'message') else str(e)
         error_code = f" (Code: {e.code})" if hasattr(e, 'code') and e.code else ""
         return format_error(
@@ -210,8 +178,6 @@ async def get_edge_count(
             }
         )
     except Exception as e:
-        logger.exception(f"Exception caught in get_edge_count: {type(e).__name__}: {str(e)}")
-        logger.debug(f"Exception type: {type(e)}, Exception class name: {type(e).__name__}")
         return format_error(
             operation="get_edge_count",
             error=e,
@@ -230,12 +196,21 @@ async def get_node_degree(
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Get the degree (number of connected edges) of a node."""
-    logger.debug(f"get_node_degree called with vertex_type={vertex_type}, vertex_id={vertex_id}, edge_type={edge_type}, direction={direction}, graph_name={graph_name}")
     try:
         conn = get_connection(graph_name=graph_name)
 
         # Build edge type parameter for v.outdegree()
-        edge_param = f'"{edge_type}"' if edge_type else ''
+        # If edge_type contains multiple types separated by |, convert to SET format
+        if edge_type:
+            if '|' in edge_type:
+                # Multiple edge types: convert to SET<STRING> format
+                edge_types_list = [f'"{et.strip()}"' for et in edge_type.split('|')]
+                edge_param = f"[{', '.join(edge_types_list)}]"
+            else:
+                # Single edge type: use STRING format
+                edge_param = f'"{edge_type}"'
+        else:
+            edge_param = ''
         
         # Build query based on direction
         if direction == "outgoing":
@@ -245,8 +220,9 @@ async def get_node_degree(
                 SetAccum<VERTEX> @@seeds;
                 
                 @@seeds += to_vertex("{vertex_id}", "{vertex_type}");
+                seed = {{@@seeds}};
                 
-                result = SELECT s FROM @@seeds:s
+                result = SELECT s FROM seed:s
                          POST-ACCUM @@outgoing += s.outdegree({edge_param});
                 
                 PRINT @@outgoing AS outgoing;
@@ -254,21 +230,22 @@ async def get_node_degree(
             """
         elif direction == "incoming":
             # For incoming, traverse from all vertices to our target
-            edge_filter = f"({edge_type}:e)" if edge_type else "(ANY:e)"
+            edge_filter = f"(({edge_type}):e)" if edge_type else "(ANY:e)"
             query = f"""
             INTERPRET QUERY () FOR GRAPH {conn.graphname} {{
                 SumAccum<INT> @@incoming;
                 SetAccum<VERTEX> @@seeds;
                 
                 @@seeds += to_vertex("{vertex_id}", "{vertex_type}");
+                seed = {{@@seeds}};
                 
-                result = SELECT s FROM ANY:s -{edge_filter}- @@seeds:t
+                result = SELECT s FROM ANY:s -{edge_filter}- seed:t
                          ACCUM @@incoming += 1;
                 PRINT @@incoming AS incoming;
             }}
             """
         else:  # direction == "both"
-            edge_filter = f"({edge_type}:e)" if edge_type else "(ANY:e)"
+            edge_filter = f"(({edge_type}):e)" if edge_type else "(ANY:e)"
             query = f"""
             INTERPRET QUERY () FOR GRAPH {conn.graphname} {{
                 MaxAccum<INT> @@outgoing;
@@ -276,13 +253,14 @@ async def get_node_degree(
                 SetAccum<VERTEX> @@seeds;
                 
                 @@seeds += to_vertex("{vertex_id}", "{vertex_type}");
+                seed = {{@@seeds}};
                 
                 // Get outgoing degree using vertex function
-                result1 = SELECT s FROM @@seeds:s
+                result1 = SELECT s FROM seed:s
                           POST-ACCUM @@outgoing += s.outdegree({edge_param});
                 
                 // Count incoming edges by traversing
-                result2 = SELECT s FROM ANY:s -{edge_filter}- @@seeds:t
+                result2 = SELECT s FROM ANY:s -{edge_filter}- seed:t
                           ACCUM @@incoming += 1;
                 
                 PRINT @@outgoing AS outgoing, @@incoming AS incoming;

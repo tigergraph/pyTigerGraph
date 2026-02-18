@@ -113,7 +113,7 @@ run_query_tool = Tool(
         "3. Run with 'run_query' to test\n"
         "4. For repeated use, install with 'install_query'\n\n"
         
-        "**Tip: Tips:**\n"
+        "**Tips:**\n"
         "  • Query type auto-detected (GSQL vs Cypher)\n"
         "  • For frequent queries, use 'install_query' + 'run_installed_query' for better performance\n"
         "  • Always include 'FOR GRAPH' clause\n"
@@ -153,7 +153,7 @@ run_installed_query_tool = Tool(
         "2. Run multiple times with 'run_installed_query' and different params\n"
         "3. Much faster than 'run_query' for repeated use\n\n"
         
-        "**Tip: Tips:**\n"
+        "**Tips:**\n"
         "  • Queries must be installed first with 'install_query'\n"
         "  • Use 'is_query_installed' to check if query exists\n"
         "  • Provide params as dictionary matching query signature\n"
@@ -187,7 +187,7 @@ install_query_tool = Tool(
         "2. Once working, install with 'install_query'\n"
         "3. Run with 'run_installed_query' (faster)\n\n"
         
-        "**Tip: Tips:**\n"
+        "**Tips:**\n"
         "  • Query text should start with 'CREATE QUERY'\n"
         "  • Installation compiles the query for better performance\n"
         "  • Can define parameters in query signature\n"
@@ -216,7 +216,7 @@ show_query_tool = Tool(
         "}\n"
         "```\n\n"
         
-        "**Tip: Tips:**\n"
+        "**Tips:**\n"
         "  • Returns the full GSQL query text\n"
         "  • Query must be installed first\n"
         "  • Use 'is_query_installed' to check existence\n\n"
@@ -244,7 +244,7 @@ get_query_metadata_tool = Tool(
         "}\n"
         "```\n\n"
         
-        "**Tip: Tips:**\n"
+        "**Tips:**\n"
         "  • Shows query parameters, types, and metadata\n"
         "  • Helps understand how to call the query\n"
         "  • Use 'show_query' to see the actual query text\n\n"
@@ -276,7 +276,7 @@ drop_query_tool = Tool(
         "  • Cannot be undone\n"
         "  • Any code calling this query will fail\n\n"
         
-        "**Tip: Tips:**\n"
+        "**Tips:**\n"
         "  • Use 'show_query' first to review before dropping\n"
         "  • Cannot drop queries being used by other queries\n\n"
         
@@ -302,7 +302,7 @@ is_query_installed_tool = Tool(
         "}\n"
         "```\n\n"
         
-        "**Tip: Tips:**\n"
+        "**Tips:**\n"
         "  • Returns true/false\n"
         "  • Faster than trying to run and catching errors\n"
         "  • Use before 'run_installed_query'\n\n"
@@ -339,7 +339,7 @@ get_neighbors_tool = Tool(
         "3. Optionally filter by edge type\n"
         "4. Receive list of connected vertices\n\n"
         
-        "**Tip: Tips:**\n"
+        "**Tips:**\n"
         "  • Simpler than writing a query for 1-hop traversal\n"
         "  • Can filter by edge type (e.g., only 'FOLLOWS' edges)\n"
         "  • Can specify target vertex type\n"
@@ -675,7 +675,7 @@ async def get_neighbors(
         conn = get_connection(graph_name=graph_name)
 
         # Build the edge pattern
-        edge_pattern = f"({edge_type}:e)" if edge_type else "(ANY:e)"
+        edge_pattern = f"(({edge_type}):e)" if edge_type else "(ANY:e)"
         target_pattern = f"{target_vertex_type}:t" if target_vertex_type else "ANY:t"
         limit_clause = f"LIMIT {limit}" if limit else ""
 

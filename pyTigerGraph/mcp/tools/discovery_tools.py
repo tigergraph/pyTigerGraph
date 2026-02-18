@@ -114,7 +114,7 @@ get_workflow_tool = Tool(
 get_tool_info_tool = Tool(
     name=TigerGraphToolName.GET_TOOL_INFO,
     description=(
-        "ℹ️ Get detailed information about a specific TigerGraph tool.\n\n"
+        "Get detailed information about a specific TigerGraph tool.\n\n"
         "**Use this tool when:**\n"
         "  - You want to understand a tool's capabilities\n"
         "  - You need examples of how to use a tool\n"

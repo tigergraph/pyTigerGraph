@@ -120,7 +120,7 @@ add_edge_tool = Tool(
         "3. Optionally add edge attributes (like timestamps)\n"
         "4. Verify with 'get_neighbors' or 'get_node_edges'\n\n"
         
-        "**Tip: Tips:**\n"
+        "**Tips:**\n"
         "  • Both vertices must exist before adding edge\n"
         "  • Edge type must match schema definition\n"
         "  • For multiple edges, use 'add_edges' (more efficient)\n"
@@ -159,7 +159,7 @@ add_edges_tool = Tool(
         "2. Use 'add_edges' to create relationships\n"
         "3. Verify with 'get_edge_count'\n\n"
         
-        "**Tip: Tips:**\n"
+        "**Tips:**\n"
         "  • All edges in one call must be same edge type\n"
         "  • All referenced vertices must exist\n"
         "  • Batch size: 1000-5000 edges per call is optimal\n"
@@ -191,7 +191,7 @@ get_edge_tool = Tool(
         "}\n"
         "```\n\n"
         
-        "**Tip: Tips:**\n"
+        "**Tips:**\n"
         "  • Requires full edge specification (source, target, type)\n"
         "  • Returns edge attributes if any\n"
         "  • Use 'get_neighbors' for simpler neighbor queries\n\n"
@@ -220,7 +220,7 @@ get_edges_tool = Tool(
         "}\n"
         "```\n\n"
         
-        "**Tip: Tips:**\n"
+        "**Tips:**\n"
         "  • Can filter by edge type\n"
         "  • Returns all edges from a source vertex\n"
         "  • Use 'get_neighbors' for simpler use cases\n\n"
@@ -311,7 +311,7 @@ has_edge_tool = Tool(
         "}\n"
         "```\n\n"
         
-        "**Tip: Tips:**\n"
+        "**Tips:**\n"
         "  • Returns boolean (true/false)\n"
         "  • Faster than get_edge when you don't need the data\n"
         "  • Use before add_edge to avoid duplicates\n\n"
@@ -598,8 +598,10 @@ async def delete_edges(
                 targetVertexType=target_type,
                 targetVertexId=str(target_id)
             )
-            # Count deleted edges from result
-            deleted_count += sum(result.values())
+            if isinstance(result, dict):
+                deleted_count += sum(result.values())
+            elif isinstance(result, int):
+                deleted_count += result
         
         return format_success(
             operation="delete_edges",

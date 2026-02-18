@@ -97,7 +97,7 @@ get_global_schema_tool = Tool(
         "```\n"
         "(No parameters needed)\n\n"
         
-        "**Tip: Tips:**\n"
+        "**Tips:**\n"
         "  • Returns output from GSQL 'LS' command\n"
         "  • Shows all graphs in the database\n"
         "  • For single graph schema, use 'describe_graph' instead\n"
@@ -135,7 +135,7 @@ list_graphs_tool = Tool(
         "3. Call 'describe_graph' to understand its structure\n"
         "4. Begin data operations\n\n"
         
-        "**Tip: Tips:**\n"
+        "**Tips:**\n"
         "  • This is often the first tool to call\n"
         "  • For detailed schema, use 'describe_graph' next\n"
         "  • No parameters required\n\n"
@@ -187,7 +187,7 @@ create_graph_tool = Tool(
         "4. Use 'describe_graph' to verify it was created correctly\n"
         "5. Start loading data with 'add_node' and 'add_edge'\n\n"
         
-        "**Tip: Tips:**\n"
+        "**Tips:**\n"
         "  • Define all vertex types before edge types\n"
         "  • Edge types reference vertex types (must exist)\n"
         "  • Each vertex type needs attributes defined\n"
@@ -222,7 +222,7 @@ drop_graph_tool = Tool(
         "  • Double-check the graph_name before executing\n"
         "  • Consider using 'clear_graph_data' if you only want to remove data\n\n"
         
-        "**Tip: Tips:**\n"
+        "**Tips:**\n"
         "  • Use 'list_graphs' first to confirm the graph name\n"
         "  • For production graphs, always backup first\n"
         "  • To keep schema but clear data, use 'clear_graph_data'\n\n"
@@ -251,13 +251,13 @@ clear_graph_data_tool = Tool(
         "}\n"
         "```\n\n"
         
-        "**Warning: WARNING:**\n"
+        "**WARNING:**\n"
         "  • Deletes ALL vertices and edges in the graph\n"
         "  • Operation is PERMANENT and cannot be undone\n"
         "  • Must set 'confirm': true to execute\n"
         "  • Schema (vertex/edge types) remains intact\n\n"
         
-        "**Tip: Tips:**\n"
+        "**Tips:**\n"
         "  • Preserves schema, only clears data\n"
         "  • To delete everything including schema, use 'drop_graph'\n"
         "  • Always backup important data first\n"
@@ -291,7 +291,7 @@ get_graph_schema_tool = Tool(
         "}\n"
         "```\n\n"
         
-        "**Tip: Tips:**\n"
+        "**Tips:**\n"
         "  • Returns raw JSON (not human-readable)\n"
         "  • For human-readable format, use 'describe_graph' instead\n"
         "  • Contains complete schema details\n"
@@ -329,7 +329,7 @@ describe_graph_tool = Tool(
         "3. Note the edge types and their connections\n"
         "4. Use this information for add_node, add_edge, run_query, etc.\n\n"
         
-        "**Tip: Tips:**\n"
+        "**Tips:**\n"
         "  • ALWAYS call this before working with an unfamiliar graph\n"
         "  • Provides human-readable markdown format\n"
         "  • Shows vertex types, edge types, and all attributes\n"
@@ -365,7 +365,7 @@ get_graph_metadata_tool = Tool(
         "}\n"
         "```\n\n"
         
-        "**Tip: Tips:**\n"
+        "**Tips:**\n"
         "  • Returns vertex types, edge types, queries, and loading jobs\n"
         "  • Can filter by 'metadata_type': 'vertex_types', 'edge_types', 'queries', 'loading_jobs', or 'all'\n"
         "  • More comprehensive than 'describe_graph'\n"
