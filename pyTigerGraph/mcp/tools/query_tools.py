@@ -14,7 +14,7 @@ from mcp.types import Tool, TextContent
 
 from ..tool_names import TigerGraphToolName
 from ..connection_manager import get_connection
-from ..response_formatter import format_success, format_error
+from ..response_formatter import format_success, format_error, gsql_has_error
 from pyTigerGraph.common.exception import TigerGraphException
 
 
@@ -108,7 +108,7 @@ run_query_tool = Tool(
         "```\n\n"
         
         "**Common Workflow:**\n"
-        "1. Call 'describe_graph' to understand the schema\n"
+        "1. Call 'show_graph_details' to understand the schema\n"
         "2. Write your query using vertex/edge types from schema\n"
         "3. Run with 'run_query' to test\n"
         "4. For repeated use, install with 'install_query'\n\n"
@@ -394,7 +394,7 @@ async def run_query(
             suggestions=[
                 "Tip: For better performance: install the query with 'install_query' and use 'run_installed_query'",
                 "Interpreted queries are slower but good for ad-hoc exploration",
-                "View installed queries: get_graph_metadata(metadata_type='queries')"
+                "View installed queries: show_graph_details()"
             ],
             metadata={
                 "graph_name": conn.graphname,
@@ -470,36 +470,52 @@ async def install_query(
     try:
         conn = get_connection(graph_name=graph_name)
         result = await conn.gsql(query_text)
-        
+        result_str = str(result) if result else ""
+
         # Try to extract query name from query_text
         query_name = "unknown"
         if "CREATE QUERY" in query_text.upper():
             parts = query_text.split("CREATE QUERY", 1)[1].strip().split("(")
             if parts:
                 query_name = parts[0].strip()
-        
+
+        if gsql_has_error(result_str):
+            return format_error(
+                operation="install_query",
+                error=TigerGraphException(result_str),
+                context={
+                    "query_name": query_name if query_name != "unknown" else None,
+                    "graph_name": conn.graphname,
+                },
+                suggestions=[
+                    "Check the query syntax for errors",
+                    "Ensure all referenced vertex/edge types exist: show_graph_details()",
+                    "Verify attribute names match the schema",
+                ],
+            )
+
         return format_success(
             operation="install_query",
-            summary=f"Success: Query installed successfully",
+            summary="Success: Query installed successfully",
             data={
-                "result": result,
-                "query_name": query_name if query_name != "unknown" else None
+                "result": result_str,
+                "query_name": query_name if query_name != "unknown" else None,
             },
             suggestions=[
                 f"Run the query: run_installed_query(query_name='{query_name}')" if query_name != "unknown" else "Run your query: run_installed_query(...)",
-                "List all queries: get_graph_metadata(metadata_type='queries')",
-                "Tip: Installed queries are compiled and much faster than interpreted"
+                "List all queries: show_graph_details()",
+                "Tip: Installed queries are compiled and much faster than interpreted",
             ],
             metadata={
                 "graph_name": conn.graphname,
-                "operation_type": "DDL"
-            }
+                "operation_type": "DDL",
+            },
         )
     except Exception as e:
         return format_error(
             operation="install_query",
             error=e,
-            context={"graph_name": graph_name or "default"}
+            context={"graph_name": graph_name or "default"},
         )
 
 
@@ -579,23 +595,38 @@ async def drop_query(
     try:
         conn = get_connection(graph_name=graph_name)
         result = await conn.gsql(f"DROP QUERY {query_name}")
-        
+        result_str = str(result) if result else ""
+
+        if gsql_has_error(result_str):
+            return format_error(
+                operation="drop_query",
+                error=TigerGraphException(result_str),
+                context={
+                    "query_name": query_name,
+                    "graph_name": conn.graphname,
+                },
+                suggestions=[
+                    "Verify the query name is correct",
+                    "List installed queries: show_graph_details()",
+                ],
+            )
+
         return format_success(
             operation="drop_query",
             summary=f"Success: Query '{query_name}' dropped successfully",
             data={
                 "query_name": query_name,
-                "result": result
+                "result": result_str,
             },
             suggestions=[
                 "Warning: This operation is permanent and cannot be undone",
                 f"Verify deletion: is_query_installed(query_name='{query_name}')",
-                "List remaining queries: get_graph_metadata(metadata_type='queries')"
+                "List remaining queries: show_graph_details()",
             ],
             metadata={
                 "graph_name": conn.graphname,
-                "destructive": True
-            }
+                "destructive": True,
+            },
         )
     except Exception as e:
         return format_error(
@@ -603,8 +634,8 @@ async def drop_query(
             error=e,
             context={
                 "query_name": query_name,
-                "graph_name": graph_name or "default"
-            }
+                "graph_name": graph_name or "default",
+            },
         )
 
 
@@ -647,7 +678,7 @@ async def is_query_installed(
                 },
                 suggestions=[
                     f"Install it: install_query(query_text='CREATE QUERY {query_name} ...')",
-                    "List all installed queries: get_graph_metadata(metadata_type='queries')"
+                    "List all installed queries: show_graph_details()"
                 ],
                 metadata={"graph_name": conn.graphname}
             )

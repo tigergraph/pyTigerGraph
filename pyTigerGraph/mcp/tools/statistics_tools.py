@@ -98,7 +98,7 @@ async def get_vertex_count(
                 },
                 suggestions=[
                     "View specific type: get_vertex_count(vertex_type='<type>')",
-                    "View schema: describe_graph()"
+                    "View schema: show_graph_details()"
                 ],
                 metadata={"graph_name": conn.graphname}
             )
@@ -162,7 +162,7 @@ async def get_edge_count(
                 },
                 suggestions=[
                     "View specific type: get_edge_count(edge_type='<type>')",
-                    "View schema: describe_graph()"
+                    "View schema: show_graph_details()"
                 ],
                 metadata={"graph_name": conn.graphname}
             )

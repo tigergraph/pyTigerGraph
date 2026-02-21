@@ -38,26 +38,26 @@ class ToolMetadata(BaseModel):
 # Define metadata for each tool
 TOOL_METADATA: Dict[str, ToolMetadata] = {
     # Schema Operations
-    "tigergraph__describe_graph": ToolMetadata(
+    "tigergraph__show_graph_details": ToolMetadata(
         category=ToolCategory.SCHEMA,
         prerequisites=[],
-        related_tools=["tigergraph__get_graph_schema", "tigergraph__get_graph_metadata"],
+        related_tools=["tigergraph__get_graph_schema"],
         common_next_steps=["tigergraph__add_node", "tigergraph__add_edge", "tigergraph__run_query"],
         use_cases=[
+            "Getting a full listing of a graph (schema, queries, jobs)",
             "Understanding the structure of a graph before writing queries",
             "Discovering available vertex and edge types",
-            "Learning the attributes of each vertex/edge type",
             "First step in any graph interaction workflow"
         ],
         complexity="basic",
-        keywords=["schema", "structure", "describe", "understand", "explore"],
+        keywords=["schema", "structure", "show", "understand", "explore", "queries", "jobs"],
         examples=[
             {
-                "description": "Get schema for default graph",
+                "description": "Show everything under default graph",
                 "parameters": {}
             },
             {
-                "description": "Get schema for specific graph",
+                "description": "Show everything under a specific graph",
                 "parameters": {"graph_name": "SocialGraph"}
             }
         ]
@@ -66,8 +66,8 @@ TOOL_METADATA: Dict[str, ToolMetadata] = {
     "tigergraph__list_graphs": ToolMetadata(
         category=ToolCategory.SCHEMA,
         prerequisites=[],
-        related_tools=["tigergraph__describe_graph", "tigergraph__create_graph"],
-        common_next_steps=["tigergraph__describe_graph"],
+        related_tools=["tigergraph__show_graph_details", "tigergraph__create_graph"],
+        common_next_steps=["tigergraph__show_graph_details"],
         use_cases=[
             "Discovering what graphs exist in the database",
             "First step when connecting to a new TigerGraph instance",
@@ -81,8 +81,8 @@ TOOL_METADATA: Dict[str, ToolMetadata] = {
     "tigergraph__create_graph": ToolMetadata(
         category=ToolCategory.SCHEMA,
         prerequisites=[],
-        related_tools=["tigergraph__list_graphs", "tigergraph__describe_graph"],
-        common_next_steps=["tigergraph__describe_graph", "tigergraph__add_node"],
+        related_tools=["tigergraph__list_graphs", "tigergraph__show_graph_details"],
+        common_next_steps=["tigergraph__show_graph_details", "tigergraph__add_node"],
         use_cases=[
             "Creating a new graph from scratch",
             "Setting up a graph with specific vertex and edge types",
@@ -119,7 +119,7 @@ TOOL_METADATA: Dict[str, ToolMetadata] = {
     "tigergraph__get_graph_schema": ToolMetadata(
         category=ToolCategory.SCHEMA,
         prerequisites=[],
-        related_tools=["tigergraph__describe_graph"],
+        related_tools=["tigergraph__show_graph_details"],
         common_next_steps=["tigergraph__add_node", "tigergraph__run_query"],
         use_cases=[
             "Getting raw JSON schema for programmatic processing",
@@ -133,7 +133,7 @@ TOOL_METADATA: Dict[str, ToolMetadata] = {
     # Node Operations
     "tigergraph__add_node": ToolMetadata(
         category=ToolCategory.DATA,
-        prerequisites=["tigergraph__describe_graph"],
+        prerequisites=["tigergraph__show_graph_details"],
         related_tools=["tigergraph__add_nodes", "tigergraph__get_node", "tigergraph__delete_node"],
         common_next_steps=["tigergraph__get_node", "tigergraph__add_edge", "tigergraph__get_node_edges"],
         use_cases=[
@@ -165,7 +165,7 @@ TOOL_METADATA: Dict[str, ToolMetadata] = {
     
     "tigergraph__add_nodes": ToolMetadata(
         category=ToolCategory.DATA,
-        prerequisites=["tigergraph__describe_graph"],
+        prerequisites=["tigergraph__show_graph_details"],
         related_tools=["tigergraph__add_node", "tigergraph__get_nodes"],
         common_next_steps=["tigergraph__get_vertex_count", "tigergraph__add_edges"],
         use_cases=[
@@ -239,7 +239,7 @@ TOOL_METADATA: Dict[str, ToolMetadata] = {
     # Edge Operations
     "tigergraph__add_edge": ToolMetadata(
         category=ToolCategory.DATA,
-        prerequisites=["tigergraph__add_node", "tigergraph__describe_graph"],
+        prerequisites=["tigergraph__add_node", "tigergraph__show_graph_details"],
         related_tools=["tigergraph__add_edges", "tigergraph__get_edge"],
         common_next_steps=["tigergraph__get_node_edges", "tigergraph__get_neighbors"],
         use_cases=[
@@ -266,7 +266,7 @@ TOOL_METADATA: Dict[str, ToolMetadata] = {
     
     "tigergraph__add_edges": ToolMetadata(
         category=ToolCategory.DATA,
-        prerequisites=["tigergraph__add_nodes", "tigergraph__describe_graph"],
+        prerequisites=["tigergraph__add_nodes", "tigergraph__show_graph_details"],
         related_tools=["tigergraph__add_edge"],
         common_next_steps=["tigergraph__get_edge_count"],
         use_cases=[
@@ -282,7 +282,7 @@ TOOL_METADATA: Dict[str, ToolMetadata] = {
     # Query Operations
     "tigergraph__run_query": ToolMetadata(
         category=ToolCategory.QUERY,
-        prerequisites=["tigergraph__describe_graph"],
+        prerequisites=["tigergraph__show_graph_details"],
         related_tools=["tigergraph__run_installed_query", "tigergraph__get_neighbors"],
         common_next_steps=[],
         use_cases=[
@@ -336,7 +336,7 @@ TOOL_METADATA: Dict[str, ToolMetadata] = {
     # Vector Operations
     "tigergraph__add_vector_attribute": ToolMetadata(
         category=ToolCategory.VECTOR,
-        prerequisites=["tigergraph__describe_graph"],
+        prerequisites=["tigergraph__show_graph_details"],
         related_tools=["tigergraph__drop_vector_attribute", "tigergraph__get_vector_index_status"],
         common_next_steps=["tigergraph__get_vector_index_status", "tigergraph__upsert_vectors"],
         use_cases=[
@@ -426,7 +426,7 @@ TOOL_METADATA: Dict[str, ToolMetadata] = {
     # Loading Operations
     "tigergraph__create_loading_job": ToolMetadata(
         category=ToolCategory.LOADING,
-        prerequisites=["tigergraph__describe_graph"],
+        prerequisites=["tigergraph__show_graph_details"],
         related_tools=["tigergraph__run_loading_job_with_file", "tigergraph__run_loading_job_with_data"],
         common_next_steps=["tigergraph__run_loading_job_with_file", "tigergraph__get_loading_jobs"],
         use_cases=[

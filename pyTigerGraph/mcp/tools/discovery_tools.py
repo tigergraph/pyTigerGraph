@@ -144,7 +144,7 @@ WORKFLOWS = {
             },
             {
                 "step": 2,
-                "tool": "tigergraph__describe_graph",
+                "tool": "tigergraph__show_graph_details",
                 "description": "Get detailed schema of a specific graph",
                 "parameters": {"graph_name": "<select from step 1>"},
                 "rationale": "Understand the structure, vertex types, and edge types of the graph you'll work with"
@@ -213,7 +213,7 @@ WORKFLOWS = {
             },
             {
                 "step": 3,
-                "tool": "tigergraph__describe_graph",
+                "tool": "tigergraph__show_graph_details",
                 "description": "Verify the schema was created correctly",
                 "parameters": {"graph_name": "MyGraph"},
                 "rationale": "Confirm the graph structure matches your design"
@@ -227,7 +227,7 @@ WORKFLOWS = {
         "steps": [
             {
                 "step": 1,
-                "tool": "tigergraph__describe_graph",
+                "tool": "tigergraph__show_graph_details",
                 "description": "Understand the graph schema before loading data",
                 "parameters": {},
                 "rationale": "Know what vertex/edge types exist and their required attributes"
@@ -292,7 +292,7 @@ WORKFLOWS = {
         "steps": [
             {
                 "step": 1,
-                "tool": "tigergraph__describe_graph",
+                "tool": "tigergraph__show_graph_details",
                 "description": "Review schema to understand what can be queried",
                 "parameters": {},
                 "rationale": "Know the vertex/edge types and attributes available for querying"
@@ -336,7 +336,7 @@ WORKFLOWS = {
         "steps": [
             {
                 "step": 1,
-                "tool": "tigergraph__describe_graph",
+                "tool": "tigergraph__show_graph_details",
                 "description": "Check existing vertex types",
                 "parameters": {},
                 "rationale": "Identify which vertex type should have vector attributes"
@@ -405,7 +405,7 @@ WORKFLOWS = {
         "steps": [
             {
                 "step": 1,
-                "tool": "tigergraph__describe_graph",
+                "tool": "tigergraph__show_graph_details",
                 "description": "Get schema and structure overview",
                 "parameters": {},
                 "rationale": "Understand the graph composition"
@@ -492,7 +492,7 @@ async def discover_tools(
             suggestions=[
                 "Try rephrasing your task with different keywords",
                 "Use 'tigergraph__get_workflow' to see common workflow patterns",
-                "Use 'tigergraph__describe_graph' to understand what's available",
+                "Use 'tigergraph__show_graph_details' to understand what's available",
                 "Browse tools by category: schema, data, query, vector, loading, utility"
             ],
             metadata={"task": task_description, "category": category}

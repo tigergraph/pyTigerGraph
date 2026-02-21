@@ -24,8 +24,7 @@ class TigerGraphToolName(str, Enum):
 
     # Schema Operations (Graph level - operates on schema within a specific graph)
     GET_GRAPH_SCHEMA = "tigergraph__get_graph_schema"
-    DESCRIBE_GRAPH = "tigergraph__describe_graph"
-    GET_GRAPH_METADATA = "tigergraph__get_graph_metadata"
+    SHOW_GRAPH_DETAILS = "tigergraph__show_graph_details"
 
     # Node Operations
     ADD_NODE = "tigergraph__add_node"
@@ -77,10 +76,13 @@ class TigerGraphToolName(str, Enum):
     # Vector Schema Operations
     ADD_VECTOR_ATTRIBUTE = "tigergraph__add_vector_attribute"
     DROP_VECTOR_ATTRIBUTE = "tigergraph__drop_vector_attribute"
+    LIST_VECTOR_ATTRIBUTES = "tigergraph__list_vector_attributes"
     GET_VECTOR_INDEX_STATUS = "tigergraph__get_vector_index_status"
 
     # Vector Data Operations
     UPSERT_VECTORS = "tigergraph__upsert_vectors"
+    LOAD_VECTORS_FROM_CSV = "tigergraph__load_vectors_from_csv"
+    LOAD_VECTORS_FROM_JSON = "tigergraph__load_vectors_from_json"
     SEARCH_TOP_K_SIMILARITY = "tigergraph__search_top_k_similarity"
     FETCH_VECTOR = "tigergraph__fetch_vector"
 

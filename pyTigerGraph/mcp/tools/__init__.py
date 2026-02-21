@@ -22,11 +22,9 @@ from .schema_tools import (
     clear_graph_data,
     # Schema operations (graph level)
     get_graph_schema_tool,
-    describe_graph_tool,
-    get_graph_metadata_tool,
+    show_graph_details_tool,
     get_graph_schema,
-    describe_graph,
-    get_graph_metadata,
+    show_graph_details,
 )
 from .node_tools import (
     add_node_tool,
@@ -114,15 +112,21 @@ from .vector_tools import (
     # Vector schema tools
     add_vector_attribute_tool,
     drop_vector_attribute_tool,
+    list_vector_attributes_tool,
     get_vector_index_status_tool,
     add_vector_attribute,
     drop_vector_attribute,
+    list_vector_attributes,
     get_vector_index_status,
     # Vector data tools
     upsert_vectors_tool,
+    load_vectors_from_csv_tool,
+    load_vectors_from_json_tool,
     search_top_k_similarity_tool,
     fetch_vector_tool,
     upsert_vectors,
+    load_vectors_from_csv,
+    load_vectors_from_json,
     search_top_k_similarity,
     fetch_vector,
 )
@@ -167,11 +171,9 @@ __all__ = [
     "clear_graph_data",
     # Schema operations (graph level)
     "get_graph_schema_tool",
-    "describe_graph_tool",
-    "get_graph_metadata_tool",
+    "show_graph_details_tool",
     "get_graph_schema",
-    "describe_graph",
-    "get_graph_metadata",
+    "show_graph_details",
     # Node tools
     "add_node_tool",
     "add_nodes_tool",
@@ -251,15 +253,21 @@ __all__ = [
     # Vector schema tools
     "add_vector_attribute_tool",
     "drop_vector_attribute_tool",
+    "list_vector_attributes_tool",
     "get_vector_index_status_tool",
     "add_vector_attribute",
     "drop_vector_attribute",
+    "list_vector_attributes",
     "get_vector_index_status",
     # Vector data tools
     "upsert_vectors_tool",
+    "load_vectors_from_csv_tool",
+    "load_vectors_from_json_tool",
     "search_top_k_similarity_tool",
     "fetch_vector_tool",
     "upsert_vectors",
+    "load_vectors_from_csv",
+    "load_vectors_from_json",
     "search_top_k_similarity",
     "fetch_vector",
     # Data Source tools

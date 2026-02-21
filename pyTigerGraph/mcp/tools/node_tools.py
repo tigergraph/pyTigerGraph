@@ -37,7 +37,7 @@ class AddNodeToolInput(BaseModel):
         description=(
             "Type of the vertex (must exist in graph schema).\n"
             "Example: 'Person', 'Product', 'Company'\n"
-            "Tip: Use 'describe_graph' to see available vertex types."
+            "Tip: Use 'show_graph_details' to see available vertex types."
         )
     )
     vertex_id: Union[str, int] = Field(
@@ -56,7 +56,7 @@ class AddNodeToolInput(BaseModel):
             "Keys must match the vertex type schema.\n"
             "Values should match the expected data types.\n"
             "Example: {'name': 'Alice', 'age': 30, 'email': 'alice@example.com'}\n"
-            "Tip: Use 'describe_graph' to see required attributes and types."
+            "Tip: Use 'show_graph_details' to see required attributes and types."
         ),
         json_schema_extra={
             "examples": [
@@ -90,7 +90,7 @@ add_node_tool = Tool(
         "```\n\n"
         
         "**Common Workflow:**\n"
-        "1. Call 'describe_graph' to understand vertex types and attributes\n"
+        "1. Call 'show_graph_details' to understand vertex types and attributes\n"
         "2. Use 'add_node' to create individual vertices\n"
         "3. Call 'get_node' to verify the vertex was created\n"
         "4. Use 'add_edge' to connect this vertex to others\n\n"
@@ -193,7 +193,7 @@ class AddNodesToolInput(BaseModel):
         description=(
             "Type of the vertices (all vertices must be the same type).\n"
             "Example: 'Person', 'Product'\n"
-            "Tip: Use 'describe_graph' to see available types."
+            "Tip: Use 'show_graph_details' to see available types."
         )
     )
 
@@ -255,7 +255,7 @@ add_nodes_tool = Tool(
         "```\n\n"
         
         "**Common Workflow:**\n"
-        "1. Call 'describe_graph' to understand the schema\n"
+        "1. Call 'show_graph_details' to understand the schema\n"
         "2. Prepare your data with primary keys and attributes\n"
         "3. Use 'add_nodes' to load vertices in batches\n"
         "4. Call 'get_vertex_count' to verify loading\n"
@@ -270,7 +270,7 @@ add_nodes_tool = Tool(
         
         "**Warning: Common Mistakes:**\n"
         "  • Missing primary key in one or more vertices\n"
-        "  • Using wrong vertex_id name (check schema with describe_graph)\n"
+        "  • Using wrong vertex_id name (check schema with show_graph_details)\n"
         "  • Mixing different vertex types in one call\n"
         "  • Attribute name typos (must match schema exactly)\n"
         "  • Wrong data types (e.g., string instead of int)"
@@ -656,7 +656,7 @@ async def delete_node(
                 summary=f"No vertex found with ID '{vertex_id}' of type '{vertex_type}'",
                 suggestions=[
                     f"Verify ID: get_nodes(vertex_type='{vertex_type}', limit=10)",
-                    f"Check type: describe_graph()"
+                    f"Check type: show_graph_details()"
                 ],
                 metadata={"graph_name": conn.graphname}
             )

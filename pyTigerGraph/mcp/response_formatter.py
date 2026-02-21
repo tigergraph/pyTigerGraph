@@ -171,7 +171,7 @@ def format_error(
         if any(term in error_lower for term in ["vertex type", "edge type", "type not found"]):
             suggestions.extend([
                 "The specified type may not exist in the schema",
-                "Call 'describe_graph' to see available vertex and edge types",
+                "Call 'show_graph_details' to see available vertex and edge types",
                 "Call 'list_graphs' to ensure you're using the correct graph"
             ])
         
@@ -179,7 +179,7 @@ def format_error(
         elif any(term in error_lower for term in ["attribute", "column", "field"]):
             suggestions.extend([
                 "One or more attributes may not match the schema definition",
-                "Call 'describe_graph' to see required attributes and their types",
+                "Call 'show_graph_details' to see required attributes and their types",
                 "Check that attribute names are spelled correctly"
             ])
         
@@ -207,7 +207,7 @@ def format_error(
                 "Query syntax error detected",
                 "For GSQL: Use 'INTERPRET QUERY () FOR GRAPH <name> { ... }'",
                 "For Cypher: Use 'INTERPRET OPENCYPHER QUERY () FOR GRAPH <name> { ... }'",
-                "Call 'describe_graph' to understand the schema before writing queries"
+                "Call 'show_graph_details' to understand the schema before writing queries"
             ])
         
         # Vector errors
@@ -216,14 +216,14 @@ def format_error(
                 "Vector operation error",
                 "Ensure vector dimensions match the attribute definition",
                 "Call 'get_vector_index_status' to check if index is ready",
-                "Verify vector attribute exists with 'describe_graph'"
+                "Verify vector attribute exists with 'show_graph_details'"
             ])
         
         # Generic suggestions
         if len(suggestions) == 0:
             suggestions.extend([
                 "Check the error message for specific details",
-                "Call 'describe_graph' to understand the current graph structure",
+                "Call 'show_graph_details' to understand the current graph structure",
                 "Verify all required parameters are provided correctly"
             ])
     
@@ -251,6 +251,27 @@ def format_error(
         metadata=context,
         suggestions=suggestions
     )
+
+
+def gsql_has_error(result_str: str) -> bool:
+    """Check whether a GSQL result string indicates a failure.
+
+    ``conn.gsql()`` does **not** raise an exception when a GSQL command fails;
+    instead, the error message is returned as a plain string.  This helper
+    inspects the result for well-known error patterns so callers can
+    distinguish success from failure.
+    """
+    error_patterns = [
+        "Encountered \"",
+        "SEMANTIC ERROR",
+        "Syntax Error",
+        "Failed to create",
+        "does not exist",
+        "is not a valid",
+        "already exists",
+        "Invalid syntax",
+    ]
+    return any(p in result_str for p in error_patterns)
 
 
 def format_list_response(

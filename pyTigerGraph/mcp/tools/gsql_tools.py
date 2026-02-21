@@ -337,7 +337,13 @@ async def gsql(
     try:
         conn = get_connection(graph_name=graph_name)
         result = await conn.gsql(command)
-        message = f"Success: GSQL command executed successfully:\n{result}"
+        result_str = str(result) if result else ""
+
+        from ..response_formatter import gsql_has_error
+        if gsql_has_error(result_str):
+            message = f"Failed: GSQL command returned an error:\n{result_str}"
+        else:
+            message = f"Success: GSQL command executed successfully:\n{result_str}"
     except Exception as e:
         message = f"Failed to execute GSQL command due to: {str(e)}"
     return [TextContent(type="text", text=message)]
@@ -395,7 +401,7 @@ async def generate_gsql(
         if graph_name:
             try:
                 conn = get_connection(graph_name=graph_name)
-                schema = await conn.describe_graph()
+                schema = await conn.getSchema()
                 if schema:
                     schema_section = f"## Graph Schema\n\n{schema}"
             except Exception as e:
@@ -485,7 +491,7 @@ async def generate_cypher(
         schema_section = "## Graph Schema\n\nNo schema information available. Generate a generic Cypher query based on the request."
         try:
             conn = get_connection(graph_name=graph_name)
-            schema = await conn.describe_graph()
+            schema = await conn.getSchema()
             if schema:
                 schema_section = f"## Graph Schema\n\n{schema}"
         except Exception as e:

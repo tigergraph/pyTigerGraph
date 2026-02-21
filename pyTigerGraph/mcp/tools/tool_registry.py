@@ -20,8 +20,7 @@ from .schema_tools import (
     clear_graph_data_tool,
     # Schema operations (graph level)
     get_graph_schema_tool,
-    describe_graph_tool,
-    get_graph_metadata_tool,
+    show_graph_details_tool,
 )
 from .node_tools import (
     add_node_tool,
@@ -66,9 +65,12 @@ from .vector_tools import (
     # Vector schema tools
     add_vector_attribute_tool,
     drop_vector_attribute_tool,
+    list_vector_attributes_tool,
     get_vector_index_status_tool,
     # Vector data tools
     upsert_vectors_tool,
+    load_vectors_from_csv_tool,
+    load_vectors_from_json_tool,
     search_top_k_similarity_tool,
     fetch_vector_tool,
 )
@@ -104,8 +106,7 @@ def get_all_tools() -> List[Tool]:
         clear_graph_data_tool,
         # Schema operations (graph level)
         get_graph_schema_tool,
-        describe_graph_tool,
-        get_graph_metadata_tool,
+        show_graph_details_tool,
         # Node tools
         add_node_tool,
         add_nodes_tool,
@@ -150,9 +151,12 @@ def get_all_tools() -> List[Tool]:
         # Vector schema tools
         add_vector_attribute_tool,
         drop_vector_attribute_tool,
+        list_vector_attributes_tool,
         get_vector_index_status_tool,
         # Vector data tools
         upsert_vectors_tool,
+        load_vectors_from_csv_tool,
+        load_vectors_from_json_tool,
         search_top_k_similarity_tool,
         fetch_vector_tool,
         # Data Source tools

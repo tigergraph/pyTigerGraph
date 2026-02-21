@@ -147,11 +147,10 @@ These operations manage individual graphs within the TigerGraph database. A data
 - `tigergraph__clear_graph_data` - Clear all data from a graph (keeps schema structure)
 
 ### Schema Operations (Graph Level)
-These operations work with the schema of a specific graph. Each graph has its own independent schema.
+These operations work with the schema and objects of a specific graph.
 
-- `tigergraph__get_graph_schema` - Get the schema of a specific graph (raw JSON)
-- `tigergraph__describe_graph` - Get a human-readable description of a specific graph's schema
-- `tigergraph__get_graph_metadata` - Get metadata about a specific graph (vertex types, edge types, queries, loading jobs)
+- `tigergraph__get_graph_schema` - Get the schema of a specific graph as structured JSON (vertex/edge types and attributes only)
+- `tigergraph__show_graph_details` - Show details of a graph: schema, queries, loading jobs, data sources. Use `detail_type` to filter (`schema`, `query`, `loading_job`, `data_source`) or omit for all
 
 ### Node Operations
 - `tigergraph__add_node` - Add a single node
@@ -196,15 +195,20 @@ These operations work with the schema of a specific graph. Each graph has its ow
 - `tigergraph__get_node_degree` - Get the degree (number of edges) of a node
 
 ### GSQL Operations
-- `tigergraph__gsql` - Execute GSQL command
+- `tigergraph__gsql` - Execute raw GSQL command
+- `tigergraph__generate_gsql` - Generate a GSQL query from a natural language description (requires LLM configuration)
+- `tigergraph__generate_cypher` - Generate an openCypher query from a natural language description (requires LLM configuration)
 
 ### Vector Schema Operations
 - `tigergraph__add_vector_attribute` - Add a vector attribute to a vertex type (DIMENSION, METRIC: COSINE/L2/IP)
 - `tigergraph__drop_vector_attribute` - Drop a vector attribute from a vertex type
+- `tigergraph__list_vector_attributes` - List vector attributes (name, dimension, index type, data type, metric) by parsing `LS` output; optionally filter by vertex type
 - `tigergraph__get_vector_index_status` - Check vector index rebuild status (Ready_for_query/Rebuild_processing)
 
 ### Vector Data Operations
 - `tigergraph__upsert_vectors` - Upsert multiple vertices with vector data using REST API (batch support)
+- `tigergraph__load_vectors_from_csv` - Bulk-load vectors from a CSV/delimited file via a GSQL loading job (creates job, runs with file, drops job)
+- `tigergraph__load_vectors_from_json` - Bulk-load vectors from a JSON Lines (.jsonl) file via a GSQL loading job with `JSON_FILE="true"` (creates job, runs with file, drops job)
 - `tigergraph__search_top_k_similarity` - Perform vector similarity search using `vectorSearch()` function
 - `tigergraph__fetch_vector` - Fetch vertices with vector data using GSQL `PRINT WITH VECTOR`
 
@@ -218,6 +222,11 @@ These operations work with the schema of a specific graph. Each graph has its ow
 - `tigergraph__get_all_data_sources` - Get all data sources
 - `tigergraph__drop_all_data_sources` - Drop all data sources
 - `tigergraph__preview_sample_data` - Preview sample data from a file
+
+### Discovery & Navigation
+- `tigergraph__discover_tools` - Search for tools by description, use case, or keywords
+- `tigergraph__get_workflow` - Get step-by-step workflow templates for common tasks (e.g., `data_loading`, `schema_creation`, `graph_exploration`)
+- `tigergraph__get_tool_info` - Get detailed information about a specific tool (parameters, examples, related tools)
 
 ## Backward Compatibility
 
@@ -294,12 +303,91 @@ asyncio.run(call_tool())
 
 **Note:** When using `MultiServerMCPClient` or similar MCP clients with stdio transport, the `args` parameter is required. For the `tigergraph-mcp` command (which is a standalone entry point), set `args` to an empty list `[]`. If you need to pass arguments to the command, include them in the list (e.g., `["-v"]` for verbose mode, `["-vv"]` for debug mode).
 
+## LLM-Friendly Features
+
+The MCP server is designed to help AI agents work effectively with TigerGraph.
+
+### Structured Responses
+
+Every tool response follows a consistent JSON structure:
+
+```json
+{
+  "success": true,
+  "operation": "get_node",
+  "summary": "Found vertex 'p123' of type 'Person'",
+  "data": { ... },
+  "suggestions": [
+    "View connected edges: get_node_edges(...)",
+    "Find neighbors: get_neighbors(...)"
+  ],
+  "metadata": { "graph_name": "MyGraph" }
+}
+```
+
+Error responses include actionable recovery hints:
+
+```json
+{
+  "success": false,
+  "operation": "get_node",
+  "error": "Vertex not found",
+  "suggestions": [
+    "Verify the vertex_id is correct",
+    "Check vertex type with show_graph_details()"
+  ]
+}
+```
+
+### Rich Tool Descriptions
+
+Each tool includes detailed descriptions with:
+- **Use cases** — when to call this tool
+- **Common workflows** — step-by-step patterns
+- **Tips** — best practices and gotchas
+- **Warnings** — safety notes for destructive operations
+- **Related tools** — what to call next
+
+### Token Optimization
+
+Responses are designed for efficient LLM token usage:
+- No echoing of input parameters (the LLM already knows what it sent)
+- Only returns new information (results, counts, boolean answers)
+- Clean text output with no decorative formatting
+
+## Tool Discovery Workflow
+
+The MCP server includes discovery tools to help AI agents find the right tool for a task:
+
+```python
+# 1. Discover tools for a task
+result = await session.call_tool(
+    "tigergraph__discover_tools",
+    arguments={"query": "how to add data to the graph"}
+)
+# Returns: ranked list of relevant tools with use cases
+
+# 2. Get a workflow template
+result = await session.call_tool(
+    "tigergraph__get_workflow",
+    arguments={"workflow_type": "data_loading"}
+)
+# Returns: step-by-step guide with tool calls
+
+# 3. Get detailed tool info
+result = await session.call_tool(
+    "tigergraph__get_tool_info",
+    arguments={"tool_name": "tigergraph__add_node"}
+)
+# Returns: full documentation, examples, related tools
+```
+
 ## Notes
 
 - **Async APIs**: All MCP tools use pyTigerGraph's async APIs (`AsyncTigerGraphConnection`) for optimal performance
 - **Transport**: The MCP server uses stdio transport by default
-- **Tool Responses**: All tools are async and return `TextContent` responses
-- **Error Handling**: Error handling is built into each tool
+- **Structured Responses**: All tools return structured JSON responses with `success`, `operation`, `summary`, `data`, `suggestions`, and `metadata` fields. Error responses include recovery hints and contextual suggestions
+- **Error Detection**: GSQL operations include error detection for syntax and semantic errors (since `conn.gsql()` does not raise Python exceptions for GSQL failures)
 - **Connection Management**: The connection manager automatically creates async connections from environment variables
-- **Performance**: Using async APIs ensures non-blocking I/O operations, making the MCP server more efficient for concurrent requests
+- **Performance**: Async APIs for non-blocking I/O; `v.outdegree()` for O(1) degree counting; batch operations for multiple vertices/edges
 

@@ -23,7 +23,8 @@ from mcp.types import Tool, TextContent
 
 from ..tool_names import TigerGraphToolName
 from ..connection_manager import get_connection
-from ..response_formatter import format_success, format_error
+from ..response_formatter import format_success, format_error, gsql_has_error
+from pyTigerGraph.common.exception import TigerGraphException
 
 
 # =============================================================================
@@ -302,10 +303,25 @@ async def create_loading_job(
             if drop_after_run:
                 gsql_script += f"\n\nDROP JOB {job_name}"
 
-        # Execute the GSQL script
         result = await conn.gsql(gsql_script)
+        result_str = str(result) if result else ""
 
-        # Build response message
+        if gsql_has_error(result_str):
+            return format_error(
+                operation="create_loading_job",
+                error=TigerGraphException(result_str),
+                context={
+                    "job_name": job_name,
+                    "graph_name": conn.graphname,
+                    "gsql_script": gsql_script,
+                },
+                suggestions=[
+                    "Check that vertex/edge types referenced in the job exist in the schema",
+                    "Use show_graph_details() to verify the current schema",
+                    "Ensure file paths and column mappings are correct",
+                ],
+            )
+
         status_parts = []
         if run_job:
             if drop_after_run:
@@ -314,7 +330,7 @@ async def create_loading_job(
                 status_parts.append("Job created and executed")
         else:
             status_parts.append("Job created successfully")
-        
+
         return format_success(
             operation="create_loading_job",
             summary=f"Success: Loading job '{job_name}' " + ", ".join(status_parts),
@@ -324,7 +340,7 @@ async def create_loading_job(
                 "executed": run_job,
                 "dropped": drop_after_run,
                 "gsql_script": gsql_script,
-                "result": result
+                "result": result_str,
             },
             suggestions=[s for s in [
                 f"Run the job: run_loading_job_with_file(job_name='{job_name}', ...)" if not run_job else "Job already executed",

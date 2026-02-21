@@ -26,8 +26,7 @@ from .tools import (
     clear_graph_data,
     # Schema operations (graph level)
     get_graph_schema,
-    describe_graph,
-    get_graph_metadata,
+    show_graph_details,
     # Node tools
     add_node,
     add_nodes,
@@ -72,9 +71,12 @@ from .tools import (
     # Vector schema tools
     add_vector_attribute,
     drop_vector_attribute,
+    list_vector_attributes,
     get_vector_index_status,
     # Vector data tools
     upsert_vectors,
+    load_vectors_from_csv,
+    load_vectors_from_json,
     search_top_k_similarity,
     fetch_vector,
     # Data Source tools
@@ -130,10 +132,8 @@ class MCPServer:
                     # Schema operations (graph level)
                     case TigerGraphToolName.GET_GRAPH_SCHEMA:
                         return await get_graph_schema(**arguments)
-                    case TigerGraphToolName.DESCRIBE_GRAPH:
-                        return await describe_graph(**arguments)
-                    case TigerGraphToolName.GET_GRAPH_METADATA:
-                        return await get_graph_metadata(**arguments)
+                    case TigerGraphToolName.SHOW_GRAPH_DETAILS:
+                        return await show_graph_details(**arguments)
                     # Node operations
                     case TigerGraphToolName.ADD_NODE:
                         return await add_node(**arguments)
@@ -215,11 +215,17 @@ class MCPServer:
                         return await add_vector_attribute(**arguments)
                     case TigerGraphToolName.DROP_VECTOR_ATTRIBUTE:
                         return await drop_vector_attribute(**arguments)
+                    case TigerGraphToolName.LIST_VECTOR_ATTRIBUTES:
+                        return await list_vector_attributes(**arguments)
                     case TigerGraphToolName.GET_VECTOR_INDEX_STATUS:
                         return await get_vector_index_status(**arguments)
                     # Vector data operations
                     case TigerGraphToolName.UPSERT_VECTORS:
                         return await upsert_vectors(**arguments)
+                    case TigerGraphToolName.LOAD_VECTORS_FROM_CSV:
+                        return await load_vectors_from_csv(**arguments)
+                    case TigerGraphToolName.LOAD_VECTORS_FROM_JSON:
+                        return await load_vectors_from_json(**arguments)
                     case TigerGraphToolName.SEARCH_TOP_K_SIMILARITY:
                         return await search_top_k_similarity(**arguments)
                     case TigerGraphToolName.FETCH_VECTOR:
