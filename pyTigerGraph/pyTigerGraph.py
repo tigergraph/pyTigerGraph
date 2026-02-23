@@ -37,7 +37,7 @@ class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT
 
         self.gds = None
         self.ai = None
-        self._mcp_server = None
+        self.mcp_server = None
 
     def __getattribute__(self, name):
         if name == "gds":
@@ -66,12 +66,12 @@ class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT
                 return super().__getattribute__(name)
         elif name == "mcp":
             # Optional MCP server support
-            if super().__getattribute__("_mcp_server") is None:
+            if super().__getattribute__("mcp_server") is None:
                 try:
                     from .mcp import ConnectionManager
                     # Set this connection as the default for MCP tools
                     ConnectionManager.set_default_connection(self)
-                    super().__setattr__("_mcp_server", True)
+                    super().__setattr__("mcp_server", True)
                 except ImportError:
                     raise Exception(
                         "MCP support requires the 'mcp' extra. "
