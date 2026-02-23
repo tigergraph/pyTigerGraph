@@ -334,19 +334,35 @@ async def gsql(
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Execute a GSQL command."""
+    from ..response_formatter import format_success, format_error, gsql_has_error
+
     try:
         conn = get_connection(graph_name=graph_name)
         result = await conn.gsql(command)
         result_str = str(result) if result else ""
 
-        from ..response_formatter import gsql_has_error
         if gsql_has_error(result_str):
-            message = f"Failed: GSQL command returned an error:\n{result_str}"
-        else:
-            message = f"Success: GSQL command executed successfully:\n{result_str}"
+            return format_error(
+                operation="gsql",
+                error=Exception(f"GSQL command returned an error:\n{result_str}"),
+                context={
+                    "command_preview": command[:200] + "..." if len(command) > 200 else command,
+                    "graph_name": conn.graphname,
+                },
+            )
+
+        return format_success(
+            operation="gsql",
+            summary="GSQL command executed successfully",
+            data={"result": result_str},
+            metadata={"graph_name": conn.graphname},
+        )
     except Exception as e:
-        message = f"Failed to execute GSQL command due to: {str(e)}"
-    return [TextContent(type="text", text=message)]
+        return format_error(
+            operation="gsql",
+            error=e,
+            context={"graph_name": graph_name or "default"},
+        )
 
 
 async def generate_gsql(

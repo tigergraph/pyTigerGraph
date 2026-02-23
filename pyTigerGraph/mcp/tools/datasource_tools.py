@@ -105,10 +105,11 @@ async def create_data_source(
     config: Dict[str, Any],
 ) -> List[TextContent]:
     """Create a new data source."""
+    from ..response_formatter import format_success, format_error, gsql_has_error
+
     try:
         conn = get_connection()
 
-        # Build the CREATE DATA_SOURCE command based on type
         config_str = ", ".join([f'{k}="{v}"' for k, v in config.items()])
 
         gsql_cmd = f"CREATE DATA_SOURCE {data_source_type.upper()} {data_source_name}"
@@ -118,14 +119,28 @@ async def create_data_source(
         result = await conn.gsql(gsql_cmd)
         result_str = str(result) if result else ""
 
-        from ..response_formatter import gsql_has_error
         if gsql_has_error(result_str):
-            message = f"Failed: Could not create data source '{data_source_name}':\n{result_str}"
-        else:
-            message = f"Success: Data source '{data_source_name}' of type '{data_source_type}' created successfully:\n{result_str}"
+            return format_error(
+                operation="create_data_source",
+                error=Exception(f"Could not create data source:\n{result_str}"),
+                context={"data_source_name": data_source_name, "data_source_type": data_source_type},
+            )
+
+        return format_success(
+            operation="create_data_source",
+            summary=f"Data source '{data_source_name}' of type '{data_source_type}' created successfully",
+            data={"data_source_name": data_source_name, "result": result_str},
+            suggestions=[
+                f"View data source: get_data_source(data_source_name='{data_source_name}')",
+                "List all data sources: get_all_data_sources()",
+            ],
+        )
     except Exception as e:
-        message = f"Failed to create data source due to: {str(e)}"
-    return [TextContent(type="text", text=message)]
+        return format_error(
+            operation="create_data_source",
+            error=e,
+            context={"data_source_name": data_source_name},
+        )
 
 
 async def update_data_source(
@@ -133,6 +148,8 @@ async def update_data_source(
     config: Dict[str, Any],
 ) -> List[TextContent]:
     """Update an existing data source."""
+    from ..response_formatter import format_success, format_error, gsql_has_error
+
     try:
         conn = get_connection()
 
@@ -142,80 +159,139 @@ async def update_data_source(
         result = await conn.gsql(gsql_cmd)
         result_str = str(result) if result else ""
 
-        from ..response_formatter import gsql_has_error
         if gsql_has_error(result_str):
-            message = f"Failed: Could not update data source '{data_source_name}':\n{result_str}"
-        else:
-            message = f"Success: Data source '{data_source_name}' updated successfully:\n{result_str}"
+            return format_error(
+                operation="update_data_source",
+                error=Exception(f"Could not update data source:\n{result_str}"),
+                context={"data_source_name": data_source_name},
+            )
+
+        return format_success(
+            operation="update_data_source",
+            summary=f"Data source '{data_source_name}' updated successfully",
+            data={"data_source_name": data_source_name, "result": result_str},
+        )
     except Exception as e:
-        message = f"Failed to update data source due to: {str(e)}"
-    return [TextContent(type="text", text=message)]
+        return format_error(
+            operation="update_data_source",
+            error=e,
+            context={"data_source_name": data_source_name},
+        )
 
 
 async def get_data_source(
     data_source_name: str,
 ) -> List[TextContent]:
     """Get information about a data source."""
+    from ..response_formatter import format_success, format_error, gsql_has_error
+
     try:
         conn = get_connection()
 
         result = await conn.gsql(f"SHOW DATA_SOURCE {data_source_name}")
         result_str = str(result) if result else ""
 
-        from ..response_formatter import gsql_has_error
         if gsql_has_error(result_str):
-            message = f"Failed: Could not retrieve data source '{data_source_name}':\n{result_str}"
-        else:
-            message = f"Success: Data source '{data_source_name}':\n{result_str}"
+            return format_error(
+                operation="get_data_source",
+                error=Exception(f"Could not retrieve data source:\n{result_str}"),
+                context={"data_source_name": data_source_name},
+            )
+
+        return format_success(
+            operation="get_data_source",
+            summary=f"Data source '{data_source_name}' details",
+            data={"data_source_name": data_source_name, "details": result_str},
+        )
     except Exception as e:
-        message = f"Failed to get data source due to: {str(e)}"
-    return [TextContent(type="text", text=message)]
+        return format_error(
+            operation="get_data_source",
+            error=e,
+            context={"data_source_name": data_source_name},
+        )
 
 
 async def drop_data_source(
     data_source_name: str,
 ) -> List[TextContent]:
     """Drop a data source."""
+    from ..response_formatter import format_success, format_error, gsql_has_error
+
     try:
         conn = get_connection()
 
         result = await conn.gsql(f"DROP DATA_SOURCE {data_source_name}")
         result_str = str(result) if result else ""
 
-        from ..response_formatter import gsql_has_error
         if gsql_has_error(result_str):
-            message = f"Failed: Could not drop data source '{data_source_name}':\n{result_str}"
-        else:
-            message = f"Success: Data source '{data_source_name}' dropped successfully:\n{result_str}"
+            return format_error(
+                operation="drop_data_source",
+                error=Exception(f"Could not drop data source:\n{result_str}"),
+                context={"data_source_name": data_source_name},
+            )
+
+        return format_success(
+            operation="drop_data_source",
+            summary=f"Data source '{data_source_name}' dropped successfully",
+            data={"data_source_name": data_source_name, "result": result_str},
+            suggestions=["List remaining: get_all_data_sources()"],
+            metadata={"destructive": True},
+        )
     except Exception as e:
-        message = f"Failed to drop data source due to: {str(e)}"
-    return [TextContent(type="text", text=message)]
+        return format_error(
+            operation="drop_data_source",
+            error=e,
+            context={"data_source_name": data_source_name},
+        )
 
 
 async def get_all_data_sources(**kwargs) -> List[TextContent]:
     """Get all data sources."""
+    from ..response_formatter import format_success, format_error, gsql_has_error
+
     try:
         conn = get_connection()
 
         result = await conn.gsql("SHOW DATA_SOURCE *")
         result_str = str(result) if result else ""
 
-        from ..response_formatter import gsql_has_error
         if gsql_has_error(result_str):
-            message = f"Failed: Could not retrieve data sources:\n{result_str}"
-        else:
-            message = f"Success: All data sources:\n{result_str}"
+            return format_error(
+                operation="get_all_data_sources",
+                error=Exception(f"Could not retrieve data sources:\n{result_str}"),
+                context={},
+            )
+
+        return format_success(
+            operation="get_all_data_sources",
+            summary="All data sources retrieved",
+            data={"details": result_str},
+            suggestions=["Create a data source: create_data_source(...)"],
+        )
     except Exception as e:
-        message = f"Failed to get data sources due to: {str(e)}"
-    return [TextContent(type="text", text=message)]
+        return format_error(
+            operation="get_all_data_sources",
+            error=e,
+            context={},
+        )
 
 
 async def drop_all_data_sources(
     confirm: bool = False,
 ) -> List[TextContent]:
     """Drop all data sources."""
+    from ..response_formatter import format_success, format_error, gsql_has_error
+
     if not confirm:
-        return [TextContent(type="text", text="Error: Drop all data sources requires confirm=True. This is a destructive operation.")]
+        return format_error(
+            operation="drop_all_data_sources",
+            error=ValueError("Confirmation required"),
+            context={},
+            suggestions=[
+                "Set confirm=True to proceed with this destructive operation",
+                "This will drop ALL data sources",
+            ],
+        )
 
     try:
         conn = get_connection()
@@ -223,14 +299,25 @@ async def drop_all_data_sources(
         result = await conn.gsql("DROP DATA_SOURCE *")
         result_str = str(result) if result else ""
 
-        from ..response_formatter import gsql_has_error
         if gsql_has_error(result_str):
-            message = f"Failed: Could not drop all data sources:\n{result_str}"
-        else:
-            message = f"Success: All data sources dropped successfully:\n{result_str}"
+            return format_error(
+                operation="drop_all_data_sources",
+                error=Exception(f"Could not drop all data sources:\n{result_str}"),
+                context={},
+            )
+
+        return format_success(
+            operation="drop_all_data_sources",
+            summary="All data sources dropped successfully",
+            data={"result": result_str},
+            metadata={"destructive": True},
+        )
     except Exception as e:
-        message = f"Failed to drop all data sources due to: {str(e)}"
-    return [TextContent(type="text", text=message)]
+        return format_error(
+            operation="drop_all_data_sources",
+            error=e,
+            context={},
+        )
 
 
 async def preview_sample_data(
@@ -240,23 +327,36 @@ async def preview_sample_data(
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Preview sample data from a file."""
+    from ..response_formatter import format_success, format_error, gsql_has_error
+
     try:
         conn = get_connection(graph_name=graph_name)
 
-        gsql_cmd = f"""
-        USE GRAPH {conn.graphname}
-        SHOW DATA_SOURCE {data_source_name} FILE "{file_path}" LIMIT {num_rows}
-        """
+        gsql_cmd = (
+            f"USE GRAPH {conn.graphname}\n"
+            f'SHOW DATA_SOURCE {data_source_name} FILE "{file_path}" LIMIT {num_rows}'
+        )
 
         result = await conn.gsql(gsql_cmd)
         result_str = str(result) if result else ""
 
-        from ..response_formatter import gsql_has_error
         if gsql_has_error(result_str):
-            message = f"Failed: Could not preview data from '{file_path}':\n{result_str}"
-        else:
-            message = f"Success: Sample data preview from '{file_path}' (first {num_rows} rows):\n{result_str}"
+            return format_error(
+                operation="preview_sample_data",
+                error=Exception(f"Could not preview data:\n{result_str}"),
+                context={"data_source_name": data_source_name, "file_path": file_path},
+            )
+
+        return format_success(
+            operation="preview_sample_data",
+            summary=f"Sample data from '{file_path}' (first {num_rows} rows)",
+            data={"data_source_name": data_source_name, "file_path": file_path, "preview": result_str},
+            metadata={"graph_name": conn.graphname},
+        )
     except Exception as e:
-        message = f"Failed to preview sample data due to: {str(e)}"
-    return [TextContent(type="text", text=message)]
+        return format_error(
+            operation="preview_sample_data",
+            error=e,
+            context={"data_source_name": data_source_name, "file_path": file_path},
+        )
 

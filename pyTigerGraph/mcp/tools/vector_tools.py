@@ -537,35 +537,59 @@ async def get_vector_index_status(
     vector_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Check the rebuild status of vector indexes."""
+    from ..response_formatter import format_success, format_error
+
     try:
         conn = get_connection(graph_name=graph_name)
 
-        # Build the endpoint path
         path = f"/vector/status/{conn.graphname}"
         if vertex_type:
             path += f"/{vertex_type}"
             if vector_name:
                 path += f"/{vector_name}"
 
-        # Use the connection's _req method to make the REST call
         result = await conn._req("GET", conn.restppUrl + path)
 
-        # Parse status
         if result:
             need_rebuild = result.get("NeedRebuildServers", [])
             if len(need_rebuild) == 0:
                 status = "Ready_for_query"
-                status_msg = "Success: Vector index is ready for queries."
+                summary = "Vector index is ready for queries"
             else:
                 status = "Rebuild_processing"
-                status_msg = f"Vector index is still rebuilding on {len(need_rebuild)} server(s)."
+                summary = f"Vector index is still rebuilding on {len(need_rebuild)} server(s)"
 
-            message = f"{status_msg}\n\nStatus: {status}\nDetails:\n{json.dumps(result, indent=2)}"
+            return format_success(
+                operation="get_vector_index_status",
+                summary=summary,
+                data={
+                    "graph_name": conn.graphname,
+                    "vertex_type": vertex_type,
+                    "vector_name": vector_name,
+                    "status": status,
+                    "details": result,
+                },
+                suggestions=[s for s in [
+                    f"List vector attributes: list_vector_attributes(graph_name='{conn.graphname}')",
+                    f"Search vectors: search_top_k_similarity(vertex_type='{vertex_type}', ...)" if vertex_type else None,
+                ] if s is not None],
+            )
         else:
-            message = "Success: No vector indexes found or status unavailable."
+            return format_success(
+                operation="get_vector_index_status",
+                summary="No vector indexes found or status unavailable",
+                data={"graph_name": conn.graphname},
+            )
     except Exception as e:
-        message = f"Failed to get vector index status due to: {str(e)}"
-    return [TextContent(type="text", text=message)]
+        return format_error(
+            operation="get_vector_index_status",
+            error=e,
+            context={
+                "vertex_type": vertex_type,
+                "vector_name": vector_name,
+                "graph_name": graph_name or "default",
+            },
+        )
 
 
 # =============================================================================
@@ -579,6 +603,8 @@ async def upsert_vectors(
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Upsert multiple vertices with vector data using REST Upsert API."""
+    from ..response_formatter import format_success, format_error
+
     try:
         conn = get_connection(graph_name=graph_name)
 
@@ -592,7 +618,6 @@ async def upsert_vectors(
                 vector = vec_data["vector"]
                 attributes = vec_data.get("attributes", {})
 
-                # Combine vector with other attributes
                 all_attributes = attributes.copy() if attributes else {}
                 all_attributes[vector_attribute] = vector
 
@@ -603,15 +628,38 @@ async def upsert_vectors(
             except Exception as e:
                 failed_ids.append((vec_data.get("vertex_id", "unknown"), str(e)))
 
-        # Build result message
         if failed_ids:
-            failed_msg = "\n".join([f"  - {vid}: {err}" for vid, err in failed_ids])
-            message = f"Warning: Partial success: {success_count}/{len(vectors)} vectors upserted for vertex type '{vertex_type}':\n  - Vector attribute: {vector_attribute}\n  - Dimensions: {dimensions}\n\nFailed:\n{failed_msg}"
+            summary = f"Partial success: {success_count}/{len(vectors)} vectors upserted"
         else:
-            message = f"Successfully upserted {success_count} vectors for vertex type '{vertex_type}':\n  - Vector attribute: {vector_attribute}\n  - Dimensions: {dimensions}"
+            summary = f"Successfully upserted {success_count} vectors for '{vertex_type}'"
+
+        return format_success(
+            operation="upsert_vectors",
+            summary=summary,
+            data={
+                "vertex_type": vertex_type,
+                "vector_attribute": vector_attribute,
+                "dimensions": dimensions,
+                "success_count": success_count,
+                "failed_count": len(failed_ids),
+                "failed": [{"vertex_id": vid, "error": err} for vid, err in failed_ids] if failed_ids else None,
+            },
+            suggestions=[
+                f"Check index status: get_vector_index_status(vertex_type='{vertex_type}', vector_name='{vector_attribute}')",
+                f"Search vectors: search_top_k_similarity(vertex_type='{vertex_type}', vector_attribute='{vector_attribute}', ...)",
+            ],
+            metadata={"graph_name": conn.graphname},
+        )
     except Exception as e:
-        message = f"Failed to upsert vectors due to: {str(e)}"
-    return [TextContent(type="text", text=message)]
+        return format_error(
+            operation="upsert_vectors",
+            error=e,
+            context={
+                "vertex_type": vertex_type,
+                "vector_attribute": vector_attribute,
+                "vector_count": len(vectors),
+            },
+        )
 
 
 async def search_top_k_similarity(
@@ -775,11 +823,14 @@ async def fetch_vector(
     from ..response_formatter import format_success, format_error, gsql_has_error
     import uuid
 
+    query_name = None
+    gname = None
+
     try:
         conn = get_connection(graph_name=graph_name)
         gname = conn.graphname
 
-        query_name = f"temp_fetch_vec_{uuid.uuid4().hex[:8]}"
+        query_name = f"_fetch_vec_{uuid.uuid4().hex[:8]}"
 
         to_vertex_calls = "\n  ".join(
             f'@@seeds += to_vertex("{vid}", "{vertex_type}");'
@@ -836,10 +887,11 @@ async def fetch_vector(
             ],
         )
     except Exception as e:
-        try:
-            await conn.gsql(f"USE GRAPH {gname}\nDROP QUERY {query_name}")
-        except Exception:
-            pass
+        if query_name and gname:
+            try:
+                await conn.gsql(f"USE GRAPH {gname}\nDROP QUERY {query_name}")
+            except Exception:
+                pass
         return format_error(
             operation="fetch_vector",
             error=e,
@@ -879,11 +931,12 @@ async def load_vectors_from_csv(
     """
     from ..response_formatter import format_success, format_error, gsql_has_error
 
+    job_name = f"load_vec_csv_{vector_attribute}_{vertex_type}"
+    gname = None
+
     try:
         conn = get_connection(graph_name=graph_name)
         gname = conn.graphname
-
-        job_name = f"load_vec_csv_{vector_attribute}_{vertex_type}"
         file_tag = "vec_file"
 
         id_col = f'$"{id_column}"' if isinstance(id_column, str) else f"${id_column}"
@@ -891,9 +944,13 @@ async def load_vectors_from_csv(
 
         header_clause = f', HEADER="true"' if header else ""
 
+        try:
+            await conn.gsql(f"USE GRAPH {gname}\nDROP JOB {job_name}")
+        except Exception:
+            pass
+
         gsql_cmd = (
             f"USE GRAPH {gname}\n"
-            f"DROP JOB {job_name}\n"
             f"CREATE LOADING JOB {job_name} FOR GRAPH {gname} {{\n"
             f'  DEFINE FILENAME {file_tag};\n'
             f"  LOAD {file_tag} TO VECTOR ATTRIBUTE {vector_attribute} ON VERTEX {vertex_type}\n"
@@ -944,10 +1001,11 @@ async def load_vectors_from_csv(
             ],
         )
     except Exception as e:
-        try:
-            await conn.gsql(f"USE GRAPH {gname}\nDROP JOB {job_name}")
-        except Exception:
-            pass
+        if gname:
+            try:
+                await conn.gsql(f"USE GRAPH {gname}\nDROP JOB {job_name}")
+            except Exception:
+                pass
         return format_error(
             operation="load_vectors_from_csv",
             error=e,
@@ -987,16 +1045,21 @@ async def load_vectors_from_json(
     """
     from ..response_formatter import format_success, format_error, gsql_has_error
 
+    job_name = f"load_vec_json_{vector_attribute}_{vertex_type}"
+    gname = None
+
     try:
         conn = get_connection(graph_name=graph_name)
         gname = conn.graphname
-
-        job_name = f"load_vec_json_{vector_attribute}_{vertex_type}"
         file_tag = "vec_file"
+
+        try:
+            await conn.gsql(f"USE GRAPH {gname}\nDROP JOB {job_name}")
+        except Exception:
+            pass
 
         gsql_cmd = (
             f"USE GRAPH {gname}\n"
-            f"DROP JOB {job_name}\n"
             f"CREATE LOADING JOB {job_name} FOR GRAPH {gname} {{\n"
             f'  DEFINE FILENAME {file_tag};\n'
             f"  LOAD {file_tag} TO VECTOR ATTRIBUTE {vector_attribute} ON VERTEX {vertex_type}\n"
@@ -1046,10 +1109,11 @@ async def load_vectors_from_json(
             ],
         )
     except Exception as e:
-        try:
-            await conn.gsql(f"USE GRAPH {gname}\nDROP JOB {job_name}")
-        except Exception:
-            pass
+        if gname:
+            try:
+                await conn.gsql(f"USE GRAPH {gname}\nDROP JOB {job_name}")
+            except Exception:
+                pass
         return format_error(
             operation="load_vectors_from_json",
             error=e,
