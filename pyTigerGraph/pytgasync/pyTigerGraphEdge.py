@@ -902,7 +902,7 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery):
         logger.debug("exit: delEdges")
 
         return ret
-    
+
     async def edgeSetToDataFrame(self, edgeSet: list, withId: bool = True, withType: bool = False) -> 'pd.DataFrame':
         """Converts an edge set to a pandas DataFrame.
 

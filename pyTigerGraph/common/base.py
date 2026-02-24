@@ -179,7 +179,7 @@ class PyTigerGraphCore(object):
         else:
             self.restppPort = restppPort
             self.restppUrl = self.host + ":" + self.restppPort
-            
+
         self.gsPort = gsPort
         if self.tgCloud and (gsPort == "14240" or gsPort == "443"):
             self.gsPort = sslPort
@@ -375,7 +375,7 @@ class PyTigerGraphCore(object):
         """
         self.responseConfigHeader = {
             "GSQL-TIMEOUT": str(timeout), "RESPONSE-LIMIT": str(responseSize)}
-        
+
     def _parse_get_ver(self, version, component, full):
         ret = ""
         for v in version:

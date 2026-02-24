@@ -360,7 +360,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         logger.debug("exit: _delete")
 
         return res
-    
+
     def getVersion(self, raw: bool = False) -> Union[str, list]:
         """Retrieves the git versions of all components of the system.
 
@@ -417,7 +417,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         logger.debug("exit: getVer")
 
         return ret
-    
+
     def customizeHeader(self, timeout:int = 16_000, responseSize:int = 3.2e+7):
         """Method to configure the request header.
 

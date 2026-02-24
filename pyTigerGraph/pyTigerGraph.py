@@ -37,6 +37,7 @@ class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT
 
         self.gds = None
         self.ai = None
+        self.mcp_server = None
 
     def __getattribute__(self, name):
         if name == "gds":
@@ -63,7 +64,63 @@ class TigerGraphConnection(pyTigerGraphVertex, pyTigerGraphEdge, pyTigerGraphUDT
                     )
             else:
                 return super().__getattribute__(name)
+        elif name == "mcp":
+            # Optional MCP server support
+            if super().__getattribute__("mcp_server") is None:
+                try:
+                    from .mcp import ConnectionManager
+                    # Set this connection as the default for MCP tools
+                    ConnectionManager.set_default_connection(self)
+                    super().__setattr__("mcp_server", True)
+                except ImportError:
+                    raise Exception(
+                        "MCP support requires the 'mcp' extra. "
+                        "Install with: pip install pyTigerGraph[mcp]"
+                    )
+            return super().__getattribute__(name)
         else:
             return super().__getattribute__(name)
+
+    def start_mcp_server(self):
+        """Start an MCP server using this connection.
+
+        This method creates an async connection from this sync connection
+        and sets it as the default for MCP tools.
+
+        Note: This requires the 'mcp' extra to be installed.
+        Install with: pip install pyTigerGraph[mcp]
+        """
+        try:
+            from .mcp import ConnectionManager
+            from .pytgasync import AsyncTigerGraphConnection
+            # Create async connection from sync connection parameters
+            # Get gsqlSecret if it exists (it's set in base class if provided)
+            gsql_secret = ""
+            if hasattr(self, 'username') and self.username == "__GSQL__secret":
+                gsql_secret = self.password
+            else:
+                gsql_secret = getattr(self, 'gsqlSecret', '')
+
+            async_conn = AsyncTigerGraphConnection(
+                host=self.host,
+                graphname=self.graphname,
+                username=self.username if self.username != "__GSQL__secret" else "tigergraph",
+                password=self.password if self.username != "__GSQL__secret" else "tigergraph",
+                gsqlSecret=gsql_secret,
+                apiToken=self.apiToken,
+                jwtToken=self.jwtToken,
+                restppPort=self.restppPort,
+                gsPort=self.gsPort,
+                sslPort=self.sslPort,
+                tgCloud=self.tgCloud,
+                certPath=self.certPath,
+            )
+            ConnectionManager.set_default_connection(async_conn)
+            return True
+        except ImportError:
+            raise Exception(
+                "MCP support requires the 'mcp' extra. "
+                "Install with: pip install pyTigerGraph[mcp]"
+            )
 
 # EOF

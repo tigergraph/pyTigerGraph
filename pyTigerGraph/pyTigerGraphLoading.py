@@ -53,7 +53,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
                 End-of-line character. Only one or two characters are allowed, except for the
                 special case `\\r\\n`. The default value is `\\n`
             timeout:
-                Timeout in seconds. If set to `0`, use the system-wide endpoint timeout setting.
+                Timeout in milliseconds. If set to `0`, use the system-wide endpoint timeout setting.
             sizeLimit:
                 Maximum size for input file in bytes.
             columns:
@@ -102,7 +102,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
                 End-of-line character. Only one or two characters are allowed, except for the
                 special case `\\r\\n`. The default value is `\\n`
             timeout:
-                Timeout in seconds. If set to `0`, use the system-wide endpoint timeout setting.
+                Timeout in milliseconds. If set to `0`, use the system-wide endpoint timeout setting.
             sizeLimit:
                 Maximum size for input file in bytes.
 
@@ -145,7 +145,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
                 End-of-line character. Only one or two characters are allowed, except for the
                 special case `\\r\\n`. The default value is `\\n`
             timeout:
-                Timeout in seconds. If set to `0`, use the system-wide endpoint timeout setting.
+                Timeout in milliseconds. If set to `0`, use the system-wide endpoint timeout setting.
             sizeLimit:
                 Maximum size for input file in bytes.
 
@@ -218,7 +218,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         logger.debug("exit: getLoadingJobs")
 
         return res
-    
+
     def createLoadingJob(self, job_definition: str) -> dict:
         """Create a new loading job with the given definition.
 
@@ -242,7 +242,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         logger.debug("exit: createLoadingJob")
 
         return res
-    
+
     def updateLoadingJob(self, job_definition: str) -> dict:
         """Update an existing loading job with the given definition.
 
@@ -266,7 +266,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         logger.debug("exit: updateLoadingJob")
 
         return res
-    
+
     def getLoadingJobInfo(self, jobName: str, verbose: bool = False) -> dict:
         """Get information about the specified loading job.
 
@@ -331,7 +331,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         logger.debug("exit: runLoadingJob")
 
         return res
-    
+
     def dropLoadingJob(self, jobName: str) -> dict:
         """Drop the specified loading job.
 
@@ -355,7 +355,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         logger.debug("exit: dropLoadingJob")
 
         return res
-    
+
     def abortLoadingJobs(self, jobIds: list[str], pauseJob: bool = False) -> dict:
         """Abort the specified loading jobs.
 
@@ -381,7 +381,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         logger.debug("exit: abortLoadingJobs")
 
         return res
-    
+
     def abortLoadingJob(self, jobId: str, pauseJob: bool = False) -> dict:
         """Abort the specified loading job.
 
@@ -407,7 +407,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         logger.debug("exit: abortLoadingJob")
 
         return res
-    
+
     def resumeLoadingJob(self, jobId: str) -> dict:
         """Resume the specified loading job.
 
@@ -431,7 +431,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         logger.debug("exit: resumeLoadingJob")
 
         return res
-    
+
     def getLoadingJobsStatus(self, jobIds: list[str]) -> dict:
         """Get the status of the specified loading jobs.
 
@@ -455,7 +455,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
         logger.debug("exit: getLoadingJobsStatus")
 
         return res
-    
+
     def getLoadingJobStatus(self, jobId: str) -> dict:
         """Get the status of the specified loading job.
 

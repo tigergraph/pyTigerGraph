@@ -163,7 +163,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
             params = {"graph": self.graphname, "query": queryName}
             res = await self._req("DELETE", self.gsUrl+"/gsql/v1/queries",
-                                 params=params, authMode="pwd", resKey="")
+                                 params=params, authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
         else:
             raise TigerGraphException("queryName must be a string or list of strings.", 0)
 
