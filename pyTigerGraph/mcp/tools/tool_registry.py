@@ -10,6 +10,10 @@
 from typing import List
 from mcp.types import Tool
 
+from .connection_tools import (
+    list_connections_tool,
+    show_connection_tool,
+)
 from .schema_tools import (
     # Global schema operations (database level)
     get_global_schema_tool,
@@ -97,6 +101,9 @@ def get_all_tools() -> List[Tool]:
         List of all MCP tools.
     """
     return [
+        # Connection profile operations
+        list_connections_tool,
+        show_connection_tool,
         # Global schema operations (database level)
         get_global_schema_tool,
         # Graph operations (database level)

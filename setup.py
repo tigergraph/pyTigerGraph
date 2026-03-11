@@ -50,10 +50,17 @@ setup(
     install_requires=[
         'validators',
         'requests',
-        'httpx'],
+        'aiohttp',
+        'httpx'],   # httpx retained for pytgasync/datasets.py streaming downloads
     extras_require={
         "gds": ["pandas", "kafka-python", "numpy", "tqdm"],
         "mcp": ["mcp>=1.0.0", "pydantic>=2.0.0", "click", "python-dotenv>=1.0.0"],
+        # pip install pyTigerGraph[fast]
+        # orjson is a Rust-backed JSON library that is 2-10x faster than stdlib json
+        # and releases the GIL during parsing, reducing inter-thread contention under
+        # concurrent load. It is used automatically when present; the library falls
+        # back to stdlib json transparently if it is not installed.
+        "fast": ["orjson"],
     },
     entry_points={
         "console_scripts": [

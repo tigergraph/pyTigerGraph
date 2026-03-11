@@ -19,18 +19,21 @@ from pyTigerGraph.common.exception import TigerGraphException
 
 class GetVertexCountToolInput(BaseModel):
     """Input schema for getting vertex count."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     vertex_type: Optional[str] = Field(None, description="Type of vertices to count. If not provided, counts all types.")
 
 
 class GetEdgeCountToolInput(BaseModel):
     """Input schema for getting edge count."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     edge_type: Optional[str] = Field(None, description="Type of edges to count. If not provided, counts all types.")
 
 
 class GetNodeDegreeToolInput(BaseModel):
     """Input schema for getting node degree."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     vertex_type: str = Field(..., description="Type of the vertex.")
     vertex_id: str = Field(..., description="ID of the vertex.")
@@ -58,12 +61,13 @@ get_node_degree_tool = Tool(
 
 
 async def get_vertex_count(
+    profile: Optional[str] = None,
     vertex_type: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Get vertex count."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
 
         if vertex_type:
             count = await conn.getVertexCount(vertex_type)
@@ -125,12 +129,13 @@ async def get_vertex_count(
 
 
 async def get_edge_count(
+    profile: Optional[str] = None,
     edge_type: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Get edge count."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
 
         if edge_type:
             count = await conn.getEdgeCount(edge_type)
@@ -189,15 +194,16 @@ async def get_edge_count(
 
 
 async def get_node_degree(
-    vertex_type: str,
-    vertex_id: str,
+    profile: Optional[str] = None,
+    vertex_type: str = None,
+    vertex_id: str = None,
     edge_type: Optional[str] = None,
     direction: Optional[str] = "both",
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Get the degree (number of connected edges) of a node."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
 
         # Build edge type parameter for v.outdegree()
         # If edge_type contains multiple types separated by |, convert to SET format

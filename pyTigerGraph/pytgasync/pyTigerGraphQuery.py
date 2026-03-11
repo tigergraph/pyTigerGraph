@@ -264,29 +264,28 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         return res
 
-    async def getInstalledQueries(self, fmt: str = "py") -> Union[dict, str, 'pd.DataFrame']:
-        """Returns a list of installed queries.
+    async def getInstalledQueries(self, fmt: str = "py") -> Union[dict, str, list, 'pd.DataFrame']:
+        """Returns installed queries for the graph.
+
+        Only queries that have been installed (i.e., have an active REST endpoint) are returned.
 
         Args:
             fmt:
                 Format of the results:
-                - "py":   Python objects (default)
+                - "py":   Python dict keyed by REST endpoint string (default)
                 - "json": JSON document
                 - "df":   pandas DataFrame
+                - "list": list of query name strings
 
         Returns:
-            The names of the installed queries.
-
-        TODO This function returns all (installed and non-installed) queries
-             Modify to return only installed ones
-        TODO Return with query name as key rather than REST endpoint as key?
+            The installed queries in the requested format.
         """
         logger.debug("entry: getInstalledQueries")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
         ret = await self.getEndpoints(dynamic=True)
-        ret = _parse_get_installed_queries(fmt, ret)
+        ret = _parse_get_installed_queries(fmt, ret, self.graphname)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -386,7 +385,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
         return ret
 
     async def runInstalledQuery(self, queryName: str, params: Union[str, dict] = None,
-                                timeout: int = None, sizeLimit: int = None, usePost: bool = False, runAsync: bool = False,
+                                timeout: int = None, sizeLimit: int = None, usePost: bool = True, runAsync: bool = False,
                                 replica: int = None, threadLimit: int = None, memoryLimit: int = None) -> list:
         """Runs an installed query.
 
@@ -407,8 +406,9 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
                 Maximum size of response (in bytes).
                 See xref:tigergraph-server:API:index.adoc#_response_size[Response size]
             usePost:
-                Defaults to False. The RESTPP accepts a maximum URL length of 8192 characters. Use POST if additional parameters cause
-                you to exceed this limit, or if you choose to pass an empty set into a query for database versions >= 3.8
+                Defaults to True. Sends query parameters in the POST request body instead of as URL query parameters.
+                POST is significantly faster than GET when params contain list values (e.g. vectors), avoids the
+                8192-character URL length limit, and is required for passing empty sets in database versions >= 3.8.
             runAsync:
                 Run the query in asynchronous mode. 
                 See xref:gsql-ref:querying:query-operations#_detached_mode_async_option[Async operation]
@@ -566,6 +566,12 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         queryText = queryText.replace("$graphname", self.graphname)
         queryText = queryText.replace("@graphname@", self.graphname)
+        # Per the TigerGraph API spec, interpreted query params always go in the
+        # URL query string (the body is reserved for the GSQL query text).
+        # _parse_query_parameters handles TigerGraph-specific encoding:
+        #   - SET/BAG: repeated keys  k=v1&k=v2
+        #   - VERTEX (no type): k=id&k.type=vtype
+        #   - SET<VERTEX> (no type): k[0]=id&k[0].type=vtype&k[1]=...
         if isinstance(params, dict):
             params = _parse_query_parameters(params)
 

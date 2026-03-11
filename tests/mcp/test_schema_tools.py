@@ -291,5 +291,63 @@ class TestShowGraphDetails(MCPToolTestBase):
         self.assertEqual(resp["data"]["detail_type"], "query")
 
 
+class TestProfilePropagation(MCPToolTestBase):
+    """Verify that the profile parameter is forwarded to get_connection."""
+
+    @patch(PATCH_TARGET)
+    async def test_list_graphs_with_profile(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.gsql.return_value = "- Graph G1(V:v)"
+
+        result = await list_graphs(profile="staging")
+        self.assert_success(result)
+        mock_gc.assert_called_with(profile="staging")
+
+    @patch(PATCH_TARGET)
+    async def test_get_graph_schema_with_profile(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.getSchema.return_value = {"VertexTypes": [], "EdgeTypes": []}
+
+        result = await get_graph_schema(profile="analytics", graph_name="FinGraph")
+        self.assert_success(result)
+        mock_gc.assert_called_with(profile="analytics", graph_name="FinGraph")
+
+    @patch(PATCH_TARGET)
+    async def test_get_global_schema_with_profile(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.gsql.return_value = "Global vertex types: ..."
+
+        result = await get_global_schema(profile="prod")
+        self.assert_success(result)
+        mock_gc.assert_called_with(profile="prod")
+
+    @patch(PATCH_TARGET)
+    async def test_show_graph_details_with_profile(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.gsql.return_value = "Vertex types: V"
+
+        result = await show_graph_details(profile="staging", graph_name="StgGraph")
+        self.assert_success(result)
+        mock_gc.assert_called_with(profile="staging", graph_name="StgGraph")
+
+    @patch(PATCH_TARGET)
+    async def test_drop_graph_with_profile(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.gsql.return_value = "Successfully dropped graph"
+
+        result = await drop_graph(profile="staging", graph_name="OldGraph")
+        self.assert_success(result)
+        mock_gc.assert_called_with(profile="staging", graph_name="OldGraph")
+
+    @patch(PATCH_TARGET)
+    async def test_none_profile_is_default(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.gsql.return_value = "- Graph G1(V:v)"
+
+        result = await list_graphs()
+        self.assert_success(result)
+        mock_gc.assert_called_with(profile=None)
+
+
 if __name__ == "__main__":
     unittest.main()

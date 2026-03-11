@@ -2,6 +2,25 @@
 
 pyTigerGraph now includes Model Context Protocol (MCP) support, allowing AI agents to interact with TigerGraph through the MCP standard. All MCP tools use pyTigerGraph's async APIs for optimal performance.
 
+## Table of Contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Running the MCP Server](#running-the-mcp-server)
+  - [Configuration](#configuration)
+  - [Using with Existing Connection](#using-with-existing-connection)
+- [Client Examples](#client-examples)
+  - [Using MultiServerMCPClient](#using-multiserverMCPclient)
+  - [Using MCP Client SDK Directly](#using-mcp-client-sdk-directly)
+- [Available Tools](#available-tools)
+- [LLM-Friendly Features](#llm-friendly-features)
+  - [Structured Responses](#structured-responses)
+  - [Rich Tool Descriptions](#rich-tool-descriptions)
+  - [Token Optimization](#token-optimization)
+  - [Tool Discovery](#tool-discovery)
+- [Notes](#notes)
+- [Backward Compatibility](#backward-compatibility)
+
 ## Installation
 
 To use MCP functionality, install pyTigerGraph with the `mcp` extra:
@@ -64,15 +83,10 @@ TG_USERNAME=tigergraph
 TG_PASSWORD=tigergraph
 TG_RESTPP_PORT=9000
 TG_GS_PORT=14240
+TG_CONN_LIMIT=10      # Optional - increase for parallel tool calls (e.g. 32)
 ```
 
 The server will automatically load the `.env` file if it exists. Environment variables take precedence over `.env` file values.
-
-You can also specify a custom path to the `.env` file:
-
-```bash
-tigergraph-mcp --env-file /path/to/custom/.env
-```
 
 #### Environment Variables
 
@@ -90,6 +104,7 @@ The following environment variables are supported:
 - `TG_SSL_PORT` - SSL port (default: 443)
 - `TG_TGCLOUD` - Whether using TigerGraph Cloud (default: False)
 - `TG_CERT_PATH` - Path to certificate (optional)
+- `TG_CONN_LIMIT` - Max keep-alive HTTP connections in the async client pool (default: 10). Should be ≥ the number of concurrent MCP tool calls you expect. Named profiles use `<PROFILE>_TG_CONN_LIMIT`.
 
 ### Using with Existing Connection
 
@@ -116,18 +131,88 @@ conn.start_mcp_server()
 from pyTigerGraph import AsyncTigerGraphConnection
 from pyTigerGraph.mcp import ConnectionManager
 
-conn = AsyncTigerGraphConnection(
+async with AsyncTigerGraphConnection(
     host="http://localhost",
     graphname="MyGraph",
     username="tigergraph",
-    password="tigergraph"
-)
-
-# Set as default for MCP tools
-ConnectionManager.set_default_connection(conn)
+    password="tigergraph",
+    connLimit=10,          # set >= number of concurrent MCP tool calls (default: 10)
+) as conn:
+    # Set as default for MCP tools
+    ConnectionManager.set_default_connection(conn)
+    # ... run MCP tools ...
+# HTTP connection pool is released on exit
 ```
 
-This sets the connection as the default for MCP tools. Note that MCP tools use async APIs internally, so using `AsyncTigerGraphConnection` directly is more efficient.
+This sets the connection as the default for MCP tools. Note that MCP tools use async APIs internally, so using `AsyncTigerGraphConnection` directly is more efficient. For long-lived connections without `async with`, call `await conn.aclose()` explicitly when finished.
+
+## Client Examples
+
+### Using MultiServerMCPClient
+
+```python
+from langchain_mcp_adapters import MultiServerMCPClient
+from pathlib import Path
+from dotenv import dotenv_values
+import asyncio
+
+# Load environment variables
+env_dict = dotenv_values(dotenv_path=Path(".env").expanduser().resolve())
+
+# Configure the client
+client = MultiServerMCPClient(
+    {
+        "tigergraph-mcp": {
+            "transport": "stdio",
+            "command": "tigergraph-mcp",
+            "args": ["-vv"],  # Enable debug logging
+            "env": env_dict,
+        },
+    }
+)
+
+# Get tools and use them
+tools = asyncio.run(client.get_tools())
+# Tools are now available for use
+```
+
+### Using MCP Client SDK Directly
+
+```python
+import asyncio
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+
+async def call_tool():
+    # Configure server parameters
+    server_params = StdioServerParameters(
+        command="tigergraph-mcp",
+        args=["-vv"],  # Enable debug logging
+        env=None,  # Uses .env file or environment variables
+    )
+    
+    async with stdio_client(server_params) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            
+            # List available tools
+            tools = await session.list_tools()
+            print(f"Available tools: {[t.name for t in tools.tools]}")
+            
+            # Call a tool
+            result = await session.call_tool(
+                "tigergraph__list_graphs",
+                arguments={}
+            )
+            
+            # Print result
+            for content in result.content:
+                print(content.text)
+
+asyncio.run(call_tool())
+```
+
+**Note:** When using `MultiServerMCPClient` or similar MCP clients with stdio transport, the `args` parameter is required. For the `tigergraph-mcp` command (which is a standalone entry point), set `args` to an empty list `[]`. If you need to pass arguments to the command, include them in the list (e.g., `["-v"]` for verbose mode, `["-vv"]` for debug mode).
 
 ## Available Tools
 
@@ -228,81 +313,6 @@ These operations work with the schema and objects of a specific graph.
 - `tigergraph__get_workflow` - Get step-by-step workflow templates for common tasks (e.g., `data_loading`, `schema_creation`, `graph_exploration`)
 - `tigergraph__get_tool_info` - Get detailed information about a specific tool (parameters, examples, related tools)
 
-## Backward Compatibility
-
-All existing pyTigerGraph APIs continue to work as before. MCP support is completely optional and does not affect existing code. The MCP functionality is only available when:
-
-1. The `mcp` extra is installed
-2. You explicitly use MCP-related imports or methods
-
-## Example: Using with MCP Clients
-
-### Using MultiServerMCPClient
-
-```python
-from langchain_mcp_adapters import MultiServerMCPClient
-from pathlib import Path
-from dotenv import dotenv_values
-import asyncio
-
-# Load environment variables
-env_dict = dotenv_values(dotenv_path=Path(".env").expanduser().resolve())
-
-# Configure the client
-client = MultiServerMCPClient(
-    {
-        "tigergraph-mcp": {
-            "transport": "stdio",
-            "command": "tigergraph-mcp",
-            "args": ["-vv"],  # Enable debug logging
-            "env": env_dict,
-        },
-    }
-)
-
-# Get tools and use them
-tools = asyncio.run(client.get_tools())
-# Tools are now available for use
-```
-
-### Using MCP Client SDK Directly
-
-```python
-import asyncio
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
-
-async def call_tool():
-    # Configure server parameters
-    server_params = StdioServerParameters(
-        command="tigergraph-mcp",
-        args=["-vv"],  # Enable debug logging
-        env=None,  # Uses .env file or environment variables
-    )
-    
-    async with stdio_client(server_params) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            
-            # List available tools
-            tools = await session.list_tools()
-            print(f"Available tools: {[t.name for t in tools.tools]}")
-            
-            # Call a tool
-            result = await session.call_tool(
-                "tigergraph__list_graphs",
-                arguments={}
-            )
-            
-            # Print result
-            for content in result.content:
-                print(content.text)
-
-asyncio.run(call_tool())
-```
-
-**Note:** When using `MultiServerMCPClient` or similar MCP clients with stdio transport, the `args` parameter is required. For the `tigergraph-mcp` command (which is a standalone entry point), set `args` to an empty list `[]`. If you need to pass arguments to the command, include them in the list (e.g., `["-v"]` for verbose mode, `["-vv"]` for debug mode).
-
 ## LLM-Friendly Features
 
 The MCP server is designed to help AI agents work effectively with TigerGraph.
@@ -355,7 +365,7 @@ Responses are designed for efficient LLM token usage:
 - Only returns new information (results, counts, boolean answers)
 - Clean text output with no decorative formatting
 
-## Tool Discovery Workflow
+### Tool Discovery
 
 The MCP server includes discovery tools to help AI agents find the right tool for a task:
 
@@ -384,10 +394,14 @@ result = await session.call_tool(
 
 ## Notes
 
-- **Async APIs**: All MCP tools use pyTigerGraph's async APIs (`AsyncTigerGraphConnection`) for optimal performance
 - **Transport**: The MCP server uses stdio transport by default
-- **Structured Responses**: All tools return structured JSON responses with `success`, `operation`, `summary`, `data`, `suggestions`, and `metadata` fields. Error responses include recovery hints and contextual suggestions
 - **Error Detection**: GSQL operations include error detection for syntax and semantic errors (since `conn.gsql()` does not raise Python exceptions for GSQL failures)
-- **Connection Management**: The connection manager automatically creates async connections from environment variables
-- **Performance**: Async APIs for non-blocking I/O; `v.outdegree()` for O(1) degree counting; batch operations for multiple vertices/edges
+- **Connection Management**: Connections are pooled by profile — each profile's `AsyncTigerGraphConnection` holds a persistent HTTP connection pool (sized by `TG_CONN_LIMIT`, default 10). The pool is automatically released at server shutdown via `ConnectionManager.close_all()`. To adjust pool size per profile, set `<PROFILE>_TG_CONN_LIMIT`.
+- **Performance**: Persistent HTTP connection pool per profile (no TCP handshake per request); async non-blocking I/O; `v.outdegree()` for O(1) degree counting; batch operations for multiple vertices/edges
 
+## Backward Compatibility
+
+All existing pyTigerGraph APIs continue to work as before. MCP support is completely optional and does not affect existing code. The MCP functionality is only available when:
+
+1. The `mcp` extra is installed
+2. You explicitly use MCP-related imports or methods

@@ -8,12 +8,17 @@
 """Connection manager for MCP server.
 
 Manages AsyncTigerGraphConnection instances for MCP tools.
+Supports named connection profiles via environment variables:
+
+  - Default profile uses unprefixed ``TG_*`` vars (backward compatible).
+  - Named profiles use ``<PROFILE>_TG_*`` vars (e.g. ``STAGING_TG_HOST``).
+  - ``TG_PROFILE`` selects the active profile (default: ``"default"``).
 """
 
 import os
 import logging
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pyTigerGraph import AsyncTigerGraphConnection
 from pyTigerGraph.common.exception import TigerGraphException
 
@@ -59,63 +64,125 @@ def _load_env_file(env_path: Optional[str] = None) -> None:
         logger.warning(f"Specified .env file not found: {env_path}")
 
 
-class ConnectionManager:
-    """Manages TigerGraph connections for MCP tools."""
+def _get_env_for_profile(profile: str, key: str, default: str = "") -> str:
+    """Resolve a config value for a profile.
 
+    Default profile uses unprefixed ``TG_*`` vars.
+    Named profiles use ``<PROFILE>_TG_*`` vars, falling back to
+    the unprefixed ``TG_*`` var, then the built-in *default*.
+    """
+    if profile == "default":
+        return os.getenv(f"TG_{key}", default)
+    return os.getenv(
+        f"{profile.upper()}_TG_{key}",
+        os.getenv(f"TG_{key}", default),
+    )
+
+
+class ConnectionManager:
+    """Manages TigerGraph connections for MCP tools.
+
+    Connections are pooled by ``profile:graph_name`` key so that
+    repeated calls with the same profile reuse the same connection.
+
+    Call ``await ConnectionManager.close_all()`` at server shutdown to release
+    the persistent HTTP connection pools held by each ``AsyncTigerGraphConnection``.
+    """
+
+    _connection_pool: Dict[str, AsyncTigerGraphConnection] = {}
+    _profiles: set = set()
+
+    # Keep legacy single-connection reference for backward compat
     _default_connection: Optional[AsyncTigerGraphConnection] = None
 
     @classmethod
+    def load_profiles(cls, env_path: Optional[str] = None) -> None:
+        """Discover available profiles from environment variables.
+
+        Profiles are detected by scanning for ``<PROFILE>_TG_HOST`` env vars.
+        The ``"default"`` profile always exists and uses unprefixed ``TG_*``
+        vars.  Called once at server startup.
+        """
+        _load_env_file(env_path)
+
+        for key in os.environ:
+            if key.endswith("_TG_HOST") and not key.startswith("TG_"):
+                profile = key.rsplit("_TG_HOST", 1)[0].lower()
+                cls._profiles.add(profile)
+
+        cls._profiles.add("default")
+        logger.info(f"Discovered connection profiles: {sorted(cls._profiles)}")
+
+    @classmethod
+    def list_profiles(cls) -> List[str]:
+        """Return sorted list of discovered profile names."""
+        if not cls._profiles:
+            cls._profiles.add("default")
+        return sorted(cls._profiles)
+
+    @classmethod
     def get_default_connection(cls) -> Optional[AsyncTigerGraphConnection]:
-        """Get the default connection instance."""
+        """Get the default connection instance (backward compat)."""
         return cls._default_connection
 
     @classmethod
     def set_default_connection(cls, conn: AsyncTigerGraphConnection) -> None:
-        """Set the default connection instance."""
+        """Set the default connection instance (backward compat)."""
         cls._default_connection = conn
 
     @classmethod
-    def create_connection_from_env(cls, env_path: Optional[str] = None) -> AsyncTigerGraphConnection:
-        """Create a connection from environment variables.
+    async def close_all(cls) -> None:
+        """Close all pooled connections and release their HTTP sockets.
 
-        Automatically loads variables from a .env file if it exists (requires python-dotenv).
-        Environment variables take precedence over .env file values.
+        Call this at server/application shutdown to drain keep-alive connections
+        gracefully. Connections are removed from the pool after closing so that
+        subsequent calls to get_connection_for_profile() create fresh sessions.
 
-        Reads the following environment variables:
-        - TG_HOST: TigerGraph host (default: http://127.0.0.1)
-        - TG_GRAPHNAME: Graph name (optional - can be set later or use list_graphs tool)
-        - TG_USERNAME: Username (default: tigergraph)
-        - TG_PASSWORD: Password (default: tigergraph)
-        - TG_SECRET: GSQL secret (optional)
-        - TG_API_TOKEN: API token (optional)
-        - TG_JWT_TOKEN: JWT token (optional)
-        - TG_RESTPP_PORT: REST++ port (default: 9000)
-        - TG_GS_PORT: GSQL port (default: 14240)
-        - TG_SSL_PORT: SSL port (default: 443)
-        - TG_TGCLOUD: Whether using TigerGraph Cloud (default: False)
-        - TG_CERT_PATH: Path to certificate (optional)
-
-        Args:
-            env_path: Optional path to .env file. If not provided, searches for .env in current and parent directories.
+        Example:
+            ```python
+            # In an MCP server lifespan or FastAPI shutdown event:
+            await ConnectionManager.close_all()
+            ```
         """
-        # Load .env file if available
-        _load_env_file(env_path)
+        for conn in list(cls._connection_pool.values()):
+            await conn.aclose()
+        cls._connection_pool.clear()
+        cls._profiles.clear()
+        cls._default_connection = None
 
-        host = os.getenv("TG_HOST", "http://127.0.0.1")
-        graphname = os.getenv("TG_GRAPHNAME", "")  # Optional - can be empty
-        username = os.getenv("TG_USERNAME", "tigergraph")
-        password = os.getenv("TG_PASSWORD", "tigergraph")
-        gsql_secret = os.getenv("TG_SECRET", "")
-        api_token = os.getenv("TG_API_TOKEN", "")
-        jwt_token = os.getenv("TG_JWT_TOKEN", "")
-        restpp_port = os.getenv("TG_RESTPP_PORT", "9000")
-        gs_port = os.getenv("TG_GS_PORT", "14240")
-        ssl_port = os.getenv("TG_SSL_PORT", "443")
-        tg_cloud = os.getenv("TG_TGCLOUD", "false").lower() == "true"
-        cert_path = os.getenv("TG_CERT_PATH", None)
+    @classmethod
+    def get_connection_for_profile(
+        cls,
+        profile: str = "default",
+        graph_name: Optional[str] = None,
+    ) -> AsyncTigerGraphConnection:
+        """Get or create a connection for the given profile and optional graph.
 
-        # TG_GRAPHNAME is now optional - can be set later or use list_graphs tool
+        Connections are cached by ``profile`` (or ``profile:graph_name`` when
+        a graph_name override is given).  If a cached connection exists but the
+        caller passes a different ``graph_name``, the graphname attribute on
+        the cached connection is updated in place.
+        """
+        cache_key = profile
 
+        if cache_key in cls._connection_pool:
+            conn = cls._connection_pool[cache_key]
+            if graph_name and conn.graphname != graph_name:
+                conn.graphname = graph_name
+            return conn
+
+        host = _get_env_for_profile(profile, "HOST", "http://127.0.0.1")
+        graphname = graph_name or _get_env_for_profile(profile, "GRAPHNAME", "")
+        username = _get_env_for_profile(profile, "USERNAME", "tigergraph")
+        password = _get_env_for_profile(profile, "PASSWORD", "tigergraph")
+        gsql_secret = _get_env_for_profile(profile, "SECRET", "")
+        api_token = _get_env_for_profile(profile, "API_TOKEN", "")
+        jwt_token = _get_env_for_profile(profile, "JWT_TOKEN", "")
+        restpp_port = _get_env_for_profile(profile, "RESTPP_PORT", "9000")
+        gs_port = _get_env_for_profile(profile, "GS_PORT", "14240")
+        ssl_port = _get_env_for_profile(profile, "SSL_PORT", "443")
+        tg_cloud = _get_env_for_profile(profile, "TGCLOUD", "false").lower() == "true"
+        cert_path = _get_env_for_profile(profile, "CERT_PATH", "") or None
         conn = AsyncTigerGraphConnection(
             host=host,
             graphname=graphname,
@@ -131,24 +198,74 @@ class ConnectionManager:
             certPath=cert_path,
         )
 
-        cls._default_connection = conn
+        cls._connection_pool[cache_key] = conn
+
+        if profile == "default":
+            cls._default_connection = conn
+
+        logger.info(f"Created connection for profile '{profile}' -> {host}")
         return conn
+
+    @classmethod
+    def get_profile_info(cls, profile: str = "default") -> Dict[str, str]:
+        """Return non-sensitive connection info for a profile.
+
+        Never includes password, secret, or tokens.
+        """
+        return {
+            "profile": profile,
+            "host": _get_env_for_profile(profile, "HOST", "http://127.0.0.1"),
+            "graphname": _get_env_for_profile(profile, "GRAPHNAME", ""),
+            "username": _get_env_for_profile(profile, "USERNAME", "tigergraph"),
+            "restpp_port": _get_env_for_profile(profile, "RESTPP_PORT", "9000"),
+            "gs_port": _get_env_for_profile(profile, "GS_PORT", "14240"),
+            "tgcloud": _get_env_for_profile(profile, "TGCLOUD", "false"),
+        }
+
+    @classmethod
+    def create_connection_from_env(cls, env_path: Optional[str] = None) -> AsyncTigerGraphConnection:
+        """Create a connection from environment variables (backward compat).
+
+        Equivalent to ``get_connection_for_profile("default")``.
+        """
+        _load_env_file(env_path)
+        return cls.get_connection_for_profile("default")
+
+    @classmethod
+    async def close_all(cls) -> None:
+        """Close all pooled connections and release their HTTP connection pools.
+
+        Call at server shutdown to cleanly drain open sockets held by the
+        persistent ``aiohttp.ClientSession`` inside each connection.
+        """
+        for key, conn in list(cls._connection_pool.items()):
+            try:
+                await conn.aclose()
+                logger.debug(f"Closed connection for profile '{key}'")
+            except Exception as e:
+                logger.warning(f"Error closing connection '{key}': {e}")
+        cls._connection_pool.clear()
+        cls._default_connection = None
 
 
 def get_connection(
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
     connection_config: Optional[Dict[str, Any]] = None,
 ) -> AsyncTigerGraphConnection:
     """Get or create an async TigerGraph connection.
 
     Args:
-        graph_name: Name of the graph. If provided, will create a new connection.
-        connection_config: Connection configuration dict. If provided, will create a new connection.
+        profile: Connection profile name. Falls back to ``TG_PROFILE`` env var,
+            then ``"default"``.
+        graph_name: Graph name override. If provided, updates the connection's
+            active graph.
+        connection_config: Explicit connection config dict. If provided, creates
+            a one-off connection (not pooled).
 
     Returns:
         AsyncTigerGraphConnection instance.
     """
-    # If connection config is provided, create a new connection
     if connection_config:
         return AsyncTigerGraphConnection(
             host=connection_config.get("host", "http://127.0.0.1"),
@@ -165,20 +282,5 @@ def get_connection(
             certPath=connection_config.get("certPath", None),
         )
 
-    # If graph_name is provided, try to get/create connection for that graph
-    if graph_name:
-        # For now, use default connection but set graphname
-        conn = ConnectionManager.get_default_connection()
-        if conn is None:
-            conn = ConnectionManager.create_connection_from_env()
-        # Update graphname if different
-        if conn.graphname != graph_name:
-            conn.graphname = graph_name
-        return conn
-
-    # Return default connection or create from env
-    conn = ConnectionManager.get_default_connection()
-    if conn is None:
-        conn = ConnectionManager.create_connection_from_env()
-    return conn
-
+    effective_profile = profile or os.getenv("TG_PROFILE", "default")
+    return ConnectionManager.get_connection_for_profile(effective_profile, graph_name)

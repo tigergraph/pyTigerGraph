@@ -71,6 +71,7 @@ class FileConfig(BaseModel):
 
 class CreateLoadingJobToolInput(BaseModel):
     """Input schema for creating a loading job."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     job_name: str = Field(..., description="Name for the loading job.")
     files: List[FileConfig] = Field(
@@ -87,6 +88,7 @@ class CreateLoadingJobToolInput(BaseModel):
 
 class RunLoadingJobWithFileToolInput(BaseModel):
     """Input schema for running a loading job with a file."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     file_path: str = Field(..., description="Absolute path to the data file to load. Example: '/home/user/data/persons.csv'")
     file_tag: str = Field(..., description="The name of file variable in the loading job (DEFINE FILENAME <fileTag>).")
@@ -99,6 +101,7 @@ class RunLoadingJobWithFileToolInput(BaseModel):
 
 class RunLoadingJobWithDataToolInput(BaseModel):
     """Input schema for running a loading job with inline data."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     data: str = Field(..., description="The data string to load (CSV, JSON, etc.). Example: 'user1,Alice\\nuser2,Bob'")
     file_tag: str = Field(..., description="The name of file variable in the loading job (DEFINE FILENAME <fileTag>).")
@@ -111,17 +114,20 @@ class RunLoadingJobWithDataToolInput(BaseModel):
 
 class GetLoadingJobsToolInput(BaseModel):
     """Input schema for listing loading jobs."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
 
 
 class GetLoadingJobStatusToolInput(BaseModel):
     """Input schema for getting loading job status."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     job_id: str = Field(..., description="The ID of the loading job to check status.")
 
 
 class DropLoadingJobToolInput(BaseModel):
     """Input schema for dropping a loading job."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     job_name: str = Field(..., description="The name of the loading job to drop.")
 
@@ -284,11 +290,12 @@ async def create_loading_job(
     files: List[Dict[str, Any]],
     run_job: bool = False,
     drop_after_run: bool = False,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Create a loading job from structured configuration."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
 
         # Generate the GSQL script
         gsql_script = _generate_loading_job_gsql(
@@ -374,11 +381,12 @@ async def run_loading_job_with_file(
     eol: Optional[str] = None,
     timeout: int = 16000,
     size_limit: int = 128000000,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Execute a loading job with a data file."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         result = await conn.runLoadingJobWithFile(
             filePath=file_path,
             fileTag=file_tag,
@@ -441,11 +449,12 @@ async def run_loading_job_with_data(
     eol: Optional[str] = None,
     timeout: int = 16000,
     size_limit: int = 128000000,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Execute a loading job with inline data string."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         result = await conn.runLoadingJobWithData(
             data=data,
             fileTag=file_tag,
@@ -503,11 +512,12 @@ async def run_loading_job_with_data(
 
 
 async def get_loading_jobs(
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Get a list of all loading jobs for the current graph."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         result = await conn.getLoadingJobs()
         if result:
             job_count = len(result) if isinstance(result, list) else 1
@@ -545,11 +555,12 @@ async def get_loading_jobs(
 
 async def get_loading_job_status(
     job_id: str,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Get the status of a specific loading job."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         result = await conn.getLoadingJobStatus(jobId=job_id)
         if result:
             return format_success(
@@ -591,11 +602,12 @@ async def get_loading_job_status(
 
 async def drop_loading_job(
     job_name: str,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Drop a loading job from the graph."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         result = await conn.dropLoadingJob(jobName=job_name)
         
         return format_success(

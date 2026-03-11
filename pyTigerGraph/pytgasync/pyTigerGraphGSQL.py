@@ -5,7 +5,7 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 """
 import logging
 import re
-import httpx
+import aiohttp
 
 from typing import Union, Tuple, Dict
 from urllib.parse import urlparse, quote_plus
@@ -55,8 +55,8 @@ class AsyncPyTigerGraphGSQL(AsyncPyTigerGraphBase):
                                   authMode="pwd", resKey=None, skipCheck=True,
                                   jsonResponse=False,
                                   headers={"Content-Type": "text/plain"})
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 404:
+        except aiohttp.ClientResponseError as e:
+            if e.status == 404:
                 res = await self._req("POST",
                                       self.gsUrl + "/gsqlserver/gsql/file",
                                       data=quote_plus(query.encode("utf-8")),

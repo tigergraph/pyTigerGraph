@@ -20,6 +20,7 @@ from pyTigerGraph.common.exception import TigerGraphException
 
 class RunQueryToolInput(BaseModel):
     """Input schema for running an interpreted query."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     query_text: str = Field(
         ..., 
@@ -36,6 +37,7 @@ class RunQueryToolInput(BaseModel):
 
 class RunInstalledQueryToolInput(BaseModel):
     """Input schema for running an installed query."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     query_name: str = Field(..., description="Name of the installed query.")
     params: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Query parameters.")
@@ -43,36 +45,42 @@ class RunInstalledQueryToolInput(BaseModel):
 
 class InstallQueryToolInput(BaseModel):
     """Input schema for installing a query."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     query_text: str = Field(..., description="GSQL query text to install.")
 
 
 class ShowQueryToolInput(BaseModel):
     """Input schema for showing a query."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     query_name: str = Field(..., description="Name of the query to show.")
 
 
 class GetQueryMetadataToolInput(BaseModel):
     """Input schema for getting query metadata."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     query_name: str = Field(..., description="Name of the query.")
 
 
 class DropQueryToolInput(BaseModel):
     """Input schema for dropping a query."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     query_name: str = Field(..., description="Name of the query to drop.")
 
 
 class IsQueryInstalledToolInput(BaseModel):
     """Input schema for checking if a query is installed."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     query_name: str = Field(..., description="Name of the query to check.")
 
 
 class GetNeighborsToolInput(BaseModel):
     """Input schema for getting neighbors of a node."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     vertex_type: str = Field(..., description="Type of the source vertex (e.g., 'Person', 'Product').")
     vertex_id: str = Field(..., description="ID of the source vertex.")
@@ -358,6 +366,7 @@ get_neighbors_tool = Tool(
 
 async def run_query(
     query_text: str,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Run an interpreted query.
@@ -372,7 +381,7 @@ async def run_query(
         graph_name: Optional graph name.
     """
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         
         # Auto-detect query type from the query text
         query_upper = query_text.strip().upper()
@@ -425,11 +434,12 @@ async def run_query(
 async def run_installed_query(
     query_name: str,
     params: Optional[Dict[str, Any]] = None,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Run an installed query."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         result = await conn.runInstalledQuery(query_name, params or {})
         
         return format_success(
@@ -464,11 +474,12 @@ async def run_installed_query(
 
 async def install_query(
     query_text: str,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Install a query."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         result = await conn.gsql(query_text)
         result_str = str(result) if result else ""
 
@@ -521,11 +532,12 @@ async def install_query(
 
 async def show_query(
     query_name: str,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Show a query."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         result = await conn.showQuery(query_name)
         
         return format_success(
@@ -555,11 +567,12 @@ async def show_query(
 
 async def get_query_metadata(
     query_name: str,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Get query metadata."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         result = await conn.getQueryMetadata(query_name)
         
         return format_success(
@@ -589,11 +602,12 @@ async def get_query_metadata(
 
 async def drop_query(
     query_name: str,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Drop (delete) an installed query."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         result = await conn.gsql(f"DROP QUERY {query_name}")
         result_str = str(result) if result else ""
 
@@ -641,11 +655,12 @@ async def drop_query(
 
 async def is_query_installed(
     query_name: str,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Check if a query is installed."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         # Try to get query metadata - if it succeeds, the query exists
         try:
             result = await conn.getQueryMetadata(query_name)
@@ -699,11 +714,12 @@ async def get_neighbors(
     edge_type: Optional[str] = None,
     target_vertex_type: Optional[str] = None,
     limit: Optional[int] = None,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Get neighbor vertices connected to a source vertex."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
 
         # Build the edge pattern
         edge_pattern = f"(({edge_type}):e)" if edge_type else "(ANY:e)"

@@ -20,7 +20,11 @@ from pyTigerGraph.common.util import (
 logger = logging.getLogger(__name__)
 
 # TODO getQueries()  # List _all_ query names
-def _parse_get_installed_queries(fmt, ret):
+def _parse_get_installed_queries(fmt, ret, graphname: str = ""):
+    prefix = f"GET /query/{graphname}/" if graphname else "GET /query/"
+    if fmt == "list":
+        return [ep[len(prefix):] for ep in ret if ep.startswith(prefix)]
+    ret = {ep: v for ep, v in ret.items() if ep.startswith(prefix)}
     if fmt == "json":
         ret = json.dumps(ret)
     if fmt == "df":
@@ -57,37 +61,33 @@ def _parse_query_parameters(params: dict) -> str:
     logger.debug("entry: _parseQueryParameters")
     logger.debug("params: " + str(params))
 
-    ret = ""
+    parts = []
     for k, v in params.items():
         if isinstance(v, tuple):
             if len(v) == 2 and isinstance(v[1], str):
-                ret += k + "=" + str(v[0]) + "&" + k + \
-                    ".type=" + _safe_char(v[1]) + "&"
+                parts.append(k + "=" + str(v[0]))
+                parts.append(k + ".type=" + _safe_char(v[1]))
             else:
                 raise TigerGraphException(
                     "Invalid parameter value: (vertex_primary_id, vertex_type)"
                     " was expected.")
         elif isinstance(v, list):
-            i = 0
-            for vv in v:
+            for i, vv in enumerate(v):
                 if isinstance(vv, tuple):
                     if len(vv) == 2 and isinstance(vv[1], str):
-                        ret += k + "[" + str(i) + "]=" + _safe_char(vv[0]) + "&" + \
-                            k + "[" + str(i) + "].type=" + vv[1] + "&"
+                        parts.append(k + "[" + str(i) + "]=" + _safe_char(vv[0]))
+                        parts.append(k + "[" + str(i) + "].type=" + vv[1])
                     else:
                         raise TigerGraphException(
                             "Invalid parameter value: (vertex_primary_id, vertex_type)"
                             " was expected.")
                 else:
-                    ret += k + "=" + _safe_char(vv) + "&"
-                i += 1
+                    parts.append(k + "=" + _safe_char(vv))
         elif isinstance(v, datetime):
-            ret += k + "=" + \
-                _safe_char(v.strftime("%Y-%m-%d %H:%M:%S")) + "&"
+            parts.append(k + "=" + _safe_char(v.strftime("%Y-%m-%d %H:%M:%S")))
         else:
-            ret += k + "=" + _safe_char(v) + "&"
-    if ret:
-        ret = ret[:-1]
+            parts.append(k + "=" + _safe_char(v))
+    ret = "&".join(parts)
 
     if logger.level == logging.DEBUG:
         logger.debug("return: " + str(ret))

@@ -95,6 +95,10 @@ class TigerGraphToolName(str, Enum):
     DROP_ALL_DATA_SOURCES = "tigergraph__drop_all_data_sources"
     PREVIEW_SAMPLE_DATA = "tigergraph__preview_sample_data"
 
+    # Connection Profile Operations
+    LIST_CONNECTIONS = "tigergraph__list_connections"
+    SHOW_CONNECTION = "tigergraph__show_connection"
+
     # Discovery and Navigation Operations
     DISCOVER_TOOLS = "tigergraph__discover_tools"
     GET_WORKFLOW = "tigergraph__get_workflow"

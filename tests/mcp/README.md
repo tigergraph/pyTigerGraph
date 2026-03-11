@@ -35,15 +35,17 @@ python -m unittest tests.mcp.test_vector_tools.TestSearchTopKSimilarity.test_suc
 |------|--------------|---------------|
 | `__init__.py` | — | `MCPToolTestBase` class, `parse_response` / `assert_success` / `assert_error` helpers |
 | `test_response_formatter.py` | `mcp.response_formatter` | `gsql_has_error`, `format_success`, `format_error`, `format_list_response` |
-| `test_schema_tools.py` | `mcp.tools.schema_tools` | `create_graph`, `drop_graph`, `list_graphs`, `get_graph_schema`, `_build_vertex_stmt`, `_build_edge_stmt`, `clear_graph_data`, `show_graph_details` |
-| `test_node_tools.py` | `mcp.tools.node_tools` | `add_node`, `add_nodes`, `get_node`, `get_nodes`, `delete_node`, `delete_nodes`, `has_node`, `get_node_edges` |
-| `test_edge_tools.py` | `mcp.tools.edge_tools` | `add_edge`, `add_edges`, `get_edge`, `get_edges`, `delete_edge`, `delete_edges`, `has_edge` |
-| `test_query_tools.py` | `mcp.tools.query_tools` | `run_query`, `run_installed_query`, `install_query`, `drop_query`, `show_query`, `get_query_metadata`, `is_query_installed`, `get_neighbors` |
-| `test_statistics_tools.py` | `mcp.tools.statistics_tools` | `get_vertex_count`, `get_edge_count`, `get_node_degree` |
-| `test_gsql_tools.py` | `mcp.tools.gsql_tools` | `gsql`, `get_llm_config` |
-| `test_vector_tools.py` | `mcp.tools.vector_tools` | `add_vector_attribute`, `drop_vector_attribute`, `list_vector_attributes`, `get_vector_index_status`, `upsert_vectors`, `search_top_k_similarity`, `fetch_vector`, `load_vectors_from_csv`, `load_vectors_from_json` |
-| `test_datasource_tools.py` | `mcp.tools.datasource_tools` | `create_data_source`, `update_data_source`, `get_data_source`, `drop_data_source`, `get_all_data_sources`, `drop_all_data_sources`, `preview_sample_data` |
-| `test_data_tools.py` | `mcp.tools.data_tools` | `_generate_loading_job_gsql`, `create_loading_job`, `run_loading_job_with_file`, `run_loading_job_with_data`, `drop_loading_job` |
+| `test_connection_manager.py` | `mcp.connection_manager` | Multi-profile env resolution (`_get_env_for_profile`), profile discovery (`load_profiles`), connection pooling, `get_connection` with profile param, backward compatibility |
+| `test_connection_tools.py` | `mcp.tools.connection_tools` | `list_connections`, `show_connection` |
+| `test_schema_tools.py` | `mcp.tools.schema_tools` | `create_graph`, `drop_graph`, `list_graphs`, `get_graph_schema`, `_build_vertex_stmt`, `_build_edge_stmt`, `clear_graph_data`, `show_graph_details`, profile propagation |
+| `test_node_tools.py` | `mcp.tools.node_tools` | `add_node`, `add_nodes`, `get_node`, `get_nodes`, `delete_node`, `delete_nodes`, `has_node`, `get_node_edges`, profile propagation |
+| `test_edge_tools.py` | `mcp.tools.edge_tools` | `add_edge`, `add_edges`, `get_edge`, `get_edges`, `delete_edge`, `delete_edges`, `has_edge`, profile propagation |
+| `test_query_tools.py` | `mcp.tools.query_tools` | `run_query`, `run_installed_query`, `install_query`, `drop_query`, `show_query`, `get_query_metadata`, `is_query_installed`, `get_neighbors`, profile propagation |
+| `test_statistics_tools.py` | `mcp.tools.statistics_tools` | `get_vertex_count`, `get_edge_count`, `get_node_degree`, profile propagation |
+| `test_gsql_tools.py` | `mcp.tools.gsql_tools` | `gsql`, `get_llm_config`, profile propagation |
+| `test_vector_tools.py` | `mcp.tools.vector_tools` | `add_vector_attribute`, `drop_vector_attribute`, `list_vector_attributes`, `get_vector_index_status`, `upsert_vectors`, `search_top_k_similarity`, `fetch_vector`, `load_vectors_from_csv`, `load_vectors_from_json`, profile propagation |
+| `test_datasource_tools.py` | `mcp.tools.datasource_tools` | `create_data_source`, `update_data_source`, `get_data_source`, `drop_data_source`, `get_all_data_sources`, `drop_all_data_sources`, `preview_sample_data`, profile propagation |
+| `test_data_tools.py` | `mcp.tools.data_tools` | `_generate_loading_job_gsql`, `create_loading_job`, `run_loading_job_with_file`, `run_loading_job_with_data`, `drop_loading_job`, profile propagation |
 
 ## How Mocking Works
 

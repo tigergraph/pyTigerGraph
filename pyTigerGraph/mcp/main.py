@@ -38,13 +38,9 @@ def main(verbose: bool, env_file: Path = None) -> None:
     # Ensure mcp.server.lowlevel.server respects the WARNING level
     logging.getLogger('mcp.server.lowlevel.server').setLevel(logging.WARNING)
 
-    # Load .env file (automatically searches if not specified)
-    from .connection_manager import _load_env_file
-    if env_file:
-        _load_env_file(str(env_file))
-    else:
-        # Automatically search for .env file
-        _load_env_file()
+    # Load .env file and discover connection profiles
+    from .connection_manager import ConnectionManager
+    ConnectionManager.load_profiles(env_path=str(env_file) if env_file else None)
 
     asyncio.run(serve())
 

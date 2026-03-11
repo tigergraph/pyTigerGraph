@@ -24,7 +24,7 @@ from pyTigerGraph.common.exception import TigerGraphException
 
 class GetGlobalSchemaToolInput(BaseModel):
     """Input schema for getting the global schema (all global vertex/edge types, graphs, etc.)."""
-    # No parameters needed - returns full global schema via GSQL LS command
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
 
 
 # =============================================================================
@@ -33,11 +33,12 @@ class GetGlobalSchemaToolInput(BaseModel):
 
 class ListGraphsToolInput(BaseModel):
     """Input schema for listing all graph names in the database."""
-    # No parameters needed - lists all graph names in the database
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
 
 
 class CreateGraphToolInput(BaseModel):
     """Input schema for creating a new graph with its schema."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: str = Field(..., description="Name of the new graph to create.")
     vertex_types: List[Dict[str, Any]] = Field(..., description="List of vertex type definitions for this graph.")
     edge_types: List[Dict[str, Any]] = Field(default_factory=list, description="List of edge type definitions for this graph.")
@@ -45,11 +46,13 @@ class CreateGraphToolInput(BaseModel):
 
 class DropGraphToolInput(BaseModel):
     """Input schema for dropping a graph from the database."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: str = Field(..., description="Name of the graph to drop.")
 
 
 class ClearGraphDataToolInput(BaseModel):
     """Input schema for clearing all data from a graph (keeps schema structure)."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     vertex_type: Optional[str] = Field(None, description="Type of vertices to clear. If not provided, clears all data.")
     confirm: bool = Field(False, description="Must be True to confirm the deletion. This is a destructive operation.")
@@ -61,11 +64,13 @@ class ClearGraphDataToolInput(BaseModel):
 
 class GetGraphSchemaToolInput(BaseModel):
     """Input schema for getting a specific graph's schema (raw JSON)."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
 
 
 class ShowGraphDetailsToolInput(BaseModel):
     """Input schema for showing details of a graph (schema, queries, jobs)."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     detail_type: Optional[str] = Field(
         None,
@@ -347,10 +352,10 @@ show_graph_details_tool = Tool(
 )
 
 
-async def get_graph_schema(graph_name: Optional[str] = None) -> List[TextContent]:
+async def get_graph_schema(profile: Optional[str] = None, graph_name: Optional[str] = None) -> List[TextContent]:
     """Get the schema of a specific graph."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         schema = await conn.getSchema()
         
         vertex_count = len(schema.get("VertexTypes", []))
@@ -540,8 +545,9 @@ def _build_edge_stmt(etype: Dict[str, Any], keyword: str = "ADD") -> tuple:
 
 
 async def create_graph(
-    graph_name: str,
-    vertex_types: List[Dict[str, Any]],
+    profile: Optional[str] = None,
+    graph_name: str = None,
+    vertex_types: List[Dict[str, Any]] = None,
     edge_types: List[Dict[str, Any]] = None,
 ) -> List[TextContent]:
     """Create a new graph with local vertex/edge types via a schema change job.
@@ -557,7 +563,7 @@ async def create_graph(
     See: https://docs.tigergraph.com/gsql-ref/4.2/ddl-and-loading/modifying-a-graph-schema
     """
     try:
-        conn = get_connection()
+        conn = get_connection(profile=profile)
 
         vertex_names: list[str] = []
         edge_names: list[str] = []
@@ -685,10 +691,10 @@ async def create_graph(
         )
 
 
-async def drop_graph(graph_name: str) -> List[TextContent]:
+async def drop_graph(profile: Optional[str] = None, graph_name: str = None) -> List[TextContent]:
     """Drop a graph."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         result = await conn.gsql(f"DROP GRAPH {graph_name}")
         result_str = str(result) if result else ""
 
@@ -725,17 +731,18 @@ async def drop_graph(graph_name: str) -> List[TextContent]:
         )
 
 
-async def get_global_schema(**kwargs) -> List[TextContent]:
+async def get_global_schema(profile: Optional[str] = None, **kwargs) -> List[TextContent]:
     """Get the complete global schema via GSQL LS command.
 
     Args:
+        profile: Connection profile name.
         **kwargs: No parameters required
 
     Returns:
         Full global schema including global vertex types, edge types, graphs, and their members.
     """
     try:
-        conn = get_connection()
+        conn = get_connection(profile=profile)
         result = await conn.gsql("LS")
         result_str = str(result) if result else ""
 
@@ -765,17 +772,18 @@ async def get_global_schema(**kwargs) -> List[TextContent]:
         )
 
 
-async def list_graphs(**kwargs) -> List[TextContent]:
+async def list_graphs(profile: Optional[str] = None, **kwargs) -> List[TextContent]:
     """List all graph names in the TigerGraph database.
 
     Args:
+        profile: Connection profile name.
         **kwargs: No parameters required - lists all graph names in the database
 
     Returns:
         List of graph names only (without detailed schema information).
     """
     try:
-        conn = get_connection()
+        conn = get_connection(profile=profile)
         result = await conn.gsql("SHOW GRAPH *")
         result_str = str(result) if result else ""
 
@@ -838,6 +846,7 @@ async def list_graphs(**kwargs) -> List[TextContent]:
 
 
 async def clear_graph_data(
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
     vertex_type: Optional[str] = None,
     confirm: bool = False,
@@ -856,7 +865,7 @@ async def clear_graph_data(
         )
 
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
 
         if vertex_type:
             # Clear specific vertex type and its connected edges
@@ -921,18 +930,20 @@ _DETAIL_TYPE_COMMANDS = {
 
 
 async def show_graph_details(
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
     detail_type: Optional[str] = None,
 ) -> List[TextContent]:
     """Show details of a graph, optionally filtered by category.
 
     Args:
+        profile: Connection profile name.
         graph_name: Graph to inspect. Uses default if omitted.
         detail_type: One of 'schema', 'query', 'loading_job', 'data_source'.
                      If omitted, runs ``LS`` to show everything.
     """
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         gname = conn.graphname
 
         if detail_type and detail_type in _DETAIL_TYPE_COMMANDS:

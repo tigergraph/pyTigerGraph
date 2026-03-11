@@ -76,12 +76,14 @@ def get_llm_config() -> Tuple[str, str]:
 
 class GSQLToolInput(BaseModel):
     """Input schema for running GSQL command."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     command: str = Field(..., description="GSQL command to execute.")
 
 
 class GenerateGSQLToolInput(BaseModel):
     """Input schema for generating GSQL from natural language."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     query_description: str = Field(
         ..., 
         description="A natural language description of what data you want to retrieve. Examples: 'Find all users who purchased more than 5 items', 'Count vertices by type', 'Find shortest path between two nodes'"
@@ -94,6 +96,7 @@ class GenerateGSQLToolInput(BaseModel):
 
 class GenerateCypherToolInput(BaseModel):
     """Input schema for generating Cypher from natural language."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     query_description: str = Field(
         ..., 
         description="A natural language description of what data you want to retrieve. Examples: 'Find all users who purchased more than 5 items', 'Find friends of friends', 'Match patterns in the graph'"
@@ -331,13 +334,14 @@ Generate an openCypher query for the following request:
 
 async def gsql(
     command: str,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Execute a GSQL command."""
     from ..response_formatter import format_success, format_error, gsql_has_error
 
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         result = await conn.gsql(command)
         result_str = str(result) if result else ""
 
@@ -367,6 +371,7 @@ async def gsql(
 
 async def generate_gsql(
     query_description: str,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Generate a GSQL query from natural language description using LangChain's init_chat_model.
@@ -377,6 +382,7 @@ async def generate_gsql(
     
     Args:
         query_description: Natural language description of the query to generate.
+        profile: Optional connection profile name.
         graph_name: Optional graph name to fetch schema for better query generation.
     
     Returns:
@@ -416,7 +422,7 @@ async def generate_gsql(
         schema_section = "## Graph Schema\n\nNo schema information available. Generate a generic GSQL query based on the request."
         if graph_name:
             try:
-                conn = get_connection(graph_name=graph_name)
+                conn = get_connection(profile=profile, graph_name=graph_name)
                 schema = await conn.getSchema()
                 if schema:
                     schema_section = f"## Graph Schema\n\n{schema}"
@@ -456,7 +462,8 @@ async def generate_gsql(
 
 async def generate_cypher(
     query_description: str,
-    graph_name: str,
+    profile: Optional[str] = None,
+    graph_name: str = None,
 ) -> List[TextContent]:
     """Generate an openCypher query from natural language description using LangChain's init_chat_model.
     
@@ -468,6 +475,7 @@ async def generate_cypher(
     
     Args:
         query_description: Natural language description of the query to generate.
+        profile: Optional connection profile name.
         graph_name: Name of the graph (required for INTERPRET OPENCYPHER QUERY wrapper).
     
     Returns:
@@ -506,7 +514,7 @@ async def generate_cypher(
         # Get schema for the graph
         schema_section = "## Graph Schema\n\nNo schema information available. Generate a generic Cypher query based on the request."
         try:
-            conn = get_connection(graph_name=graph_name)
+            conn = get_connection(profile=profile, graph_name=graph_name)
             schema = await conn.getSchema()
             if schema:
                 schema_section = f"## Graph Schema\n\n{schema}"

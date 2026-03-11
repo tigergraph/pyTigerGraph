@@ -30,6 +30,7 @@ from ..connection_manager import get_connection
 
 class VectorAddAttributeToolInput(BaseModel):
     """Input schema for adding a vector attribute to a vertex type."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     vertex_type: str = Field(..., description="Name of the vertex type to add the vector attribute to.")
     vector_name: str = Field(..., description="Name of the vector attribute.")
@@ -39,6 +40,7 @@ class VectorAddAttributeToolInput(BaseModel):
 
 class VectorDropAttributeToolInput(BaseModel):
     """Input schema for dropping a vector attribute from a vertex type."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     vertex_type: str = Field(..., description="Name of the vertex type.")
     vector_name: str = Field(..., description="Name of the vector attribute to drop.")
@@ -46,12 +48,14 @@ class VectorDropAttributeToolInput(BaseModel):
 
 class VectorListAttributesToolInput(BaseModel):
     """Input schema for listing vector attributes in a graph."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     vertex_type: Optional[str] = Field(None, description="Filter by vertex type. If not provided, returns vector attributes for all vertex types.")
 
 
 class VectorIndexStatusToolInput(BaseModel):
     """Input schema for checking vector index status."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     vertex_type: Optional[str] = Field(None, description="Vertex type to check. If not provided, checks all.")
     vector_name: Optional[str] = Field(None, description="Vector attribute name. If not provided, checks all.")
@@ -63,6 +67,7 @@ class VectorIndexStatusToolInput(BaseModel):
 
 class VectorLoadFromCsvToolInput(BaseModel):
     """Input schema for bulk-loading vectors from a CSV/delimited file via a GSQL loading job."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     vertex_type: str = Field(..., description="Target vertex type that has the vector attribute.")
     vector_attribute: str = Field(..., description="Name of the vector attribute to load into.")
@@ -76,6 +81,7 @@ class VectorLoadFromCsvToolInput(BaseModel):
 
 class VectorLoadFromJsonToolInput(BaseModel):
     """Input schema for bulk-loading vectors from a JSON Lines file via a GSQL loading job."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     vertex_type: str = Field(..., description="Target vertex type that has the vector attribute.")
     vector_attribute: str = Field(..., description="Name of the vector attribute to load into.")
@@ -98,6 +104,7 @@ class VectorData(BaseModel):
 
 class VectorUpsertToolInput(BaseModel):
     """Input schema for upserting multiple vectors via REST API."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     vertex_type: str = Field(..., description="Type of the vertices.")
     vector_attribute: str = Field(..., description="Name of the vector attribute.")
@@ -106,6 +113,7 @@ class VectorUpsertToolInput(BaseModel):
 
 class VectorSearchToolInput(BaseModel):
     """Input schema for vector similarity search using vectorSearch() function."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     vertex_type: str = Field(..., description="Type of vertices to search.")
     vector_attribute: str = Field(..., description="Name of the vector attribute to search.")
@@ -117,6 +125,7 @@ class VectorSearchToolInput(BaseModel):
 
 class VectorFetchToolInput(BaseModel):
     """Input schema for fetching vertices with their vector data using GSQL."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph. If not provided, uses default connection.")
     vertex_type: str = Field(..., description="Type of the vertex.")
     vertex_ids: List[Union[str, int]] = Field(..., description="List of vertex IDs to fetch.")
@@ -294,6 +303,7 @@ async def add_vector_attribute(
     vector_name: str,
     dimension: int,
     metric: str = "COSINE",
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Add a vector attribute to a vertex type.
@@ -304,7 +314,7 @@ async def add_vector_attribute(
     from ..response_formatter import format_success, format_error, gsql_has_error
 
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         gname = conn.graphname
 
         metric = metric.upper()
@@ -360,6 +370,7 @@ async def add_vector_attribute(
 async def drop_vector_attribute(
     vertex_type: str,
     vector_name: str,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Drop a vector attribute from a vertex type.
@@ -370,7 +381,7 @@ async def drop_vector_attribute(
     from ..response_formatter import format_success, format_error, gsql_has_error
 
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         gname = conn.graphname
 
         is_global = await _is_global_vertex_type(conn, vertex_type)
@@ -413,6 +424,7 @@ async def drop_vector_attribute(
 
 
 async def list_vector_attributes(
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
     vertex_type: Optional[str] = None,
 ) -> List[TextContent]:
@@ -431,7 +443,7 @@ async def list_vector_attributes(
     from ..response_formatter import format_success, format_error, gsql_has_error
 
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         gname = conn.graphname
 
         result = await conn.gsql(f"USE GRAPH {gname}\nLS")
@@ -532,6 +544,7 @@ async def list_vector_attributes(
 
 
 async def get_vector_index_status(
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
     vertex_type: Optional[str] = None,
     vector_name: Optional[str] = None,
@@ -540,7 +553,7 @@ async def get_vector_index_status(
     from ..response_formatter import format_success, format_error
 
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
 
         path = f"/vector/status/{conn.graphname}"
         if vertex_type:
@@ -600,13 +613,14 @@ async def upsert_vectors(
     vertex_type: str,
     vector_attribute: str,
     vectors: List[Dict[str, Any]],
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Upsert multiple vertices with vector data using REST Upsert API."""
     from ..response_formatter import format_success, format_error
 
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
 
         success_count = 0
         failed_ids = []
@@ -669,6 +683,7 @@ async def search_top_k_similarity(
     top_k: int = 10,
     ef: Optional[int] = None,
     return_vectors: bool = False,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Perform vector similarity search using vectorSearch() function.
@@ -685,7 +700,7 @@ async def search_top_k_similarity(
     gname = None
 
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         gname = conn.graphname
 
         # Pre-flight: check query_vector dimension against the attribute definition
@@ -806,6 +821,7 @@ async def fetch_vector(
     vertex_type: str,
     vertex_ids: List[Union[str, int]],
     vector_attribute: Optional[str] = None,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
     **kwargs,
 ) -> List[TextContent]:
@@ -827,7 +843,7 @@ async def fetch_vector(
     gname = None
 
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         gname = conn.graphname
 
         query_name = f"_fetch_vec_{uuid.uuid4().hex[:8]}"
@@ -916,6 +932,7 @@ async def load_vectors_from_csv(
     element_separator: str = ",",
     field_separator: str = "|",
     header: bool = False,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Bulk-load vectors from a local CSV/delimited file using a GSQL loading job.
@@ -935,7 +952,7 @@ async def load_vectors_from_csv(
     gname = None
 
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         gname = conn.graphname
         file_tag = "vec_file"
 
@@ -1024,6 +1041,7 @@ async def load_vectors_from_json(
     id_key: str = "id",
     vector_key: str = "vector",
     element_separator: str = ",",
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Bulk-load vectors from a JSON Lines file using a GSQL loading job with JSON_FILE="true".
@@ -1049,7 +1067,7 @@ async def load_vectors_from_json(
     gname = None
 
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         gname = conn.graphname
         file_tag = "vec_file"
 

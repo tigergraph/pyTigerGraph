@@ -17,6 +17,9 @@ from .tool_names import TigerGraphToolName
 from pyTigerGraph.common.exception import TigerGraphException
 from .tools import (
     get_all_tools,
+    # Connection profile operations
+    list_connections,
+    show_connection,
     # Global schema operations (database level)
     get_global_schema,
     # Graph operations (database level)
@@ -117,6 +120,11 @@ class MCPServer:
             """Handle tool calls."""
             try:
                 match name:
+                    # Connection profile operations
+                    case TigerGraphToolName.LIST_CONNECTIONS:
+                        return await list_connections(**arguments)
+                    case TigerGraphToolName.SHOW_CONNECTION:
+                        return await show_connection(**arguments)
                     # Global schema operations (database level)
                     case TigerGraphToolName.GET_GLOBAL_SCHEMA:
                         return await get_global_schema(**arguments)
@@ -266,8 +274,12 @@ class MCPServer:
 
 async def serve() -> None:
     """Serve the MCP server."""
+    from .connection_manager import ConnectionManager
     server = MCPServer()
     options = server.server.create_initialization_options()
-    async with stdio_server() as (read_stream, write_stream):
-        await server.server.run(read_stream, write_stream, options, raise_exceptions=True)
+    try:
+        async with stdio_server() as (read_stream, write_stream):
+            await server.server.run(read_stream, write_stream, options, raise_exceptions=True)
+    finally:
+        await ConnectionManager.close_all()
 

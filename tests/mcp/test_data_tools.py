@@ -283,5 +283,40 @@ class TestDropLoadingJob(MCPToolTestBase):
         self.assert_error(result)
 
 
+class TestProfilePropagation(MCPToolTestBase):
+    """Verify profile is forwarded to get_connection for data tools."""
+
+    @patch(PATCH_TARGET)
+    async def test_create_loading_job_with_profile(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.gsql.return_value = "Successfully created loading job"
+
+        result = await create_loading_job(
+            job_name="load_people",
+            files=[{
+                "file_alias": "f1",
+                "file_path": "/data/people.csv",
+                "node_mappings": [{"vertex_type": "Person", "attribute_mappings": {"id": 0}}],
+            }],
+            profile="staging",
+            graph_name="StgGraph",
+        )
+        self.assert_success(result)
+        mock_gc.assert_called_with(profile="staging", graph_name="StgGraph")
+
+    @patch(PATCH_TARGET)
+    async def test_run_loading_job_with_profile(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.runLoadingJobWithFile.return_value = {"statistics": {}}
+
+        result = await run_loading_job_with_file(
+            job_name="load_people",
+            file_path="/data/people.csv",
+            file_tag="f1",
+            profile="analytics",
+        )
+        mock_gc.assert_called_with(profile="analytics", graph_name=None)
+
+
 if __name__ == "__main__":
     unittest.main()

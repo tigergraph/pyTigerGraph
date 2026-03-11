@@ -17,6 +17,7 @@ from ..connection_manager import get_connection
 
 class CreateDataSourceToolInput(BaseModel):
     """Input schema for creating a data source."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     data_source_name: str = Field(..., description="Name of the data source.")
     data_source_type: str = Field(..., description="Type of data source: 's3', 'gcs', 'azure_blob', or 'local'.")
     config: Dict[str, Any] = Field(..., description="Configuration for the data source (e.g., bucket, credentials).")
@@ -24,32 +25,37 @@ class CreateDataSourceToolInput(BaseModel):
 
 class UpdateDataSourceToolInput(BaseModel):
     """Input schema for updating a data source."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     data_source_name: str = Field(..., description="Name of the data source to update.")
     config: Dict[str, Any] = Field(..., description="Updated configuration for the data source.")
 
 
 class GetDataSourceToolInput(BaseModel):
     """Input schema for getting a data source."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     data_source_name: str = Field(..., description="Name of the data source.")
 
 
 class DropDataSourceToolInput(BaseModel):
     """Input schema for dropping a data source."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     data_source_name: str = Field(..., description="Name of the data source to drop.")
 
 
 class GetAllDataSourcesToolInput(BaseModel):
     """Input schema for getting all data sources."""
-    # No parameters needed - returns all data sources
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
 
 
 class DropAllDataSourcesToolInput(BaseModel):
     """Input schema for dropping all data sources."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     confirm: bool = Field(False, description="Must be True to confirm dropping all data sources.")
 
 
 class PreviewSampleDataToolInput(BaseModel):
     """Input schema for previewing sample data."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     data_source_name: str = Field(..., description="Name of the data source.")
     file_path: str = Field(..., description="Path to the file within the data source.")
     num_rows: int = Field(10, description="Number of sample rows to preview.")
@@ -103,12 +109,13 @@ async def create_data_source(
     data_source_name: str,
     data_source_type: str,
     config: Dict[str, Any],
+    profile: Optional[str] = None,
 ) -> List[TextContent]:
     """Create a new data source."""
     from ..response_formatter import format_success, format_error, gsql_has_error
 
     try:
-        conn = get_connection()
+        conn = get_connection(profile=profile)
 
         config_str = ", ".join([f'{k}="{v}"' for k, v in config.items()])
 
@@ -146,12 +153,13 @@ async def create_data_source(
 async def update_data_source(
     data_source_name: str,
     config: Dict[str, Any],
+    profile: Optional[str] = None,
 ) -> List[TextContent]:
     """Update an existing data source."""
     from ..response_formatter import format_success, format_error, gsql_has_error
 
     try:
-        conn = get_connection()
+        conn = get_connection(profile=profile)
 
         config_str = ", ".join([f'{k}="{v}"' for k, v in config.items()])
         gsql_cmd = f"ALTER DATA_SOURCE {data_source_name} = ({config_str})"
@@ -181,12 +189,13 @@ async def update_data_source(
 
 async def get_data_source(
     data_source_name: str,
+    profile: Optional[str] = None,
 ) -> List[TextContent]:
     """Get information about a data source."""
     from ..response_formatter import format_success, format_error, gsql_has_error
 
     try:
-        conn = get_connection()
+        conn = get_connection(profile=profile)
 
         result = await conn.gsql(f"SHOW DATA_SOURCE {data_source_name}")
         result_str = str(result) if result else ""
@@ -213,12 +222,13 @@ async def get_data_source(
 
 async def drop_data_source(
     data_source_name: str,
+    profile: Optional[str] = None,
 ) -> List[TextContent]:
     """Drop a data source."""
     from ..response_formatter import format_success, format_error, gsql_has_error
 
     try:
-        conn = get_connection()
+        conn = get_connection(profile=profile)
 
         result = await conn.gsql(f"DROP DATA_SOURCE {data_source_name}")
         result_str = str(result) if result else ""
@@ -245,12 +255,15 @@ async def drop_data_source(
         )
 
 
-async def get_all_data_sources(**kwargs) -> List[TextContent]:
+async def get_all_data_sources(
+    profile: Optional[str] = None,
+    **kwargs,
+) -> List[TextContent]:
     """Get all data sources."""
     from ..response_formatter import format_success, format_error, gsql_has_error
 
     try:
-        conn = get_connection()
+        conn = get_connection(profile=profile)
 
         result = await conn.gsql("SHOW DATA_SOURCE *")
         result_str = str(result) if result else ""
@@ -277,6 +290,7 @@ async def get_all_data_sources(**kwargs) -> List[TextContent]:
 
 
 async def drop_all_data_sources(
+    profile: Optional[str] = None,
     confirm: bool = False,
 ) -> List[TextContent]:
     """Drop all data sources."""
@@ -294,7 +308,7 @@ async def drop_all_data_sources(
         )
 
     try:
-        conn = get_connection()
+        conn = get_connection(profile=profile)
 
         result = await conn.gsql("DROP DATA_SOURCE *")
         result_str = str(result) if result else ""
@@ -324,13 +338,14 @@ async def preview_sample_data(
     data_source_name: str,
     file_path: str,
     num_rows: int = 10,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Preview sample data from a file."""
     from ..response_formatter import format_success, format_error, gsql_has_error
 
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
 
         gsql_cmd = (
             f"USE GRAPH {conn.graphname}\n"

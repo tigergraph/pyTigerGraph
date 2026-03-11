@@ -25,6 +25,7 @@ from pyTigerGraph.common.exception import TigerGraphException
 
 class AddNodeToolInput(BaseModel):
     """Input schema for adding a node."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(
         None,
         description=(
@@ -131,12 +132,13 @@ async def add_node(
     vertex_type: str,
     vertex_id: Union[str, int],
     attributes: Optional[Dict[str, Any]] = None,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Add a node to the graph with enhanced error handling and suggestions."""
     
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         
         # Perform the upsert
         await conn.upsertVertex(vertex_type, str(vertex_id), attributes or {})
@@ -184,6 +186,7 @@ async def add_node(
 
 class AddNodesToolInput(BaseModel):
     """Input schema for adding multiple nodes."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(
         None,
         description="Name of the graph. If not provided, uses default connection."
@@ -283,12 +286,13 @@ async def add_nodes(
     vertex_type: str,
     vertices: List[Dict[str, Any]],
     vertex_id: str = "id",
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Add multiple nodes to the graph with progress tracking."""
     
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         
         # Convert vertices list to format expected by upsertVertices
         vertex_data = []
@@ -378,6 +382,7 @@ async def add_nodes(
 
 class GetNodeToolInput(BaseModel):
     """Input schema for getting a node."""
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(None, description="Name of the graph.")
     vertex_type: str = Field(..., description="Type of the vertex to retrieve.")
     vertex_id: Union[str, int] = Field(..., description="ID of the vertex to retrieve.")
@@ -414,11 +419,12 @@ get_node_tool = Tool(
 async def get_node(
     vertex_type: str,
     vertex_id: Union[str, int],
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Get a node from the graph."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         # Use getVerticesById instead of getVertices with WHERE clause
         result = await conn.getVerticesById(vertex_type, vertex_id)
         
@@ -486,6 +492,7 @@ class GetNodesToolInput(BaseModel):
         default=None,
         description="Sort results by attribute. Use '-' prefix for descending (e.g., '-age')"
     )
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(
         default=None,
         description="Name of the graph to query (uses default if not specified)"
@@ -529,11 +536,12 @@ async def get_nodes(
     where: Optional[str] = None,
     limit: Optional[int] = 100,
     sort: Optional[str] = None,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Get multiple nodes from the graph with optional filtering."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         
         # Build query parameters
         kwargs = {
@@ -590,6 +598,7 @@ class DeleteNodeToolInput(BaseModel):
     vertex_id: Union[str, int] = Field(
         description="The unique identifier of the vertex to delete"
     )
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(
         default=None,
         description="Name of the graph (uses default if not specified)"
@@ -628,11 +637,12 @@ delete_node_tool = Tool(
 async def delete_node(
     vertex_type: str,
     vertex_id: Union[str, int],
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Delete a single node from the graph."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         
         # Delete using delVerticesById
         result = await conn.delVerticesById(vertex_type, vertex_id)
@@ -696,6 +706,7 @@ class DeleteNodesToolInput(BaseModel):
         default=None,
         description="Optional list of specific vertex IDs to delete (alternative to WHERE clause)"
     )
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(
         default=None,
         description="Name of the graph (uses default if not specified)"
@@ -737,11 +748,12 @@ async def delete_nodes(
     vertex_type: str,
     where: Optional[str] = None,
     vertex_ids: Optional[List[Union[str, int]]] = None,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Delete multiple nodes from the graph."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         
         if vertex_ids:
             # Delete by specific IDs
@@ -794,6 +806,7 @@ class HasNodeToolInput(BaseModel):
     vertex_id: Union[str, int] = Field(
         description="The unique identifier of the vertex"
     )
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(
         default=None,
         description="Name of the graph (uses default if not specified)"
@@ -833,11 +846,12 @@ has_node_tool = Tool(
 async def has_node(
     vertex_type: str,
     vertex_id: Union[str, int],
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Check if a node exists in the graph."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         
         # Use getVerticesById for existence check
         result = await conn.getVerticesById(vertex_type, vertex_id)
@@ -887,6 +901,7 @@ class GetNodeEdgesToolInput(BaseModel):
         default=100,
         description="Maximum number of edges to return (default: 100)"
     )
+    profile: Optional[str] = Field(None, description="Connection profile name. If not provided, uses TG_PROFILE env var or 'default'. Use 'list_connections' to see available profiles.")
     graph_name: Optional[str] = Field(
         default=None,
         description="Name of the graph (uses default if not specified)"
@@ -932,11 +947,12 @@ async def get_node_edges(
     vertex_id: Union[str, int],
     edge_type: Optional[str] = None,
     limit: Optional[int] = 100,
+    profile: Optional[str] = None,
     graph_name: Optional[str] = None,
 ) -> List[TextContent]:
     """Get all edges connected to a specific node."""
     try:
-        conn = get_connection(graph_name=graph_name)
+        conn = get_connection(profile=profile, graph_name=graph_name)
         
         # Get outgoing edges from this vertex
         edges = await conn.getEdges(

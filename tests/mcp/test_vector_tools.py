@@ -493,5 +493,60 @@ class TestLoadVectorsFromJson(MCPToolTestBase):
         self.assertIn('JSON_FILE="true"', create_call)
 
 
+class TestProfilePropagation(MCPToolTestBase):
+    """Verify profile is forwarded to get_connection for vector tools."""
+
+    @patch(PATCH_TARGET)
+    async def test_add_vector_attribute_with_profile(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.gsql.side_effect = [
+            "",
+            "Successfully created schema change job",
+        ]
+
+        result = await add_vector_attribute(
+            vertex_type="Person",
+            vector_name="emb",
+            dimension=128,
+            profile="staging",
+        )
+        self.assert_success(result)
+        mock_gc.assert_called_with(profile="staging", graph_name=None)
+
+    @patch(PATCH_TARGET)
+    async def test_list_vector_attributes_with_profile(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.gsql.return_value = (
+            "---- Graph TestGraph\n"
+            "Vector Embeddings:\n"
+            "  - Person:\n"
+            '    - emb(Dimension=128, IndexType="HNSW", DataType="FLOAT", Metric="COSINE")\n'
+        )
+
+        result = await list_vector_attributes(profile="analytics")
+        self.assert_success(result)
+        mock_gc.assert_called_with(profile="analytics", graph_name=None)
+
+    @patch(PATCH_TARGET)
+    async def test_search_with_profile_and_graph(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.gsql.side_effect = [
+            '- emb(Dimension=3, IndexType="HNSW", DataType="FLOAT", Metric="COSINE")',
+            "OK",
+            "OK",
+        ]
+        self.mock_conn.runInstalledQuery.return_value = [{"results": []}]
+
+        result = await search_top_k_similarity(
+            vertex_type="Person",
+            vector_attribute="emb",
+            query_vector=[0.1, 0.2, 0.3],
+            top_k=5,
+            profile="prod",
+            graph_name="ProdGraph",
+        )
+        mock_gc.assert_called_with(profile="prod", graph_name="ProdGraph")
+
+
 if __name__ == "__main__":
     unittest.main()

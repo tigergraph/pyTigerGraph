@@ -121,5 +121,27 @@ class TestGetNodeDegree(MCPToolTestBase):
         self.assertIn("FOLLOWS", query_arg)
 
 
+class TestProfilePropagation(MCPToolTestBase):
+    """Verify profile is forwarded to get_connection for statistics tools."""
+
+    @patch(PATCH_TARGET)
+    async def test_get_vertex_count_with_profile(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.getVertexCount.return_value = 10
+
+        result = await get_vertex_count(vertex_type="Person", profile="staging")
+        self.assert_success(result)
+        mock_gc.assert_called_with(profile="staging", graph_name=None)
+
+    @patch(PATCH_TARGET)
+    async def test_get_edge_count_with_profile(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.getEdgeCount.return_value = 50
+
+        result = await get_edge_count(edge_type="FOLLOWS", profile="analytics")
+        self.assert_success(result)
+        mock_gc.assert_called_with(profile="analytics", graph_name=None)
+
+
 if __name__ == "__main__":
     unittest.main()

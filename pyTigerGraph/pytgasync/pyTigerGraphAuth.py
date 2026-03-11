@@ -7,8 +7,6 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 import logging
 from typing import Union, Dict
 import warnings
-import httpx
-
 from pyTigerGraph.common.exception import TigerGraphException
 from pyTigerGraph.common.auth import (
     _parse_get_secrets,

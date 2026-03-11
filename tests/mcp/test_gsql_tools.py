@@ -44,7 +44,25 @@ class TestGsql(MCPToolTestBase):
 
         result = await gsql(command="LS", graph_name="MyGraph")
         self.assert_success(result)
-        mock_gc.assert_called_with(graph_name="MyGraph")
+        mock_gc.assert_called_with(profile=None, graph_name="MyGraph")
+
+    @patch(PATCH_TARGET)
+    async def test_with_profile(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.gsql.return_value = "OK"
+
+        result = await gsql(command="LS", profile="staging")
+        self.assert_success(result)
+        mock_gc.assert_called_with(profile="staging", graph_name=None)
+
+    @patch(PATCH_TARGET)
+    async def test_with_profile_and_graph(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.gsql.return_value = "OK"
+
+        result = await gsql(command="LS", profile="analytics", graph_name="FinGraph")
+        self.assert_success(result)
+        mock_gc.assert_called_with(profile="analytics", graph_name="FinGraph")
 
 
 class TestGetLlmConfig(unittest.TestCase):

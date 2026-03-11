@@ -249,5 +249,43 @@ class TestGetNodeEdges(MCPToolTestBase):
         )
 
 
+class TestProfilePropagation(MCPToolTestBase):
+    """Verify profile is forwarded to get_connection for node tools."""
+
+    @patch(PATCH_TARGET)
+    async def test_add_node_with_profile(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.upsertVertex.return_value = None
+
+        result = await add_node(
+            vertex_type="Person", vertex_id="u1", profile="staging"
+        )
+        self.assert_success(result)
+        mock_gc.assert_called_with(profile="staging", graph_name=None)
+
+    @patch(PATCH_TARGET)
+    async def test_get_node_with_profile_and_graph(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.getVerticesById.return_value = [{"v_id": "u1"}]
+
+        result = await get_node(
+            vertex_type="Person",
+            vertex_id="u1",
+            profile="analytics",
+            graph_name="FinGraph",
+        )
+        self.assert_success(result)
+        mock_gc.assert_called_with(profile="analytics", graph_name="FinGraph")
+
+    @patch(PATCH_TARGET)
+    async def test_delete_node_none_profile(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.delVerticesById.return_value = 1
+
+        result = await delete_node(vertex_type="Person", vertex_id="u1")
+        self.assert_success(result)
+        mock_gc.assert_called_with(profile=None, graph_name=None)
+
+
 if __name__ == "__main__":
     unittest.main()

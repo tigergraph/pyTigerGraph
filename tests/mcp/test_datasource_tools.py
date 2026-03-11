@@ -142,5 +142,31 @@ class TestPreviewSampleData(MCPToolTestBase):
         self.assert_error(result)
 
 
+class TestProfilePropagation(MCPToolTestBase):
+    """Verify profile is forwarded to get_connection for datasource tools."""
+
+    @patch(PATCH_TARGET)
+    async def test_create_data_source_with_profile(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.gsql.return_value = "Successfully created data source"
+
+        result = await create_data_source(
+            data_source_name="my_s3",
+            data_source_type="s3",
+            config={"bucket": "test"},
+            profile="staging",
+        )
+        self.assert_success(result)
+        mock_gc.assert_called_with(profile="staging")
+
+    @patch(PATCH_TARGET)
+    async def test_get_all_data_sources_with_profile(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.gsql.return_value = "data sources: none"
+
+        result = await get_all_data_sources(profile="analytics")
+        mock_gc.assert_called_with(profile="analytics")
+
+
 if __name__ == "__main__":
     unittest.main()

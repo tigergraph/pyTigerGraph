@@ -220,5 +220,45 @@ class TestGetNeighbors(MCPToolTestBase):
         self.assertEqual(resp["data"]["count"], 0)
 
 
+class TestProfilePropagation(MCPToolTestBase):
+    """Verify profile is forwarded to get_connection for query tools."""
+
+    @patch(PATCH_TARGET)
+    async def test_run_query_with_profile(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.runInterpretedQuery.return_value = [{"v": []}]
+
+        result = await run_query(
+            query_text="INTERPRET QUERY () FOR GRAPH G { PRINT 1; }",
+            profile="staging",
+        )
+        self.assert_success(result)
+        mock_gc.assert_called_with(profile="staging", graph_name=None)
+
+    @patch(PATCH_TARGET)
+    async def test_run_installed_query_with_profile(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.runInstalledQuery.return_value = [{"result": "ok"}]
+
+        result = await run_installed_query(
+            query_name="myQuery",
+            profile="analytics",
+            graph_name="FinGraph",
+        )
+        self.assert_success(result)
+        mock_gc.assert_called_with(profile="analytics", graph_name="FinGraph")
+
+    @patch(PATCH_TARGET)
+    async def test_install_query_with_profile(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.gsql.return_value = "Successfully created query"
+
+        result = await install_query(
+            query_text="CREATE QUERY foo() { PRINT 1; }",
+            profile="prod",
+        )
+        mock_gc.assert_called_with(profile="prod", graph_name=None)
+
+
 if __name__ == "__main__":
     unittest.main()

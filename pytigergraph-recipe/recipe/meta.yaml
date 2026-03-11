@@ -1,0 +1,30 @@
+package:
+  name: pytigergraph
+  version: "2.0.0"
+
+source:
+  url: https://pypi.io/packages/source/p/pytigergraph/pytigergraph-2.0.0.tar.gz
+
+build:
+  noarch: python
+  script: {{ PYTHON }} -m pip install . --no-deps -vv
+
+requirements:
+  host:
+    - python >=3.9
+    - pip
+    - setuptools
+    - wheel
+  run:
+    - python >=3.9
+    - requests
+
+about:
+  home: https://github.com/tigergraph/pyTigerGraph
+  license: Apache-2.0
+  license_family: Apache
+  summary: Python client for TigerGraph
+
+extra:
+  recipe-maintainers:
+    - chengbiao-jin

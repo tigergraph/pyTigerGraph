@@ -7,6 +7,12 @@
 
 """MCP tools for TigerGraph."""
 
+from .connection_tools import (
+    list_connections_tool,
+    show_connection_tool,
+    list_connections,
+    show_connection,
+)
 from .schema_tools import (
     # Global schema operations (database level)
     get_global_schema_tool,
@@ -157,6 +163,11 @@ from .discovery_tools import (
 from .tool_registry import get_all_tools
 
 __all__ = [
+    # Connection profile operations
+    "list_connections_tool",
+    "show_connection_tool",
+    "list_connections",
+    "show_connection",
     # Global schema operations (database level)
     "get_global_schema_tool",
     "get_global_schema",

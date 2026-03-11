@@ -228,5 +228,42 @@ class TestHasEdge(MCPToolTestBase):
         self.assertFalse(resp["data"]["exists"])
 
 
+class TestProfilePropagation(MCPToolTestBase):
+    """Verify profile is forwarded to get_connection for edge tools."""
+
+    @patch(PATCH_TARGET)
+    async def test_add_edge_with_profile(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.upsertEdge.return_value = None
+
+        result = await add_edge(
+            source_vertex_type="Person",
+            source_vertex_id="u1",
+            edge_type="FOLLOWS",
+            target_vertex_type="Person",
+            target_vertex_id="u2",
+            profile="staging",
+        )
+        self.assert_success(result)
+        mock_gc.assert_called_with(profile="staging", graph_name=None)
+
+    @patch(PATCH_TARGET)
+    async def test_get_edge_with_profile_and_graph(self, mock_gc):
+        mock_gc.return_value = self.mock_conn
+        self.mock_conn.getEdges.return_value = [{"e_type": "FOLLOWS", "from_id": "u1", "to_id": "u2"}]
+
+        result = await get_edge(
+            source_vertex_type="Person",
+            source_vertex_id="u1",
+            edge_type="FOLLOWS",
+            target_vertex_type="Person",
+            target_vertex_id="u2",
+            profile="analytics",
+            graph_name="FinGraph",
+        )
+        self.assert_success(result)
+        mock_gc.assert_called_with(profile="analytics", graph_name="FinGraph")
+
+
 if __name__ == "__main__":
     unittest.main()
