@@ -140,8 +140,8 @@ conn = TigerGraphConnection(
 
 ### Synchronous mode (`TigerGraphConnection`)
 
-- Each thread gets its own `requests.Session` backed by a private connection pool. This eliminates the `_cookies_lock` contention that a shared session causes under concurrent load.
-- Install `pyTigerGraph[fast]` to activate the `orjson` backend and significantly reduce GIL contention between threads during JSON parsing.
+- Each thread gets its own dedicated HTTP session and connection pool, so concurrent threads never block each other.
+- Install `pyTigerGraph[fast]` to activate the `orjson` backend and reduce JSON parsing overhead under concurrent load.
 - Use `ThreadPoolExecutor` to run queries in parallel:
 
 ```python
@@ -149,7 +149,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 with TigerGraphConnection(...) as conn:
     with ThreadPoolExecutor(max_workers=16) as executor:
-        futures = {executor.submit(conn.runInstalledQuery, "q", {"p": v}): v for v in values}
+        futures = [executor.submit(conn.runInstalledQuery, "q", {"p": v}) for v in values]
         for f in as_completed(futures):
             print(f.result())
 ```

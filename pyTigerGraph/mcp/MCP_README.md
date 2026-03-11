@@ -8,6 +8,7 @@ pyTigerGraph now includes Model Context Protocol (MCP) support, allowing AI agen
 - [Usage](#usage)
   - [Running the MCP Server](#running-the-mcp-server)
   - [Configuration](#configuration)
+  - [Multiple Connection Profiles](#multiple-connection-profiles)
   - [Using with Existing Connection](#using-with-existing-connection)
 - [Client Examples](#client-examples)
   - [Using MultiServerMCPClient](#using-multiserverMCPclient)
@@ -83,7 +84,6 @@ TG_USERNAME=tigergraph
 TG_PASSWORD=tigergraph
 TG_RESTPP_PORT=9000
 TG_GS_PORT=14240
-TG_CONN_LIMIT=10      # Optional - increase for parallel tool calls (e.g. 32)
 ```
 
 The server will automatically load the `.env` file if it exists. Environment variables take precedence over `.env` file values.
@@ -104,7 +104,52 @@ The following environment variables are supported:
 - `TG_SSL_PORT` - SSL port (default: 443)
 - `TG_TGCLOUD` - Whether using TigerGraph Cloud (default: False)
 - `TG_CERT_PATH` - Path to certificate (optional)
-- `TG_CONN_LIMIT` - Max keep-alive HTTP connections in the async client pool (default: 10). Should be ≥ the number of concurrent MCP tool calls you expect. Named profiles use `<PROFILE>_TG_CONN_LIMIT`.
+
+### Multiple Connection Profiles
+
+If you work with more than one TigerGraph environment — for example, development, staging, and production — you can define named profiles in your `.env` file and switch between them without changing any code.
+
+#### Defining profiles
+
+Each named profile uses a `<PROFILE>_` prefix on the standard `TG_*` variables. Only the variables that differ from the default need to be set.
+
+```bash
+# .env
+
+# Default profile (no prefix) — used when TG_PROFILE is not set
+TG_HOST=http://localhost
+TG_USERNAME=tigergraph
+TG_PASSWORD=tigergraph
+TG_GRAPHNAME=MyGraph
+
+# Staging profile
+STAGING_TG_HOST=https://staging.example.com
+STAGING_TG_PASSWORD=staging_secret
+STAGING_TG_TGCLOUD=true
+
+# Production profile
+PROD_TG_HOST=https://prod.example.com
+PROD_TG_USERNAME=admin
+PROD_TG_PASSWORD=prod_secret
+PROD_TG_GRAPHNAME=ProdGraph
+PROD_TG_TGCLOUD=true
+```
+
+Profiles are discovered automatically at startup. Any variable matching `<PROFILE>_TG_HOST` registers a new profile. Values not set for a named profile fall back to the default profile's values.
+
+#### Selecting the active profile
+
+Pass `TG_PROFILE` as an environment variable or add it to your `.env`:
+
+```bash
+# Switch to the staging profile for this run
+TG_PROFILE=staging tigergraph-mcp
+
+# Or set it permanently in .env
+TG_PROFILE=prod
+```
+
+If `TG_PROFILE` is not set, the default profile (unprefixed `TG_*` variables) is used.
 
 ### Using with Existing Connection
 
@@ -136,7 +181,6 @@ async with AsyncTigerGraphConnection(
     graphname="MyGraph",
     username="tigergraph",
     password="tigergraph",
-    connLimit=10,          # set >= number of concurrent MCP tool calls (default: 10)
 ) as conn:
     # Set as default for MCP tools
     ConnectionManager.set_default_connection(conn)
@@ -396,8 +440,8 @@ result = await session.call_tool(
 
 - **Transport**: The MCP server uses stdio transport by default
 - **Error Detection**: GSQL operations include error detection for syntax and semantic errors (since `conn.gsql()` does not raise Python exceptions for GSQL failures)
-- **Connection Management**: Connections are pooled by profile — each profile's `AsyncTigerGraphConnection` holds a persistent HTTP connection pool (sized by `TG_CONN_LIMIT`, default 10). The pool is automatically released at server shutdown via `ConnectionManager.close_all()`. To adjust pool size per profile, set `<PROFILE>_TG_CONN_LIMIT`.
-- **Performance**: Persistent HTTP connection pool per profile (no TCP handshake per request); async non-blocking I/O; `v.outdegree()` for O(1) degree counting; batch operations for multiple vertices/edges
+- **Connection Management**: Connections are pooled by profile and reused across requests — no TCP handshake overhead per tool call. The pool is released automatically at server shutdown.
+- **Performance**: Persistent HTTP connection pool per profile; async non-blocking I/O; `v.outdegree()` for O(1) degree counting; batch operations for multiple vertices/edges
 
 ## Backward Compatibility
 
