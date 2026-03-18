@@ -1,8 +1,13 @@
+from importlib.metadata import version as _pkg_version, PackageNotFoundError
+
 from pyTigerGraph.pyTigerGraph import TigerGraphConnection
 from pyTigerGraph.pytgasync.pyTigerGraph import AsyncTigerGraphConnection
 from pyTigerGraph.common.exception import TigerGraphException
 
-__version__ = "2.0.1"
+try:
+    __version__ = _pkg_version("pyTigerGraph")
+except PackageNotFoundError:
+    __version__ = "2.0.1"
 
 __license__ = "Apache 2"
 

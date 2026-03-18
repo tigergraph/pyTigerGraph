@@ -61,8 +61,9 @@ class test_pyTigerGraphLoading(unittest.TestCase):
         self.assertEqual(url, "http://localhost:14240/gsql/v1/loading-jobs/status?jobId=job1&jobId=job2")
 
     def test_prep_get_loading_job_status(self):
-        url = _prep_get_loading_job_status("http://localhost:14240", "job1")
-        self.assertEqual(url, "http://localhost:14240/gsql/v1/loading-jobs/status/job1")
-    
+        url = _prep_get_loading_job_status("http://localhost:14240", "mygraph", "job1")
+        self.assertEqual(url, "http://localhost:14240/gsql/v1/loading-jobs/status/job1?graph=mygraph")
 
-                        
+
+
+

@@ -100,7 +100,38 @@ def _prep_get_loading_jobs_status(gsUrl: str, graphname: str, jobIds: list[str])
         url += "&" + job_params
     return url
 
-def _prep_get_loading_job_status(gsUrl: str, jobId: str):
+def _prep_get_loading_job_status(gsUrl: str, graphname: str, jobId: str):
     '''url builder for getLoadingJobStatus()'''
-    url = gsUrl + "/gsql/v1/loading-jobs/status/" + jobId
+    url = gsUrl + "/gsql/v1/loading-jobs/status/" + jobId + "?graph=" + graphname
     return url
+
+
+# ---- Data Source helpers ----
+
+def _prep_data_source_url(gsUrl: str, graphname: str = None):
+    '''url builder for getDataSources() and createDataSource()'''
+    url = gsUrl + "/gsql/v1/data-sources"
+    if graphname:
+        url += "?graph=" + graphname
+    return url
+
+
+def _prep_data_source_by_name(gsUrl: str, dsName: str, graphname: str = None):
+    '''url builder for getDataSource(), dropDataSource(), updateDataSource()'''
+    url = gsUrl + "/gsql/v1/data-sources/" + dsName
+    if graphname:
+        url += "?graph=" + graphname
+    return url
+
+
+def _prep_drop_all_data_sources(gsUrl: str, graphname: str = None):
+    '''url builder for dropAllDataSources()'''
+    url = gsUrl + "/gsql/v1/data-sources/dropAll"
+    if graphname:
+        url += "?graph=" + graphname
+    return url
+
+
+def _prep_sample_data_url(gsUrl: str):
+    '''url builder for previewSampleData()'''
+    return gsUrl + "/gsql/v1/sample-data"

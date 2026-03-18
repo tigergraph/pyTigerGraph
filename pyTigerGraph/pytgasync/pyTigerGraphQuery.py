@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     import pandas as pd
 
 from pyTigerGraph.common.exception import TigerGraphException
+from pyTigerGraph.common.gsql import _wrap_gsql_result
 from pyTigerGraph.common.query import (
     _parse_get_installed_queries,
     _parse_query_parameters,
@@ -106,25 +107,24 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
                 "create query queryName (...) FOR GRAPH graphName { ... }"
 
         Returns:
-            The response from the database containing the creation result.
+            A dict with at least a ``"message"`` key describing the outcome.
 
         Endpoints:
             - `POST /gsql/v1/queries` (In TigerGraph versions >= 4.0)
+            - Falls back to GSQL ``CREATE QUERY`` for TigerGraph versions < 4.0
         """
         logger.debug("entry: createQuery")
-        if not await self._version_greater_than_4_0():
-            logger.debug("exit: createQuery")
-            raise TigerGraphException(
-                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
 
-        # Replace graphname placeholders
         queryText = queryText.replace("$graphname", self.graphname)
         queryText = queryText.replace("@graphname@", self.graphname)
 
-        params = {"graph": self.graphname}
-        res = await self._req("POST", self.gsUrl+"/gsql/v1/queries",
-                             params=params, data=queryText, authMode="pwd",
-                             headers={'Content-Type': 'text/plain'})
+        if await self._version_greater_than_4_0():
+            params = {"graph": self.graphname}
+            res = await self._req("POST", self.gsUrl+"/gsql/v1/queries",
+                                 params=params, data=queryText, authMode="pwd",
+                                 headers={'Content-Type': 'text/plain'})
+        else:
+            res = _wrap_gsql_result(await self.gsql(f"USE GRAPH {self.graphname}\n{queryText}"))
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -140,27 +140,31 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
                 Name of the query to drop, or list of query names to drop.
 
         Returns:
-            The response from the database containing the drop result.
+            A dict with at least a ``"message"`` key describing the outcome.
 
         Endpoints:
             - `DELETE /gsql/v1/queries/{queryName}` (In TigerGraph versions >= 4.0)
+            - Falls back to GSQL ``DROP QUERY`` for TigerGraph versions < 4.0
         """
         logger.debug("entry: dropQueries")
-        if not await self._version_greater_than_4_0():
-            logger.debug("exit: dropQueries")
-            raise TigerGraphException(
-                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
 
-        # Handle single query name
-        if isinstance(queryName, str):
+        if not await self._version_greater_than_4_0():
+            if isinstance(queryName, list):
+                if not queryName:
+                    raise TigerGraphException("Query name list cannot be empty.", 0)
+                names = ", ".join(queryName)
+            elif isinstance(queryName, str):
+                names = queryName
+            else:
+                raise TigerGraphException("queryName must be a string or list of strings.", 0)
+            res = _wrap_gsql_result(await self.gsql(f"USE GRAPH {self.graphname}\nDROP QUERY {names}"))
+        elif isinstance(queryName, str):
             params = {"graph": self.graphname}
             res = await self._req("DELETE", self.gsUrl+"/gsql/v1/queries/"+queryName,
                                  params=params, authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
-        # Handle list of query names
         elif isinstance(queryName, list):
             if not queryName:
                 raise TigerGraphException("Query name list cannot be empty.", 0)
-
             params = {"graph": self.graphname, "query": queryName}
             res = await self._req("DELETE", self.gsUrl+"/gsql/v1/queries",
                                  params=params, authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
@@ -800,8 +804,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
                       "queryParameters": [queryName+".*"]}
         else:
             params = {"queries": [queryName]}
-        print(params)
-        if await self._versionGreaterThan4_0():
+        if await self._version_greater_than_4_0():
             res = await self._delete(self.gsUrl+"/gsql/v1/description?graph="+self.graphname, authMode="pwd", data=params, jsonData=True, resKey=None)
         else:
             res = await self._delete(self.gsUrl+"/gsqlserver/gsql/description?graph="+self.graphname, authMode="pwd", data=params, jsonData=True, resKey=None)

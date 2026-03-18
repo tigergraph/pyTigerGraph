@@ -6,6 +6,7 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 import json
 import logging
 import re
+import uuid
 
 from typing import Union
 
@@ -14,6 +15,7 @@ from pyTigerGraph.common.schema import (
     _prep_get_endpoints
 )
 from pyTigerGraph.common.exception import TigerGraphException
+from pyTigerGraph.common.gsql import _wrap_gsql_result, _parse_graph_list
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
 logger = logging.getLogger(__name__)
@@ -408,5 +410,138 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
         logger.debug("exit: validateGraphSchema")
+
+        return res
+
+    def createGraph(self, graphName: str) -> dict:
+        """Creates an empty graph.
+
+        Args:
+            graphName:
+                Name of the graph to create.
+
+        Returns:
+            A dict with at least a ``"message"`` key describing the outcome.
+
+        Endpoints:
+            - `POST /gsql/v1/schema/graphs` (In TigerGraph versions >= 4.0)
+            - Falls back to GSQL ``CREATE GRAPH`` for TigerGraph versions < 4.0
+        """
+        logger.debug("entry: createGraph")
+
+        if self._version_greater_than_4_0():
+            data = {"name": graphName}
+            res = self._post(self.gsUrl + "/gsql/v1/schema/graphs",
+                            data=data, authMode="pwd", resKey="",
+                            headers={'Content-Type': 'application/json'})
+        else:
+            res = _wrap_gsql_result(self.gsql(f"CREATE GRAPH {graphName}()"))
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: createGraph")
+
+        return res
+
+    def dropGraph(self, graphName: str) -> dict:
+        """Drops a graph and all its data.
+
+        Args:
+            graphName:
+                Name of the graph to drop.
+
+        Returns:
+            A dict with at least a ``"message"`` key describing the outcome.
+
+        Endpoints:
+            - `DELETE /gsql/v1/schema/graphs/{graphName}` (In TigerGraph versions >= 4.0)
+            - Falls back to GSQL ``DROP GRAPH`` for TigerGraph versions < 4.0
+        """
+        logger.debug("entry: dropGraph")
+
+        if self._version_greater_than_4_0():
+            res = self._delete(self.gsUrl + "/gsql/v1/schema/graphs/" + graphName,
+                              authMode="pwd", resKey="",
+                              headers={'Content-Type': 'application/json'})
+        else:
+            res = _wrap_gsql_result(self.gsql(f"DROP GRAPH {graphName}"))
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: dropGraph")
+
+        return res
+
+    def listGraphs(self) -> list:
+        """Lists all graphs in the database.
+
+        Returns:
+            A list of dicts, each with at least a ``"GraphName"`` key.
+
+        Endpoints:
+            - `GET /gsql/v1/schema/graphs` (In TigerGraph versions >= 4.0)
+            - Falls back to GSQL ``SHOW GRAPH *`` for TigerGraph versions < 4.0
+        """
+        logger.debug("entry: listGraphs")
+
+        if self._version_greater_than_4_0():
+            res = self._get(self.gsUrl + "/gsql/v1/schema/graphs",
+                           authMode="pwd")
+        else:
+            res = _parse_graph_list(self.gsql("SHOW GRAPH *"))
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: listGraphs")
+
+        return res
+
+    def runSchemaChange(self, gsqlStatements: Union[str, list], graphName: str = None) -> dict:
+        """Runs schema change statements on a graph.
+
+        Args:
+            gsqlStatements:
+                GSQL schema change DDL statements (e.g. ``ADD VERTEX ...``, ``ADD EDGE ...``).
+                Can be a string of semicolon-separated statements or a list of statements.
+            graphName:
+                Target graph name. Uses connection's graphname if not provided.
+
+        Returns:
+            A dict with at least a ``"message"`` key describing the outcome.
+
+        Endpoints:
+            - `POST /gsql/v1/schema/change?graph={graphName}` (In TigerGraph versions >= 4.0)
+            - Falls back to GSQL schema change job for TigerGraph versions < 4.0
+        """
+        logger.debug("entry: runSchemaChange")
+
+        gname = graphName or self.graphname
+
+        if isinstance(gsqlStatements, list):
+            gsqlStatements = "\n".join(
+                s if s.rstrip().endswith(";") else s + ";"
+                for s in gsqlStatements
+            )
+
+        if self._version_greater_than_4_0():
+            params = {"graph": gname}
+            res = self._post(self.gsUrl + "/gsql/v1/schema/change",
+                            params=params, data=gsqlStatements, authMode="pwd", resKey="",
+                            headers={'Content-Type': 'text/plain'})
+        else:
+            job_name = f"schema_change_{uuid.uuid4().hex[:8]}"
+            gsql_cmd = (
+                f"USE GRAPH {gname}\n"
+                f"CREATE SCHEMA_CHANGE JOB {job_name} FOR GRAPH {gname} {{\n"
+                f"    {gsqlStatements}\n"
+                f"}}\n"
+                f"RUN SCHEMA_CHANGE JOB {job_name}\n"
+                f"DROP JOB {job_name}"
+            )
+            res = _wrap_gsql_result(self.gsql(gsql_cmd))
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: runSchemaChange")
 
         return res

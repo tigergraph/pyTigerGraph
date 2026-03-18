@@ -60,6 +60,69 @@ def _parse_gsql(res, query: str, graphname: str = None, options=None):
 
     return string_without_ansi
 
+_GSQL_ERROR_PATTERNS = [
+    "Encountered \"",
+    "SEMANTIC ERROR",
+    "Syntax Error",
+    "Failed to create",
+    "does not exist",
+    "is not a valid",
+    "already exists",
+    "Invalid syntax",
+]
+
+
+def _wrap_gsql_result(result, skipCheck: bool = False):
+    """Wrap a gsql() string result into a dict matching 4.x REST response format.
+
+    Args:
+        result:     The raw string returned by ``gsql()``.
+        skipCheck:  If ``False`` (default), raises ``TigerGraphException`` when
+                    an error pattern is detected — consistent with ``_error_check``
+                    on the 4.x REST path.  If ``True``, returns the dict with
+                    ``"error": True`` without raising.
+    """
+    msg = str(result) if result else ""
+    has_error = any(p in msg for p in _GSQL_ERROR_PATTERNS)
+    if has_error and not skipCheck:
+        raise TigerGraphException(msg)
+    return {
+        "error": has_error,
+        "message": msg,
+    }
+
+
+def _parse_graph_list(gsql_output):
+    """Parse ``SHOW GRAPH *`` output into a list of dicts matching 4.x REST format."""
+    output = str(gsql_output) if gsql_output else ""
+    graphs = []
+    for line in output.splitlines():
+        stripped = line.strip().lstrip("- ").strip()
+        if not stripped.startswith("Graph "):
+            continue
+        paren_start = stripped.find("(")
+        name = stripped[6:paren_start].strip() if paren_start > 6 else stripped[6:].strip()
+        if not name or name == "*":
+            continue
+        vertices = []
+        edges = []
+        if paren_start != -1:
+            paren_end = stripped.rfind(")")
+            inner = stripped[paren_start + 1:paren_end] if paren_end > paren_start else ""
+            for token in inner.split(","):
+                token = token.strip()
+                if token.endswith(":v"):
+                    vertices.append(token[:-2])
+                elif token.endswith(":e"):
+                    edges.append(token[:-2])
+        graphs.append({
+            "GraphName": name,
+            "VertexTypes": vertices,
+            "EdgeTypes": edges,
+        })
+    return graphs
+
+
 def _prep_get_udf(ExprFunctions: bool = True, ExprUtil: bool = True):
     urls = {}  # urls when using TG 4.x
     alt_urls = {}  # urls when using TG 3.x

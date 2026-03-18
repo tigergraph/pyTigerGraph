@@ -1,5 +1,48 @@
 [build-system]
-# These are the assumed default build requirements from pip:
-# https://pip.pypa.io/en/stable/reference/pip/#pep-517-and-518-support
 requires = ["setuptools>=43.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyTigerGraph"
+version = "2.0.1"
+description = "Library to connect to TigerGraph databases"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+authors = [{ name = "TigerGraph Inc.", email = "support@tigergraph.com" }]
+requires-python = ">=3.8"
+keywords = ["TigerGraph", "Graph Database", "Data Science", "Machine Learning"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Build Tools",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "validators",
+    "requests",
+    "aiohttp",
+    "httpx",
+]
+
+[project.optional-dependencies]
+gds = ["pandas", "kafka-python", "numpy", "tqdm"]
+mcp = ["tigergraph-mcp"]
+fast = ["orjson"]
+
+[project.urls]
+"Source" = "https://github.com/tigergraph/pyTigerGraph"
+"Bug Reports" = "https://github.com/tigergraph/pyTigerGraph/issues"
+"Documentation" = "https://docs.tigergraph.com/pytigergraph/current/intro/"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pyTigerGraph*"]
+
+[tool.setuptools.package-data]
+"pyTigerGraph.gds" = ["**/*"]
