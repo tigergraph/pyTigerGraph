@@ -1,6 +1,6 @@
 package:
   name: pytigergraph
-  version: "2.0.0"
+  version: "2.0.1"
 
 source:
   url: https://pypi.io/packages/source/p/pytigergraph/pytigergraph-2.0.0.tar.gz
