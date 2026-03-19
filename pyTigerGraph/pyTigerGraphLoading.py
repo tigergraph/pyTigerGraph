@@ -219,7 +219,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
 
         url = _prep_loading_job_url(self.gsUrl, self.graphname)
 
-        res = self._req("GET", url)
+        res = self._req("GET", url, resKey="jobNames")
 
         logger.debug("return: " + str(res))
         logger.debug("exit: getLoadingJobs")
@@ -243,7 +243,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
 
         url = _prep_loading_job_url(self.gsUrl, self.graphname)
 
-        res = self._req("POST", url, data=job_definition)
+        res = self._req("POST", url, data=job_definition, resKey=None)
 
         logger.debug("return: " + str(res))
         logger.debug("exit: createLoadingJob")
@@ -267,7 +267,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
 
         url = _prep_loading_job_url(self.gsUrl, self.graphname)
 
-        res = self._req("PUT", url, data=job_definition)
+        res = self._req("PUT", url, data=job_definition, resKey=None)
 
         logger.debug("return: " + str(res))
         logger.debug("exit: updateLoadingJob")
@@ -332,7 +332,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
 
         url, data = _prep_run_loading_job(self.gsUrl, self.graphname, jobName, data_source_config, sys_data_root, verbose, dryrun, interval, maxNumError, maxPercentError)
 
-        res = self._req("POST", url, data=data)
+        res = self._req("POST", url, data=data, resKey=None)
 
         logger.debug("return: " + str(res))
         logger.debug("exit: runLoadingJob")
@@ -358,7 +358,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
 
         if self._version_greater_than_4_0():
             url = _prep_loading_job_info(self.gsUrl, jobName, self.graphname)
-            res = self._req("DELETE", url)
+            res = self._req("DELETE", url, resKey=None)
         else:
             res = _wrap_gsql_result(self.gsql(f"USE GRAPH {self.graphname}\nDROP JOB {jobName}"))
 
@@ -386,7 +386,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
 
         url = _prep_abort_loading_jobs(self.gsUrl, self.graphname, jobIds, pauseJob)
 
-        res = self._req("GET", url)
+        res = self._req("GET", url, resKey=None)
 
         logger.debug("return: " + str(res))
         logger.debug("exit: abortLoadingJobs")
@@ -412,7 +412,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
 
         url = _prep_abort_one_loading_job(self.gsUrl, self.graphname, jobId, pauseJob)
 
-        res = self._req("GET", url)
+        res = self._req("GET", url, resKey=None)
 
         logger.debug("return: " + str(res))
         logger.debug("exit: abortLoadingJob")
@@ -436,7 +436,7 @@ class pyTigerGraphLoading(pyTigerGraphBase):
 
         url = _prep_resume_loading_job(self.gsUrl, jobId)
 
-        res = self._req("GET", url)
+        res = self._req("GET", url, resKey=None)
 
         logger.debug("return: " + str(res))
         logger.debug("exit: resumeLoadingJob")

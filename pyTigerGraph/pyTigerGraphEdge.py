@@ -849,7 +849,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         for et in ets:
             data = '{"function":"stat_edge_attr","type":"' + \
                 et + '","from_type":"*","to_type":"*"}'
-            res = self._req("POST", self.restppUrl + "/builtins/" + self.graphname, data=data, resKey="",
+            res = self._req("POST", self.restppUrl + "/builtins/" + self.graphname, data=data, resKey=None,
                             skipCheck=True)
             responses.append((et, res))
         ret = _parse_get_edge_stats(responses, skipNA)

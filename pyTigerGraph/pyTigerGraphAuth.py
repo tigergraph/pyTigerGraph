@@ -573,7 +573,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
 
         data = {"token": token}
         res = self._post(self.gsUrl+"/gsql/v1/tokens/check",
-                        data=data, authMode="pwd", resKey="",
+                        data=data, authMode="pwd", resKey=None,
                         headers={'Content-Type': 'application/json'})
 
         if logger.level == logging.DEBUG:

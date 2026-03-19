@@ -212,20 +212,20 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
         )
         if bui:
             eps = {}
-            res = await self._req("GET", url + "builtin=true", resKey="")
+            res = await self._req("GET", url + "builtin=true", resKey=None)
             for ep in res:
                 if not re.search(" /graph/", ep) or re.search(" /graph/{graph_name}/", ep):
                     eps[ep] = res[ep]
             ret.update(eps)
         if dyn:
             eps = {}
-            res = await self._req("GET", url + "dynamic=true", resKey="")
+            res = await self._req("GET", url + "dynamic=true", resKey=None)
             for ep in res:
                 if re.search("^GET /query/" + self.graphname, ep):
                     eps[ep] = res[ep]
             ret.update(eps)
         if sta:
-            ret.update(await self._req("GET", url + "static=true", resKey=""))
+            ret.update(await self._req("GET", url + "static=true", resKey=None))
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -269,7 +269,7 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
         data = {"gsql": gsql_commands}
         params = {"gsql": "true"}
         res = await self._req("POST", self.gsUrl+"/gsql/v1/schema/vertices",
-                             params=params, data=data, authMode="pwd", resKey="",
+                             params=params, data=data, authMode="pwd", resKey=None,
                              headers={'Content-Type': 'application/json'})
 
         if logger.level == logging.DEBUG:
@@ -323,7 +323,7 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
 
         data = {"createVertices": vertices_config}
         res = await self._req("POST", self.gsUrl+"/gsql/v1/schema/vertices",
-                             data=data, authMode="pwd", resKey="",
+                             data=data, authMode="pwd", resKey=None,
                              headers={'Content-Type': 'application/json'})
 
         if logger.level == logging.DEBUG:
@@ -375,7 +375,7 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
         data = {"addVertices": vertex_names}
         params = {"graph": graph_name}
         res = await self._req("POST", self.gsUrl+"/gsql/v1/schema/vertices",
-                             params=params, data=data, authMode="pwd", resKey="",
+                             params=params, data=data, authMode="pwd", resKey=None,
                              headers={'Content-Type': 'application/json'})
 
         if logger.level == logging.DEBUG:
@@ -405,7 +405,7 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
                 "This function is only supported on versions of TigerGraph >= 4.0.", 0)
 
         res = await self._req("POST", self.gsUrl+"/gsql/v1/schema/check",
-                             authMode="pwd", resKey="",
+                             authMode="pwd", resKey=None,
                              headers={'Content-Type': 'text/plain'})
 
         if logger.level == logging.DEBUG:
@@ -433,7 +433,7 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
         if await self._version_greater_than_4_0():
             data = {"name": graphName}
             res = await self._req("POST", self.gsUrl + "/gsql/v1/schema/graphs",
-                                 data=data, authMode="pwd", resKey="",
+                                 data=data, authMode="pwd", resKey=None,
                                  headers={'Content-Type': 'application/json'})
         else:
             res = _wrap_gsql_result(await self.gsql(f"CREATE GRAPH {graphName}()"))
@@ -462,7 +462,7 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
 
         if await self._version_greater_than_4_0():
             res = await self._req("DELETE", self.gsUrl + "/gsql/v1/schema/graphs/" + graphName,
-                                 authMode="pwd", resKey="",
+                                 authMode="pwd", resKey=None,
                                  headers={'Content-Type': 'application/json'})
         else:
             res = _wrap_gsql_result(await self.gsql(f"DROP GRAPH {graphName}"))
@@ -487,7 +487,7 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
 
         if await self._version_greater_than_4_0():
             res = await self._req("GET", self.gsUrl + "/gsql/v1/schema/graphs",
-                                 authMode="pwd")
+                                 authMode="pwd", resKey="graphs")
         else:
             res = _parse_graph_list(await self.gsql("SHOW GRAPH *"))
 
@@ -527,7 +527,7 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
         if await self._version_greater_than_4_0():
             params = {"graph": gname}
             res = await self._req("POST", self.gsUrl + "/gsql/v1/schema/change",
-                                 params=params, data=gsqlStatements, authMode="pwd", resKey="",
+                                 params=params, data=gsqlStatements, authMode="pwd", resKey=None,
                                  headers={'Content-Type': 'text/plain'})
         else:
             job_name = f"schema_change_{uuid.uuid4().hex[:8]}"

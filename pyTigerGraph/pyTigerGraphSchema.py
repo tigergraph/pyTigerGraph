@@ -211,20 +211,20 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         )
         if bui:
             eps = {}
-            res = self._req("GET", url + "builtin=true", resKey="")
+            res = self._req("GET", url + "builtin=true", resKey=None)
             for ep in res:
                 if not re.search(" /graph/", ep) or re.search(" /graph/{graph_name}/", ep):
                     eps[ep] = res[ep]
             ret.update(eps)
         if dyn:
             eps = {}
-            res = self._req("GET", url + "dynamic=true", resKey="")
+            res = self._req("GET", url + "dynamic=true", resKey=None)
             for ep in res:
                 if re.search("^GET /query/" + self.graphname, ep):
                     eps[ep] = res[ep]
             ret.update(eps)
         if sta:
-            ret.update(self._req("GET", url + "static=true", resKey=""))
+            ret.update(self._req("GET", url + "static=true", resKey=None))
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -268,7 +268,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         data = {"gsql": gsql_commands}
         params = {"gsql": "true"}
         res = self._post(self.gsUrl+"/gsql/v1/schema/vertices",
-                        params=params, data=data, authMode="pwd", resKey="",
+                        params=params, data=data, authMode="pwd", resKey=None,
                         headers={'Content-Type': 'application/json'})
 
         if logger.level == logging.DEBUG:
@@ -322,7 +322,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
 
         data = {"createVertices": vertices_config}
         res = self._post(self.gsUrl+"/gsql/v1/schema/vertices",
-                        data=data, authMode="pwd", resKey="",
+                        data=data, authMode="pwd", resKey=None,
                         headers={'Content-Type': 'application/json'})
 
         if logger.level == logging.DEBUG:
@@ -374,7 +374,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         data = {"addVertices": vertex_names}
         params = {"graph": graph_name}
         res = self._post(self.gsUrl+"/gsql/v1/schema/vertices",
-                        params=params, data=data, authMode="pwd", resKey="",
+                        params=params, data=data, authMode="pwd", resKey=None,
                         headers={'Content-Type': 'application/json'})
 
         if logger.level == logging.DEBUG:
@@ -404,7 +404,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
                 "This function is only supported on versions of TigerGraph >= 4.0.", 0)
 
         res = self._post(self.gsUrl+"/gsql/v1/schema/check",
-                        authMode="pwd", resKey="",
+                        authMode="pwd", resKey=None,
                         headers={'Content-Type': 'text/plain'})
 
         if logger.level == logging.DEBUG:
@@ -432,7 +432,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         if self._version_greater_than_4_0():
             data = {"name": graphName}
             res = self._post(self.gsUrl + "/gsql/v1/schema/graphs",
-                            data=data, authMode="pwd", resKey="",
+                            data=data, authMode="pwd", resKey=None,
                             headers={'Content-Type': 'application/json'})
         else:
             res = _wrap_gsql_result(self.gsql(f"CREATE GRAPH {graphName}()"))
@@ -461,7 +461,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
 
         if self._version_greater_than_4_0():
             res = self._delete(self.gsUrl + "/gsql/v1/schema/graphs/" + graphName,
-                              authMode="pwd", resKey="",
+                              authMode="pwd", resKey=None,
                               headers={'Content-Type': 'application/json'})
         else:
             res = _wrap_gsql_result(self.gsql(f"DROP GRAPH {graphName}"))
@@ -486,7 +486,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
 
         if self._version_greater_than_4_0():
             res = self._get(self.gsUrl + "/gsql/v1/schema/graphs",
-                           authMode="pwd")
+                           authMode="pwd", resKey="graphs")
         else:
             res = _parse_graph_list(self.gsql("SHOW GRAPH *"))
 
@@ -526,7 +526,7 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         if self._version_greater_than_4_0():
             params = {"graph": gname}
             res = self._post(self.gsUrl + "/gsql/v1/schema/change",
-                            params=params, data=gsqlStatements, authMode="pwd", resKey="",
+                            params=params, data=gsqlStatements, authMode="pwd", resKey=None,
                             headers={'Content-Type': 'text/plain'})
         else:
             job_name = f"schema_change_{uuid.uuid4().hex[:8]}"

@@ -836,7 +836,7 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery):
         for et in ets:
             data = '{"function":"stat_edge_attr","type":"' + \
                 et + '","from_type":"*","to_type":"*"}'
-            res = await self._req("POST", self.restppUrl + "/builtins/" + self.graphname, data=data, resKey="",
+            res = await self._req("POST", self.restppUrl + "/builtins/" + self.graphname, data=data, resKey=None,
                                   skipCheck=True)
             responses.append((et, res))
         ret = _parse_get_edge_stats(responses, skipNA)

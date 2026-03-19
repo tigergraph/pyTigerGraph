@@ -21,7 +21,7 @@ pip install pyTigerGraph
 | Extra | What it adds | Install command |
 |-------|-------------|-----------------|
 | `gds` | Graph Data Science — data loaders for PyTorch Geometric, DGL, and Pandas | `pip install 'pyTigerGraph[gds]'` |
-| `mcp` | Model Context Protocol server — installs [`tigergraph-mcp`](https://github.com/tigergraph/tigergraph-mcp) (convenience alias) | `pip install 'pyTigerGraph[mcp]'` |
+| `mcp` | Model Context Protocol server — installs [`pyTigerGraph-mcp`](https://github.com/tigergraph/tigergraph-mcp) (convenience alias) | `pip install 'pyTigerGraph[mcp]'` |
 | `fast` | [orjson](https://github.com/ijl/orjson) JSON backend — 2–10× faster parsing, releases the GIL under concurrent load | `pip install 'pyTigerGraph[fast]'` |
 
 Extras can be combined:
@@ -192,20 +192,20 @@ See the [GDS documentation](https://docs.tigergraph.com/pytigergraph/current/gds
 
 ## MCP Server
 
-The TigerGraph MCP server is now a standalone package: **[tigergraph-mcp](https://github.com/tigergraph/tigergraph-mcp)**. It exposes TigerGraph operations as tools for AI agents and LLM applications (Claude Desktop, Cursor, Copilot, etc.).
+The TigerGraph MCP server is now a standalone package: **[pyTigerGraph-mcp](https://github.com/tigergraph/tigergraph-mcp)**. It exposes TigerGraph operations as tools for AI agents and LLM applications (Claude Desktop, Cursor, Copilot, etc.).
 
 ```sh
 # Recommended — install the standalone package directly
-pip install tigergraph-mcp
+pip install pyTigerGraph-mcp
 
-# Or via the pyTigerGraph convenience alias (installs tigergraph-mcp automatically)
+# Or via the pyTigerGraph convenience alias (installs pyTigerGraph-mcp automatically)
 pip install 'pyTigerGraph[mcp]'
 
 # Start the server (reads connection config from environment variables)
 tigergraph-mcp
 ```
 
-For full setup instructions, available tools, configuration examples, and multi-profile support, see the **[tigergraph-mcp README](https://github.com/tigergraph/tigergraph-mcp#readme)**.
+For full setup instructions, available tools, configuration examples, and multi-profile support, see the **[pyTigerGraph-mcp README](https://github.com/tigergraph/tigergraph-mcp#readme)**.
 
 > **Migrating from `pyTigerGraph.mcp`?** Update your imports:
 > ```python

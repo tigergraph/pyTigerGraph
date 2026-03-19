@@ -677,7 +677,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
         responses = []
         for vt in vts:
             data = '{"function":"stat_vertex_attr","type":"' + vt + '"}'
-            res = self._req("POST", self.restppUrl + "/builtins/" + self.graphname, data=data, resKey="",
+            res = self._req("POST", self.restppUrl + "/builtins/" + self.graphname, data=data, resKey=None,
                             skipCheck=True)
             responses.append((vt, res))
 

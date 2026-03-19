@@ -687,7 +687,7 @@ class AsyncPyTigerGraphVertex(AsyncPyTigerGraphUtils, AsyncPyTigerGraphSchema):
         responses = []
         for vt in vts:
             data = '{"function":"stat_vertex_attr","type":"' + vt + '"}'
-            res = await self._req("POST", self.restppUrl + "/builtins/" + self.graphname, data=data, resKey="",
+            res = await self._req("POST", self.restppUrl + "/builtins/" + self.graphname, data=data, resKey=None,
                                   skipCheck=True)
             responses.append((vt, res))
 

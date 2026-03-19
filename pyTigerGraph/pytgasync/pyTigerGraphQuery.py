@@ -58,10 +58,10 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
             logger.debug("entry: getQueryMetadata")
         if await self._version_greater_than_4_0():
             params = {"graph": self.graphname, "queryName": queryName}
-            res = await self._req("POST", self.gsUrl+"/gsql/v1/queries/signature", params=params, authMode="pwd", resKey="")
+            res = await self._req("POST", self.gsUrl+"/gsql/v1/queries/signature", params=params, authMode="pwd", resKey=None)
         else:
             params = {"graph": self.graphname, "query": queryName}
-            res = await self._req("GET", self.gsUrl+"/gsqlserver/gsql/queryinfo", params=params, authMode="pwd", resKey="")
+            res = await self._req("GET", self.gsUrl+"/gsqlserver/gsql/queryinfo", params=params, authMode="pwd", resKey=None)
         if not res["error"]:
             if logger.level == logging.DEBUG:
                 logger.debug("exit: getQueryMetadata")
@@ -90,7 +90,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         params = {"graph": self.graphname}
         res = await self._req("GET", self.gsUrl+"/gsql/v1/queries/"+queryName,
-                             params=params, authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
+                             params=params, authMode="pwd", resKey=None, headers={'Content-Type': 'application/json'})
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -122,6 +122,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
             params = {"graph": self.graphname}
             res = await self._req("POST", self.gsUrl+"/gsql/v1/queries",
                                  params=params, data=queryText, authMode="pwd",
+                                 resKey=None,
                                  headers={'Content-Type': 'text/plain'})
         else:
             res = _wrap_gsql_result(await self.gsql(f"USE GRAPH {self.graphname}\n{queryText}"))
@@ -161,13 +162,13 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
         elif isinstance(queryName, str):
             params = {"graph": self.graphname}
             res = await self._req("DELETE", self.gsUrl+"/gsql/v1/queries/"+queryName,
-                                 params=params, authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
+                                 params=params, authMode="pwd", resKey=None, headers={'Content-Type': 'application/json'})
         elif isinstance(queryName, list):
             if not queryName:
                 raise TigerGraphException("Query name list cannot be empty.", 0)
             params = {"graph": self.graphname, "query": queryName}
             res = await self._req("DELETE", self.gsUrl+"/gsql/v1/queries",
-                                 params=params, authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
+                                 params=params, authMode="pwd", resKey=None, headers={'Content-Type': 'application/json'})
         else:
             raise TigerGraphException("queryName must be a string or list of strings.", 0)
 
@@ -198,7 +199,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         data = {"code": queryCode}
         res = await self._req("POST", self.gsUrl+"/gsql/v1/internal/check/query",
-                             data=data, authMode="pwd", resKey="",
+                             data=data, authMode="pwd", resKey=None,
                              headers={'Content-Type': 'application/json'})
 
         if logger.level == logging.DEBUG:
@@ -235,7 +236,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
             params["status"] = status
 
         res = await self._req("GET", self.gsUrl+"/gsql/v1/queries/info",
-                             params=params, authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
+                             params=params, authMode="pwd", resKey=None, headers={'Content-Type': 'application/json'})
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -343,7 +344,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         ret = None
         while not ret:
-            ret = await self._req("GET", self.gsUrl + "/gsql/v1/queries/install/" + str(request_id), authMode="pwd", resKey="")
+            ret = await self._req("GET", self.gsUrl + "/gsql/v1/queries/install/" + str(request_id), authMode="pwd", resKey=None)
             if "SUCCESS" in ret["message"] or "FAILED" in ret["message"]:
                 break
             else:
@@ -380,7 +381,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
             raise TigerGraphException(
                 "This function is only supported on versions of TigerGraph >= 4.1.0.", 0)
 
-        ret = await self._req("GET", self.gsUrl + "/gsql/v1/queries/install/" + requestId, authMode="pwd", resKey="")
+        ret = await self._req("GET", self.gsUrl + "/gsql/v1/queries/install/" + requestId, authMode="pwd", resKey=None)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -598,7 +599,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
         """
         if logger.level == logging.DEBUG:
             logger.debug("entry: getRunningQueries")
-        res = await self._req("GET", self.restppUrl+"/showprocesslist/"+self.graphname, resKey="")
+        res = await self._req("GET", self.restppUrl+"/showprocesslist/"+self.graphname, resKey=None)
         if not res["error"]:
             if logger.level == logging.DEBUG:
                 logger.debug("exit: getRunningQueries")
@@ -622,7 +623,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
             params["requestid"] = request_id
         if url:
             params["url"] = url
-        res = await self._get(self.restppUrl+"/abortquery/"+self.graphname, params=params, resKey="")
+        res = await self._get(self.restppUrl+"/abortquery/"+self.graphname, params=params, resKey=None)
         if not res["error"]:
             if logger.level == logging.DEBUG:
                 logger.debug("exit: abortQuery")
@@ -653,7 +654,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         seconds, segments = _prep_get_statistics(self, seconds, segments)
         ret = await self._req("GET", self.restppUrl + "/statistics/" + self.graphname + "?seconds=" +
-                              str(seconds) + "&segment=" + str(segments), resKey="")
+                              str(seconds) + "&segment=" + str(segments), resKey=None)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))

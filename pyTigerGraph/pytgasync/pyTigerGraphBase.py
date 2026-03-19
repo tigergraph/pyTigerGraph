@@ -170,30 +170,27 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
             # In TG 4.x the port for restpp has changed from 9000 to 14240.
             # This block should only be called once. When using 4.x, using port 9000 should fail so self.restppurl will change to host:14240/restpp
             # ----
-            # Changes port to 14240, adds /restpp to end to url, tries again, saves changes if successful
-            if self.restppPort == "9000" and "9000" in url:
+            # Changes port to gsql port, adds /restpp to end to url, tries again, saves changes if successful
+            if self.restppPort in url and "/gsql" not in url and ("/restpp" not in url or self.tgCloud):
                 async with self._restpp_failover_lock:
                     # Re-check inside lock: another task may have already completed the failover
-                    if self.restppPort == "9000" and "9000" in url:
-                        newRestppUrl = self.host + ":14240/restpp"
-                        # In tgcloud /restpp can already be in the restpp url. We want to extract everything after the port or /restpp
-                        if '/restpp' in url:
-                            url = newRestppUrl + '/' + \
-                                '/'.join(url.split(':')[2].split('/')[2:])
+                    if self.restppPort in url:
+                        newRestppUrl = self.host + ":" + self.gsPort + "/restpp"
+                        # If /restpp is already in the URL (e.g. tgCloud), skip that path segment
+                        if "/restpp" in url:
+                            url = newRestppUrl + "/" + "/".join(url.split(":")[2].split("/")[2:])
                         else:
-                            url = newRestppUrl + '/' + \
-                                '/'.join(url.split(':')[2].split('/')[1:])
+                            url = newRestppUrl + "/" + "/".join(url.split(":")[2].split("/")[1:])
                         status, body, resp = await self._do_request(
                             method, url, _headers, _data, jsonData, params, None)
                         if not skipCheck and not (200 <= status < 300) and status != 404:
                             try:
                                 self._error_check(json.loads(body))
                             except json.decoder.JSONDecodeError:
-                                # could not parse the response body (probably returned an html response)
                                 pass
                         resp.raise_for_status()
                         self.restppUrl = newRestppUrl
-                        self.restppPort = "14240"
+                        self.restppPort = self.gsPort
             else:
                 raise e
 
@@ -294,7 +291,9 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
 
         return res
 
-    async def _delete(self, url: str, authMode: str = "token", data: dict = None, resKey="results", jsonData=False) -> Union[dict, list]:
+    async def _delete(self, url: str, authMode: str = "token", headers: dict = None,
+                      data: dict = None, resKey="results", skipCheck: bool = False,
+                      params: Union[dict, list, str] = None, jsonData=False) -> Union[dict, list]:
         """Generic DELETE method.
 
         Args:
@@ -302,6 +301,17 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
                 Complete REST++ API URL including path and parameters.
             authMode:
                 Authentication mode, either `"token"` (default) or `"pwd"`.
+            headers:
+                Standard HTTP request headers.
+            data:
+                Request payload, typically a JSON document.
+            resKey:
+                The JSON subdocument to be returned, default is `"results"`.
+            skipCheck:
+                Some endpoints return an error to indicate that the requested
+                action is not applicable. This argument skips error checking.
+            params:
+                Request URL parameters.
 
         Returns:
             The response from the request (as a dictionary).
@@ -310,7 +320,8 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        res = await self._req("DELETE", url, authMode, data=data, resKey=resKey, jsonData=jsonData)
+        res = await self._req("DELETE", url, authMode, headers, data,
+                              resKey, skipCheck, params, jsonData=jsonData)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))

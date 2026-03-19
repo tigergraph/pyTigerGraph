@@ -32,7 +32,7 @@ dependencies = [
 
 [project.optional-dependencies]
 gds = ["pandas", "kafka-python", "numpy", "tqdm"]
-mcp = ["tigergraph-mcp"]
+mcp = ["pyTigerGraph-mcp"]
 fast = ["orjson"]
 
 [project.urls]

@@ -453,7 +453,7 @@ class AsyncPyTigerGraphAuth(AsyncPyTigerGraphGSQL):
 
         data = {"token": token}
         res = await self._req("POST", self.gsUrl+"/gsql/v1/tokens/check",
-                             data=data, authMode="pwd", resKey="",
+                             data=data, authMode="pwd", resKey=None,
                              headers={'Content-Type': 'application/json'})
 
         if logger.level == logging.DEBUG:

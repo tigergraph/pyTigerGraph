@@ -363,7 +363,9 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
 
         return res
 
-    def _delete(self, url: str, authMode: str = "token", data: dict = None, resKey="results", jsonData=False) -> Union[dict, list]:
+    def _delete(self, url: str, authMode: str = "token", headers: dict = None,
+                data: dict = None, resKey="results", skipCheck: bool = False,
+                params: Union[dict, list, str] = None, jsonData=False) -> Union[dict, list]:
         """Generic DELETE method.
 
         Args:
@@ -371,6 +373,17 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
                 Complete REST++ API URL including path and parameters.
             authMode:
                 Authentication mode, either `"token"` (default) or `"pwd"`.
+            headers:
+                Standard HTTP request headers.
+            data:
+                Request payload, typically a JSON document.
+            resKey:
+                The JSON subdocument to be returned, default is `"results"`.
+            skipCheck:
+                Some endpoints return an error to indicate that the requested
+                action is not applicable. This argument skips error checking.
+            params:
+                Request URL parameters.
 
         Returns:
             The response from the request (as a dictionary).
@@ -379,8 +392,8 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        res = self._req("DELETE", url, authMode, data=data,
-                        resKey=resKey, jsonData=jsonData)
+        res = self._req("DELETE", url, authMode, headers, data,
+                        resKey, skipCheck, params, jsonData=jsonData)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
