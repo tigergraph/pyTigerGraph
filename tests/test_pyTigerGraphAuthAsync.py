@@ -11,7 +11,7 @@ class test_pyTigerGraphAuthAsync(unittest.IsolatedAsyncioTestCase):
         self.conn = await make_connection()
 
     async def test_01_getSecrets(self):
-        res = await self.conn.showSecrets()
+        res = await self.conn.getSecrets()
         self.assertIsInstance(res, dict)
         # self.assertEqual(3, len(res)) # Just in case more secrets than expected
         self.assertIn("secret1", res)
@@ -44,7 +44,7 @@ class test_pyTigerGraphAuthAsync(unittest.IsolatedAsyncioTestCase):
             "The secret with alias secret1 already exists.", tge.exception.message)
 
     async def test_04_dropSecret(self):
-        res = await self.conn.showSecrets()
+        res = await self.conn.getSecrets()
         for a in list(res.keys()):
             if a.startswith("AUTO_GENERATED_ALIAS"):
                 res = await self.conn.dropSecret(a)

@@ -10,6 +10,8 @@ class test_pyTigerGraphBase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.conn = make_connection()
+        for i in range(1, 6):
+            cls.conn.upsertVertex("vertex4", i, {"a01": i})
 
     def test_00_errorCheck(self):
         json_ok1 = {

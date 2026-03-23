@@ -99,11 +99,11 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             if self._versionGreaterThan4_0():
                 res = self._req("PUT",
                                 url="{}/gsql/v1/udt/files/ExprFunctions".format(
-                                    self.gsUrl), authMode="pwd", data=data, resKey="")
+                                    self.gsUrl), authMode="pwd", data=data, resKey=None)
             else:
                 res = self._req("PUT",
                                 url="{}/gsqlserver/gsql/userdefinedfunction?filename=ExprFunctions".format(
-                                    self.gsUrl), authMode="pwd", data=data, resKey="")
+                                    self.gsUrl), authMode="pwd", data=data, resKey=None)
             if not res["error"]:
                 logger.info("ExprFunctions installed successfully")
             else:
@@ -122,12 +122,12 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                 res = self._req("PUT",
                                 url="{}/gsql/v1/udt/files/ExprUtil".format(
                                     self.gsUrl),
-                                authMode="pwd", data=data, resKey="")
+                                authMode="pwd", data=data, resKey=None)
             else:
                 res = self._req("PUT",
                                 url="{}/gsqlserver/gsql/userdefinedfunction?filename=ExprUtil".format(
                                     self.gsUrl),
-                                authMode="pwd", data=data, resKey="")
+                                authMode="pwd", data=data, resKey=None)
             if not res["error"]:
                 logger.info("ExprUtil installed successfully")
             else:
@@ -176,7 +176,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
 
         for file_name in urls:
             resp = self._req(
-                "GET", f"{self.gsUrl}{urls[file_name]}", resKey="")
+                "GET", f"{self.gsUrl}{urls[file_name]}", resKey=None)
             responses[file_name] = resp
 
         return _parse_get_udf(responses, json_out=json_out)
@@ -204,7 +204,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             logger.debug("params: " + self._locals(locals()))
 
         res = self._get(self.gsUrl+"/gsql/v1/statements/"+requestId,
-                       authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
+                       authMode="pwd", resKey=None, headers={'Content-Type': 'application/json'})
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -235,7 +235,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             logger.debug("params: " + self._locals(locals()))
 
         res = self._put(self.gsUrl+"/gsql/v1/statements/"+requestId+"/cancel",
-                       authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
+                       authMode="pwd", resKey=None, headers={'Content-Type': 'application/json'})
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -262,7 +262,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                 "This function is only supported on versions of TigerGraph >= 4.0.", 0)
 
         res = self._post(self.gsUrl+"/gsql/v1/schema/recover",
-                        authMode="pwd", resKey="", headers={'Content-Type': 'text/plain'})
+                        authMode="pwd", resKey=None, headers={'Content-Type': 'text/plain'})
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -295,7 +295,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                 "This function is only supported on versions of TigerGraph >= 4.0.", 0)
 
         res = self._get(self.gsUrl+"/gsql/v1/clear-store",
-                       authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
+                       authMode="pwd", resKey=None, headers={'Content-Type': 'application/json'})
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -328,7 +328,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
                 "This function is only supported on versions of TigerGraph >= 4.0.", 0)
 
         res = self._get(self.gsUrl+"/gsql/v1/drop-all",
-                       authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
+                       authMode="pwd", resKey=None, headers={'Content-Type': 'application/json'})
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -397,8 +397,8 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             data["password"] = password
 
         res = self._post(self.gsUrl+"/gsql/v1/db-export",
-                        data=data, authMode="pwd", resKey="",
-                        headers={'Content-Type': 'application/json'})
+                        data=data, authMode="pwd", resKey=None,
+                        headers={'Content-Type': 'application/json'}, jsonData=True)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -451,8 +451,8 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             data["password"] = password
 
         res = self._post(self.gsUrl+"/gsql/v1/db-import",
-                        data=data, authMode="pwd", resKey="",
-                        headers={'Content-Type': 'application/json'})
+                        data=data, authMode="pwd", resKey=None,
+                        headers={'Content-Type': 'application/json'}, jsonData=True)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -487,7 +487,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
             params["verbose"] = verbose
 
         res = self._get(self.gsUrl+"/gsql/v1/version",
-                       params=params, authMode="pwd", resKey="",
+                       params=params, authMode="pwd", resKey=None,
                        headers={'Content-Type': 'text/plain'})
 
         if logger.level == logging.DEBUG:

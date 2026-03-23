@@ -13,9 +13,11 @@ if TYPE_CHECKING:
     import pandas as pd
 
 from pyTigerGraph.common.exception import TigerGraphException
+from pyTigerGraph.common.gsql import _wrap_gsql_result
 from pyTigerGraph.common.query import (
     _parse_get_installed_queries,
     _parse_query_parameters,
+    _prep_query_parameters_json,
     _prep_run_installed_query,
     _prep_get_statistics
 )
@@ -60,11 +62,11 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
         if self._version_greater_than_4_0():
             params = {"graph": self.graphname, "queryName": queryName}
             res = self._post(self.gsUrl+"/gsql/v1/queries/signature",
-                             params=params, authMode="pwd", resKey="")
+                             params=params, authMode="pwd", resKey=None)
         else:
             params = {"graph": self.graphname, "query": queryName}
             res = self._get(self.gsUrl+"/gsqlserver/gsql/queryinfo",
-                            params=params, authMode="pwd", resKey="")
+                            params=params, authMode="pwd", resKey=None)
         if not res["error"]:
             if logger.level == logging.DEBUG:
                 logger.debug("exit: getQueryMetadata")
@@ -93,7 +95,7 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
 
         params = {"graph": self.graphname}
         res = self._get(self.gsUrl+"/gsql/v1/queries/"+queryName,
-                       params=params, authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
+                       params=params, authMode="pwd", resKey=None, headers={'Content-Type': 'application/json'})
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -110,25 +112,25 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
                 "create query queryName (...) FOR GRAPH graphName { ... }"
 
         Returns:
-            The response from the database containing the creation result.
+            A dict with at least a ``"message"`` key describing the outcome.
 
         Endpoints:
             - `POST /gsql/v1/queries` (In TigerGraph versions >= 4.0)
+            - Falls back to GSQL ``CREATE QUERY`` for TigerGraph versions < 4.0
         """
         logger.debug("entry: createQuery")
-        if not self._version_greater_than_4_0():
-            logger.debug("exit: createQuery")
-            raise TigerGraphException(
-                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
 
-        # Replace graphname placeholders
         queryText = queryText.replace("$graphname", self.graphname)
         queryText = queryText.replace("@graphname@", self.graphname)
 
-        params = {"graph": self.graphname}
-        res = self._post(self.gsUrl+"/gsql/v1/queries",
-                        params=params, data=queryText, authMode="pwd",
-                        headers={'Content-Type': 'text/plain'})
+        if self._version_greater_than_4_0():
+            params = {"graph": self.graphname}
+            res = self._post(self.gsUrl+"/gsql/v1/queries",
+                            params=params, data=queryText, authMode="pwd",
+                            resKey=None,
+                            headers={'Content-Type': 'text/plain'})
+        else:
+            res = _wrap_gsql_result(self.gsql(f"USE GRAPH {self.graphname}\n{queryText}"))
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -144,30 +146,48 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
                 Name of the query to drop, or list of query names to drop.
 
         Returns:
-            The response from the database containing the drop result.
+            A dict with at least a ``"message"`` key describing the outcome.
 
         Endpoints:
             - `DELETE /gsql/v1/queries/{queryName}` (In TigerGraph versions >= 4.0)
+            - Falls back to GSQL ``DROP QUERY`` for TigerGraph versions < 4.0
         """
         logger.debug("entry: dropQueries")
-        if not self._version_greater_than_4_0():
-            logger.debug("exit: dropQueries")
-            raise TigerGraphException(
-                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
 
-        # Handle single query name
-        if isinstance(queryName, str):
+        if not self._version_greater_than_4_0():
+            if isinstance(queryName, list):
+                if not queryName:
+                    raise TigerGraphException("Query name list cannot be empty.", 0)
+                names = ", ".join(queryName)
+            elif isinstance(queryName, str):
+                names = queryName
+            else:
+                raise TigerGraphException("queryName must be a string or list of strings.", 0)
+            res = _wrap_gsql_result(self.gsql(f"USE GRAPH {self.graphname}\nDROP QUERY {names}"))
+        elif isinstance(queryName, str):
             params = {"graph": self.graphname}
-            res = self._delete(self.gsUrl+"/gsql/v1/queries/"+queryName,
-                              params=params, authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
-        # Handle list of query names
+            try:
+                res = self._delete(self.gsUrl+"/gsql/v1/queries/"+queryName,
+                                  params=params, authMode="pwd", resKey=None,
+                                  headers={'Content-Type': 'application/json'})
+            except Exception as e:
+                if hasattr(e, "response") and hasattr(e.response, "status_code") and e.response.status_code == 404:
+                    raise TigerGraphException(
+                        f"Query '{queryName}' does not exist or cannot be dropped.", "404") from e
+                raise
         elif isinstance(queryName, list):
             if not queryName:
                 raise TigerGraphException("Query name list cannot be empty.", 0)
-
             params = {"graph": self.graphname, "query": queryName}
-            res = self._delete(self.gsUrl+"/gsql/v1/queries",
-                                      params=params, authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
+            try:
+                res = self._delete(self.gsUrl+"/gsql/v1/queries",
+                                  params=params, authMode="pwd", resKey=None,
+                                  headers={'Content-Type': 'application/json'})
+            except Exception as e:
+                if hasattr(e, "response") and hasattr(e.response, "status_code") and e.response.status_code == 404:
+                    raise TigerGraphException(
+                        f"One or more queries do not exist or cannot be dropped: {queryName}", "404") from e
+                raise
         else:
             raise TigerGraphException("queryName must be a string or list of strings.", 0)
 
@@ -197,9 +217,10 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
                 "This function is only supported on versions of TigerGraph >= 4.0.", 0)
 
         data = {"code": queryCode}
+        params = {"graph": self.graphname}
         res = self._post(self.gsUrl+"/gsql/v1/internal/check/query",
-                        data=data, authMode="pwd", resKey="",
-                        headers={'Content-Type': 'application/json'})
+                        params=params, data=data, authMode="pwd", resKey=None,
+                        headers={'Content-Type': 'application/json'}, jsonData=True)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -235,7 +256,7 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
             params["status"] = status
 
         res = self._get(self.gsUrl+"/gsql/v1/queries/info",
-                       params=params, authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
+                       params=params, authMode="pwd", resKey=None, headers={'Content-Type': 'application/json'})
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -268,29 +289,28 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
 
         return res
 
-    def getInstalledQueries(self, fmt: str = "py") -> Union[dict, str, 'pd.DataFrame']:
-        """Returns a list of installed queries.
+    def getInstalledQueries(self, fmt: str = "py") -> Union[dict, str, list, 'pd.DataFrame']:
+        """Returns installed queries for the graph.
+
+        Only queries that have been installed (i.e., have an active REST endpoint) are returned.
 
         Args:
             fmt:
                 Format of the results:
-                - "py":   Python objects (default)
+                - "py":   Python dict keyed by REST endpoint string (default)
                 - "json": JSON document
                 - "df":   pandas DataFrame
+                - "list": list of query name strings
 
         Returns:
-            The names of the installed queries.
-
-        TODO This function returns all (installed and non-installed) queries
-             Modify to return only installed ones
-        TODO Return with query name as key rather than REST endpoint as key?
+            The installed queries in the requested format.
         """
         logger.debug("entry: getInstalledQueries")
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
         ret = self.getEndpoints(dynamic=True)
-        ret = _parse_get_installed_queries(fmt, ret)
+        ret = _parse_get_installed_queries(fmt, ret, self.graphname)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -340,7 +360,7 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
                 flag = ",".join(flag)
             params["flag"] = flag
 
-        ret = self._req("GET", self.gsUrl + "/gsql/v1/queries/install", params=params, authMode="pwd", resKey="")
+        ret = self._req("GET", self.gsUrl + "/gsql/v1/queries/install", params=params, authMode="pwd", resKey=None)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -372,7 +392,7 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
             raise TigerGraphException(
                 "This function is only supported on versions of TigerGraph >= 4.1.0.", 0)
 
-        ret = self._req("GET", self.gsUrl + "/gsql/v1/queries/install/" + requestId, authMode="pwd", resKey="")
+        ret = self._req("GET", self.gsUrl + "/gsql/v1/queries/install/" + requestId, authMode="pwd", resKey=None)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -381,7 +401,7 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
         return ret
 
     def runInstalledQuery(self, queryName: str, params: Union[str, dict] = None,
-                          timeout: int = None, sizeLimit: int = None, usePost: bool = False, runAsync: bool = False,
+                          timeout: int = None, sizeLimit: int = None, usePost: Optional[bool] = None, runAsync: bool = False,
                           replica: int = None, threadLimit: int = None, memoryLimit: int = None) -> list:
         """Runs an installed query.
 
@@ -402,8 +422,11 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
                 Maximum size of response (in bytes).
                 See xref:tigergraph-server:API:index.adoc#_response_size[Response size]
             usePost:
-                Defaults to False. The RESTPP accepts a maximum URL length of 8192 characters. Use POST if additional parameters cause
-                you to exceed this limit, or if you choose to pass an empty set into a query for database versions >= 3.8
+                Controls whether query parameters are sent via POST body (True) or GET query string (False).
+                Defaults to None (auto-detect): string params use GET, dict/None params use POST.
+                POST is significantly faster than GET when params contain list values (e.g. vectors), avoids the
+                8192-character URL length limit, and is required for passing empty sets in database versions >= 3.8.
+                Passing a string with usePost=True raises an exception.
             runAsync:
                 Run the query in asynchronous mode. 
                 See xref:gsql-ref:querying:query-operations#_detached_mode_async_option[Async operation]
@@ -424,20 +447,36 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
             accumulators, etc.
 
         Notes:
-            When specifying parameter values in a dictionary:
+            When specifying parameter values in a dictionary the same conventions
+            apply regardless of ``usePost``:
 
-            - For primitive parameter types use
-                `"key": value`
-            - For `SET` and `BAG` parameter types with primitive values, use
-                `"key": [value1, value2, ...]`
-            - For `VERTEX<type>` use
-                `"key": primary_id`
-            - For `VERTEX` (no vertex type specified) use
-                `"key": (primary_id, "vertex_type")`
-            - For `SET<VERTEX<type>>` use
-                `"key": [primary_id1, primary_id2, ...]`
-            - For `SET<VERTEX>` (no vertex type specified) use
-                `"key": [(primary_id1, "vertex_type1"), (primary_id2, "vertex_type2"), ...]`
+            - Primitive types (INT, UINT, FLOAT, DOUBLE, BOOL, STRING):
+                ``"key": value``
+            - SET/BAG of primitives:
+                ``"key": [value1, value2, ...]``
+            - VERTEX<T> (typed vertex):
+                ``"key": (primary_id,)``  ← 1-element tuple
+            - VERTEX (untyped, type not pre-specified in query):
+                ``"key": (primary_id, "vertex_type")``
+            - SET<VERTEX<T>> (typed vertex set):
+                ``"key": [(id1,), (id2,), ...]``
+            - SET<VERTEX> (untyped vertex set):
+                ``"key": [(id1, "type1"), (id2, "type2"), ...]``
+            - DATETIME:
+                ``"key": datetime_object``  (auto-converted to "YYYY-MM-DD HH:MM:SS")
+            - MAP:
+                ``"key": {"k1": v1, "k2": v2}``
+                Auto-converted to ``{"keylist": [...], "valuelist": [...]}`` in POST mode.
+
+            Transport selection (``usePost``):
+                - ``None`` (default): auto-detected. String params → GET;
+                  dict or no params → POST.
+                - ``True``: always POST. String params raise ``TigerGraphException``.
+                - ``False``: always GET. Dict params are URL-encoded.
+
+            In POST mode ``%`` characters in string values are automatically
+            encoded as ``%25`` (TigerGraph URL-decodes strings inside JSON
+            bodies; the server decodes them back transparently).
 
         Endpoints:
             - `GET /query/{graph_name}/{query_name}`
@@ -451,9 +490,39 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
 
         headers, res_key = _prep_run_installed_query(timeout=timeout, sizeLimit=sizeLimit, runAsync=runAsync,
                                                           replica=replica, threadLimit=threadLimit, memoryLimit=memoryLimit)
+
+        # Auto-detect transport when usePost is not explicitly set.
+        if usePost is None:
+            usePost = not isinstance(params, str)  # str → GET, dict/None → POST
+        elif usePost is True and isinstance(params, str):
+            raise TigerGraphException(
+                "runInstalledQuery() with usePost=True requires params to be a dict, "
+                "not a query string. Convert 'key=val&...' to {'key': val, ...}.")
+
+        query_url = self.restppUrl + "/query/" + self.graphname + "/" + queryName
+
         if usePost:
-            ret = self._req("POST", self.restppUrl + "/query/" + self.graphname + "/" + queryName,
-                            data=params, headers=headers, resKey=res_key, jsonData=True)
+            original_params = params  # kept for GET retry if POST fails
+            if params and isinstance(params, dict):
+                params = _prep_query_parameters_json(params)
+            try:
+                ret = self._req("POST", query_url, data=params, headers=headers,
+                                resKey=res_key, jsonData=True)
+            except TigerGraphException as e:
+                # Backward-compat retry: plain vertex IDs (old-style {"v": id}) cause
+                # REST-30000 "'id' is not found in the VERTEX parameter …" on POST.
+                # Retry transparently with GET where plain IDs are valid for VERTEX<T>.
+                if e.code == "REST-30000" and "'id' is not found in the VERTEX parameter" in (e.message or ""):
+                    logger.warning(
+                        "Deprecated parameter format detected: plain values for VERTEX<T> "
+                        "parameters (e.g. {\"p\": 1}) are deprecated and will be removed in a "
+                        "future release. Use a 1-tuple instead: {\"p\": (1,)}. "
+                        "Retrying with GET for backward compatibility (REST-30000: %s).",
+                        e.message,
+                    )
+                    ret = self._run_installed_query_get(query_url, original_params, headers, res_key)
+                else:
+                    raise
 
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(ret))
@@ -461,17 +530,25 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
 
             return ret
         else:
-            if params:
-                if isinstance(params, dict):
-                    params = _parse_query_parameters(params)
-            ret = self._req("GET", self.restppUrl + "/query/" + self.graphname + "/" + queryName,
-                            params=params, headers=headers, resKey=res_key)
+            ret = self._run_installed_query_get(query_url, params, headers, res_key)
 
             if logger.level == logging.DEBUG:
                 logger.debug("return: " + str(ret))
             logger.debug("exit: runInstalledQuery (GET)")
 
             return ret
+
+    def _run_installed_query_get(self, query_url, params, headers, res_key):
+        """Execute an installed query via GET, building the URL query string manually.
+
+        Passing params= to the HTTP client risks re-encoding an already
+        percent-encoded string (aiohttp does this; requests does not), so we
+        always append the query string ourselves to avoid that inconsistency.
+        """
+        if params and isinstance(params, dict):
+            params = _parse_query_parameters(params)
+        url = query_url + "?" + str(params) if params else query_url
+        return self._req("GET", url, headers=headers, resKey=res_key)
 
     def checkQueryStatus(self, requestId: str = ""):
         """Checks the status of the queries running on the graph specified in the connection.
@@ -556,6 +633,12 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
 
         queryText = queryText.replace("$graphname", self.graphname)
         queryText = queryText.replace("@graphname@", self.graphname)
+        # Per the TigerGraph API spec, interpreted query params always go in the
+        # URL query string (the body is reserved for the GSQL query text).
+        # _parse_query_parameters handles TigerGraph-specific encoding:
+        #   - SET/BAG: repeated keys  k=v1&k=v2
+        #   - VERTEX (no type): k=id&k.type=vtype
+        #   - SET<VERTEX> (no type): k[0]=id&k[0].type=vtype&k[1]=...
         if isinstance(params, dict):
             params = _parse_query_parameters(params)
 
@@ -579,7 +662,7 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
         if logger.level == logging.DEBUG:
             logger.debug("entry: getRunningQueries")
         res = self._get(self.restppUrl+"/showprocesslist/" +
-                        self.graphname, resKey="")
+                        self.graphname, resKey=None)
         if not res["error"]:
             if logger.level == logging.DEBUG:
                 logger.debug("exit: getRunningQueries")
@@ -604,7 +687,7 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
         if url:
             params["url"] = url
         res = self._get(self.restppUrl+"/abortquery/" +
-                        self.graphname, params=params, resKey="")
+                        self.graphname, params=params, resKey=None)
         if not res["error"]:
             if logger.level == logging.DEBUG:
                 logger.debug("exit: abortQuery")
@@ -797,7 +880,7 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
 
         seconds, segments = _prep_get_statistics(self, seconds, segments)
         ret = self._req("GET", self.restppUrl + "/statistics/" + self.graphname + "?seconds=" +
-                        str(seconds) + "&segment=" + str(segments), resKey="")
+                        str(seconds) + "&segment=" + str(segments), resKey=None)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -952,7 +1035,6 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
                       "queryParameters": [queryName+".*"]}
         else:
             params = {"queries": [queryName]}
-        print(params)
         if self._version_greater_than_4_0():
             res = self._delete(self.gsUrl+"/gsql/v1/description?graph="+self.graphname,
                                authMode="pwd", data=params, jsonData=True, resKey=None)

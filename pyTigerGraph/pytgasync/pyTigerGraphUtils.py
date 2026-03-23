@@ -66,7 +66,7 @@ class AsyncPyTigerGraphUtils(AsyncPyTigerGraphBase):
         """
         logger.debug("entry: getLicenseInfo")
 
-        res = await self._req("GET", self.restppUrl + "/showlicenseinfo", resKey="", skipCheck=True)
+        res = await self._req("GET", self.restppUrl + "/showlicenseinfo", resKey=None, skipCheck=True)
         ret = _parse_get_license_info(res)
 
         if logger.level == logging.DEBUG:
@@ -83,7 +83,7 @@ class AsyncPyTigerGraphUtils(AsyncPyTigerGraphBase):
         """
         if logger.level == logging.DEBUG:
             logger.debug("entry: ping")
-        res = await self._req("GET", self.gsUrl+"/api/ping", resKey="")
+        res = await self._req("GET", self.gsUrl+"/api/ping", resKey=None)
         if not res["error"]:
             if logger.level == logging.DEBUG:
                 logger.debug("exit: ping")
@@ -143,9 +143,9 @@ class AsyncPyTigerGraphUtils(AsyncPyTigerGraphBase):
             params["what"] = what
         # in >=4.1 the datapoints endpoint has been removed and replaced
         if await self._version_greater_than_4_0():
-            res = await self._req("POST", self.gsUrl+"/informant/metrics/get/"+what, data=_json, jsonData=True, resKey="")
+            res = await self._req("POST", self.gsUrl+"/informant/metrics/get/"+what, data=_json, jsonData=True, resKey=None)
         else:
-            res = await self._req("GET", self.gsUrl+"/ts3/api/datapoints", authMode="pwd", params=params, resKey="")
+            res = await self._req("GET", self.gsUrl+"/ts3/api/datapoints", authMode="pwd", params=params, resKey=None)
         if logger.level == logging.DEBUG:
             logger.debug("exit: getSystemMetrics")
         return res
@@ -163,7 +163,7 @@ class AsyncPyTigerGraphUtils(AsyncPyTigerGraphBase):
         params = {}
         if seconds:
             params["seconds"] = seconds
-        res = await self._get(self.restppUrl+"/statistics/"+self.graphname, params=params, resKey="")
+        res = await self._get(self.restppUrl+"/statistics/"+self.graphname, params=params, resKey=None)
         if logger.level == logging.DEBUG:
             logger.debug("exit: getQueryPerformance")
         return res
@@ -178,7 +178,7 @@ class AsyncPyTigerGraphUtils(AsyncPyTigerGraphBase):
         """
         if logger.level == logging.DEBUG:
             logger.debug("entry: getServiceStatus")
-        res = await self._req("POST", self.gsUrl+"/informant/current-service-status", data=json.dumps(request_body), resKey="")
+        res = await self._req("POST", self.gsUrl+"/informant/current-service-status", data=json.dumps(request_body), resKey=None)
         if logger.level == logging.DEBUG:
             logger.debug("exit: getServiceStatus")
         return res
@@ -215,7 +215,7 @@ class AsyncPyTigerGraphUtils(AsyncPyTigerGraphBase):
             params["path"] = path
         if force:
             params["force"] = force
-        res = await self._req("GET", self.restppUrl+"/rebuildnow/"+self.graphname, params=params, resKey="")
+        res = await self._req("GET", self.restppUrl+"/rebuildnow/"+self.graphname, params=params, resKey=None)
         if not res["error"]:
             if logger.level == logging.DEBUG:
                 logger.debug("exit: rebuildGraph")

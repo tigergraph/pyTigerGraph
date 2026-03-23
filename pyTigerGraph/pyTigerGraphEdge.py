@@ -18,7 +18,6 @@ from pyTigerGraph.common.edge import (
     _prep_get_edge_count_from,
     _parse_get_edge_count_from,
     _prep_upsert_edge,
-    _dumps,
     _prep_upsert_edges,
     _prep_upsert_edge_dataframe,
     _prep_get_edges,
@@ -30,8 +29,7 @@ from pyTigerGraph.common.edge import (
 from pyTigerGraph.common.edge import edgeSetToDataFrame as _eS2DF
 
 from pyTigerGraph.common.schema import (
-    _get_attr_type,
-    _upsert_attrs
+    _get_attr_type
 )
 
 from pyTigerGraph.pyTigerGraphQuery import pyTigerGraphQuery
@@ -461,24 +459,6 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                                  attributes
                                 )
 
-        ret = self._req("POST", self.restppUrl + "/graph/" + self.graphname, data=data)[0][
-            "accepted_edges"]
-
-        vals = _upsert_attrs(attributes)
-        data = json.dumps(
-            {
-                "edges": {
-                    sourceVertexType: {
-                        sourceVertexId: {
-                            edgeType: {targetVertexType: {
-                                targetVertexId: vals}}
-
-                        }
-                    }
-                }
-            }
-        )
-
         params = {"vertex_must_exist": vertexMustExist}
         ret = self._post(
             self.restppUrl + "/graph/" + self.graphname,
@@ -557,48 +537,15 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                                   edgeType=edgeType,
                                   targetVertexType=targetVertexType,
                                   edges=edges)
-        header = {}
+        headers = {}
         if atomic:
-            header = {"gsql-atomic-level": "atomic"}
-        ret = self._req("POST", self.restppUrl + "/graph/" + self.graphname, data=data, headers=header)[0][
-            "accepted_edges"]
-
-        data = {sourceVertexType: {}}
-        l1 = data[sourceVertexType]
-        for e in edges:
-            if len(e) > 2:
-                vals = _upsert_attrs(e[2])
-            else:
-                vals = {}
-            # sourceVertexId
-            # Converted to string as the key in the JSON payload must be a string
-            sourceVertexId = str(e[0])
-            if sourceVertexId not in l1:
-                l1[sourceVertexId] = {}
-            l2 = l1[sourceVertexId]
-            # edgeType
-            if edgeType not in l2:
-                l2[edgeType] = {}
-            l3 = l2[edgeType]
-            # targetVertexType
-            if targetVertexType not in l3:
-                l3[targetVertexType] = {}
-            l4 = l3[targetVertexType]
-            if self.___trgvtxids not in l4:
-                l4[self.___trgvtxids] = {}
-            l4 = l4[self.___trgvtxids]
-            # targetVertexId
-            # Converted to string as the key in the JSON payload must be a string
-            targetVertexId = str(e[1])
-            if targetVertexId not in l4:
-                l4[targetVertexId] = []
-            l4[targetVertexId].append(vals)
-
-        data = _dumps({"edges": data})
-
+            headers = {"gsql-atomic-level": "atomic"}
         params = {"vertex_must_exist": vertexMustExist}
         ret = self._post(
-            self.restppUrl + "/graph/" + self.graphname, data=data, params=params
+            self.restppUrl + "/graph/" + self.graphname,
+            data=data,
+            params=params,
+            headers=headers,
         )[0]["accepted_edges"]
 
         if logger.level == logging.DEBUG:
@@ -647,30 +594,13 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
             logger.debug("params: " + self._locals(locals()))
 
         json_up = _prep_upsert_edge_dataframe(df, from_id, to_id, attributes)
-        ret = self.upsertEdges(sourceVertexType, edgeType,
-                               targetVertexType, json_up)
-
-        json_up = []
-
-        for index in df.index:
-            json_up.append(json.loads(df.loc[index].to_json()))
-            json_up[-1] = (
-                index if from_id is None else json_up[-1][from_id],
-                index if to_id is None else json_up[-1][to_id],
-                json_up[-1]
-                if attributes is None
-                else {
-                    target: json_up[-1][source] for target, source in attributes.items()
-                },
-            )
-
         ret = self.upsertEdges(
             sourceVertexType,
             edgeType,
             targetVertexType,
             json_up,
             vertexMustExist=vertexMustExist,
-            atomic=atomic
+            atomic=atomic,
         )
 
         if logger.level == logging.DEBUG:
@@ -919,7 +849,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         for et in ets:
             data = '{"function":"stat_edge_attr","type":"' + \
                 et + '","from_type":"*","to_type":"*"}'
-            res = self._req("POST", self.restppUrl + "/builtins/" + self.graphname, data=data, resKey="",
+            res = self._req("POST", self.restppUrl + "/builtins/" + self.graphname, data=data, resKey=None,
                             skipCheck=True)
             responses.append((et, res))
         ret = _parse_get_edge_stats(responses, skipNA)

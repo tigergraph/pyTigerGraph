@@ -26,11 +26,12 @@ print(resp)
 ```
 """
 
+import asyncio
 import json
 import logging
-import httpx
+import aiohttp
 
-from typing import Union
+from typing import Optional, Union
 from urllib.parse import urlparse
 
 from pyTigerGraph.common.base import PyTigerGraphCore
@@ -99,11 +100,20 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
                          version=version, apiToken=apiToken, useCert=useCert, certPath=certPath,
                          debug=debug, sslPort=sslPort, gcp=gcp, jwtToken=jwtToken)
 
+        # Lazily initialized on first request (inside an async context) to avoid
+        # creating aiohttp.ClientSession outside an event loop in __init__.
+        self._async_client: Optional[aiohttp.ClientSession] = None
+
+        # asyncio.Lock for the one-time port failover (TG 3.x port 9000 → 4.x port 14240).
+        # Without a lock all concurrent tasks simultaneously fail and all enter the failover
+        # block, doubling requests and racing to overwrite self.restppUrl/self.restppPort.
+        self._restpp_failover_lock = asyncio.Lock()
+
     async def _req(self, method: str, url: str, authMode: str = "token", headers: dict = None,
                    data: Union[dict, list, str] = None, resKey: str = "results", skipCheck: bool = False,
                    params: Union[dict, list, str] = None, strictJson: bool = True, jsonData: bool = False,
                    jsonResponse: bool = True, func=None) -> Union[dict, list]:
-        """Generic REST++ API request. Copied from synchronous version, changing requests to httpx with async functionality.
+        """Generic REST++ API request. Copied from synchronous version, using aiohttp for direct asyncio integration.
 
         Args:
             method:
@@ -131,59 +141,83 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
         Returns:
             The (relevant part of the) response from the request (as a dictionary).
         """
-        _headers, _data, verify = self._prep_req(authMode, headers, url, method, data)
+        # Lazy init: session must be created inside an async context (event loop running).
+        if self._async_client is None or self._async_client.closed:
+            self._async_client = self._make_async_client()
+
+        _headers, _data, _ = self._prep_req(authMode, headers, url, method, data)
 
         if "GSQL-TIMEOUT" in _headers:
-            http_timeout = (30, int(int(_headers["GSQL-TIMEOUT"])/1000) + 30)
+            http_timeout = aiohttp.ClientTimeout(
+                sock_connect=30,
+                total=int(int(_headers["GSQL-TIMEOUT"]) / 1000) + 30,
+            )
         else:
-            http_timeout = (30, None)
+            http_timeout = aiohttp.ClientTimeout(sock_connect=30, total=None)
 
-        async with httpx.AsyncClient(timeout=None) as client:
-            if jsonData:
-                res = await client.request(method, url, headers=_headers, json=_data, params=params, timeout=http_timeout)
-            else:
-                res = await client.request(method, url, headers=_headers, data=_data, params=params, timeout=http_timeout)
-
+        conn_err = None
         try:
-            if not skipCheck and not (200 <= res.status_code < 300) and res.status_code != 404:
+            status, body, resp = await self._do_request(
+                method, url, _headers, _data, jsonData, params, http_timeout)
+        except (aiohttp.ClientConnectorError, aiohttp.ClientConnectionError, OSError) as e:
+            status, body, resp = None, None, None
+            conn_err = e
+
+        if resp is not None:
+            if not skipCheck and not (200 <= status < 300) and status != 404:
                 try:
-                    self._error_check(json.loads(res.text))
+                    self._error_check(json.loads(body))
                 except json.decoder.JSONDecodeError:
-                    # could not parse the res text (probably returned an html response)
                     pass
-            res.raise_for_status()
-        except Exception as e:
+            try:
+                resp.raise_for_status()
+            except (aiohttp.ClientConnectorError, aiohttp.ClientConnectionError, OSError) as e:
+                resp = None
+                conn_err = e
+            # HTTP errors (4xx/5xx) propagate immediately — no failover
+
+        if resp is None:
             # In TG 4.x the port for restpp has changed from 9000 to 14240.
             # This block should only be called once. When using 4.x, using port 9000 should fail so self.restppurl will change to host:14240/restpp
             # ----
-            # Changes port to 14240, adds /restpp to end to url, tries again, saves changes if successful
-            if self.restppPort == "9000" and "9000" in url:
-                newRestppUrl = self.host + ":14240/restpp"
-                # In tgcloud /restpp can already be in the restpp url. We want to extract everything after the port or /restpp
-                if '/restpp' in url:
-                    url = newRestppUrl + '/' + \
-                        '/'.join(url.split(':')[2].split('/')[2:])
-                else:
-                    url = newRestppUrl + '/' + \
-                        '/'.join(url.split(':')[2].split('/')[1:])
-                async with httpx.AsyncClient(timeout=None) as client:
-                    if jsonData:
-                        res = await client.request(method, url, headers=_headers, json=_data, params=params)
+            # Changes port to gsql port, adds /restpp to end to url, tries again, saves changes if successful
+            if self.restppPort in url and "/gsql" not in url and ("/restpp" not in url or self.tgCloud):
+                async with self._restpp_failover_lock:
+                    if self.restppPort in url:
+                        newRestppUrl = self.host + ":" + self.gsPort + "/restpp"
+                        if "/restpp" in url:
+                            url = newRestppUrl + "/" + "/".join(url.split(":")[2].split("/")[2:])
+                        else:
+                            url = newRestppUrl + "/" + "/".join(url.split(":")[2].split("/")[1:])
+                        status, body, resp = await self._do_request(
+                            method, url, _headers, _data, jsonData, params, None)
+                        if not skipCheck and not (200 <= status < 300) and status != 404:
+                            try:
+                                self._error_check(json.loads(body))
+                            except json.decoder.JSONDecodeError:
+                                pass
+                        resp.raise_for_status()
+                        self.restppUrl = newRestppUrl
+                        self.restppPort = self.gsPort
                     else:
-                        res = await client.request(method, url, headers=_headers, data=_data, params=params)
-                if not skipCheck and not (200 <= res.status_code < 300) and res.status_code != 404:
-                    try:
-                        self._error_check(json.loads(res.text))
-                    except json.decoder.JSONDecodeError:
-                        # could not parse the res text (probably returned an html response)
-                        pass
-                res.raise_for_status()
-                self.restppUrl = newRestppUrl
-                self.restppPort = "14240"
+                        url = url.replace(
+                            self.host + ":" + self.gsPort,
+                            self.restppUrl, 1)
+                        status, body, resp = await self._do_request(
+                            method, url, _headers, _data, jsonData, params, None)
+                        if not skipCheck and not (200 <= status < 300) and status != 404:
+                            try:
+                                self._error_check(json.loads(body))
+                            except json.decoder.JSONDecodeError:
+                                pass
+                        resp.raise_for_status()
             else:
-                raise e
+                if conn_err is not None:
+                    raise conn_err
+                raise aiohttp.ClientConnectionError(
+                    f"Failed to connect to {url}")
 
-        return self._parse_req(res, jsonResponse, strictJson, skipCheck, resKey)
+        return self._parse_req(body, jsonResponse, strictJson, skipCheck, resKey)
 
     async def _get(self, url: str, authMode: str = "token", headers: dict = None, resKey: str = "results",
                    skipCheck: bool = False, params: Union[dict, list, str] = None, strictJson: bool = True) -> Union[dict, list]:
@@ -280,7 +314,9 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
 
         return res
 
-    async def _delete(self, url: str, authMode: str = "token", data: dict = None, resKey="results", jsonData=False) -> Union[dict, list]:
+    async def _delete(self, url: str, authMode: str = "token", headers: dict = None,
+                      data: dict = None, resKey="results", skipCheck: bool = False,
+                      params: Union[dict, list, str] = None, jsonData=False) -> Union[dict, list]:
         """Generic DELETE method.
 
         Args:
@@ -288,6 +324,17 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
                 Complete REST++ API URL including path and parameters.
             authMode:
                 Authentication mode, either `"token"` (default) or `"pwd"`.
+            headers:
+                Standard HTTP request headers.
+            data:
+                Request payload, typically a JSON document.
+            resKey:
+                The JSON subdocument to be returned, default is `"results"`.
+            skipCheck:
+                Some endpoints return an error to indicate that the requested
+                action is not applicable. This argument skips error checking.
+            params:
+                Request URL parameters.
 
         Returns:
             The response from the request (as a dictionary).
@@ -296,13 +343,101 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        res = await self._req("DELETE", url, authMode, data=data, resKey=resKey, jsonData=jsonData)
+        res = await self._req("DELETE", url, authMode, headers, data,
+                              resKey, skipCheck, params, jsonData=jsonData)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
         logger.debug("exit: _delete")
 
         return res
+
+    def _make_async_client(self) -> aiohttp.ClientSession:
+        """Create a persistent aiohttp.ClientSession.
+
+        aiohttp integrates directly with asyncio (no anyio abstraction layer),
+        giving lower per-request overhead than httpx for high-concurrency workloads.
+        The connection pool grows to match demand automatically (limit=0).
+        SSL verify is taken from self.verify, computed once at __init__ time.
+
+        Must be called from within an async context (event loop running) to avoid
+        aiohttp deprecation warnings about session creation outside a coroutine.
+        """
+        connector = aiohttp.TCPConnector(
+            limit=0,                            # unbounded pool, grows with demand
+            ssl=None if self.verify else False,  # None = default SSL context (verify on)
+        )
+        return aiohttp.ClientSession(connector=connector)
+
+    async def _do_request(
+        self,
+        method: str,
+        url: str,
+        _headers: dict,
+        _data,
+        jsonData: bool,
+        params,
+        timeout: Optional[aiohttp.ClientTimeout],
+    ):
+        """Execute one HTTP request and return (status_code, response_text, response).
+
+        Wraps aiohttp's per-request context manager so _req can treat the response
+        as a plain (status, text, resp) triple. The response object remains usable
+        for raise_for_status() after the context manager exits because aiohttp caches
+        status, headers, and request_info on the response object at header-receive time.
+        """
+        kwargs = {"headers": _headers, "params": params}
+        if timeout is not None:
+            kwargs["timeout"] = timeout
+        if jsonData:
+            kwargs["json"] = _data
+        else:
+            kwargs["data"] = _data
+        async with self._async_client.request(method, url, **kwargs) as resp:
+            # read() returns raw bytes — avoids charset detection overhead and lets
+            # orjson/json.loads consume bytes directly without a decode step.
+            body = await resp.read()
+        return resp.status, body, resp
+
+    async def aclose(self) -> None:
+        """Close the underlying HTTP connection pool.
+
+        Call this when done with the connection to release open sockets.
+        Alternatively, use the connection as an async context manager:
+
+        ```python
+        async with AsyncTigerGraphConnection(...) as conn:
+            await conn.runInstalledQuery(...)
+        ```
+        """
+        if self._async_client is not None and not self._async_client.closed:
+            await self._async_client.close()
+        self._async_client = None
+
+    def __del__(self) -> None:
+        """Best-effort cleanup when the object is garbage-collected.
+
+        If the event loop is still running at GC time (e.g. during asyncio.run()
+        shutdown), schedules aclose() as a task so sockets are drained gracefully.
+        If the loop has already stopped, the OS reclaims the sockets and there is
+        nothing more we can do — this is not an error.
+
+        This does NOT replace explicit aclose() / async-with usage: GC timing is
+        unpredictable and create_task() is fire-and-forget with no error handling.
+        Use `async with AsyncTigerGraphConnection(...) as conn:` for reliable cleanup.
+        """
+        if self._async_client is not None and not self._async_client.closed:
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(self._async_client.close())
+            except RuntimeError:
+                pass  # no running loop; OS reclaims sockets on process exit
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.aclose()
 
     async def getVersion(self, raw: bool = False) -> Union[str, list]:
         """Retrieves the git versions of all components of the system.

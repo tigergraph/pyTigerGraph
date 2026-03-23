@@ -25,8 +25,10 @@ import json
 import logging
 import sys
 import re
+import threading
 import warnings
 import requests
+from requests.adapters import HTTPAdapter
 
 from typing import Union
 from urllib.parse import urlparse
@@ -108,6 +110,18 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
                          version=version, apiToken=apiToken, useCert=useCert, certPath=certPath,
                          debug=debug, sslPort=sslPort, gcp=gcp, jwtToken=jwtToken)
 
+        # Thread-local sessions — each thread gets its own requests.Session and connection pool.
+        # A single shared Session serializes all threads via its internal cookie-jar RLock
+        # (_cookies_lock), which is acquired on every response even when no cookies are set.
+        # Thread-local sessions eliminate that contention while still benefiting from HTTP
+        # keep-alive within each thread's sequential request stream.
+        self._local = threading.local()
+
+        # Lock for the one-time port failover (TG 3.x port 9000 → 4.x port 14240/restpp).
+        # Without a lock, all parallel threads simultaneously fail and all enter the failover
+        # block, doubling requests and racing to overwrite self.restppUrl / self.restppPort.
+        self._restpp_failover_lock = threading.Lock()
+
         if graphname == "MyGraph":
             warnings.warn(
                 "The default graphname 'MyGraph' is deprecated. Please explicitly specify your graph name.",
@@ -144,7 +158,26 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         del _locals["self"]
         return str(_locals)
 
-        logger.debug("exit: __init__")
+    def _do_request(
+        self,
+        method: str,
+        url: str,
+        _headers: dict,
+        _data,
+        jsonData: bool,
+        params,
+        timeout,
+    ) -> requests.Response:
+        """Execute one HTTP request and return the response.
+
+        Centralises the jsonData/data branching so _req doesn't duplicate it
+        for both the primary request and the failover retry.
+        """
+        if jsonData:
+            return self._session.request(
+                method, url, headers=_headers, json=_data, params=params, timeout=timeout)
+        return self._session.request(
+            method, url, headers=_headers, data=_data, params=params, timeout=timeout)
 
     def _req(self, method: str, url: str, authMode: str = "token", headers: dict = None,
              data: Union[dict, list, str] = None, resKey: str = "results", skipCheck: bool = False,
@@ -178,65 +211,76 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         Returns:
             The (relevant part of the) response from the request (as a dictionary).
         """
-        _headers, _data, verify = self._prep_req(authMode, headers, url, method, data)
+        _headers, _data, _ = self._prep_req(authMode, headers, url, method, data)
 
         if "GSQL-TIMEOUT" in _headers:
             http_timeout = (30, int(int(_headers["GSQL-TIMEOUT"])/1000) + 30)
         else:
             http_timeout = (30, None)
 
-        if jsonData:
-            res = requests.request(
-                method, url, headers=_headers, json=_data, params=params, verify=verify, timeout=http_timeout)
-        else:
-            res = requests.request(
-                method, url, headers=_headers, data=_data, params=params, verify=verify, timeout=http_timeout)
-
+        conn_err = None
         try:
-            if not skipCheck and not (200 <= res.status_code < 300):
-                try:
-                    self._error_check(json.loads(res.text))
-                except json.decoder.JSONDecodeError:
-                    # could not parse the res text (probably returned an html response)
-                    pass
-            res.raise_for_status()
-        except Exception as e:
+            res = self._do_request(method, url, _headers, _data, jsonData, params, http_timeout)
+        except requests.exceptions.ConnectionError as e:
+            res = None
+            conn_err = e
 
+        if res is not None:
+            if not skipCheck and not (200 <= res.status_code < 300) and res.status_code != 404:
+                try:
+                    self._error_check(json.loads(res.content))
+                except json.decoder.JSONDecodeError:
+                    pass
+            try:
+                res.raise_for_status()
+            except requests.exceptions.ConnectionError as e:
+                res = None
+                conn_err = e
+            # HTTP errors (4xx/5xx) propagate immediately — no failover
+
+        if res is None:
             # In TG 4.x the port for restpp has changed from 9000 to 14240.
             # This block should only be called once. When using 4.x, using port 9000 should fail so self.restppurl will change to host:14240/restpp
             # ----
             # Changes port to gsql port, adds /restpp to end to url, tries again, saves changes if successful
             if self.restppPort in url and "/gsql" not in url and ("/restpp" not in url or self.tgCloud):
-                newRestppUrl = self.host + ":"+self.gsPort+"/restpp"
-                # In tgcloud /restpp can already be in the restpp url. We want to extract everything after the port or /restpp
-                if self.tgCloud:
-                    url = newRestppUrl + '/' + '/'.join(url.split(':')[2].split('/')[2:])
-                else:
-                    url = newRestppUrl + '/' + \
-                        '/'.join(url.split(':')[2].split('/')[1:])
-                if jsonData:
-                    res = requests.request(
-                        method, url, headers=_headers, json=_data, params=params, verify=verify)
-                else:
-                    res = requests.request(
-                        method, url, headers=_headers, data=_data, params=params, verify=verify)
-
-                # Run error check if there might be an error before raising for status
-                # raising for status gives less descriptive error message
-                if not skipCheck and not (200 <= res.status_code < 300) and res.status_code != 404:
-                    try:
-                        self._error_check(json.loads(res.text))
-                    except json.decoder.JSONDecodeError:
-                        # could not parse the res text (probably returned an html response)
-                        pass
-                res.raise_for_status()
-                self.restppUrl = newRestppUrl
-                self.restppPort = self.gsPort
+                with self._restpp_failover_lock:
+                    if self.restppPort in url:
+                        newRestppUrl = self.host + ":" + self.gsPort + "/restpp"
+                        if "/restpp" in url:
+                            url = newRestppUrl + "/" + "/".join(url.split(":")[2].split("/")[2:])
+                        else:
+                            url = newRestppUrl + "/" + "/".join(url.split(":")[2].split("/")[1:])
+                        res = self._do_request(method, url, _headers, _data, jsonData, params, None)
+                        if not skipCheck and not (200 <= res.status_code < 300) and res.status_code != 404:
+                            try:
+                                self._error_check(json.loads(res.content))
+                            except json.decoder.JSONDecodeError:
+                                pass
+                        res.raise_for_status()
+                        self.restppUrl = newRestppUrl
+                        self.restppPort = self.gsPort
+                    else:
+                        url = url.replace(
+                            self.host + ":" + self.gsPort,
+                            self.restppUrl, 1)
+                        res = self._do_request(method, url, _headers, _data, jsonData, params, None)
+                        if not skipCheck and not (200 <= res.status_code < 300) and res.status_code != 404:
+                            try:
+                                self._error_check(json.loads(res.content))
+                            except json.decoder.JSONDecodeError:
+                                pass
+                        res.raise_for_status()
             else:
-                e.add_note(f"headers: {_headers}")
-                raise e
+                if conn_err is not None:
+                    raise conn_err
+                raise requests.exceptions.ConnectionError(
+                    f"Failed to connect to {url}")
 
-        return self._parse_req(res, jsonResponse, strictJson, skipCheck, resKey)
+        # Pass raw bytes to _parse_req — avoids chardet encoding detection that res.text triggers
+        # when Content-Type does not explicitly declare a charset. json.loads and orjson both
+        # accept bytes natively, so no decode step is needed for JSON responses.
+        return self._parse_req(res.content, jsonResponse, strictJson, skipCheck, resKey)
 
     def _get(self, url: str, authMode: str = "token", headers: dict = None, resKey: str = "results",
              skipCheck: bool = False, params: Union[dict, list, str] = None, strictJson: bool = True) -> Union[dict, list]:
@@ -336,7 +380,9 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
 
         return res
 
-    def _delete(self, url: str, authMode: str = "token", data: dict = None, resKey="results", jsonData=False) -> Union[dict, list]:
+    def _delete(self, url: str, authMode: str = "token", headers: dict = None,
+                data: dict = None, resKey="results", skipCheck: bool = False,
+                params: Union[dict, list, str] = None, jsonData=False) -> Union[dict, list]:
         """Generic DELETE method.
 
         Args:
@@ -344,6 +390,17 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
                 Complete REST++ API URL including path and parameters.
             authMode:
                 Authentication mode, either `"token"` (default) or `"pwd"`.
+            headers:
+                Standard HTTP request headers.
+            data:
+                Request payload, typically a JSON document.
+            resKey:
+                The JSON subdocument to be returned, default is `"results"`.
+            skipCheck:
+                Some endpoints return an error to indicate that the requested
+                action is not applicable. This argument skips error checking.
+            params:
+                Request URL parameters.
 
         Returns:
             The response from the request (as a dictionary).
@@ -352,14 +409,67 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        res = self._req("DELETE", url, authMode, data=data,
-                        resKey=resKey, jsonData=jsonData)
+        res = self._req("DELETE", url, authMode, headers, data,
+                        resKey, skipCheck, params, jsonData=jsonData)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
         logger.debug("exit: _delete")
 
         return res
+
+    @property
+    def _session(self) -> requests.Session:
+        """Return the calling thread's dedicated Session, creating it on first use.
+
+        Uses EAFP (try/except) rather than LBYL (hasattr) so the common case —
+        session already exists — hits the fast return path without paying the cost
+        of hasattr's internal getattr+AttributeError machinery.  Caching self._local
+        in a local variable avoids a redundant Python attribute lookup on self.
+        SSL verify is baked into the session once rather than passed on every request.
+        """
+        local = self._local
+        try:
+            return local.session
+        except AttributeError:
+            s = requests.Session()
+            s.verify = self.verify  # fixed after __init__; no need to pass per-request
+            _adapter = HTTPAdapter(
+                pool_connections=1,   # one pool per host (we talk to one TG server)
+                pool_maxsize=1,       # each thread is sequential; only 1 socket needed at a time
+                max_retries=0,
+            )
+            s.mount("http://", _adapter)
+            s.mount("https://", _adapter)
+            local.session = s
+            return s
+
+    def close(self) -> None:
+        """Close this thread's HTTP session and release its sockets.
+
+        Each thread maintains its own session, so only the calling thread's
+        session is affected. Sessions in other threads are closed when those
+        threads exit and are garbage-collected.
+
+        Prefer using the connection as a context manager so cleanup is automatic:
+
+        ```python
+        with TigerGraphConnection(...) as conn:
+            conn.runInstalledQuery(...)
+        ```
+        """
+        local = self._local
+        try:
+            local.session.close()
+            del local.session
+        except AttributeError:
+            pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
     def getVersion(self, raw: bool = False) -> Union[str, list]:
         """Retrieves the git versions of all components of the system.

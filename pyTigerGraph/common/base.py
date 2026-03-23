@@ -15,6 +15,18 @@ import requests
 from typing import Union
 from urllib.parse import urlparse
 
+# orjson is an optional Rust-backed JSON library that:
+#   - parses/serialises 2–10× faster than stdlib json
+#   - releases the GIL during parsing, eliminating inter-thread contention on
+#     multi-threaded workloads where all threads parse responses simultaneously
+# Fall back to stdlib transparently when orjson is not installed.
+try:
+    import orjson as _orjson
+    _HAS_ORJSON = True
+except ImportError:
+    _orjson = None
+    _HAS_ORJSON = False
+
 from pyTigerGraph.common.exception import TigerGraphException
 
 
@@ -112,6 +124,7 @@ class PyTigerGraphCore(object):
 
         # Detect auth mode automatically by checking if jwtToken or apiToken is provided
         self.authHeader = self._set_auth_header()
+        self.authMode = "token" if (self.jwtToken or self.apiToken) else "pwd"
 
         # TODO Eliminate version and use gsqlVersion only, meaning TigerGraph server version
         if gsqlVersion:
@@ -151,6 +164,12 @@ class PyTigerGraphCore(object):
             self.useCert = True
             self.certPath = certPath
         self.sslPort = str(sslPort)
+
+        # SSL verify value — depends only on useCert/certPath which are fixed after init,
+        # so we compute it once here rather than on every request in _prep_req.
+        # Note: for http, certPath="" (not None) so the condition is True → False; for
+        # https, useCert=True → False. The verify=True branch in _prep_req is unreachable.
+        self.verify = False if (self.useCert or self.certPath) else True
 
         # TODO Remove gcp parameter
         if gcp:
@@ -212,6 +231,10 @@ class PyTigerGraphCore(object):
 
         self.asynchronous = False
 
+        # Pre-build per-authMode header dicts so _prep_req avoids repeating
+        # the isinstance/string-comparison chain on every request.
+        self._refresh_auth_headers()
+
         logger.debug("exit: __init__")
 
     def _set_auth_header(self):
@@ -222,6 +245,34 @@ class PyTigerGraphCore(object):
             return {"Authorization": "Bearer " + self.apiToken}
         else:
             return {"Authorization": "Basic {0}".format(self.base64_credential)}
+
+    def _refresh_auth_headers(self) -> None:
+        """Pre-build per-authMode header dicts used by every request.
+
+        Called once at __init__ and again after getToken() updates the
+        credentials. Eliminates per-request isinstance checks and string
+        formatting in _prep_req's hot path.
+
+        Two dicts are kept because authMode can be either "token" or "pwd":
+          - "token": JWT > apiToken (tuple or str) > Basic
+          - "pwd":   JWT > Basic
+        The "X-User-Agent" header is baked in so _prep_req skips that update too.
+        """
+        # ---- token mode ----
+        if isinstance(self.jwtToken, str) and self.jwtToken.strip():
+            token_val = "Bearer " + self.jwtToken
+        elif isinstance(self.apiToken, tuple):
+            token_val = "Bearer " + self.apiToken[0]
+        elif isinstance(self.apiToken, str) and self.apiToken.strip():
+            token_val = "Bearer " + self.apiToken
+        else:
+            token_val = "Basic " + self.base64_credential
+
+        # ---- pwd mode ----
+        pwd_val = ("Bearer " + self.jwtToken) if self.jwtToken else ("Basic " + self.base64_credential)
+
+        self._cached_token_auth = {"Authorization": token_val, "X-User-Agent": "pyTigerGraph"}
+        self._cached_pwd_auth   = {"Authorization": pwd_val,   "X-User-Agent": "pyTigerGraph"}
 
     def _verify_jwt_token_support(self):
         try:
@@ -281,34 +332,11 @@ class PyTigerGraphCore(object):
         if logger.level == logging.DEBUG:
             logger.debug("params: " + self._locals(locals()))
 
-        _headers = {}
-
-        # If JWT token is provided, always use jwtToken as token
-        if authMode == "token":
-            if isinstance(self.jwtToken, str) and self.jwtToken.strip() != "":
-                token = self.jwtToken
-            elif isinstance(self.apiToken, tuple):
-                token = self.apiToken[0]
-            elif isinstance(self.apiToken, str) and self.apiToken.strip() != "":
-                token = self.apiToken
-            else:
-                token = None
-
-            if token:
-                self.authHeader = {'Authorization': "Bearer " + token}
-                _headers = self.authHeader
-            else:
-                self.authHeader = {
-                    'Authorization': 'Basic {0}'.format(self.base64_credential)}
-                _headers = self.authHeader
-                self.authMode = "pwd"
-        else:
-            if self.jwtToken:
-                _headers = {'Authorization': "Bearer " + self.jwtToken}
-            else:
-                _headers = {'Authorization': 'Basic {0}'.format(
-                    self.base64_credential)}
-                self.authMode = "pwd"
+        # Shallow-copy the pre-built header dict (auth + X-User-Agent already included).
+        # _refresh_auth_headers() keeps these current after every getToken() call.
+        _headers = dict(
+            self._cached_token_auth if authMode == "token" else self._cached_pwd_auth
+        )
 
         if headers:
             _headers.update(headers)
@@ -323,25 +351,28 @@ class PyTigerGraphCore(object):
         else:
             _data = None
 
-        if self.useCert is True or self.certPath is not None:
-            verify = False
-        else:
-            verify = True
-
-        _headers.update({"X-User-Agent": "pyTigerGraph"})
         logger.debug("exit: _prep_req")
 
-        return _headers, _data, verify
+        return _headers, _data, self.verify
 
-    def _parse_req(self, res, jsonResponse, strictJson, skipCheck, resKey):
+    def _parse_req(self, data: Union[bytes, str], jsonResponse, strictJson, skipCheck, resKey):
         logger.debug("entry: _parse_req")
         if jsonResponse:
             try:
-                res = json.loads(res.text, strict=strictJson)
-            except:
-                raise TigerGraphException("Cannot parse json: " + res.text)
+                if _HAS_ORJSON and strictJson:
+                    # orjson accepts bytes directly (no decode step), parses 2–10× faster
+                    # than stdlib, and releases the GIL — eliminating inter-thread contention
+                    # when multiple threads parse responses simultaneously.
+                    res = _orjson.loads(data)
+                else:
+                    # strictJson=False allows control characters; orjson is always strict,
+                    # so fall back to stdlib for that case.
+                    res = json.loads(data, strict=strictJson)
+            except Exception:
+                text = data.decode("utf-8", errors="replace") if isinstance(data, bytes) else data
+                raise TigerGraphException("Cannot parse json: " + text)
         else:
-            res = res.text
+            res = data.decode("utf-8", errors="replace") if isinstance(data, bytes) else data
 
         if not skipCheck:
             self._error_check(res)

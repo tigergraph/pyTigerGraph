@@ -1,27 +1,18 @@
+from importlib.metadata import version as _pkg_version, PackageNotFoundError
+
 from pyTigerGraph.pyTigerGraph import TigerGraphConnection
 from pyTigerGraph.pytgasync.pyTigerGraph import AsyncTigerGraphConnection
 from pyTigerGraph.common.exception import TigerGraphException
 
-__version__ = "2.0.0"
+try:
+    __version__ = _pkg_version("pyTigerGraph")
+except PackageNotFoundError:
+    __version__ = "2.0.1"
 
 __license__ = "Apache 2"
 
-# Optional MCP support
-try:
-    from pyTigerGraph.mcp import serve, MCPServer, get_connection, ConnectionManager
-    __all__ = [
-        "TigerGraphConnection",
-        "AsyncTigerGraphConnection",
-        "TigerGraphException",
-        "serve",
-        "MCPServer",
-        "get_connection",
-        "ConnectionManager",
-    ]
-except ImportError:
-    # MCP dependencies not installed
-    __all__ = [
-        "TigerGraphConnection",
-        "AsyncTigerGraphConnection",
-        "TigerGraphException",
-    ]
+__all__ = [
+    "TigerGraphConnection",
+    "AsyncTigerGraphConnection",
+    "TigerGraphException",
+]

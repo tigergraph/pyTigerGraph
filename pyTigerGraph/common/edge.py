@@ -177,30 +177,22 @@ def _dumps(data) -> str:
     Returns:
         The JSON to be sent to the endpoint.
     """
-    ret = ""
-    if isinstance(data, dict):
-        c1 = 0
-        for k1, v1 in data.items():
-            if c1 > 0:
-                ret += ","
-            if k1 == ___trgvtxids:
-                # Dealing with the (possibly multiple instances of) edge details
-                # v1 should be a dict of lists
-                c2 = 0
-                for k2, v2 in v1.items():
-                    if c2 > 0:
-                        ret += ","
-                    c3 = 0
-                    for v3 in v2:
-                        if c3 > 0:
-                            ret += ","
-                        ret += json.dumps(k2) + ':' + json.dumps(v3)
-                        c3 += 1
-                    c2 += 1
-            else:
-                ret += json.dumps(k1) + ':' + _dumps(data[k1])
-            c1 += 1
-    return "{" + ret + "}"
+    if not isinstance(data, dict):
+        return json.dumps(data)
+    parts = []
+    for k1, v1 in data.items():
+        if k1 == ___trgvtxids:
+            # Dealing with the (possibly multiple instances of) edge details.
+            # v1 is a dict mapping target vertex ID -> list of attribute dicts.
+            # Each list entry becomes a separate JSON key:value pair (same key repeated
+            # for MultiEdge), so we cannot use json.dumps on v1 directly.
+            for k2, v2 in v1.items():
+                k2_encoded = json.dumps(k2)
+                for v3 in v2:
+                    parts.append(k2_encoded + ":" + json.dumps(v3))
+        else:
+            parts.append(json.dumps(k1) + ":" + _dumps(v1))
+    return "{" + ",".join(parts) + "}"
 
 def _prep_upsert_edges(sourceVertexType,
                        edgeType,
@@ -248,8 +240,8 @@ def _prep_upsert_edge_dataframe(df, from_id, to_id, attributes):
     for index in df.index:
         json_up.append(json.loads(df.loc[index].to_json()))
         json_up[-1] = (
-            index if from_id is None else json_up[-1][from_id],
-            index if to_id is None else json_up[-1][to_id],
+            index if not from_id else json_up[-1][from_id],
+            index if not to_id else json_up[-1][to_id],
             json_up[-1] if attributes is None
             else {target: json_up[-1][source] for target, source in attributes.items()}
         )

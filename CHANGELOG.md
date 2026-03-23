@@ -5,6 +5,116 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-03-23
+
+### Breaking Changes
+
+- **`showSecrets()` removed.** Use `getSecrets()` instead.
+- **`runInstalledQuery()` now auto-selects GET or POST** based on `params` type (`dict` → POST, `str` → GET). Passing a raw query string with `usePost=True` raises `TigerGraphException`.
+- **MCP tools moved to [`pytigergraph-mcp`](https://github.com/tigergraph/pytigergraph-mcp).** Do not import from `pyTigerGraph.mcp` directly.
+
+### New Features
+
+- **Unified vertex parameter syntax for `runInstalledQuery()`.** Use `(id,)` for `VERTEX<T>`, `(id, "type")` for untyped `VERTEX`, and lists of tuples for sets. Works identically for both GET and POST.
+- **MAP parameter support.** Pass a Python `dict` for a `MAP` query parameter; it is converted to TigerGraph's wire format automatically.
+- **`getVectorIndexStatus()`** — poll vector index build status without writing raw GSQL.
+- **`runSchemaChange()`** — run GSQL DDL as a schema-change job via a single API call.
+- **Data-source management APIs** — `createDataSource()`, `updateDataSource()`, `getDataSource()`, `getDataSources()`, `dropDataSource()`, `dropAllDataSources()`.
+- **Improved performance for parallel workloads.** Sync connections use per-thread HTTP sessions; async connections use `aiohttp`. Both reduce contention and improve throughput under concurrent load.
+- **TigerGraph 3.x compatibility.** Queries, loading jobs, and schema operations automatically fall back to 3.x `gsqlserver` endpoints, so the same client code works on both 3.x and 4.x.
+
+### Fixed
+
+- **Edge upsert `vertexMustExist`** flag now correctly forwarded to TigerGraph in all code paths.
+- **Edge upsert attribute payloads** serialized correctly for all attribute types.
+
+---
+
+## [2.0.0] - 2025-03-04
+
+### Added
+
+- **MCP (Model Context Protocol) tools.** pyTigerGraph now ships with built-in MCP tool definitions, enabling integration with MCP-compatible AI frameworks.
+
+---
+
+## [1.9.1] - 2024-11-04
+
+### Changed
+
+- API enhancements.
+
+---
+
+## [1.9.0] - 2025-06-30
+
+### Changed
+
+- Multiple API enhancements.
+
+---
+
+## [1.8.4] - 2025-01-20
+
+### Fixed
+
+- Fixed URL construction when `gsPort` and `restppPort` are set to the same value.
+
+---
+
+## [1.8.3] - 2024-12-04
+
+### Fixed
+
+- Fixed `httpx` timeout during async function calls, most notably when installing a query via `.gsql()`.
+
+---
+
+## [1.8.1] - 2024-11-19
+
+### Fixed
+
+- Fixed import error of `TigerGraphException` in the GDS submodule.
+
+---
+
+## [1.8.0] - 2024-11-04
+
+### Added
+
+- **`AsyncTigerGraphConnection`** — full async communication with TigerGraph using the new `AsyncTigerGraphConnection` class.
+- **`delVerticesByType()`** — delete all vertices of a given type in one call.
+- **`limit` parameter for `getEdgesByType()`** — cap the number of edges returned. Note: the limit is applied client-side after retrieval.
+- **Upsert atomicity configuration** — new parameters to control atomicity behaviour of upsert operations.
+- **`runLoadingJobWithDataFrame()`** — run a GSQL loading job directly from a Pandas DataFrame.
+- **`runLoadingJobWithData()`** — run a GSQL loading job from a raw data string.
+
+---
+
+## [1.7.4] - 2024-10-16
+
+### Fixed
+
+- Fixed error when generating a token via `getToken()` with a secret key.
+
+---
+
+## [1.7.3] - 2024-10-14
+
+### Fixed
+
+- Fixed error when generating a token via `getToken()` on TigerGraph Cloud v3.x instances.
+
+---
+
+## [1.7.2] - 2024-10-01
+
+### Added
+
+- **`delVerticesByType()`** — delete all vertices of a specified type. Supports `permanent` (prevent re-insertion of the same IDs) and `ack` (`"all"` or `"none"`) parameters.
+
+---
+
 ## [1.1] - 2022-09-06
 
 Release of pyTigerGraph version 1.1. 

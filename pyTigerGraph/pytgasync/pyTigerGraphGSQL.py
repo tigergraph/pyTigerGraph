@@ -5,7 +5,7 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 """
 import logging
 import re
-import httpx
+import aiohttp
 
 from typing import Union, Tuple, Dict
 from urllib.parse import urlparse, quote_plus
@@ -55,8 +55,8 @@ class AsyncPyTigerGraphGSQL(AsyncPyTigerGraphBase):
                                   authMode="pwd", resKey=None, skipCheck=True,
                                   jsonResponse=False,
                                   headers={"Content-Type": "text/plain"})
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 404:
+        except aiohttp.ClientResponseError as e:
+            if e.status == 404:
                 res = await self._req("POST",
                                       self.gsUrl + "/gsqlserver/gsql/file",
                                       data=quote_plus(query.encode("utf-8")),
@@ -103,7 +103,7 @@ class AsyncPyTigerGraphGSQL(AsyncPyTigerGraphBase):
         responses = {}
 
         for file_name in urls:
-            resp = await self._req("GET", f"{self.gsUrl}{urls[file_name]}", resKey="")
+            resp = await self._req("GET", f"{self.gsUrl}{urls[file_name]}", resKey=None)
             responses[file_name] = resp
 
         return _parse_get_udf(responses, json_out=json_out)
@@ -131,7 +131,7 @@ class AsyncPyTigerGraphGSQL(AsyncPyTigerGraphBase):
             logger.debug("params: " + self._locals(locals()))
 
         res = await self._req("GET", self.gsUrl+"/gsql/v1/statements/"+requestId,
-                             authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
+                             authMode="pwd", resKey=None, headers={'Content-Type': 'application/json'})
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -162,7 +162,7 @@ class AsyncPyTigerGraphGSQL(AsyncPyTigerGraphBase):
             logger.debug("params: " + self._locals(locals()))
 
         res = await self._req("PUT", self.gsUrl+"/gsql/v1/statements/"+requestId+"/cancel",
-                             authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
+                             authMode="pwd", resKey=None, headers={'Content-Type': 'application/json'})
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -189,7 +189,7 @@ class AsyncPyTigerGraphGSQL(AsyncPyTigerGraphBase):
                 "This function is only supported on versions of TigerGraph >= 4.0.", 0)
 
         res = await self._req("POST", self.gsUrl+"/gsql/v1/schema/recover",
-                             authMode="pwd", resKey="", headers={'Content-Type': 'text/plain'})
+                             authMode="pwd", resKey=None, headers={'Content-Type': 'text/plain'})
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -222,7 +222,7 @@ class AsyncPyTigerGraphGSQL(AsyncPyTigerGraphBase):
                 "This function is only supported on versions of TigerGraph >= 4.0.", 0)
 
         res = await self._req("GET", self.gsUrl+"/gsql/v1/clear-store",
-                             authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
+                             authMode="pwd", resKey=None, headers={'Content-Type': 'application/json'})
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -255,7 +255,7 @@ class AsyncPyTigerGraphGSQL(AsyncPyTigerGraphBase):
                 "This function is only supported on versions of TigerGraph >= 4.0.", 0)
 
         res = await self._req("GET", self.gsUrl+"/gsql/v1/drop-all",
-                             authMode="pwd", resKey="", headers={'Content-Type': 'application/json'})
+                             authMode="pwd", resKey=None, headers={'Content-Type': 'application/json'})
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -324,8 +324,8 @@ class AsyncPyTigerGraphGSQL(AsyncPyTigerGraphBase):
             data["password"] = password
 
         res = await self._req("POST", self.gsUrl+"/gsql/v1/db-export",
-                             data=data, authMode="pwd", resKey="",
-                             headers={'Content-Type': 'application/json'})
+                             data=data, authMode="pwd", resKey=None,
+                             headers={'Content-Type': 'application/json'}, jsonData=True)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -378,8 +378,8 @@ class AsyncPyTigerGraphGSQL(AsyncPyTigerGraphBase):
             data["password"] = password
 
         res = await self._req("POST", self.gsUrl+"/gsql/v1/db-import",
-                             data=data, authMode="pwd", resKey="",
-                             headers={'Content-Type': 'application/json'})
+                             data=data, authMode="pwd", resKey=None,
+                             headers={'Content-Type': 'application/json'}, jsonData=True)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -414,7 +414,7 @@ class AsyncPyTigerGraphGSQL(AsyncPyTigerGraphBase):
             params["verbose"] = verbose
 
         res = await self._req("GET", self.gsUrl+"/gsql/v1/version",
-                             params=params, authMode="pwd", resKey="",
+                             params=params, authMode="pwd", resKey=None,
                              headers={'Content-Type': 'text/plain'})
 
         if logger.level == logging.DEBUG:

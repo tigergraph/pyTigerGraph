@@ -201,9 +201,30 @@ class test_pyTigerGraphEdgeAsync(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(res, int)
         self.assertEqual(1, res)
 
-        # TODO Tests with ack, new_vertex_only, vertex_must_exist, update_vertex_only and
-        #   atomic_level parameters; when they will be added to pyTigerGraphEdge.upsertEdge()
         # TODO Add MultiEdge edge to schema and add test cases
+
+    async def test_09_upsertEdge_mustExist(self):
+        res = await self.conn.upsertEdge(
+            "vertex6",
+            int(1e6),
+            "edge4_many_to_many",
+            "vertex7",
+            1,
+            vertexMustExist=True,
+        )
+        self.assertIsInstance(res, int)
+        self.assertEqual(0, res)
+
+        res = await self.conn.upsertEdge(
+            "vertex6",
+            6,
+            "edge4_many_to_many",
+            "vertex7",
+            int(2e6),
+            vertexMustExist=True,
+        )
+        self.assertIsInstance(res, int)
+        self.assertEqual(0, res)
 
     async def test_10_upsertEdges(self):
         es = [
@@ -220,9 +241,48 @@ class test_pyTigerGraphEdgeAsync(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(res, int)
         self.assertEqual(14, res)
 
+    async def test_10_upsertEdges_mustExist(self):
+        es = [(2, int(1e6)), (int(1e6), 2)]
+        res = await self.conn.upsertEdges(
+            "vertex6", "edge4_many_to_many", "vertex7", es, vertexMustExist=True
+        )
+        self.assertIsInstance(res, int)
+        self.assertEqual(0, res)
+
     async def test_11_upsertEdgeDataFrame(self):
-        # TODO Implement
-        pass
+        edges = [
+            {
+                "e_type": "edge1_undirected",
+                "directed": False,
+                "from_id": 1,
+                "from_type": "vertex4",
+                "to_id": 4,
+                "to_type": "vertex5",
+                "attributes": {"a01": -100},
+            },
+            {
+                "e_type": "edge1_undirected",
+                "directed": False,
+                "from_id": 1,
+                "from_type": "vertex4",
+                "to_id": 5,
+                "to_type": "vertex5",
+                "attributes": {"a01": -100},
+            },
+        ]
+        df = await self.conn.edgeSetToDataFrame(edges)
+        res = await self.conn.upsertEdgeDataFrame(
+            df=df,
+            sourceVertexType="vertex4",
+            edgeType="edge1_undirected",
+            targetVertexType="vertex5",
+            from_id="from_id",
+            to_id="to_id",
+            attributes={"a01": "a01"},
+            vertexMustExist=True,
+        )
+        self.assertIsInstance(res, int)
+        self.assertEqual(2, res)
 
     async def test_12_getEdges(self):
         res = await self.conn.getEdges("vertex4", 1)

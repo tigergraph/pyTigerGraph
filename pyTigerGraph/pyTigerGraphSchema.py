@@ -6,6 +6,7 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 import json
 import logging
 import re
+import uuid
 
 from typing import Union
 
@@ -14,6 +15,7 @@ from pyTigerGraph.common.schema import (
     _prep_get_endpoints
 )
 from pyTigerGraph.common.exception import TigerGraphException
+from pyTigerGraph.common.gsql import _wrap_gsql_result, _parse_graph_list
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
 
 logger = logging.getLogger(__name__)
@@ -209,20 +211,20 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         )
         if bui:
             eps = {}
-            res = self._req("GET", url + "builtin=true", resKey="")
+            res = self._req("GET", url + "builtin=true", resKey=None)
             for ep in res:
                 if not re.search(" /graph/", ep) or re.search(" /graph/{graph_name}/", ep):
                     eps[ep] = res[ep]
             ret.update(eps)
         if dyn:
             eps = {}
-            res = self._req("GET", url + "dynamic=true", resKey="")
+            res = self._req("GET", url + "dynamic=true", resKey=None)
             for ep in res:
                 if re.search("^GET /query/" + self.graphname, ep):
                     eps[ep] = res[ep]
             ret.update(eps)
         if sta:
-            ret.update(self._req("GET", url + "static=true", resKey=""))
+            ret.update(self._req("GET", url + "static=true", resKey=None))
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -266,8 +268,8 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         data = {"gsql": gsql_commands}
         params = {"gsql": "true"}
         res = self._post(self.gsUrl+"/gsql/v1/schema/vertices",
-                        params=params, data=data, authMode="pwd", resKey="",
-                        headers={'Content-Type': 'application/json'})
+                        params=params, data=data, authMode="pwd", resKey=None,
+                        headers={'Content-Type': 'application/json'}, jsonData=True)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -320,8 +322,8 @@ class pyTigerGraphSchema(pyTigerGraphBase):
 
         data = {"createVertices": vertices_config}
         res = self._post(self.gsUrl+"/gsql/v1/schema/vertices",
-                        data=data, authMode="pwd", resKey="",
-                        headers={'Content-Type': 'application/json'})
+                        data=data, authMode="pwd", resKey=None,
+                        headers={'Content-Type': 'application/json'}, jsonData=True)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -372,12 +374,87 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         data = {"addVertices": vertex_names}
         params = {"graph": graph_name}
         res = self._post(self.gsUrl+"/gsql/v1/schema/vertices",
-                        params=params, data=data, authMode="pwd", resKey="",
-                        headers={'Content-Type': 'application/json'})
+                        params=params, data=data, authMode="pwd", resKey=None,
+                        headers={'Content-Type': 'application/json'}, jsonData=True)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
         logger.debug("exit: addGlobalVerticesToGraph")
+
+        return res
+
+    def dropVertices(self, vertex_names: Union[str, list], graph: str = None,
+                     ignoreErrors: bool = False) -> dict:
+        """Drops vertex types from a graph or drops global vertex types.
+
+        Args:
+            vertex_names (str or list):
+                Name(s) of the vertex types to drop. Can be a single string or a list
+                of strings. Use ``"all"`` to drop all vertices.
+            graph (str, optional):
+                The graph from which vertex types should be dropped.
+                If not provided, drops global vertex types.
+            ignoreErrors (bool):
+                If ``True``, suppress exceptions (e.g. when some vertices do not exist)
+                and return the error as a dict instead. Defaults to ``False``.
+
+        Returns:
+            The response from the database containing the drop result.
+
+        Raises:
+            `TigerGraphException` if the function is called on TigerGraph < 4.0,
+            or if the drop fails and ``ignoreErrors`` is ``False``.
+
+        Endpoints:
+            - ``DELETE /gsql/v1/schema/vertices`` (In TigerGraph versions >= 4.0)
+
+        See https://docs.tigergraph.com/tigergraph-server/4.2/api/gsql-endpoints#_drop_vertices
+        """
+        logger.debug("entry: dropVertices")
+        if not self._version_greater_than_4_0():
+            logger.debug("exit: dropVertices")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        if isinstance(vertex_names, list):
+            if not vertex_names:
+                raise TigerGraphException("vertex_names cannot be empty.", 0)
+            vertex_param = ",".join(vertex_names)
+        elif isinstance(vertex_names, str):
+            vertex_param = vertex_names
+        else:
+            raise TigerGraphException("vertex_names must be a string or list of strings.", 0)
+
+        params = {"vertex": vertex_param}
+        if graph is not None:
+            params["graph"] = graph
+
+        if not ignoreErrors:
+            res = self._delete(self.gsUrl + "/gsql/v1/schema/vertices",
+                               params=params, authMode="pwd", resKey=None)
+        else:
+            try:
+                res = self._delete(self.gsUrl + "/gsql/v1/schema/vertices",
+                                   params=params, authMode="pwd", resKey=None)
+            except Exception:
+                # Batch may fail if some vertices don't exist; retry individually.
+                names = vertex_param.split(",") if "," in vertex_param else [vertex_param]
+                dropped = []
+                failed = []
+                for name in names:
+                    try:
+                        self._delete(self.gsUrl + "/gsql/v1/schema/vertices",
+                                     params={**params, "vertex": name},
+                                     authMode="pwd", resKey=None)
+                        dropped.append(name)
+                    except Exception:
+                        failed.append(name)
+                res = {"error": len(failed) > 0,
+                       "message": f"Dropped: {dropped}. Failed: {failed}."}
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: dropVertices")
 
         return res
 
@@ -402,11 +479,144 @@ class pyTigerGraphSchema(pyTigerGraphBase):
                 "This function is only supported on versions of TigerGraph >= 4.0.", 0)
 
         res = self._post(self.gsUrl+"/gsql/v1/schema/check",
-                        authMode="pwd", resKey="",
+                        authMode="pwd", resKey=None,
                         headers={'Content-Type': 'text/plain'})
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
         logger.debug("exit: validateGraphSchema")
+
+        return res
+
+    def createGraph(self, graphName: str) -> dict:
+        """Creates an empty graph.
+
+        Args:
+            graphName:
+                Name of the graph to create.
+
+        Returns:
+            A dict with at least a ``"message"`` key describing the outcome.
+
+        Endpoints:
+            - `POST /gsql/v1/schema/graphs` (In TigerGraph versions >= 4.0)
+            - Falls back to GSQL ``CREATE GRAPH`` for TigerGraph versions < 4.0
+        """
+        logger.debug("entry: createGraph")
+
+        if self._version_greater_than_4_0():
+            data = {"name": graphName}
+            res = self._post(self.gsUrl + "/gsql/v1/schema/graphs",
+                            data=data, authMode="pwd", resKey=None,
+                            headers={'Content-Type': 'application/json'}, jsonData=True)
+        else:
+            res = _wrap_gsql_result(self.gsql(f"CREATE GRAPH {graphName}()"))
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: createGraph")
+
+        return res
+
+    def dropGraph(self, graphName: str) -> dict:
+        """Drops a graph and all its data.
+
+        Args:
+            graphName:
+                Name of the graph to drop.
+
+        Returns:
+            A dict with at least a ``"message"`` key describing the outcome.
+
+        Endpoints:
+            - `DELETE /gsql/v1/schema/graphs/{graphName}` (In TigerGraph versions >= 4.0)
+            - Falls back to GSQL ``DROP GRAPH`` for TigerGraph versions < 4.0
+        """
+        logger.debug("entry: dropGraph")
+
+        if self._version_greater_than_4_0():
+            res = self._delete(self.gsUrl + "/gsql/v1/schema/graphs/" + graphName,
+                              authMode="pwd", resKey=None,
+                              headers={'Content-Type': 'application/json'})
+        else:
+            res = _wrap_gsql_result(self.gsql(f"DROP GRAPH {graphName}"))
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: dropGraph")
+
+        return res
+
+    def listGraphs(self) -> list:
+        """Lists all graphs in the database.
+
+        Returns:
+            A list of dicts, each with at least a ``"GraphName"`` key.
+
+        Endpoints:
+            - `GET /gsql/v1/schema/graphs` (In TigerGraph versions >= 4.0)
+            - Falls back to GSQL ``SHOW GRAPH *`` for TigerGraph versions < 4.0
+        """
+        logger.debug("entry: listGraphs")
+
+        if self._version_greater_than_4_0():
+            res = self._get(self.gsUrl + "/gsql/v1/schema/graphs",
+                           authMode="pwd", resKey="graphs")
+        else:
+            res = _parse_graph_list(self.gsql("SHOW GRAPH *"))
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: listGraphs")
+
+        return res
+
+    def runSchemaChange(self, gsqlStatements: Union[str, list], graphName: str = None) -> dict:
+        """Runs schema change statements on a graph.
+
+        Args:
+            gsqlStatements:
+                GSQL schema change DDL statements (e.g. ``ADD VERTEX ...``, ``ADD EDGE ...``).
+                Can be a string of semicolon-separated statements or a list of statements.
+            graphName:
+                Target graph name. Uses connection's graphname if not provided.
+
+        Returns:
+            A dict with at least a ``"message"`` key describing the outcome.
+
+        Endpoints:
+            - `POST /gsql/v1/schema/change?graph={graphName}` (In TigerGraph versions >= 4.0)
+            - Falls back to GSQL schema change job for TigerGraph versions < 4.0
+        """
+        logger.debug("entry: runSchemaChange")
+
+        gname = graphName or self.graphname
+
+        if isinstance(gsqlStatements, list):
+            gsqlStatements = "\n".join(
+                s if s.rstrip().endswith(";") else s + ";"
+                for s in gsqlStatements
+            )
+
+        if self._version_greater_than_4_0():
+            params = {"graph": gname}
+            res = self._post(self.gsUrl + "/gsql/v1/schema/change",
+                            params=params, data=gsqlStatements, authMode="pwd", resKey=None,
+                            headers={'Content-Type': 'text/plain'})
+        else:
+            job_name = f"schema_change_{uuid.uuid4().hex[:8]}"
+            gsql_cmd = (
+                f"USE GRAPH {gname}\n"
+                f"CREATE SCHEMA_CHANGE JOB {job_name} FOR GRAPH {gname} {{\n"
+                f"    {gsqlStatements}\n"
+                f"}}\n"
+                f"RUN SCHEMA_CHANGE JOB {job_name}\n"
+                f"DROP JOB {job_name}"
+            )
+            res = _wrap_gsql_result(self.gsql(gsql_cmd))
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: runSchemaChange")
 
         return res

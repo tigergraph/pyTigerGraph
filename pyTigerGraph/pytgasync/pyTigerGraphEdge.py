@@ -404,7 +404,8 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery):
         return ret
 
     async def upsertEdge(self, sourceVertexType: str, sourceVertexId: str, edgeType: str,
-                         targetVertexType: str, targetVertexId: str, attributes: dict = None) -> int:
+                         targetVertexType: str, targetVertexId: str, attributes: dict = None,
+                         vertexMustExist: bool = False) -> int:
         """Upserts an edge.
 
         Data is upserted:
@@ -457,7 +458,9 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery):
                                  targetVertexType,
                                  targetVertexId,
                                  attributes)
-        ret = await self._req("POST", self.restppUrl + "/graph/" + self.graphname, data=data)
+        params = {"vertex_must_exist": vertexMustExist}
+        ret = await self._req("POST", self.restppUrl + "/graph/" + self.graphname, data=data,
+                              params=params)
         ret = ret[0]["accepted_edges"]
 
         if logger.level == logging.DEBUG:
@@ -467,7 +470,7 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery):
         return ret
 
     async def upsertEdges(self, sourceVertexType: str, edgeType: str, targetVertexType: str,
-                          edges: list, atomic: bool = False) -> int:
+                          edges: list, vertexMustExist: bool = False, atomic: bool = False) -> int:
         """Upserts multiple edges (of the same type).
 
         Args:
@@ -534,7 +537,9 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery):
         if atomic:
             headers["gsql-atomic-level"] = "atomic"
 
-        ret = await self._req("POST", self.restppUrl + "/graph/" + self.graphname, data=data)
+        params = {"vertex_must_exist": vertexMustExist}
+        ret = await self._req("POST", self.restppUrl + "/graph/" + self.graphname, data=data,
+                              params=params, headers=headers)
         ret = ret[0]["accepted_edges"]
 
         if logger.level == logging.DEBUG:
@@ -545,7 +550,8 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery):
 
     async def upsertEdgeDataFrame(self, df: 'pd.DataFrame', sourceVertexType: str, edgeType: str,
                                   targetVertexType: str, from_id: str = "", to_id: str = "",
-                                  attributes: dict = None, atomic: bool = False) -> int:
+                                  attributes: dict = None, vertexMustExist: bool = False,
+                                  atomic: bool = False) -> int:
         """Upserts edges from a Pandas DataFrame.
 
         Args:
@@ -582,7 +588,8 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery):
             logger.debug("params: " + self._locals(locals()))
 
         json_up = _prep_upsert_edge_dataframe(df, from_id, to_id, attributes)
-        ret = await self.upsertEdges(sourceVertexType, edgeType, targetVertexType, json_up, atomic=atomic)
+        ret = await self.upsertEdges(sourceVertexType, edgeType, targetVertexType, json_up,
+                                     vertexMustExist=vertexMustExist, atomic=atomic)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
@@ -829,7 +836,7 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery):
         for et in ets:
             data = '{"function":"stat_edge_attr","type":"' + \
                 et + '","from_type":"*","to_type":"*"}'
-            res = await self._req("POST", self.restppUrl + "/builtins/" + self.graphname, data=data, resKey="",
+            res = await self._req("POST", self.restppUrl + "/builtins/" + self.graphname, data=data, resKey=None,
                                   skipCheck=True)
             responses.append((et, res))
         ret = _parse_get_edge_stats(responses, skipNA)

@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, Union
 if TYPE_CHECKING:
     import pandas as pd
 
+import json
+
 from pyTigerGraph.common.loading import (
     _prep_run_loading_job_with_file,
     _prep_loading_job_url,
@@ -19,8 +21,13 @@ from pyTigerGraph.common.loading import (
     _prep_abort_one_loading_job,
     _prep_resume_loading_job,
     _prep_get_loading_job_status,
-    _prep_get_loading_jobs_status
+    _prep_get_loading_jobs_status,
+    _prep_data_source_url,
+    _prep_data_source_by_name,
+    _prep_drop_all_data_sources,
+    _prep_sample_data_url,
 )
+from pyTigerGraph.common.gsql import _wrap_gsql_result
 from pyTigerGraph.pytgasync.pyTigerGraphBase import AsyncPyTigerGraphBase
 
 logger = logging.getLogger(__name__)
@@ -211,7 +218,7 @@ class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
 
         url = _prep_loading_job_url(self.gsUrl, self.graphname)
 
-        res = await self._req("GET", url)
+        res = await self._req("GET", url, resKey="jobNames")
 
         logger.debug("return: " + str(res))
         logger.debug("exit: getLoadingJobs")
@@ -235,7 +242,7 @@ class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
 
         url = _prep_loading_job_url(self.gsUrl, self.graphname)
 
-        res = self._req("POST", url, data=job_definition)
+        res = await self._req("POST", url, data=job_definition, resKey=None)
 
         logger.debug("return: " + str(res))
         logger.debug("exit: createLoadingJob")
@@ -259,7 +266,7 @@ class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
 
         url = _prep_loading_job_url(self.gsUrl, self.graphname)
 
-        res = await self._req("PUT", url, data=job_definition)
+        res = await self._req("PUT", url, data=job_definition, resKey=None)
 
         logger.debug("return: " + str(res))
         logger.debug("exit: updateLoadingJob")
@@ -324,7 +331,7 @@ class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
 
         url, data = _prep_run_loading_job(self.gsUrl, self.graphname, jobName, data_source_config, sys_data_root, verbose, dryrun, interval, maxNumError, maxPercentError)
 
-        res = await self._req("POST", url, data=data)
+        res = await self._req("POST", url, data=data, resKey=None)
 
         logger.debug("return: " + str(res))
         logger.debug("exit: runLoadingJob")
@@ -338,17 +345,21 @@ class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
             jobName:
                 The name of the loading job.
 
+        Returns:
+            A dict with at least a ``"message"`` key describing the outcome.
+
         Endpoint:
-            - `DELETE /gsql/v1/loading-jobs/<job_name>?graph=<graph_name>`
-                See xref:tigergraph-server:API:gsql-endpoints.adoc#_drop_a_loading_job[Drop a loading job]
+            - `DELETE /gsql/v1/loading-jobs/<job_name>?graph=<graph_name>` (In TigerGraph versions >= 4.0)
+            - Falls back to GSQL ``DROP JOB`` for TigerGraph versions < 4.0
         """
         logger.debug("entry: dropLoadingJob")
-
         logger.debug("params: " + self._locals(locals()))
 
-        url = _prep_loading_job_info(self.gsUrl, jobName, self.graphname)
-
-        res = await self._req("DELETE", url)
+        if await self._version_greater_than_4_0():
+            url = _prep_loading_job_info(self.gsUrl, jobName, self.graphname)
+            res = await self._req("DELETE", url, resKey=None)
+        else:
+            res = _wrap_gsql_result(await self.gsql(f"USE GRAPH {self.graphname}\nDROP JOB {jobName}"))
 
         logger.debug("return: " + str(res))
         logger.debug("exit: dropLoadingJob")
@@ -374,7 +385,7 @@ class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
 
         url = _prep_abort_loading_jobs(self.gsUrl, self.graphname, jobIds, pauseJob)
 
-        res = await self._req("GET", url)
+        res = await self._req("GET", url, resKey=None)
 
         logger.debug("return: " + str(res))
         logger.debug("exit: abortLoadingJobs")
@@ -400,7 +411,7 @@ class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
 
         url = _prep_abort_one_loading_job(self.gsUrl, self.graphname, jobId, pauseJob)
 
-        res = await self._req("GET", url)
+        res = await self._req("GET", url, resKey=None)
 
         logger.debug("return: " + str(res))
         logger.debug("exit: abortLoadingJob")
@@ -424,7 +435,7 @@ class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
 
         url = _prep_resume_loading_job(self.gsUrl, jobId)
 
-        res = await self._req("GET", url)
+        res = await self._req("GET", url, resKey=None)
 
         logger.debug("return: " + str(res))
         logger.debug("exit: resumeLoadingJob")
@@ -478,3 +489,187 @@ class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
         logger.debug("exit: getLoadingJobStatus")
 
         return res
+
+    # =====================================================================
+    # Data Source Management
+    # =====================================================================
+
+    async def createDataSource(self, dsName: str, config: dict,
+                               graphName: str = None) -> dict:
+        """Create a new data source.
+
+        On TigerGraph 4.x uses REST API ``POST /gsql/v1/data-sources``.
+        On 3.x falls back to ``CREATE DATA_SOURCE`` via GSQL console.
+
+        Args:
+            dsName:  Name for the data source.
+            config:  Configuration dict.  Must contain a ``"type"`` key
+                     (e.g. ``"s3"``, ``"gcs"``, ``"kafka"``).
+            graphName:  Graph to associate the data source with.
+                        Defaults to the connection's current graph.
+
+        Returns:
+            A dict with at least a ``"message"`` key describing the outcome.
+        """
+        graph = graphName or self.graphname
+        if await self._version_greater_than_4_0():
+            url = _prep_data_source_url(self.gsUrl, graph)
+            body = {"name": dsName, "config": config}
+            return await self._req("POST", url, data=body, jsonData=True, resKey=None)
+
+        config_json = json.dumps(config)
+        gsql_cmd = f"CREATE DATA_SOURCE {dsName} = '{config_json}'"
+        if graph:
+            gsql_cmd += f" FOR GRAPH {graph}"
+        return _wrap_gsql_result(await self.gsql(gsql_cmd))
+
+    async def updateDataSource(self, dsName: str, config: dict,
+                               graphName: str = None) -> dict:
+        """Update an existing data source.
+
+        On TigerGraph 4.x uses ``PUT /gsql/v1/data-sources/<name>``.
+        On 3.x falls back to a DROP + CREATE sequence.
+
+        Args:
+            dsName:   Name of the data source to update.
+            config:   New configuration dict.
+            graphName:  Graph context.
+
+        Returns:
+            A dict with at least a ``"message"`` key describing the outcome.
+        """
+        graph = graphName or self.graphname
+        if await self._version_greater_than_4_0():
+            url = _prep_data_source_by_name(self.gsUrl, dsName, graph)
+            body = {"name": dsName, "config": config}
+            return await self._req("PUT", url, data=body, jsonData=True, resKey=None)
+
+        await self.gsql(f"DROP DATA_SOURCE {dsName}")
+        config_json = json.dumps(config)
+        gsql_cmd = f"CREATE DATA_SOURCE {dsName} = '{config_json}'"
+        if graph:
+            gsql_cmd += f" FOR GRAPH {graph}"
+        return _wrap_gsql_result(await self.gsql(gsql_cmd))
+
+    async def getDataSource(self, dsName: str) -> dict:
+        """Get information about a specific data source.
+
+        On TigerGraph 4.x uses REST API ``GET /gsql/v1/data-sources/<name>``.
+        On 3.x falls back to ``SHOW DATA_SOURCE <name>`` via GSQL console.
+
+        Args:
+            dsName:  Name of the data source.
+
+        Returns:
+            A dict.  On 4.x contains structured data source info.
+            On 3.x contains ``{"message": "<GSQL output>"}``.
+        """
+        if await self._version_greater_than_4_0():
+            url = _prep_data_source_by_name(self.gsUrl, dsName)
+            return await self._req("GET", url, resKey="results")
+
+        return _wrap_gsql_result(await self.gsql(f"SHOW DATA_SOURCE {dsName}"))
+
+    async def getDataSources(self) -> Union[list, dict]:
+        """List all data sources.
+
+        On TigerGraph 4.x uses REST API ``GET /gsql/v1/data-sources``.
+        On 3.x falls back to ``SHOW DATA_SOURCE *`` via GSQL console.
+
+        Returns:
+            On 4.x: a list of data source dicts.
+            On 3.x: ``{"message": "<GSQL output>"}``.
+        """
+        if await self._version_greater_than_4_0():
+            url = _prep_data_source_url(self.gsUrl)
+            return await self._req("GET", url, resKey="results")
+
+        return _wrap_gsql_result(await self.gsql("SHOW DATA_SOURCE *"))
+
+    async def dropDataSource(self, dsName: str,
+                             graphName: str = None) -> dict:
+        """Drop a data source.
+
+        On TigerGraph 4.x uses REST API ``DELETE /gsql/v1/data-sources/<name>``.
+        On 3.x falls back to ``DROP DATA_SOURCE <name>`` via GSQL console.
+
+        Args:
+            dsName:     Name of the data source to drop.
+            graphName:  Graph context.
+
+        Returns:
+            A dict with at least a ``"message"`` key describing the outcome.
+        """
+        graph = graphName or self.graphname
+        if await self._version_greater_than_4_0():
+            url = _prep_data_source_by_name(self.gsUrl, dsName, graph)
+            return await self._req("DELETE", url, resKey=None)
+
+        return _wrap_gsql_result(await self.gsql(f"DROP DATA_SOURCE {dsName}"))
+
+    async def dropAllDataSources(self, graphName: str = None) -> dict:
+        """Drop all data sources.
+
+        On TigerGraph 4.x uses REST API ``DELETE /gsql/v1/data-sources/dropAll``.
+        On 3.x falls back to ``DROP DATA_SOURCE *`` via GSQL console.
+
+        Args:
+            graphName:  If provided, drops data sources for that graph only.
+
+        Returns:
+            A dict with at least a ``"message"`` key describing the outcome.
+        """
+        if await self._version_greater_than_4_0():
+            url = _prep_drop_all_data_sources(self.gsUrl, graphName)
+            return await self._req("DELETE", url, resKey=None)
+
+        return _wrap_gsql_result(await self.gsql("DROP DATA_SOURCE *"))
+
+    async def previewSampleData(self, dsName: str, path: str, size: int = 10,
+                                graphName: str = None) -> dict:
+        """Preview sample rows from a file in a data source.
+
+        Available on TigerGraph 4.x only (``POST /gsql/v1/sample-data``).
+        On 3.x raises ``NotImplementedError``.
+
+        Args:
+            dsName:     Name of the data source.
+            path:       Path to the file within the data source.
+            size:       Number of rows to preview.
+            graphName:  Graph context.
+        """
+        if not await self._version_greater_than_4_0():
+            raise NotImplementedError(
+                "previewSampleData requires TigerGraph 4.x. "
+                "On 3.x, access the file directly via your storage provider."
+            )
+
+        graph = graphName or self.graphname
+        url = _prep_sample_data_url(self.gsUrl)
+        body = {
+            "graphName": graph,
+            "dataSource": dsName,
+            "path": path,
+            "size": size,
+        }
+        return await self._req("POST", url, data=body, jsonData=True, resKey="results")
+
+    async def getVectorIndexStatus(self, graphName: str = None,
+                                   vertexType: str = None,
+                                   vectorName: str = None) -> dict:
+        """Get the rebuild status of vector indexes.
+
+        Uses REST++ endpoint ``GET /vector/status/<graph>[/<vertexType>[/<vectorName>]]``.
+
+        Args:
+            graphName:   Graph name. Defaults to the connection's current graph.
+            vertexType:  Optionally filter by vertex type.
+            vectorName:  Optionally filter by vector attribute name.
+        """
+        graph = graphName or self.graphname
+        path = f"/vector/status/{graph}"
+        if vertexType:
+            path += f"/{vertexType}"
+            if vectorName:
+                path += f"/{vectorName}"
+        return await self._req("GET", self.restppUrl + path)

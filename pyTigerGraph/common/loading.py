@@ -70,9 +70,10 @@ def _prep_run_loading_job(gsUrl: str,
 
 def _prep_abort_loading_jobs(gsUrl: str, graphname: str, jobIds: list[str], pauseJob: bool):
     '''url builder for abortLoadingJob()'''
+    job_params = "&".join("jobId=" + jobId for jobId in jobIds)
     url = gsUrl + "/gsql/v1/loading-jobs/abort?graph=" + graphname
-    for jobId in jobIds:
-        url += "&jobId=" + jobId
+    if job_params:
+        url += "&" + job_params
     if pauseJob:
         url += "&isPause=true"
     return url
@@ -91,16 +92,46 @@ def _prep_resume_loading_job(gsUrl: str, jobId: str):
     url = gsUrl + "/gsql/v1/loading-jobs/resume/" + jobId
     return url
 
-def _prep_get_loading_jobs_status(gsUrl: str, jobIds: list[str]):
-    '''url builder for getLoadingJobStatus()
-    TODO: verify that this is correct
-    '''
-    url = gsUrl + "/gsql/v1/loading-jobs/status/jobId"
-    for jobId in jobIds:
-        url += "&jobId=" + jobId
+def _prep_get_loading_jobs_status(gsUrl: str, graphname: str, jobIds: list[str]):
+    '''url builder for getLoadingJobsStatus()'''
+    job_params = "&".join("jobId=" + jobId for jobId in jobIds)
+    url = gsUrl + "/gsql/v1/loading-jobs/status?graph=" + graphname
+    if job_params:
+        url += "&" + job_params
     return url
 
-def _prep_get_loading_job_status(gsUrl: str, jobId: str):
+def _prep_get_loading_job_status(gsUrl: str, graphname: str, jobId: str):
     '''url builder for getLoadingJobStatus()'''
-    url = gsUrl + "/gsql/v1/loading-jobs/status/" + jobId
+    url = gsUrl + "/gsql/v1/loading-jobs/status/" + jobId + "?graph=" + graphname
     return url
+
+
+# ---- Data Source helpers ----
+
+def _prep_data_source_url(gsUrl: str, graphname: str = None):
+    '''url builder for getDataSources() and createDataSource()'''
+    url = gsUrl + "/gsql/v1/data-sources"
+    if graphname:
+        url += "?graph=" + graphname
+    return url
+
+
+def _prep_data_source_by_name(gsUrl: str, dsName: str, graphname: str = None):
+    '''url builder for getDataSource(), dropDataSource(), updateDataSource()'''
+    url = gsUrl + "/gsql/v1/data-sources/" + dsName
+    if graphname:
+        url += "?graph=" + graphname
+    return url
+
+
+def _prep_drop_all_data_sources(gsUrl: str, graphname: str = None):
+    '''url builder for dropAllDataSources()'''
+    url = gsUrl + "/gsql/v1/data-sources/dropAll"
+    if graphname:
+        url += "?graph=" + graphname
+    return url
+
+
+def _prep_sample_data_url(gsUrl: str):
+    '''url builder for previewSampleData()'''
+    return gsUrl + "/gsql/v1/sample-data"
