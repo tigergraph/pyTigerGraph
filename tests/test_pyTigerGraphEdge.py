@@ -1,4 +1,5 @@
 import json
+import time
 import unittest
 
 import pandas as pd
@@ -9,6 +10,49 @@ class test_pyTigerGraphEdge(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.conn = make_connection()
+        cls._ensure_test_data()
+
+    @classmethod
+    def _ensure_test_data(cls):
+        """Re-insert test data that may have been deleted by prior test suites.
+
+        Retries until edge1_undirected count reaches 8, as schema change jobs
+        from prior test suites may temporarily block data operations.
+        """
+        c = cls.conn
+        edges = [
+            ("vertex4", 1, "edge1_undirected", "vertex5", 1, {"a01": 1}),
+            ("vertex4", 1, "edge1_undirected", "vertex5", 2, {"a01": 2}),
+            ("vertex4", 1, "edge1_undirected", "vertex5", 3, {"a01": 2}),
+            ("vertex4", 2, "edge1_undirected", "vertex5", 2, {"a01": 2}),
+            ("vertex4", 2, "edge1_undirected", "vertex5", 4, {"a01": 2}),
+            ("vertex4", 3, "edge1_undirected", "vertex5", 1, {"a01": 2}),
+            ("vertex4", 3, "edge1_undirected", "vertex5", 3, {"a01": 2}),
+            ("vertex4", 3, "edge1_undirected", "vertex5", 5, {"a01": 2}),
+            ("vertex4", 2, "edge2_directed", "vertex5", 1, {"a01": 2}),
+            ("vertex4", 3, "edge3_directed_with_reverse", "vertex5", 1, {"a01": 3}),
+            ("vertex4", 1, "edge4_many_to_many", "vertex5", 1, {}),
+            ("vertex4", 1, "edge4_many_to_many", "vertex5", 2, {}),
+            ("vertex4", 1, "edge4_many_to_many", "vertex5", 3, {}),
+            ("vertex4", 2, "edge4_many_to_many", "vertex6", 2, {}),
+            ("vertex4", 2, "edge4_many_to_many", "vertex6", 4, {}),
+            ("vertex4", 3, "edge4_many_to_many", "vertex7", 1, {}),
+            ("vertex4", 3, "edge4_many_to_many", "vertex7", 3, {}),
+            ("vertex4", 3, "edge4_many_to_many", "vertex7", 5, {}),
+        ]
+
+        for attempt in range(5):
+            for i in range(1, 6):
+                c.upsertVertex("vertex4", i, {"a01": i})
+                c.upsertVertex("vertex5", i, {})
+                c.upsertVertex("vertex6", i, {})
+                c.upsertVertex("vertex7", i, {})
+            for src_type, src_id, etype, tgt_type, tgt_id, attrs in edges:
+                c.upsertEdge(src_type, src_id, etype, tgt_type, tgt_id, attrs)
+            count = c.getEdgeCount("edge1_undirected")
+            if count == 8:
+                break
+            time.sleep(5)
 
     def test_01_getEdgeTypes(self):
         res = sorted(self.conn.getEdgeTypes())

@@ -398,7 +398,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
 
         res = self._post(self.gsUrl+"/gsql/v1/db-export",
                         data=data, authMode="pwd", resKey=None,
-                        headers={'Content-Type': 'application/json'})
+                        headers={'Content-Type': 'application/json'}, jsonData=True)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -452,7 +452,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
 
         res = self._post(self.gsUrl+"/gsql/v1/db-import",
                         data=data, authMode="pwd", resKey=None,
-                        headers={'Content-Type': 'application/json'})
+                        headers={'Content-Type': 'application/json'}, jsonData=True)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))

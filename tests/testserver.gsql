@@ -1,5 +1,5 @@
 SET exit_on_error = FALSE
-DROP ALL
+DROP GRAPH tests CASCADE
 
 CREATE GRAPH tests()
 

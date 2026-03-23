@@ -270,7 +270,7 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
         params = {"gsql": "true"}
         res = await self._req("POST", self.gsUrl+"/gsql/v1/schema/vertices",
                              params=params, data=data, authMode="pwd", resKey=None,
-                             headers={'Content-Type': 'application/json'})
+                             headers={'Content-Type': 'application/json'}, jsonData=True)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -324,7 +324,7 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
         data = {"createVertices": vertices_config}
         res = await self._req("POST", self.gsUrl+"/gsql/v1/schema/vertices",
                              data=data, authMode="pwd", resKey=None,
-                             headers={'Content-Type': 'application/json'})
+                             headers={'Content-Type': 'application/json'}, jsonData=True)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -376,11 +376,85 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
         params = {"graph": graph_name}
         res = await self._req("POST", self.gsUrl+"/gsql/v1/schema/vertices",
                              params=params, data=data, authMode="pwd", resKey=None,
-                             headers={'Content-Type': 'application/json'})
+                             headers={'Content-Type': 'application/json'}, jsonData=True)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
         logger.debug("exit: addGlobalVerticesToGraph")
+
+        return res
+
+    async def dropVertices(self, vertex_names: Union[str, list], graph: str = None,
+                           ignoreErrors: bool = False) -> dict:
+        """Drops vertex types from a graph or drops global vertex types.
+
+        Args:
+            vertex_names (str or list):
+                Name(s) of the vertex types to drop. Can be a single string or a list
+                of strings. Use ``"all"`` to drop all vertices.
+            graph (str, optional):
+                The graph from which vertex types should be dropped.
+                If not provided, drops global vertex types.
+            ignoreErrors (bool):
+                If ``True``, suppress exceptions (e.g. when some vertices do not exist)
+                and return the error as a dict instead. Defaults to ``False``.
+
+        Returns:
+            The response from the database containing the drop result.
+
+        Raises:
+            `TigerGraphException` if the function is called on TigerGraph < 4.0,
+            or if the drop fails and ``ignoreErrors`` is ``False``.
+
+        Endpoints:
+            - ``DELETE /gsql/v1/schema/vertices`` (In TigerGraph versions >= 4.0)
+
+        See https://docs.tigergraph.com/tigergraph-server/4.2/api/gsql-endpoints#_drop_vertices
+        """
+        logger.debug("entry: dropVertices")
+        if not await self._version_greater_than_4_0():
+            logger.debug("exit: dropVertices")
+            raise TigerGraphException(
+                "This function is only supported on versions of TigerGraph >= 4.0.", 0)
+
+        if isinstance(vertex_names, list):
+            if not vertex_names:
+                raise TigerGraphException("vertex_names cannot be empty.", 0)
+            vertex_param = ",".join(vertex_names)
+        elif isinstance(vertex_names, str):
+            vertex_param = vertex_names
+        else:
+            raise TigerGraphException("vertex_names must be a string or list of strings.", 0)
+
+        params = {"vertex": vertex_param}
+        if graph is not None:
+            params["graph"] = graph
+
+        if not ignoreErrors:
+            res = await self._req("DELETE", self.gsUrl + "/gsql/v1/schema/vertices",
+                                  params=params, authMode="pwd", resKey=None)
+        else:
+            try:
+                res = await self._req("DELETE", self.gsUrl + "/gsql/v1/schema/vertices",
+                                      params=params, authMode="pwd", resKey=None)
+            except Exception:
+                names = vertex_param.split(",") if "," in vertex_param else [vertex_param]
+                dropped = []
+                failed = []
+                for name in names:
+                    try:
+                        await self._req("DELETE", self.gsUrl + "/gsql/v1/schema/vertices",
+                                        params={**params, "vertex": name},
+                                        authMode="pwd", resKey=None)
+                        dropped.append(name)
+                    except Exception:
+                        failed.append(name)
+                res = {"error": len(failed) > 0,
+                       "message": f"Dropped: {dropped}. Failed: {failed}."}
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: dropVertices")
 
         return res
 
@@ -434,7 +508,7 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
             data = {"name": graphName}
             res = await self._req("POST", self.gsUrl + "/gsql/v1/schema/graphs",
                                  data=data, authMode="pwd", resKey=None,
-                                 headers={'Content-Type': 'application/json'})
+                                 headers={'Content-Type': 'application/json'}, jsonData=True)
         else:
             res = _wrap_gsql_result(await self.gsql(f"CREATE GRAPH {graphName}()"))
 

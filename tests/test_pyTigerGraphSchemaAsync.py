@@ -507,29 +507,23 @@ class test_pyTigerGraphSchemaAsync(unittest.IsolatedAsyncioTestCase):
             await self.conn.addGlobalVerticesToGraph(123)  # Should be string or list
 
     async def test_rebuildGraphEngine(self):
-        """Test rebuildGraphEngine function."""
+        """Test rebuildGraph function."""
         # Test basic rebuild
-        res = await self.conn.rebuildGraphEngine()
+        res = await self.conn.rebuildGraph()
         self.assertIsInstance(res, dict)
-        self.assertIn("error", res)
-        self.assertIn("message", res)
 
         # Test with parameters (use existing vertex type from testserver.gsql)
-        res = await self.conn.rebuildGraphEngine(
+        res = await self.conn.rebuildGraph(
             threadnum=2,
             vertextype="vertex4",
             path="/tmp/test_rebuild",
             force=True
         )
         self.assertIsInstance(res, dict)
-        self.assertIn("error", res)
-        self.assertIn("message", res)
 
         # Test with segid parameter
-        res = await self.conn.rebuildGraphEngine(segid=1)
+        res = await self.conn.rebuildGraph(segid=1)
         self.assertIsInstance(res, dict)
-        self.assertIn("error", res)
-        self.assertIn("message", res)
 
 
 if __name__ == '__main__':

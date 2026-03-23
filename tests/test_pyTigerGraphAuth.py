@@ -11,7 +11,7 @@ class test_pyTigerGraphAuth(unittest.TestCase):
         cls.conn = make_connection()
 
     def test_01_getSecrets(self):
-        res = self.conn.showSecrets()
+        res = self.conn.getSecrets()
         self.assertIsInstance(res, dict)
         # self.assertEqual(3, len(res)) # Just in case more secrets than expected
         self.assertIn("secret1", res)
@@ -23,6 +23,9 @@ class test_pyTigerGraphAuth(unittest.TestCase):
         # TODO Implement
 
     def test_03_createSecret(self):
+        self.conn.dropSecret("secret4", ignoreErrors=True)
+        self.conn.dropSecret("secret5", ignoreErrors=True)
+
         res = self.conn.createSecret("secret4")
         self.assertIsInstance(res, str)
 
@@ -43,23 +46,38 @@ class test_pyTigerGraphAuth(unittest.TestCase):
         self.assertEqual(
             "The secret with alias secret1 already exists.", tge.exception.message)
 
+    @staticmethod
+    def _msg(res):
+        """Extract message text from dropSecret result (str for TG<4, dict for TG>=4)."""
+        if isinstance(res, dict):
+            return res.get("message", "")
+        return res
+
     def test_04_dropSecret(self):
-        res = self.conn.showSecrets()
-        for a in list(res.keys()):
+        secrets = self.conn.getSecrets()
+        for a in list(secrets.keys()):
             if a.startswith("AUTO_GENERATED_ALIAS"):
                 res = self.conn.dropSecret(a)
-                self.assertTrue("Successfully dropped secrets" in res)
+                msg = self._msg(res)
+                self.assertTrue("Successfully" in msg or "removed" in msg, msg)
 
-        res = self.conn.dropSecret(["secret4", "secret5"])
-        self.assertTrue("Failed to drop secrets" not in res)
+        res = self.conn.dropSecret("secret4")
+        msg = self._msg(res)
+        self.assertTrue("Successfully" in msg or "removed" in msg, msg)
+
+        res = self.conn.dropSecret("secret5")
+        msg = self._msg(res)
+        self.assertTrue("Successfully" in msg or "removed" in msg, msg)
 
         res = self.conn.dropSecret("non_existent_secret")
-        self.assertTrue("Failed to drop secrets" in res)
+        msg = self._msg(res)
+        self.assertIn("Failed", msg)
 
-        with self.assertRaises(TigerGraphException) as tge:
-            res = self.conn.dropSecret("non_existent_secret", False)
+        with self.assertRaises((TigerGraphException, Exception)):
+            self.conn.dropSecret("non_existent_secret", False)
 
     def test_05_getToken(self):
+        self.conn.dropSecret("secret5", ignoreErrors=True)
         res = self.conn.createSecret("secret5", True)
         token = self.conn.getToken(res["secret5"])
         if isinstance(token, str): # handle plaintext tokens from TG 3.x

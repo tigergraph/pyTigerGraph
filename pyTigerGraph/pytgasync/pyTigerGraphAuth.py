@@ -6,7 +6,6 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 
 import logging
 from typing import Union, Dict
-import warnings
 from pyTigerGraph.common.exception import TigerGraphException
 from pyTigerGraph.common.auth import (
     _parse_get_secrets,
@@ -130,17 +129,6 @@ class AsyncPyTigerGraphAuth(AsyncPyTigerGraphGSQL):
             logger.debug("exit: getSecrets")
 
             return ret
-
-    async def showSecrets(self) -> Dict[str, str]:
-        """DEPRECATED
-
-        Use `getSecrets()` instead.
-        """
-        warnings.warn("The `showSecrets()` function is deprecated; use `getSecrets()` instead.",
-                      DeprecationWarning)
-
-        ret = await self.getSecrets()
-        return ret
 
     async def createSecret(self, alias: str = "", withAlias: bool = False, value: str = "", userName: str = "" ) -> Union[str, Dict[str, str]]:
         """Creates a secret for generating authentication tokens.
@@ -278,8 +266,7 @@ class AsyncPyTigerGraphAuth(AsyncPyTigerGraphGSQL):
                 single_secret = secrets_list[0]
                 try:
                     res = await self._delete(self.gsUrl+"/gsql/v1/secrets/"+single_secret,
-                                         authMode="pwd", resKey="message",
-                                         headers={'Content-Type': 'application/json'})
+                                         authMode="pwd", resKey=None)
 
                     if logger.level == logging.DEBUG:
                         logger.debug("return: " + str(res))
@@ -291,7 +278,7 @@ class AsyncPyTigerGraphAuth(AsyncPyTigerGraphGSQL):
                     if logger.level == logging.DEBUG:
                         logger.debug("return: error ignored")
                     logger.debug("exit: dropSecret")
-                    return {"error": False, "message": "Error ignored as requested"}
+                    return {"error": False, "message": f"Failed to drop secrets: [{single_secret}]"}
 
             # Multiple secrets/aliases or with userName - use payload
             url = self.gsUrl+"/gsql/v1/secrets"
@@ -301,8 +288,8 @@ class AsyncPyTigerGraphAuth(AsyncPyTigerGraphGSQL):
 
             data = {"secrets": secrets_list}
             try:
-                res = await self._delete(url, data=data, params=params, authMode="pwd", resKey="message",
-                                     headers={'Content-Type': 'application/json'}, jsonData=True)
+                res = await self._delete(url, data=data, params=params, authMode="pwd", resKey=None,
+                                     jsonData=True)
                 if logger.level == logging.DEBUG:
                     logger.debug("return: " + str(res))
                 logger.debug("exit: dropSecret")
@@ -313,7 +300,7 @@ class AsyncPyTigerGraphAuth(AsyncPyTigerGraphGSQL):
                 if logger.level == logging.DEBUG:
                     logger.debug("return: error ignored")
                 logger.debug("exit: dropSecret")
-                return {"error": False, "message": "Error ignored as requested"}
+                return {"error": False, "message": f"Failed to drop secrets: {secrets_list}"}
         else:
             # For older versions, use GSQL command
             if isinstance(alias, str):
@@ -454,7 +441,7 @@ class AsyncPyTigerGraphAuth(AsyncPyTigerGraphGSQL):
         data = {"token": token}
         res = await self._req("POST", self.gsUrl+"/gsql/v1/tokens/check",
                              data=data, authMode="pwd", resKey=None,
-                             headers={'Content-Type': 'application/json'})
+                             headers={'Content-Type': 'application/json'}, jsonData=True)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))

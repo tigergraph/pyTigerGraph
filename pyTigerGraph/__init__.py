@@ -11,22 +11,8 @@ except PackageNotFoundError:
 
 __license__ = "Apache 2"
 
-# Optional MCP support
-try:
-    from pyTigerGraph.mcp import serve, MCPServer, get_connection, ConnectionManager
-    __all__ = [
-        "TigerGraphConnection",
-        "AsyncTigerGraphConnection",
-        "TigerGraphException",
-        "serve",
-        "MCPServer",
-        "get_connection",
-        "ConnectionManager",
-    ]
-except ImportError:
-    # MCP dependencies not installed
-    __all__ = [
-        "TigerGraphConnection",
-        "AsyncTigerGraphConnection",
-        "TigerGraphException",
-    ]
+__all__ = [
+    "TigerGraphConnection",
+    "AsyncTigerGraphConnection",
+    "TigerGraphException",
+]

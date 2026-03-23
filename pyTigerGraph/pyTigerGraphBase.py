@@ -218,47 +218,64 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         else:
             http_timeout = (30, None)
 
-        res = self._do_request(method, url, _headers, _data, jsonData, params, http_timeout)
-
+        conn_err = None
         try:
+            res = self._do_request(method, url, _headers, _data, jsonData, params, http_timeout)
+        except requests.exceptions.ConnectionError as e:
+            res = None
+            conn_err = e
+
+        if res is not None:
             if not skipCheck and not (200 <= res.status_code < 300) and res.status_code != 404:
                 try:
                     self._error_check(json.loads(res.content))
                 except json.decoder.JSONDecodeError:
-                    # could not parse the response body (probably returned an html response)
                     pass
-            res.raise_for_status()
-        except Exception as e:
+            try:
+                res.raise_for_status()
+            except requests.exceptions.ConnectionError as e:
+                res = None
+                conn_err = e
+            # HTTP errors (4xx/5xx) propagate immediately — no failover
 
+        if res is None:
             # In TG 4.x the port for restpp has changed from 9000 to 14240.
             # This block should only be called once. When using 4.x, using port 9000 should fail so self.restppurl will change to host:14240/restpp
             # ----
             # Changes port to gsql port, adds /restpp to end to url, tries again, saves changes if successful
             if self.restppPort in url and "/gsql" not in url and ("/restpp" not in url or self.tgCloud):
                 with self._restpp_failover_lock:
-                    # Re-check inside lock: another thread may have already completed the failover
                     if self.restppPort in url:
                         newRestppUrl = self.host + ":" + self.gsPort + "/restpp"
-                        # If /restpp is already in the URL (e.g. tgCloud), skip that path segment
                         if "/restpp" in url:
                             url = newRestppUrl + "/" + "/".join(url.split(":")[2].split("/")[2:])
                         else:
                             url = newRestppUrl + "/" + "/".join(url.split(":")[2].split("/")[1:])
                         res = self._do_request(method, url, _headers, _data, jsonData, params, None)
-                        # Run error check if there might be an error before raising for status
-                        # raising for status gives less descriptive error message
                         if not skipCheck and not (200 <= res.status_code < 300) and res.status_code != 404:
                             try:
                                 self._error_check(json.loads(res.content))
                             except json.decoder.JSONDecodeError:
-                                # could not parse the response body (probably returned an html response)
                                 pass
                         res.raise_for_status()
                         self.restppUrl = newRestppUrl
                         self.restppPort = self.gsPort
+                    else:
+                        url = url.replace(
+                            self.host + ":" + self.gsPort,
+                            self.restppUrl, 1)
+                        res = self._do_request(method, url, _headers, _data, jsonData, params, None)
+                        if not skipCheck and not (200 <= res.status_code < 300) and res.status_code != 404:
+                            try:
+                                self._error_check(json.loads(res.content))
+                            except json.decoder.JSONDecodeError:
+                                pass
+                        res.raise_for_status()
             else:
-                e.add_note(f"headers: {_headers}")
-                raise e
+                if conn_err is not None:
+                    raise conn_err
+                raise requests.exceptions.ConnectionError(
+                    f"Failed to connect to {url}")
 
         # Pass raw bytes to _parse_req — avoids chardet encoding detection that res.text triggers
         # when Content-Type does not explicitly declare a charset. json.loads and orjson both

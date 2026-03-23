@@ -5,6 +5,116 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-03-23
+
+### Breaking Changes
+
+- **`showSecrets()` has been removed.** Replace all calls with `getSecrets()`.
+- **`usePost` default changed from `False` to `None`** in `runInstalledQuery()`. The transport is now auto-selected based on `params` type (dict → POST, string → GET). Code that relied on dict params always going through POST is unaffected; code that passed a raw query string and expected POST will now use GET instead.
+- **`usePost=True` with a string `params` now raises `TigerGraphException`** instead of silently sending a malformed request body. Convert the string to a dict or drop `usePost=True` instead.
+
+### New Features
+
+- **Unified vertex parameter syntax for `runInstalledQuery()`.** The same tuple notation now works correctly for both GET and POST — no need to format params differently depending on `usePost`:
+  - `(id,)` — typed vertex `VERTEX<T>`
+  - `(id, "type")` — untyped vertex `VERTEX`
+  - `[(id,), ...]` — typed vertex set `SET<VERTEX<T>>`
+  - `[(id, "type"), ...]` — untyped vertex set `SET<VERTEX>`
+- **MAP query parameter support.** Pass a Python `dict` directly for a `MAP` parameter; it is converted to TigerGraph's wire format automatically. A dict with an `"id"` key is treated as a pre-formatted vertex object and passed through unchanged.
+
+### Compatibility Notes
+
+- **Old-style plain IDs for typed vertex params still work**, but at a cost. If you pass `{"p": 1}` instead of `{"p": (1,)}` for a `VERTEX<T>` parameter, `runInstalledQuery()` catches the server-side rejection and retries transparently via GET, logging a warning. Each such call incurs one extra HTTP round-trip. Migrate to `(id,)` tuples to eliminate the overhead.
+- **`(id, "")` (empty type string) now raises immediately** on the client instead of forwarding to TigerGraph. Update any code relying on the server-side error to handle the client-side `TigerGraphException` instead.
+- **MCP tools have moved to [`pytigergraph-mcp`](https://github.com/tigergraph/pytigergraph-mcp).** Do not import from `pyTigerGraph.mcp` directly; install and use the dedicated `pytigergraph-mcp` package instead.
+
+---
+
+## [2.0.0] - 2025-03-04
+
+### Added
+
+- **MCP (Model Context Protocol) tools.** pyTigerGraph now ships with built-in MCP tool definitions, enabling integration with MCP-compatible AI frameworks.
+
+---
+
+## [1.9.1] - 2024-11-04
+
+### Changed
+
+- API enhancements.
+
+---
+
+## [1.9.0] - 2025-06-30
+
+### Changed
+
+- Multiple API enhancements.
+
+---
+
+## [1.8.4] - 2025-01-20
+
+### Fixed
+
+- Fixed URL construction when `gsPort` and `restppPort` are set to the same value.
+
+---
+
+## [1.8.3] - 2024-12-04
+
+### Fixed
+
+- Fixed `httpx` timeout during async function calls, most notably when installing a query via `.gsql()`.
+
+---
+
+## [1.8.1] - 2024-11-19
+
+### Fixed
+
+- Fixed import error of `TigerGraphException` in the GDS submodule.
+
+---
+
+## [1.8.0] - 2024-11-04
+
+### Added
+
+- **`AsyncTigerGraphConnection`** — full async communication with TigerGraph using the new `AsyncTigerGraphConnection` class.
+- **`delVerticesByType()`** — delete all vertices of a given type in one call.
+- **`limit` parameter for `getEdgesByType()`** — cap the number of edges returned. Note: the limit is applied client-side after retrieval.
+- **Upsert atomicity configuration** — new parameters to control atomicity behaviour of upsert operations.
+- **`runLoadingJobWithDataFrame()`** — run a GSQL loading job directly from a Pandas DataFrame.
+- **`runLoadingJobWithData()`** — run a GSQL loading job from a raw data string.
+
+---
+
+## [1.7.4] - 2024-10-16
+
+### Fixed
+
+- Fixed error when generating a token via `getToken()` with a secret key.
+
+---
+
+## [1.7.3] - 2024-10-14
+
+### Fixed
+
+- Fixed error when generating a token via `getToken()` on TigerGraph Cloud v3.x instances.
+
+---
+
+## [1.7.2] - 2024-10-01
+
+### Added
+
+- **`delVerticesByType()`** — delete all vertices of a specified type. Supports `permanent` (prevent re-insertion of the same IDs) and `ack` (`"all"` or `"none"`) parameters.
+
+---
+
 ## [1.1] - 2022-09-06
 
 Release of pyTigerGraph version 1.1. 

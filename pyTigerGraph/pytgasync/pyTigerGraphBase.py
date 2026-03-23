@@ -155,28 +155,36 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
         else:
             http_timeout = aiohttp.ClientTimeout(sock_connect=30, total=None)
 
-        status, body, resp = await self._do_request(
-            method, url, _headers, _data, jsonData, params, http_timeout)
-
+        conn_err = None
         try:
+            status, body, resp = await self._do_request(
+                method, url, _headers, _data, jsonData, params, http_timeout)
+        except (aiohttp.ClientConnectorError, aiohttp.ClientConnectionError, OSError) as e:
+            status, body, resp = None, None, None
+            conn_err = e
+
+        if resp is not None:
             if not skipCheck and not (200 <= status < 300) and status != 404:
                 try:
                     self._error_check(json.loads(body))
                 except json.decoder.JSONDecodeError:
-                    # could not parse the response body (probably returned an html response)
                     pass
-            resp.raise_for_status()
-        except Exception as e:
+            try:
+                resp.raise_for_status()
+            except (aiohttp.ClientConnectorError, aiohttp.ClientConnectionError, OSError) as e:
+                resp = None
+                conn_err = e
+            # HTTP errors (4xx/5xx) propagate immediately — no failover
+
+        if resp is None:
             # In TG 4.x the port for restpp has changed from 9000 to 14240.
             # This block should only be called once. When using 4.x, using port 9000 should fail so self.restppurl will change to host:14240/restpp
             # ----
             # Changes port to gsql port, adds /restpp to end to url, tries again, saves changes if successful
             if self.restppPort in url and "/gsql" not in url and ("/restpp" not in url or self.tgCloud):
                 async with self._restpp_failover_lock:
-                    # Re-check inside lock: another task may have already completed the failover
                     if self.restppPort in url:
                         newRestppUrl = self.host + ":" + self.gsPort + "/restpp"
-                        # If /restpp is already in the URL (e.g. tgCloud), skip that path segment
                         if "/restpp" in url:
                             url = newRestppUrl + "/" + "/".join(url.split(":")[2].split("/")[2:])
                         else:
@@ -191,8 +199,23 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
                         resp.raise_for_status()
                         self.restppUrl = newRestppUrl
                         self.restppPort = self.gsPort
+                    else:
+                        url = url.replace(
+                            self.host + ":" + self.gsPort,
+                            self.restppUrl, 1)
+                        status, body, resp = await self._do_request(
+                            method, url, _headers, _data, jsonData, params, None)
+                        if not skipCheck and not (200 <= status < 300) and status != 404:
+                            try:
+                                self._error_check(json.loads(body))
+                            except json.decoder.JSONDecodeError:
+                                pass
+                        resp.raise_for_status()
             else:
-                raise e
+                if conn_err is not None:
+                    raise conn_err
+                raise aiohttp.ClientConnectionError(
+                    f"Failed to connect to {url}")
 
         return self._parse_req(body, jsonResponse, strictJson, skipCheck, resKey)
 

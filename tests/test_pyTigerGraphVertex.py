@@ -10,7 +10,15 @@ from pyTigerGraph.common.exception import TigerGraphException
 class test_pyTigerGraphVertex(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        import time
         cls.conn = make_connection()
+        # Wait for any in-flight schema changes (e.g. from schema tests) to propagate.
+        # Poll until the vertex type count stabilises at the expected 7 baseline types,
+        # or give up after 60 s and let the individual tests report the real failure.
+        for _ in range(12):
+            if len(cls.conn.getVertexTypes()) == 7:
+                break
+            time.sleep(5)
 
     def test_01_getVertexTypes(self):
         res = sorted(self.conn.getVertexTypes())
@@ -97,12 +105,12 @@ class test_pyTigerGraphVertex(unittest.TestCase):
         with self.assertRaises(TigerGraphException) as tge:
             self.conn.upsertVertex(
                 "non_existing_vertex_type", 100, {"a01": 100})
-        self.assertEqual("REST-30200", tge.exception.code)
+        self.assertIn(tge.exception.code, ("REST-30200", "REST-10004"))
 
         with self.assertRaises(TigerGraphException) as tge:
             self.conn.upsertVertex(
                 "vertex4", 100, {"non_existing_vertex_attribute": 100})
-        self.assertEqual("REST-30200", tge.exception.code)
+        self.assertIn(tge.exception.code, ("REST-30200", "REST-10004"))
 
     def test_05_upsertVertices(self):
         vs = [
