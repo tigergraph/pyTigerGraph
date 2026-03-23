@@ -9,24 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking Changes
 
-- **`showSecrets()` has been removed.** Replace all calls with `getSecrets()`.
-- **`usePost` default changed from `False` to `None`** in `runInstalledQuery()`. The transport is now auto-selected based on `params` type (dict → POST, string → GET). Code that relied on dict params always going through POST is unaffected; code that passed a raw query string and expected POST will now use GET instead.
-- **`usePost=True` with a string `params` now raises `TigerGraphException`** instead of silently sending a malformed request body. Convert the string to a dict or drop `usePost=True` instead.
+- **`showSecrets()` removed.** Use `getSecrets()` instead.
+- **`runInstalledQuery()` now auto-selects GET or POST** based on `params` type (`dict` → POST, `str` → GET). Passing a raw query string with `usePost=True` raises `TigerGraphException`.
+- **MCP tools moved to [`pytigergraph-mcp`](https://github.com/tigergraph/pytigergraph-mcp).** Do not import from `pyTigerGraph.mcp` directly.
 
 ### New Features
 
-- **Unified vertex parameter syntax for `runInstalledQuery()`.** The same tuple notation now works correctly for both GET and POST — no need to format params differently depending on `usePost`:
-  - `(id,)` — typed vertex `VERTEX<T>`
-  - `(id, "type")` — untyped vertex `VERTEX`
-  - `[(id,), ...]` — typed vertex set `SET<VERTEX<T>>`
-  - `[(id, "type"), ...]` — untyped vertex set `SET<VERTEX>`
-- **MAP query parameter support.** Pass a Python `dict` directly for a `MAP` parameter; it is converted to TigerGraph's wire format automatically. A dict with an `"id"` key is treated as a pre-formatted vertex object and passed through unchanged.
+- **Unified vertex parameter syntax for `runInstalledQuery()`.** Use `(id,)` for `VERTEX<T>`, `(id, "type")` for untyped `VERTEX`, and lists of tuples for sets. Works identically for both GET and POST.
+- **MAP parameter support.** Pass a Python `dict` for a `MAP` query parameter; it is converted to TigerGraph's wire format automatically.
+- **`getVectorIndexStatus()`** — poll vector index build status without writing raw GSQL.
+- **`runSchemaChange()`** — run GSQL DDL as a schema-change job via a single API call.
+- **Data-source management APIs** — `createDataSource()`, `updateDataSource()`, `getDataSource()`, `getDataSources()`, `dropDataSource()`, `dropAllDataSources()`.
+- **Improved performance for parallel workloads.** Sync connections use per-thread HTTP sessions; async connections use `aiohttp`. Both reduce contention and improve throughput under concurrent load.
+- **TigerGraph 3.x compatibility.** Queries, loading jobs, and schema operations automatically fall back to 3.x `gsqlserver` endpoints, so the same client code works on both 3.x and 4.x.
 
-### Compatibility Notes
+### Fixed
 
-- **Old-style plain IDs for typed vertex params still work**, but at a cost. If you pass `{"p": 1}` instead of `{"p": (1,)}` for a `VERTEX<T>` parameter, `runInstalledQuery()` catches the server-side rejection and retries transparently via GET, logging a warning. Each such call incurs one extra HTTP round-trip. Migrate to `(id,)` tuples to eliminate the overhead.
-- **`(id, "")` (empty type string) now raises immediately** on the client instead of forwarding to TigerGraph. Update any code relying on the server-side error to handle the client-side `TigerGraphException` instead.
-- **MCP tools have moved to [`pytigergraph-mcp`](https://github.com/tigergraph/pytigergraph-mcp).** Do not import from `pyTigerGraph.mcp` directly; install and use the dedicated `pytigergraph-mcp` package instead.
+- **Edge upsert `vertexMustExist`** flag now correctly forwarded to TigerGraph in all code paths.
+- **Edge upsert attribute payloads** serialized correctly for all attribute types.
 
 ---
 
