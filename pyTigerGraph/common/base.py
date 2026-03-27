@@ -241,14 +241,19 @@ class PyTigerGraphCore(object):
     # -- Scope helpers (mirror GSQL's USE GRAPH / USE GLOBAL) ----------
 
     class _GlobalScope:
-        """Context manager returned by :meth:`useGlobal` for temporary global scope."""
+        """Context manager returned by :meth:`useGlobal` for temporary global scope.
+
+        The original graphname is captured at construction time (not at
+        ``__enter__``) so that ``useGlobal()`` can set ``graphname = ""``
+        before the ``with`` block begins, supporting both the bare-call
+        and context-manager use cases.
+        """
 
         def __init__(self, conn):
             self._conn = conn
-            self._saved = None
+            self._saved = conn.graphname
 
         def __enter__(self):
-            self._saved = self._conn.graphname
             self._conn.graphname = ""
             return self._conn
 
@@ -286,8 +291,9 @@ class PyTigerGraphCore(object):
                 conn.getSchemaChangeJobs()   # global
             # conn.graphname is restored here
         """
+        scope = self._GlobalScope(self)
         self.graphname = ""
-        return self._GlobalScope(self)
+        return scope
 
     def _set_auth_header(self):
         """Set the authentication header based on available tokens or credentials."""

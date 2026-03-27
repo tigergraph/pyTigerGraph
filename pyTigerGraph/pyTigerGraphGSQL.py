@@ -486,7 +486,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
 
         params = {}
         if verbose:
-            params["verbose"] = verbose
+            params["verbose"] = str(verbose).lower()
 
         res = self._get(self.gsUrl+"/gsql/v1/version",
                        params=params, authMode="pwd", resKey=None,

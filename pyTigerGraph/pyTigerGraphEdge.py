@@ -459,7 +459,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
                                  attributes
                                 )
 
-        params = {"vertex_must_exist": vertexMustExist}
+        params = {"vertex_must_exist": str(vertexMustExist).lower()}
         ret = self._post(
             self.restppUrl + "/graph/" + self.graphname,
             data=data,
@@ -540,7 +540,7 @@ class pyTigerGraphEdge(pyTigerGraphQuery):
         headers = {}
         if atomic:
             headers = {"gsql-atomic-level": "atomic"}
-        params = {"vertex_must_exist": vertexMustExist}
+        params = {"vertex_must_exist": str(vertexMustExist).lower()}
         ret = self._post(
             self.restppUrl + "/graph/" + self.graphname,
             data=data,

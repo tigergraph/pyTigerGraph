@@ -219,7 +219,7 @@ class pyTigerGraphUtils(pyTigerGraphBase):
         if path:
             params["path"] = path
         if force:
-            params["force"] = force
+            params["force"] = str(force).lower()
         res = self._get(self.restppUrl+"/rebuildnow/" +
                         self.graphname, params=params, resKey=None)
         if not res["error"]:
