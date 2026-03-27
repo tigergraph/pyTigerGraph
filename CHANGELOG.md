@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.2] - 2026-03-27
+
+### New Features
+
+- **Schema Change Job APIs** — `createSchemaChangeJob()`, `getSchemaChangeJobs()`, `runSchemaChangeJob()`, `dropSchemaChangeJobs()` for managing schema change jobs via REST.
+- **`force` parameter for `runSchemaChange()`** — allows forcing schema changes even when they would cause data loss. Also accepts `dict` (JSON format) for TigerGraph >= 4.0 and supports global schema changes.
+- **Graph scope control** — `useGraph(graphName)` and `useGlobal()` methods on the connection object, mirroring GSQL's `USE GRAPH` / `USE GLOBAL`. `useGlobal()` doubles as a context manager for temporary global scoping (`with conn.useGlobal(): ...`).
+- **GSQL reserved keyword helpers** — `getReservedKeywords()` and `isReservedKeyword(name)` static methods to query the canonical set of GSQL reserved keywords.
+- **Conda build support** — `build.sh` now supports `--conda-build`, `--conda-upload`, `--conda-all`, and `--conda-forge-test` for building and validating conda packages.
+
+### Fixed
+
+- **`_refresh_auth_headers()` init ordering** — auth header cache is now built before `_verify_jwt_token_support()` and the tgCloud ping, preventing `AttributeError` when using JWT tokens or TigerGraph Cloud hosts.
+- **`gsql()` graph scope** — the `POST /gsql/v1/statements` path now falls back to `self.graphname` and prepends `USE GRAPH` automatically when the connection has a graph set.
+- **`dropVertices()`** now correctly falls back to `self.graphname` when the `graph` parameter is `None`.
+- **`dropAllDataSources()`** now correctly uses `self.graphname` fallback for the 4.x REST API path.
+- **`getVectorIndexStatus()`** no longer produces a malformed URL when called without a graph name; now supports global scope (returns status for all graphs).
+- **`previewSampleData()`** now raises `TigerGraphException` when no graph name is available, instead of sending an empty graph name to the server.
+- **Docstring fixes** — corrected `timeout` parameter descriptions across vertex and edge query methods.
+
+### Tests
+
+- Added `test_common_base.py` — unit tests for auth header init ordering and credential refresh.
+- Added `test_common_query_helpers.py` — unit tests for POST query parameter encoding (`_encode_str_for_post`, `_prep_query_parameters_json`) and round-trip verification.
+
+---
+
 ## [2.0.1] - 2026-03-23
 
 ### Breaking Changes

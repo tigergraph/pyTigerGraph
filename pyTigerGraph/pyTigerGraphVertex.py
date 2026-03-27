@@ -447,7 +447,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             withType:
                 (When the output format is "df") should the vertex type be included in the dataframe?
             timeout:
-                Time allowed for successful execution (0 = no limit, default).
+                Time allowed for successful execution in seconds. 0 or omitted applies the system-wide endpoint timeout.
 
         Returns:
             The (selected) details of the (matching) vertex instances (sorted, limited) as
@@ -510,7 +510,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
                 Maximum number of vertex instances to be returned (after sorting).
                 Must be used with `sort`.
             timeout:
-                Time allowed for successful execution (0 = no limit, default).
+                Time allowed for successful execution in seconds. 0 or omitted applies the system-wide endpoint timeout.
 
         Returns:
             The (selected) details of the (matching) vertex instances (sorted, limited) as pandas
@@ -564,7 +564,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
             withType:
                 (If the output format is "df") should the vertex type be included in the dataframe?
             timeout:
-                Time allowed for successful execution (0 = no limit, default).
+                Time allowed for successful execution in seconds. 0 or omitted applies the system-wide endpoint timeout.
 
         Returns:
             The (selected) details of the (matching) vertex instances as dictionary, JSON or pandas
@@ -715,7 +715,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
                 If true, the deleted vertex IDs can never be inserted back, unless the graph is
                 dropped or the graph store is cleared.
            timeout:
-                Time allowed for successful execution (0 = no limit, default).
+                Time allowed for successful execution in seconds. 0 or omitted applies the system-wide endpoint timeout.
 
         Returns:
              A single number of vertices deleted.
@@ -762,7 +762,7 @@ class pyTigerGraphVertex(pyTigerGraphUtils, pyTigerGraphSchema):
                 If true, the deleted vertex IDs can never be inserted back, unless the graph is
                 dropped or the graph store is cleared.
             timeout:
-                Time allowed for successful execution (0 = no limit, default).
+                Time allowed for successful execution in seconds. 0 or omitted applies the system-wide endpoint timeout.
 
         Returns:
             A single number of vertices deleted.

@@ -458,7 +458,7 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery):
                                  targetVertexType,
                                  targetVertexId,
                                  attributes)
-        params = {"vertex_must_exist": vertexMustExist}
+        params = {"vertex_must_exist": str(vertexMustExist).lower()}
         ret = await self._req("POST", self.restppUrl + "/graph/" + self.graphname, data=data,
                               params=params)
         ret = ret[0]["accepted_edges"]
@@ -537,7 +537,7 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery):
         if atomic:
             headers["gsql-atomic-level"] = "atomic"
 
-        params = {"vertex_must_exist": vertexMustExist}
+        params = {"vertex_must_exist": str(vertexMustExist).lower()}
         ret = await self._req("POST", self.restppUrl + "/graph/" + self.graphname, data=data,
                               params=params, headers=headers)
         ret = ret[0]["accepted_edges"]
@@ -708,7 +708,7 @@ class AsyncPyTigerGraphEdge(AsyncPyTigerGraphQuery):
             limit:
                 Maximum number of edge instances to be returned (after sorting).
             timeout:
-                Time allowed for successful execution (0 = no limit, default).
+                Time allowed for successful execution in seconds. 0 or omitted applies the system-wide endpoint timeout.
 
         Returns:
             The (selected) details of the (matching) edge instances (sorted, limited) as dictionary,

@@ -2,6 +2,10 @@
 
 Use GSQL within pyTigerGraph.
 All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object].
+
+This module also defines the canonical set of GSQL reserved keywords,
+serving as the single source of truth for pyTigerGraph, tigergraph-mcp,
+and any downstream application.
 """
 import logging
 import re
@@ -157,3 +161,57 @@ def _parse_get_udf(responses, json_out):
     if rets:
         return rets[0]
     return ""
+
+
+# ─── GSQL Reserved Keywords ──────────────────────────────────────────────
+
+_RESERVED_KEYWORDS: frozenset = frozenset({
+    "ACCUM", "ADD", "ALL", "ALLOCATE", "ALTER", "AND", "ANY", "AS", "ASC",
+    "AVG", "BAG", "BATCH", "BETWEEN", "BIGINT", "BLOB", "BOOL", "BOOLEAN",
+    "BOTH", "BREAK", "BY", "CALL", "CASCADE", "CASE", "CATCH", "CHAR",
+    "CHARACTER", "CHECK", "CLOB", "COALESCE", "COMPRESS", "CONST", "CONSTRAINT",
+    "CONTINUE", "COST", "COUNT", "CREATE", "CURRENT_DATE", "CURRENT_TIME",
+    "CURRENT_TIMESTAMP", "CURSOR", "KAFKA", "S3", "DATETIME", "DATETIME_ADD",
+    "DATETIME_SUB", "DAY", "DATETIME_DIFF", "DATETIME_TO_EPOCH",
+    "DATETIME_FORMAT", "DECIMAL", "DECLARE", "DELETE", "DESC", "DISTRIBUTED",
+    "DO", "DOUBLE", "DROP", "EDGE", "ELSE", "ELSEIF", "EPOCH_TO_DATETIME",
+    "END", "ESCAPE", "EXCEPTION", "EXISTS", "FALSE", "FILE", "SYS.FILE_NAME",
+    "FILTER", "FIXED_BINARY", "FLOAT", "FOR", "FOREACH", "FROM", "GLOBAL",
+    "GRANTS", "GRAPH", "GROUP", "GROUPBYACCUM", "HAVING", "HOUR", "HEADER",
+    "HEAPACCUM", "IF", "IGNORE", "SYS.INTERNAL_ID", "IN", "INDEX",
+    "INPUT_LINE_FILTER", "INSERT", "INT", "INTERSECT", "INT8", "INT16", "INT32",
+    "INT32_T", "INT64_T", "INTEGER", "INTERPRET", "INTO", "IS", "ISEMPTY",
+    "JOB", "JOIN", "JSONARRAY", "JSONOBJECT", "KEY", "LEADING", "LIKE", "LIMIT",
+    "LIST", "LOAD", "LOADACCUM", "LOG", "LONG", "MAP", "MINUTE", "NOBODY",
+    "NOT", "NOW", "NULL", "OFFSET", "ON", "OPENCYPHER", "OR", "ORDER",
+    "PINNED", "POLICY", "POST_ACCUM", "POST-ACCUM", "PRIMARY", "PRIMARY_ID",
+    "PRINT", "PROXY", "QUERY", "QUIT", "RAISE", "RANGE", "REDUCE", "REPLACE",
+    "RESET_COLLECTION_ACCUM", "RETURN", "RETURNS", "ROW", "SAMPLE", "SECOND",
+    "SELECT", "SELECTVERTEX", "SET", "STATIC", "STRING", "SUM", "TARGET",
+    "TEMP_TABLE", "THEN", "TO", "TO_CSV", "TO_DATETIME", "TRAILING",
+    "TRANSLATESQL", "TRIM", "TRUE", "TRY", "TUPLE", "TYPE", "TYPEDEF", "UINT",
+    "UINT8", "UINT16", "UINT32", "UINT8_T", "UINT32_T", "UINT64_T", "UNION",
+    "UPDATE", "UPSERT", "USING", "VALUES", "VERTEX", "WHEN", "WHERE", "WHILE",
+    "WITH", "GSQL_SYS_TAG", "_INTERNAL_ATTR_TAG",
+})
+
+
+def _get_reserved_keywords() -> frozenset:
+    """Return the full set of GSQL reserved keywords.
+
+    Returns:
+        A frozenset of uppercase keyword strings.
+    """
+    return _RESERVED_KEYWORDS
+
+
+def _is_reserved_keyword(name: str) -> bool:
+    """Check whether *name* is a GSQL reserved keyword (case-insensitive).
+
+    Args:
+        name: The identifier to check.
+
+    Returns:
+        True if the name is reserved.
+    """
+    return name.upper() in _RESERVED_KEYWORDS

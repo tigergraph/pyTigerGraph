@@ -122,6 +122,11 @@ class PyTigerGraphCore(object):
         self.base64_credential = base64.b64encode(
             "{0}:{1}".format(self.username, self.password).encode("utf-8")).decode("utf-8")
 
+        # Pre-build auth header dicts immediately after credentials are set so
+        # _prep_req can safely use _cached_token_auth/_cached_pwd_auth in any
+        # subsequent _get()/_req() call (e.g. tgCloud ping, JWT verification).
+        self._refresh_auth_headers()
+
         # Detect auth mode automatically by checking if jwtToken or apiToken is provided
         self.authHeader = self._set_auth_header()
         self.authMode = "token" if (self.jwtToken or self.apiToken) else "pwd"
@@ -226,16 +231,63 @@ class PyTigerGraphCore(object):
             self.awsIamHeaders["X-Amz-Security-Token"] = request.headers["X-Amz-Security-Token"]
             self.awsIamHeaders["Authorization"] = request.headers["Authorization"]
 
+        self.asynchronous = False
+
         if self.jwtToken:
             self._verify_jwt_token_support()
 
-        self.asynchronous = False
-
-        # Pre-build per-authMode header dicts so _prep_req avoids repeating
-        # the isinstance/string-comparison chain on every request.
-        self._refresh_auth_headers()
-
         logger.debug("exit: __init__")
+
+    # -- Scope helpers (mirror GSQL's USE GRAPH / USE GLOBAL) ----------
+
+    class _GlobalScope:
+        """Context manager returned by :meth:`useGlobal` for temporary global scope."""
+
+        def __init__(self, conn):
+            self._conn = conn
+            self._saved = None
+
+        def __enter__(self):
+            self._saved = self._conn.graphname
+            self._conn.graphname = ""
+            return self._conn
+
+        def __exit__(self, *exc):
+            self._conn.graphname = self._saved
+
+    def useGraph(self, graphName: str = ""):
+        """Switch this connection to a specific graph's scope.
+
+        Mirrors GSQL's ``USE GRAPH <graphName>`` command.
+        After this call, all operations that accept an optional graph name
+        will target this graph by default.
+
+        If *graphName* is omitted or empty, behaves the same as
+        :meth:`useGlobal` (switches to global scope).
+
+        Args:
+            graphName:
+                Name of the graph to use.  Empty or omitted for global scope.
+        """
+        if not graphName:
+            return self.useGlobal()
+        self.graphname = graphName
+
+    def useGlobal(self):
+        """Switch this connection to global scope.
+
+        Mirrors GSQL's ``USE GLOBAL`` command.
+        After this call, all operations that accept an optional graph name
+        will target the global scope by default.
+
+        Can also be used as a context manager for temporary global scope::
+
+            with conn.useGlobal():
+                conn.getSchemaChangeJobs()   # global
+            # conn.graphname is restored here
+        """
+        self.graphname = ""
+        return self._GlobalScope(self)
 
     def _set_auth_header(self):
         """Set the authentication header based on available tokens or credentials."""
