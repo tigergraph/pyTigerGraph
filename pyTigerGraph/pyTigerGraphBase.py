@@ -104,23 +104,18 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
             TigerGraphException: In case on invalid URL scheme.
 
         """
+        # Thread-local sessions and failover lock must be created BEFORE
+        # super().__init__() because the parent __init__ may issue HTTP
+        # requests (tgCloud ping, JWT verification) that go through
+        # _session() → self._local.
+        self._local = threading.local()
+        self._restpp_failover_lock = threading.Lock()
+
         super().__init__(host=host, graphname=graphname, gsqlSecret=gsqlSecret,
                          username=username, password=password, tgCloud=tgCloud,
                          restppPort=restppPort, gsPort=gsPort, gsqlVersion=gsqlVersion,
                          version=version, apiToken=apiToken, useCert=useCert, certPath=certPath,
                          debug=debug, sslPort=sslPort, gcp=gcp, jwtToken=jwtToken)
-
-        # Thread-local sessions — each thread gets its own requests.Session and connection pool.
-        # A single shared Session serializes all threads via its internal cookie-jar RLock
-        # (_cookies_lock), which is acquired on every response even when no cookies are set.
-        # Thread-local sessions eliminate that contention while still benefiting from HTTP
-        # keep-alive within each thread's sequential request stream.
-        self._local = threading.local()
-
-        # Lock for the one-time port failover (TG 3.x port 9000 → 4.x port 14240/restpp).
-        # Without a lock, all parallel threads simultaneously fail and all enter the failover
-        # block, doubling requests and racing to overwrite self.restppUrl / self.restppPort.
-        self._restpp_failover_lock = threading.Lock()
 
         if graphname == "MyGraph":
             warnings.warn(

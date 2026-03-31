@@ -181,15 +181,8 @@ class PyTigerGraphCore(object):
             warnings.warn("The `gcp` parameter is deprecated.",
                           DeprecationWarning)
         self.tgCloud = tgCloud or gcp
-        if "tgcloud" in self.netloc.lower():
-            try:  # If get request succeeds, using TG Cloud instance provisioned after 6/20/2022
-                self._get(self.host + "/api/ping", resKey="message")
-                self.tgCloud = True
-            # If get request fails, using TG Cloud instance provisioned before 6/20/2022, before new firewall config
-            except requests.exceptions.RequestException:
-                self.tgCloud = False
-            except TigerGraphException:
-                raise (TigerGraphException("Incorrect graphname."))
+        if not self.tgCloud and "tgcloud" in self.netloc.lower():
+            self.tgCloud = True
 
         restppPort = str(restppPort)
         sslPort = str(sslPort)
