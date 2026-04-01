@@ -18,8 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **`_refresh_auth_headers()` init ordering** — auth header cache is now built immediately after credentials are set, before the tgCloud ping and JWT verification. Prevents `AttributeError` on `_cached_token_auth` when connecting without a token (e.g. `TigerGraphConnection(host=..., username=..., password=...)`).
-- **Boolean query parameters causing `yarl` errors** — `upsertEdge()`, `upsertEdges()` (`vertexMustExist`), `getVersion()` (`verbose`), and `rebuildGraph()` (`force`) now convert boolean values to lowercase strings before passing them as URL query parameters.
+- **`_refresh_auth_headers()` called earlier in `__init__`** — auth header cache is now built immediately after credentials are set.
+- **tgCloud auto-detection simplified** — removed the HTTP ping to `/api/ping`; detection now relies solely on the hostname containing `"tgcloud"`.
+- **`threading.local()` init ordering** — `self._local` and `self._restpp_failover_lock` are now created before `super().__init__()` in `pyTigerGraphBase`.
+- **Boolean query parameter conversion** — `upsertEdge()`, `upsertEdges()` (`vertexMustExist`), `getVersion()` (`verbose`), and `rebuildGraph()` (`force`) now convert boolean values to lowercase strings.
 - **`dropVertices()`** now correctly falls back to `self.graphname` when the `graph` parameter is `None`.
 - **`dropAllDataSources()`** now correctly uses `self.graphname` fallback for the 4.x REST API path.
 - **`getVectorIndexStatus()`** no longer produces a malformed URL when called without a graph name; now supports global scope (returns status for all graphs).
