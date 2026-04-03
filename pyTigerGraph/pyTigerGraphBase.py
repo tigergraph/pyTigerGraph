@@ -362,7 +362,8 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
 
         return res
 
-    def _put(self, url: str, authMode: str = "token", data=None, resKey=None, jsonData=False) -> Union[dict, list]:
+    def _put(self, url: str, authMode: str = "token", data=None, resKey=None,
+             jsonData=False, params: Union[dict, list, str] = None) -> Union[dict, list]:
         """Generic PUT method.
 
         Args:
@@ -370,6 +371,12 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
                 Complete REST++ API URL including path and parameters.
             authMode:
                 Authentication mode, either `"token"` (default) or `"pwd"`.
+            data:
+                Request payload, typically a JSON document.
+            resKey:
+                The JSON subdocument to be returned, default is `None`.
+            params:
+                Request URL parameters.
 
         Returns:
             The response from the request (as a dictionary).
@@ -379,7 +386,7 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
             logger.debug("params: " + self._locals(locals()))
 
         res = self._req("PUT", url, authMode, data=data,
-                        resKey=resKey, jsonData=jsonData)
+                        resKey=resKey, jsonData=jsonData, params=params)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))

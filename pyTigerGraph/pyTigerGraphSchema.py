@@ -830,17 +830,15 @@ class pyTigerGraphSchema(pyTigerGraphBase):
 
         gname = graphName or self.graphname
 
-        query_parts = []
+        params = {}
         if gname:
-            query_parts.append(f"graph={gname}")
+            params["graph"] = gname
         if force:
-            query_parts.append("force=true")
+            params["force"] = "true"
 
         url = self.gsUrl + "/gsql/v1/schema/jobs/" + jobName
-        if query_parts:
-            url += "?" + "&".join(query_parts)
 
-        res = self._put(url, authMode="pwd", resKey=None)
+        res = self._put(url, authMode="pwd", resKey=None, params=params)
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))

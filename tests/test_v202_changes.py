@@ -413,15 +413,16 @@ class TestSchemaChangeJobAPIs(unittest.TestCase):
             conn.runSchemaChangeJob("job1")
         url = mock.call_args[0][0]
         self.assertIn("/gsql/v1/schema/jobs/job1", url)
-        self.assertIn("graph=g1", url)
+        kwargs = mock.call_args[1]
+        self.assertEqual(kwargs["params"]["graph"], "g1")
 
     def test_run_schema_change_job_with_force(self):
         conn = _make_conn_v4(graphname="g1")
         with patch.object(conn, "_put", return_value={"error": False, "message": "ok"}) as mock:
             conn.runSchemaChangeJob("job1", force=True)
-        url = mock.call_args[0][0]
-        self.assertIn("force=true", url)
-        self.assertIn("graph=g1", url)
+        kwargs = mock.call_args[1]
+        self.assertEqual(kwargs["params"]["force"], "true")
+        self.assertEqual(kwargs["params"]["graph"], "g1")
 
     def test_drop_schema_change_jobs_single(self):
         conn = _make_conn_v4(graphname="g1")
@@ -804,21 +805,28 @@ class TestGlobalScopeDeferredUse(unittest.TestCase):
 # runSchemaChangeJob URL encoding
 # ──────────────────────────────────────────────────────────────────────
 
-class TestRunSchemaChangeJobUrl(unittest.TestCase):
+class TestRunSchemaChangeJobParams(unittest.TestCase):
 
-    def test_url_includes_graph_name(self):
+    def test_passes_graph_in_params(self):
         conn = _make_conn_v4(graphname="myGraph")
         with patch.object(conn, "_put", return_value={"error": False, "message": "ok"}) as mock:
             conn.runSchemaChangeJob("job1")
-        url = mock.call_args[0][0]
-        self.assertIn("graph=myGraph", url)
+        kwargs = mock.call_args[1]
+        self.assertEqual(kwargs["params"]["graph"], "myGraph")
 
-    def test_url_includes_force(self):
+    def test_passes_force_in_params(self):
         conn = _make_conn_v4(graphname="myGraph")
         with patch.object(conn, "_put", return_value={"error": False, "message": "ok"}) as mock:
             conn.runSchemaChangeJob("job1", force=True)
-        url = mock.call_args[0][0]
-        self.assertIn("force=true", url)
+        kwargs = mock.call_args[1]
+        self.assertEqual(kwargs["params"]["force"], "true")
+
+    def test_no_graph_omits_param(self):
+        conn = _make_conn_v4(graphname="")
+        with patch.object(conn, "_put", return_value={"error": False, "message": "ok"}) as mock:
+            conn.runSchemaChangeJob("job1")
+        kwargs = mock.call_args[1]
+        self.assertNotIn("graph", kwargs["params"])
 
 
 # ──────────────────────────────────────────────────────────────────────
