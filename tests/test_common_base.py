@@ -107,5 +107,115 @@ class TestRefreshAuthHeadersUpdate(unittest.TestCase):
         self.assertIn("Basic ", conn._cached_auth["Authorization"])
 
 
+# ──────────────────────────────────────────────────────────────────────
+# _token_source tracking
+# ──────────────────────────────────────────────────────────────────────
+
+class TestTokenSource(unittest.TestCase):
+    """_token_source tracks whether the token was user-provided or generated."""
+
+    def test_no_token_source_is_none(self):
+        conn = _make_conn()
+        self.assertIsNone(conn._token_source)
+
+    def test_api_token_source_is_user(self):
+        conn = _make_conn(apiToken="usertoken")
+        self.assertEqual(conn._token_source, "user")
+
+    def test_jwt_token_source_is_user(self):
+        conn = _make_conn(jwtToken="header.payload.signature")
+        self.assertEqual(conn._token_source, "user")
+
+    def test_get_token_sets_source_to_generated(self):
+        conn = _make_conn()
+        self.assertIsNone(conn._token_source)
+
+        with patch.object(conn, "_token", return_value=({"token": "newtoken"}, "4")):
+            conn.getToken()
+
+        self.assertEqual(conn._token_source, "generated")
+
+    def test_get_token_overrides_user_source(self):
+        conn = _make_conn(apiToken="usertoken")
+        self.assertEqual(conn._token_source, "user")
+
+        with patch.object(conn, "_token", return_value=({"token": "newtoken"}, "4")):
+            conn.getToken()
+
+        self.assertEqual(conn._token_source, "generated")
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Auto-refresh on 401
+# ──────────────────────────────────────────────────────────────────────
+
+class TestAutoRefreshOn401(unittest.TestCase):
+    """Token auto-refresh on 401 for generated tokens; error for user tokens."""
+
+    def _mock_response(self, status_code=200, content=b'{"results": "ok"}'):
+        resp = MagicMock()
+        resp.status_code = status_code
+        resp.content = content
+        resp.raise_for_status = MagicMock()
+        if status_code >= 400:
+            import requests
+            resp.raise_for_status.side_effect = requests.exceptions.HTTPError(
+                response=resp)
+        return resp
+
+    def test_401_with_generated_token_auto_refreshes(self):
+        conn = _make_conn()
+        conn._token_source = "generated"
+        conn.restppPort = "9000"
+
+        resp_401 = self._mock_response(401, b'{"message": "token expired"}')
+        resp_200 = self._mock_response(200, b'{"results": "ok"}')
+
+        with patch.object(conn, "_do_request", side_effect=[resp_401, resp_200]) as mock_do, \
+             patch.object(conn, "getToken", return_value="newtoken") as mock_get_token:
+            result = conn._req("GET", "http://127.0.0.1:9000/query/test")
+
+        mock_get_token.assert_called_once()
+        self.assertEqual(mock_do.call_count, 2)
+        self.assertEqual(result, "ok")
+
+    def test_401_with_user_token_raises(self):
+        import requests
+        conn = _make_conn(apiToken="usertoken")
+        conn.restppPort = "9000"
+
+        resp_401 = self._mock_response(401, b'{"message": "token expired"}')
+
+        with patch.object(conn, "_do_request", return_value=resp_401):
+            with self.assertRaises(requests.exceptions.HTTPError):
+                conn._req("GET", "http://127.0.0.1:9000/query/test")
+
+    def test_401_with_no_token_raises(self):
+        import requests
+        conn = _make_conn()
+        conn.restppPort = "9000"
+
+        resp_401 = self._mock_response(401, b'{"message": "unauthorized"}')
+
+        with patch.object(conn, "_do_request", return_value=resp_401):
+            with self.assertRaises(requests.exceptions.HTTPError):
+                conn._req("GET", "http://127.0.0.1:9000/query/test")
+
+    def test_non_401_error_not_refreshed(self):
+        import requests
+        conn = _make_conn()
+        conn._token_source = "generated"
+        conn.restppPort = "9000"
+
+        resp_500 = self._mock_response(500, b'{"message": "server error"}')
+
+        with patch.object(conn, "_do_request", return_value=resp_500), \
+             patch.object(conn, "getToken") as mock_get_token:
+            with self.assertRaises(requests.exceptions.HTTPError):
+                conn._req("GET", "http://127.0.0.1:9000/query/test")
+
+        mock_get_token.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
