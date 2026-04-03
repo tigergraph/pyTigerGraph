@@ -248,6 +248,9 @@ class PyTigerGraphCore(object):
             self._saved = conn.graphname
 
         def __enter__(self):
+            # Re-capture if graphname changed since useGlobal() was called
+            if self._conn.graphname != "":
+                self._saved = self._conn.graphname
             self._conn.graphname = ""
             return self._conn
 

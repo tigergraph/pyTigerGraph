@@ -216,6 +216,28 @@ class TestAutoRefreshOn401(unittest.TestCase):
 
         mock_get_token.assert_not_called()
 
+    def test_401_refresh_does_not_recurse(self):
+        """If getToken() itself triggers a 401, it must not recurse infinitely."""
+        import requests
+        conn = _make_conn()
+        conn._token_source = "generated"
+        conn.restppPort = "9000"
+
+        resp_401 = self._mock_response(401, b'{"message": "token expired"}')
+
+        def fake_get_token(*a, **kw):
+            # Simulate getToken calling _req which also gets 401.
+            # The guard flag should prevent recursion.
+            raise requests.exceptions.HTTPError(response=resp_401)
+
+        with patch.object(conn, "_do_request", return_value=resp_401), \
+             patch.object(conn, "getToken", side_effect=fake_get_token):
+            with self.assertRaises(requests.exceptions.HTTPError):
+                conn._req("GET", "http://127.0.0.1:9000/query/test")
+
+        # Guard flag must be cleared after the failed refresh
+        self.assertFalse(getattr(conn, "_refreshing_token", False))
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

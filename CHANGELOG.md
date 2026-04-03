@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`installQueries()` polling robustness** — handles missing `message` key in server responses and times out after 1 hour instead of hanging indefinitely.
+- **`useGlobal()` context manager** — now correctly restores the graph name when used as a deferred context manager.
 - **`_refresh_auth_headers()` called earlier in `__init__`** — auth header cache is now built immediately after credentials are set.
 - **tgCloud auto-detection simplified** — removed the HTTP ping to `/api/ping`; detection now relies solely on the hostname containing `"tgcloud"`.
 - **`threading.local()` init ordering** — `self._local` and `self._restpp_failover_lock` are now created before `super().__init__()` in `pyTigerGraphBase`.

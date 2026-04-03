@@ -369,14 +369,18 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
             # If a requestId is present, poll until the job completes.
             request_id = res.get("requestId") if isinstance(res, dict) else None
             if request_id:
+                max_retries = 360  # 1 hour with 10s sleep
                 ret = None
-                while not ret:
+                for _ in range(max_retries):
                     ret = await self._req("GET", self.gsUrl + "/gsql/v1/queries/install/" + str(request_id), authMode="pwd", resKey=None)
-                    if "SUCCESS" in ret["message"] or "FAILED" in ret["message"]:
+                    msg = ret.get("message", "") if isinstance(ret, dict) else ""
+                    if "SUCCESS" in msg or "FAILED" in msg:
                         break
-                    else:
-                        ret = None
-                    await asyncio.sleep(1)
+                    ret = None
+                    await asyncio.sleep(10)
+                else:
+                    raise TigerGraphException(
+                        "Query installation timed out after polling for 1 hour.", 0)
             else:
                 ret = res
         else:

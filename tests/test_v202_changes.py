@@ -755,6 +755,92 @@ class TestInstallQueriesWaitParam(unittest.TestCase):
         with self.assertRaises(TigerGraphException):
             conn.installQueries("my_query")
 
+    def test_wait_true_times_out(self):
+        """Polling raises TigerGraphException after max retries."""
+        conn = _make_conn_v41()
+        install_response = {"requestId": "req123", "message": "submitted"}
+        running_response = {"requestId": "req123", "message": "RUNNING"}
+
+        with patch.object(conn, "_req", side_effect=[install_response] + [running_response] * 360), \
+             patch("pyTigerGraph.pyTigerGraphQuery.time.sleep"):
+            with self.assertRaises(TigerGraphException) as ctx:
+                conn.installQueries("my_query", wait=True)
+            self.assertIn("timed out", str(ctx.exception).lower())
+
+    def test_wait_true_handles_missing_message(self):
+        """Polling handles responses without 'message' key gracefully."""
+        conn = _make_conn_v41()
+        install_response = {"requestId": "req123", "message": "submitted"}
+        no_message_response = {"requestId": "req123", "status": "unknown"}
+        success_response = {"requestId": "req123", "message": "SUCCESS"}
+
+        with patch.object(conn, "_req", side_effect=[
+            install_response, no_message_response, success_response
+        ]), \
+             patch("pyTigerGraph.pyTigerGraphQuery.time.sleep"):
+            result = conn.installQueries("my_query", wait=True)
+
+        self.assertEqual(result, success_response)
+
+
+# ──────────────────────────────────────────────────────────────────────
+# _GlobalScope context manager
+# ──────────────────────────────────────────────────────────────────────
+
+class TestGlobalScopeDeferredUse(unittest.TestCase):
+
+    def test_deferred_context_manager_restores_correctly(self):
+        """Deferred use of context manager saves graphname at __enter__ time."""
+        conn = _make_conn(graphname="original")
+        scope = conn.useGlobal()          # graphname -> ""
+        conn.useGraph("changed")          # graphname -> "changed"
+        with scope:
+            self.assertEqual(conn.graphname, "")
+        # Should restore "changed" (captured at __enter__), not "original"
+        self.assertEqual(conn.graphname, "changed")
+
+
+# ──────────────────────────────────────────────────────────────────────
+# runSchemaChangeJob URL encoding
+# ──────────────────────────────────────────────────────────────────────
+
+class TestRunSchemaChangeJobUrl(unittest.TestCase):
+
+    def test_url_includes_graph_name(self):
+        conn = _make_conn_v4(graphname="myGraph")
+        with patch.object(conn, "_put", return_value={"error": False, "message": "ok"}) as mock:
+            conn.runSchemaChangeJob("job1")
+        url = mock.call_args[0][0]
+        self.assertIn("graph=myGraph", url)
+
+    def test_url_includes_force(self):
+        conn = _make_conn_v4(graphname="myGraph")
+        with patch.object(conn, "_put", return_value={"error": False, "message": "ok"}) as mock:
+            conn.runSchemaChangeJob("job1", force=True)
+        url = mock.call_args[0][0]
+        self.assertIn("force=true", url)
+
+
+# ──────────────────────────────────────────────────────────────────────
+# createSchemaChangeJob Content-Type
+# ──────────────────────────────────────────────────────────────────────
+
+class TestCreateSchemaChangeJobContentType(unittest.TestCase):
+
+    def test_gsql_path_sends_text_plain_content_type(self):
+        conn = _make_conn_v4(graphname="g1")
+        with patch.object(conn, "_post", return_value={"error": False, "message": "ok"}) as mock:
+            conn.createSchemaChangeJob("job1", "ADD VERTEX V1 (PRIMARY_ID id UINT);")
+        kwargs = mock.call_args[1]
+        self.assertEqual(kwargs["headers"]["Content-Type"], "text/plain")
+
+    def test_dict_path_sends_json_content_type(self):
+        conn = _make_conn_v4(graphname="g1")
+        with patch.object(conn, "_post", return_value={"error": False, "message": "ok"}) as mock:
+            conn.createSchemaChangeJob("job1", {"some": "config"})
+        kwargs = mock.call_args[1]
+        self.assertEqual(kwargs["headers"]["Content-Type"], "application/json")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
