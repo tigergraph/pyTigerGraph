@@ -1,7 +1,7 @@
 """Unit tests for pyTigerGraph.common.base (PyTigerGraphCore).
 
 These tests run without a live TigerGraph server by mocking network calls.
-They guard against init-ordering bugs where _cached_token_auth is accessed
+They guard against init-ordering bugs where _cached_auth is accessed
 before _refresh_auth_headers() has been called.
 """
 
@@ -29,27 +29,23 @@ class TestRefreshAuthHeadersOrdering(unittest.TestCase):
     """_refresh_auth_headers() must be called before any _get()/_req() in __init__.
 
     Regression test for GML-2041 ordering bug:
-      _cached_token_auth was set AFTER _verify_jwt_token_support() (and the
+      _cached_auth was set AFTER _verify_jwt_token_support() (and the
       tgCloud ping), causing AttributeError swallowed as a JWT error message.
     """
 
     def test_cached_auth_set_with_username_password(self):
         conn = _make_conn()
-        self.assertTrue(hasattr(conn, "_cached_token_auth"))
-        self.assertTrue(hasattr(conn, "_cached_pwd_auth"))
-        self.assertIn("Basic ", conn._cached_token_auth["Authorization"])
-        self.assertIn("Basic ", conn._cached_pwd_auth["Authorization"])
+        self.assertTrue(hasattr(conn, "_cached_auth"))
+        self.assertIn("Basic ", conn._cached_auth["Authorization"])
 
     def test_cached_auth_set_with_api_token(self):
         conn = _make_conn(apiToken="myapitoken123")
-        self.assertIn("Bearer myapitoken123", conn._cached_token_auth["Authorization"])
-        self.assertIn("Basic ", conn._cached_pwd_auth["Authorization"])
+        self.assertIn("Bearer myapitoken123", conn._cached_auth["Authorization"])
 
     def test_cached_auth_set_with_jwt_token(self):
         """Regression: jwtToken must not cause AttributeError during __init__."""
         conn = _make_conn(jwtToken="header.payload.signature")
-        self.assertIn("Bearer header.payload.signature", conn._cached_token_auth["Authorization"])
-        self.assertIn("Bearer header.payload.signature", conn._cached_pwd_auth["Authorization"])
+        self.assertIn("Bearer header.payload.signature", conn._cached_auth["Authorization"])
 
     def test_jwt_token_calls_verify(self):
         """_verify_jwt_token_support() must be called when jwtToken is provided."""
@@ -70,24 +66,23 @@ class TestRefreshAuthHeadersOrdering(unittest.TestCase):
         """tgCloud _get() ping fires before _verify_jwt_token_support; must not AttributeError."""
         with patch.object(TigerGraphConnection, "_get", return_value="pong") as mock_get:
             conn = TigerGraphConnection(host="http://my.tgcloud.io")
-        # _cached_token_auth must exist at the point _get() was called
-        self.assertTrue(hasattr(conn, "_cached_token_auth"))
+        # _cached_auth must exist at the point _get() was called
+        self.assertTrue(hasattr(conn, "_cached_auth"))
 
     def test_tgcloud_ping_does_not_crash_with_jwt(self):
-        """tgCloud ping + JWT verification both fire; _cached_token_auth must precede both."""
+        """tgCloud ping + JWT verification both fire; _cached_auth must precede both."""
         with patch.object(TigerGraphConnection, "_get", return_value="pong"):
             with patch.object(TigerGraphConnection, "_verify_jwt_token_support"):
                 conn = TigerGraphConnection(
                     host="http://my.tgcloud.io",
                     jwtToken="header.payload.signature",
                 )
-        self.assertIn("Bearer header.payload.signature", conn._cached_token_auth["Authorization"])
+        self.assertIn("Bearer header.payload.signature", conn._cached_auth["Authorization"])
 
     def test_x_user_agent_header_present(self):
-        """X-User-Agent must be baked into cached auth dicts."""
+        """X-User-Agent must be baked into cached auth dict."""
         conn = _make_conn()
-        self.assertEqual(conn._cached_token_auth.get("X-User-Agent"), "pyTigerGraph")
-        self.assertEqual(conn._cached_pwd_auth.get("X-User-Agent"), "pyTigerGraph")
+        self.assertEqual(conn._cached_auth.get("X-User-Agent"), "pyTigerGraph")
 
 
 class TestRefreshAuthHeadersUpdate(unittest.TestCase):
@@ -95,21 +90,21 @@ class TestRefreshAuthHeadersUpdate(unittest.TestCase):
 
     def test_refresh_after_get_token(self):
         conn = _make_conn()
-        self.assertIn("Basic ", conn._cached_token_auth["Authorization"])
+        self.assertIn("Basic ", conn._cached_auth["Authorization"])
 
         conn.apiToken = "newtoken456"
         conn._refresh_auth_headers()
 
-        self.assertIn("Bearer newtoken456", conn._cached_token_auth["Authorization"])
+        self.assertIn("Bearer newtoken456", conn._cached_auth["Authorization"])
 
     def test_refresh_clears_old_token(self):
         conn = _make_conn(apiToken="oldtoken")
-        self.assertIn("Bearer oldtoken", conn._cached_token_auth["Authorization"])
+        self.assertIn("Bearer oldtoken", conn._cached_auth["Authorization"])
 
         conn.apiToken = ""
         conn._refresh_auth_headers()
 
-        self.assertIn("Basic ", conn._cached_token_auth["Authorization"])
+        self.assertIn("Basic ", conn._cached_auth["Authorization"])
 
 
 if __name__ == "__main__":

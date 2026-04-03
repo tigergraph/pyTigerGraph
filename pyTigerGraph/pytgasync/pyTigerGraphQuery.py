@@ -3,8 +3,8 @@
 The functions on this page run installed or interpret queries in TigerGraph.
 All functions in this module are called as methods on a link:https://docs.tigergraph.com/pytigergraph/current/core-functions/base[`TigerGraphConnection` object].
 """
-import logging
 import asyncio
+import logging
 
 from typing import TYPE_CHECKING, Union, Optional
 
@@ -316,7 +316,7 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         return ret
 
-    async def installQueries(self, queries: Union[str, list], flag: Union[str, list] = None) -> str:
+    async def installQueries(self, queries: Union[str, list], flag: Union[str, list] = None, wait: bool = False) -> str:
         """Installs one or more queries.
 
         Args:
@@ -324,11 +324,15 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
                 A single query string or a list of query strings to install. Use '*' or 'all' to install all queries.
             flag:
                 Method to install queries.
-                - '-single' Install the query in single gpr mode. 
+                - '-single' Install the query in single gpr mode.
                 - '-legacy' Install the query in UDF mode.
                 - '-debug' Present results contains debug info.
                 - '-cost' Present results contains performance consumption.
                 - '-force' Install the query even if it already installed.
+            wait:
+                If True, polls the installation status until the job completes before returning.
+                If False, returns immediately with the server response containing the requestId.
+                Defaults to False for async connections.
 
         Returns:
             The response from the server.
@@ -360,18 +364,21 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
 
         res = await self._req("GET", self.gsUrl + "/gsql/v1/queries/install", params=params, authMode="pwd", resKey=None)
 
-        # TG 4.1 may respond synchronously (no requestId) or asynchronously (with requestId).
-        # If a requestId is present, poll until the job completes.
-        request_id = res.get("requestId") if isinstance(res, dict) else None
-        if request_id:
-            ret = None
-            while not ret:
-                ret = await self._req("GET", self.gsUrl + "/gsql/v1/queries/install/" + str(request_id), authMode="pwd", resKey=None)
-                if "SUCCESS" in ret["message"] or "FAILED" in ret["message"]:
-                    break
-                else:
-                    ret = None
-                await asyncio.sleep(1)
+        if wait:
+            # TG 4.1 may respond synchronously (no requestId) or asynchronously (with requestId).
+            # If a requestId is present, poll until the job completes.
+            request_id = res.get("requestId") if isinstance(res, dict) else None
+            if request_id:
+                ret = None
+                while not ret:
+                    ret = await self._req("GET", self.gsUrl + "/gsql/v1/queries/install/" + str(request_id), authMode="pwd", resKey=None)
+                    if "SUCCESS" in ret["message"] or "FAILED" in ret["message"]:
+                        break
+                    else:
+                        ret = None
+                    await asyncio.sleep(1)
+            else:
+                ret = res
         else:
             ret = res
 

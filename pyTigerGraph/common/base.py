@@ -119,12 +119,13 @@ class PyTigerGraphCore(object):
 
         self.jwtToken = jwtToken
         self.apiToken = apiToken
+        self._token_source = "user" if (apiToken or jwtToken) else None
         self.base64_credential = base64.b64encode(
             "{0}:{1}".format(self.username, self.password).encode("utf-8")).decode("utf-8")
 
-        # Pre-build auth header dicts immediately after credentials are set so
-        # _prep_req can safely use _cached_token_auth/_cached_pwd_auth in any
-        # subsequent _get()/_req() call (e.g. tgCloud ping, JWT verification).
+        # Pre-build the cached auth header dict immediately after credentials
+        # are set so _prep_req can safely use _cached_auth in any subsequent
+        # _get()/_req() call (e.g. tgCloud ping, JWT verification).
         self._refresh_auth_headers()
 
         # Detect auth mode automatically by checking if jwtToken or apiToken is provided
@@ -298,18 +299,16 @@ class PyTigerGraphCore(object):
             return {"Authorization": "Basic {0}".format(self.base64_credential)}
 
     def _refresh_auth_headers(self) -> None:
-        """Pre-build per-authMode header dicts used by every request.
+        """Pre-build the cached auth header dict used by every request.
 
         Called once at __init__ and again after getToken() updates the
         credentials. Eliminates per-request isinstance checks and string
         formatting in _prep_req's hot path.
 
-        Two dicts are kept because authMode can be either "token" or "pwd":
-          - "token": JWT > apiToken (tuple or str) > Basic
-          - "pwd":   JWT > Basic
+        Fallback order: JWT > apiToken (tuple or str) > Basic.
         The "X-User-Agent" header is baked in so _prep_req skips that update too.
         """
-        # ---- token mode ----
+        # JWT > apiToken > Basic auth
         if isinstance(self.jwtToken, str) and self.jwtToken.strip():
             token_val = "Bearer " + self.jwtToken
         elif isinstance(self.apiToken, tuple):
@@ -319,11 +318,7 @@ class PyTigerGraphCore(object):
         else:
             token_val = "Basic " + self.base64_credential
 
-        # ---- pwd mode ----
-        pwd_val = ("Bearer " + self.jwtToken) if self.jwtToken else ("Basic " + self.base64_credential)
-
-        self._cached_token_auth = {"Authorization": token_val, "X-User-Agent": "pyTigerGraph"}
-        self._cached_pwd_auth   = {"Authorization": pwd_val,   "X-User-Agent": "pyTigerGraph"}
+        self._cached_auth = {"Authorization": token_val, "X-User-Agent": "pyTigerGraph"}
 
     def _verify_jwt_token_support(self):
         try:
@@ -385,9 +380,7 @@ class PyTigerGraphCore(object):
 
         # Shallow-copy the pre-built header dict (auth + X-User-Agent already included).
         # _refresh_auth_headers() keeps these current after every getToken() call.
-        _headers = dict(
-            self._cached_token_auth if authMode == "token" else self._cached_pwd_auth
-        )
+        _headers = dict(self._cached_auth)
 
         if headers:
             _headers.update(headers)
