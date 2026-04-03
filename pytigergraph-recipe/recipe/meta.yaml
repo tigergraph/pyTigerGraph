@@ -2,11 +2,11 @@
 
 package:
   name: pytigergraph
-  version: "2.0.1"
+  version: "2.0.2"
 
 source:
-  url: https://pypi.org/packages/source/p/pytigergraph/pytigergraph-2.0.1.tar.gz
-  sha256: 6c0834a7abdacf4b00c41e3603c397954a50825677ddadde7a03086eaae479f4
+  url: https://pypi.org/packages/source/p/pytigergraph/pytigergraph-2.0.2.tar.gz
+  # sha256: update after publishing to PyPI
 
 build:
   number: 0
