@@ -515,19 +515,30 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
 
         return ret
 
-    async def customizeHeader(self, timeout:int = 16_000, responseSize:int = 3.2e+7):
+    async def customizeHeader(self, timeout: int = 16_000, responseSize: int = 3.2e+7,
+                              threadLimit: int = None, memoryLimit: int = None):
         """Method to configure the request header.
 
         Args:
-            tiemout (int, optional):
-                The timeout value desired in milliseconds. Defaults to 16,000 ms (16 sec)
+            timeout (int, optional):
+                The timeout value desired in milliseconds. Defaults to 16,000 ms (16 sec).
             responseSize:
                 The size of the response in bytes. Defaults to 3.2E7 bytes (32 MB).
+            threadLimit (int, optional):
+                Maximum number of threads to use per query. If not set, the server default is used.
+                Ignored by TigerGraph versions that do not support this header.
+            memoryLimit (int, optional):
+                Maximum memory per query in MB. If not set, the server default is used.
+                Ignored by TigerGraph versions that do not support this header.
 
         Returns:
             Nothing. Sets `responseConfigHeader` class attribute.
         """
         self.responseConfigHeader = {"GSQL-TIMEOUT": str(timeout), "RESPONSE-LIMIT": str(responseSize)}
+        if threadLimit:
+            self.responseConfigHeader["GSQL-THREAD-LIMIT"] = str(threadLimit)
+        if memoryLimit:
+            self.responseConfigHeader["GSQL-QueryLocalMemLimitMB"] = str(memoryLimit)
 
     async def _version_greater_than_4_0(self) -> bool:
         """Gets if the TigerGraph database version is greater than 4.0 using gerVer().
