@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.2] - 2026-04-03
+## [2.0.2] - 2026-04-07
 
 ### New Features
 
@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **GSQL reserved keyword helpers** — `getReservedKeywords()` and `isReservedKeyword(name)` static methods to query the canonical set of GSQL reserved keywords.
 - **Conda build support** — `build.sh` now supports `--conda-build`, `--conda-upload`, `--conda-all`, and `--conda-forge-test` for building and validating conda packages.
 - **`installQueries()` now supports a `wait` parameter** — controls whether the call blocks until installation completes. Defaults to `True` for sync and `False` for async connections.
+- **`customizeHeader()` now supports `threadLimit` and `memoryLimit`** — sets connection-wide `GSQL-THREAD-LIMIT` and `GSQL-QueryLocalMemLimitMB` headers for query resource control.
 
 ### Improved
 
