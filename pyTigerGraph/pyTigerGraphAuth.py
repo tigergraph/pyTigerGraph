@@ -423,6 +423,7 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
         self.apiToken = token
         self.authHeader = auth_header
         self.authMode = "token"
+        self._token_source = "generated"
 
         logger.debug("exit: getToken")
         return token

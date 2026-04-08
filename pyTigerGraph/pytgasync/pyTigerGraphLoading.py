@@ -27,6 +27,7 @@ from pyTigerGraph.common.loading import (
     _prep_drop_all_data_sources,
     _prep_sample_data_url,
 )
+from pyTigerGraph.common.exception import TigerGraphException
 from pyTigerGraph.common.gsql import _wrap_gsql_result
 from pyTigerGraph.pytgasync.pyTigerGraphBase import AsyncPyTigerGraphBase
 
@@ -619,8 +620,9 @@ class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
         Returns:
             A dict with at least a ``"message"`` key describing the outcome.
         """
+        graph = graphName or self.graphname
         if await self._version_greater_than_4_0():
-            url = _prep_drop_all_data_sources(self.gsUrl, graphName)
+            url = _prep_drop_all_data_sources(self.gsUrl, graph)
             return await self._req("DELETE", url, resKey=None)
 
         return _wrap_gsql_result(await self.gsql("DROP DATA_SOURCE *"))
@@ -645,31 +647,46 @@ class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
             )
 
         graph = graphName or self.graphname
+        if not graph:
+            raise TigerGraphException(
+                "previewSampleData requires a graph name. "
+                "Set graphname on the connection or pass graphName explicitly.", 0)
         url = _prep_sample_data_url(self.gsUrl)
         body = {
             "graphName": graph,
             "dataSource": dsName,
             "path": path,
             "size": size,
+            "parsing": {
+                "fileFormat": "none",
+                "eol": "\\n",
+            },
         }
-        return await self._req("POST", url, data=body, jsonData=True, resKey="results")
+        return await self._req("POST", url, data=body, jsonData=True,
+                               authMode="pwd", resKey="results")
 
     async def getVectorIndexStatus(self, graphName: str = None,
                                    vertexType: str = None,
                                    vectorName: str = None) -> dict:
         """Get the rebuild status of vector indexes.
 
-        Uses REST++ endpoint ``GET /vector/status/<graph>[/<vertexType>[/<vectorName>]]``.
+        Uses REST++ endpoint
+        ``GET /vector/status[/<graph>[/<vertexType>[/<vectorName>]]]``.
 
         Args:
             graphName:   Graph name. Defaults to the connection's current graph.
-            vertexType:  Optionally filter by vertex type.
-            vectorName:  Optionally filter by vector attribute name.
+                         If the connection has no graph set (global scope),
+                         returns status for all graphs.
+            vertexType:  Optionally filter by vertex type (requires graphName).
+            vectorName:  Optionally filter by vector attribute name
+                         (requires vertexType).
         """
         graph = graphName or self.graphname
-        path = f"/vector/status/{graph}"
-        if vertexType:
-            path += f"/{vertexType}"
-            if vectorName:
-                path += f"/{vectorName}"
+        path = "/vector/status"
+        if graph:
+            path += f"/{graph}"
+            if vertexType:
+                path += f"/{vertexType}"
+                if vectorName:
+                    path += f"/{vectorName}"
         return await self._req("GET", self.restppUrl + path)

@@ -214,7 +214,7 @@ class AsyncPyTigerGraphUtils(AsyncPyTigerGraphBase):
         if path:
             params["path"] = path
         if force:
-            params["force"] = force
+            params["force"] = str(force).lower()
         res = await self._req("GET", self.restppUrl+"/rebuildnow/"+self.graphname, params=params, resKey=None)
         if not res["error"]:
             if logger.level == logging.DEBUG:

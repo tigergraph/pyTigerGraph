@@ -1,28 +1,42 @@
+{% set python_min = "3.9" %}
+
 package:
   name: pytigergraph
-  version: "2.0.1"
+  version: "2.0.2"
 
 source:
-  url: https://pypi.io/packages/source/p/pytigergraph/pytigergraph-2.0.1.tar.gz
+  url: https://pypi.org/packages/source/p/pytigergraph/pytigergraph-2.0.2.tar.gz
+  # sha256: update after publishing to PyPI
 
 build:
+  number: 0
   noarch: python
   script: {{ PYTHON }} -m pip install . --no-deps -vv
 
 requirements:
   host:
-    - python >=3.9
+    - python {{ python_min }}
     - pip
     - setuptools
     - wheel
   run:
-    - python >=3.9
+    - python >={{ python_min }}
     - requests
+    - aiohttp
+    - httpx
+    - validators
+
+test:
+  imports:
+    - pyTigerGraph
+  requires:
+    - python {{ python_min }}
 
 about:
   home: https://github.com/tigergraph/pyTigerGraph
   license: Apache-2.0
   license_family: Apache
+  license_file: LICENSE
   summary: Python client for TigerGraph
 
 extra:

@@ -393,7 +393,9 @@ class pyTigerGraphSchema(pyTigerGraphBase):
                 of strings. Use ``"all"`` to drop all vertices.
             graph (str, optional):
                 The graph from which vertex types should be dropped.
-                If not provided, drops global vertex types.
+                If ``None`` and the connection has a ``graphname`` set,
+                that graph is used.  If neither is set, drops global
+                vertex types.
             ignoreErrors (bool):
                 If ``True``, suppress exceptions (e.g. when some vertices do not exist)
                 and return the error as a dict instead. Defaults to ``False``.
@@ -425,9 +427,11 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         else:
             raise TigerGraphException("vertex_names must be a string or list of strings.", 0)
 
+        gname = graph or self.graphname
+
         params = {"vertex": vertex_param}
-        if graph is not None:
-            params["graph"] = graph
+        if gname:
+            params["graph"] = gname
 
         if not ignoreErrors:
             res = self._delete(self.gsUrl + "/gsql/v1/schema/vertices",
@@ -488,12 +492,20 @@ class pyTigerGraphSchema(pyTigerGraphBase):
 
         return res
 
-    def createGraph(self, graphName: str) -> dict:
-        """Creates an empty graph.
+    def createGraph(self, graphName: str,
+                    vertexTypes: list = None,
+                    edgeTypes: list = None) -> dict:
+        """Creates a graph, optionally including existing global vertex/edge types.
 
         Args:
             graphName:
                 Name of the graph to create.
+            vertexTypes:
+                Optional list of existing global vertex type names to include
+                in the graph.  Pass ``["*"]`` to include all global types.
+            edgeTypes:
+                Optional list of existing global edge type names to include
+                in the graph.
 
         Returns:
             A dict with at least a ``"message"`` key describing the outcome.
@@ -504,13 +516,23 @@ class pyTigerGraphSchema(pyTigerGraphBase):
         """
         logger.debug("entry: createGraph")
 
+        type_names = []
+        if vertexTypes:
+            type_names.extend(vertexTypes)
+        if edgeTypes:
+            type_names.extend(edgeTypes)
+        type_list = ", ".join(type_names)
+        gsql_cmd = f"CREATE GRAPH {graphName}({type_list})"
+
         if self._version_greater_than_4_0():
-            data = {"name": graphName}
+            data = {"gsql": gsql_cmd}
             res = self._post(self.gsUrl + "/gsql/v1/schema/graphs",
                             data=data, authMode="pwd", resKey=None,
-                            headers={'Content-Type': 'application/json'}, jsonData=True)
+                            params={"gsql": "true", "graphName": graphName},
+                            headers={"Content-Type": "application/json"},
+                            jsonData=True)
         else:
-            res = _wrap_gsql_result(self.gsql(f"CREATE GRAPH {graphName}()"))
+            res = _wrap_gsql_result(self.gsql(gsql_cmd))
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -539,7 +561,8 @@ class pyTigerGraphSchema(pyTigerGraphBase):
                               authMode="pwd", resKey=None,
                               headers={'Content-Type': 'application/json'})
         else:
-            res = _wrap_gsql_result(self.gsql(f"DROP GRAPH {graphName}"))
+            res = _wrap_gsql_result(
+                self.gsql(f"DROP GRAPH {graphName}"))
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
@@ -571,52 +594,294 @@ class pyTigerGraphSchema(pyTigerGraphBase):
 
         return res
 
-    def runSchemaChange(self, gsqlStatements: Union[str, list], graphName: str = None) -> dict:
-        """Runs schema change statements on a graph.
+    def runSchemaChange(self, gsqlStatements: Union[str, list, dict],
+                        graphName: str = None, force: bool = False) -> dict:
+        """Runs schema change statements directly (without creating a named job).
+
+        Supports both local (graph-scoped) and global schema changes.
 
         Args:
             gsqlStatements:
-                GSQL schema change DDL statements (e.g. ``ADD VERTEX ...``, ``ADD EDGE ...``).
-                Can be a string of semicolon-separated statements or a list of statements.
+                Schema change specification in one of two formats:
+
+                **dict (JSON format, TG >= 4.0 only)** — Sent directly to
+                ``POST /gsql/v1/schema/change`` as JSON.  Supports keys such as
+                ``addVertexTypes``, ``dropVertexTypes``, ``alterVertexTypes``,
+                ``addEdgeTypes``, ``dropEdgeTypes``, ``alterEdgeTypes``.
+
+                **str or list (GSQL DDL)** — Wrapped in a GSQL schema change
+                job and executed via ``gsql()``.  Works on all TigerGraph
+                versions.
+
             graphName:
-                Target graph name. Uses connection's graphname if not provided.
+                Target graph name for a local schema change.  If ``None`` and
+                the connection has no ``graphname`` set, a **global** schema
+                change is executed instead.
+
+            force:
+                If ``True``, abort any loading jobs that conflict with the
+                schema change.  Only applies to the JSON (dict) path.
 
         Returns:
             A dict with at least a ``"message"`` key describing the outcome.
 
         Endpoints:
-            - `POST /gsql/v1/schema/change?graph={graphName}` (In TigerGraph versions >= 4.0)
-            - Falls back to GSQL schema change job for TigerGraph versions < 4.0
+            - ``POST /gsql/v1/schema/change`` with JSON body (TG >= 4.0)
+            - GSQL schema change job via ``gsql()`` (all versions)
         """
         logger.debug("entry: runSchemaChange")
 
         gname = graphName or self.graphname
 
-        if isinstance(gsqlStatements, list):
-            gsqlStatements = "\n".join(
-                s if s.rstrip().endswith(";") else s + ";"
-                for s in gsqlStatements
-            )
-
-        if self._version_greater_than_4_0():
-            params = {"graph": gname}
+        if isinstance(gsqlStatements, dict):
+            if not self._version_greater_than_4_0():
+                raise TigerGraphException(
+                    "JSON-format schema changes require TigerGraph >= 4.0. "
+                    "Pass GSQL DDL statements as a string instead.")
+            params = {}
+            if gname:
+                params["graph"] = gname
+            if force:
+                params["force"] = "true"
             res = self._post(self.gsUrl + "/gsql/v1/schema/change",
-                            params=params, data=gsqlStatements, authMode="pwd", resKey=None,
-                            headers={'Content-Type': 'text/plain'})
+                            params=params, data=json.dumps(gsqlStatements),
+                            authMode="pwd", resKey=None,
+                            headers={'Content-Type': 'application/json'})
         else:
+            if isinstance(gsqlStatements, list):
+                gsqlStatements = "\n".join(
+                    s if s.rstrip().endswith(";") else s + ";"
+                    for s in gsqlStatements
+                )
             job_name = f"schema_change_{uuid.uuid4().hex[:8]}"
-            gsql_cmd = (
-                f"USE GRAPH {gname}\n"
-                f"CREATE SCHEMA_CHANGE JOB {job_name} FOR GRAPH {gname} {{\n"
-                f"    {gsqlStatements}\n"
-                f"}}\n"
-                f"RUN SCHEMA_CHANGE JOB {job_name}\n"
-                f"DROP JOB {job_name}"
-            )
+            if gname:
+                gsql_cmd = (
+                    f"USE GRAPH {gname}\n"
+                    f"CREATE SCHEMA_CHANGE JOB {job_name} FOR GRAPH {gname} {{\n"
+                    f"    {gsqlStatements}\n"
+                    f"}}\n"
+                    f"RUN SCHEMA_CHANGE JOB {job_name}\n"
+                    f"DROP JOB {job_name}"
+                )
+            else:
+                gsql_cmd = (
+                    f"CREATE GLOBAL SCHEMA_CHANGE JOB {job_name} {{\n"
+                    f"    {gsqlStatements}\n"
+                    f"}}\n"
+                    f"RUN GLOBAL SCHEMA_CHANGE JOB {job_name}\n"
+                    f"DROP JOB {job_name}"
+                )
             res = _wrap_gsql_result(self.gsql(gsql_cmd))
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))
         logger.debug("exit: runSchemaChange")
+
+        return res
+
+    def createSchemaChangeJob(self, jobName: str, statements: Union[str, list, dict],
+                              graphName: str = None) -> dict:
+        """Creates a named schema change job without running it.
+
+        Args:
+            jobName:
+                Name for the schema change job.
+
+            statements:
+                Schema change specification in one of two formats:
+
+                **dict (JSON format)** — Sent as JSON to
+                ``POST /gsql/v1/schema/jobs/{jobName}``.
+                For global jobs the dict should contain a ``"graphs"`` key;
+                for local jobs it should contain keys such as
+                ``addVertexTypes``, ``dropVertexTypes``, etc.
+
+                **str or list (GSQL DDL)** — Individual DDL statements
+                (e.g. ``"ADD VERTEX Foo (...)"``).
+                They are wrapped in a ``CREATE [GLOBAL] SCHEMA_CHANGE JOB``
+                command and sent via the ``?gsql=true`` parameter.
+
+            graphName:
+                Target graph for a local schema change job.  If ``None`` and
+                the connection has no ``graphname`` set, a **global** job is
+                created.
+
+        Returns:
+            The server response dict.
+
+        Endpoint:
+            - ``POST /gsql/v1/schema/jobs/{jobName}``
+        """
+        logger.debug("entry: createSchemaChangeJob")
+
+        gname = graphName or self.graphname
+
+        url = self.gsUrl + "/gsql/v1/schema/jobs/" + jobName
+
+        if isinstance(statements, dict):
+            params = {}
+            if gname:
+                params["graph"] = gname
+            res = self._post(url, params=params,
+                            data=json.dumps(statements),
+                            authMode="pwd", resKey=None,
+                            headers={'Content-Type': 'application/json'})
+        else:
+            if isinstance(statements, list):
+                statements = "\n".join(
+                    s if s.rstrip().endswith(";") else s + ";"
+                    for s in statements
+                )
+            if gname:
+                gsql_cmd = (
+                    f"CREATE SCHEMA_CHANGE JOB {jobName} FOR GRAPH {gname} {{\n"
+                    f"    {statements}\n"
+                    f"}}"
+                )
+                params = {"gsql": "true", "graph": gname}
+            else:
+                gsql_cmd = (
+                    f"CREATE GLOBAL SCHEMA_CHANGE JOB {jobName} {{\n"
+                    f"    {statements}\n"
+                    f"}}"
+                )
+                params = {"gsql": "true", "type": "global"}
+            res = self._post(url, params=params,
+                            data=json.dumps({"gsql": gsql_cmd}),
+                            authMode="pwd", resKey=None,
+                            headers={'Content-Type': 'text/plain'})
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: createSchemaChangeJob")
+
+        return res
+
+    def getSchemaChangeJobs(self, jobName: str = None, graphName: str = None,
+                            jsonFormat: bool = True) -> Union[dict, list]:
+        """Retrieves schema change jobs.
+
+        Args:
+            jobName:
+                Name of a specific job to retrieve.  If ``None``, all schema
+                change jobs are returned.
+
+            graphName:
+                Graph whose local jobs to retrieve.  If ``None`` and the
+                connection has no ``graphname`` set, global jobs are returned.
+
+            jsonFormat:
+                If ``True`` (default), requests JSON-formatted output from the
+                server.
+
+        Returns:
+            A dict (single job) or list (all jobs) describing the schema
+            change job(s).
+
+        Endpoints:
+            - ``GET /gsql/v1/schema/jobs`` (all jobs)
+            - ``GET /gsql/v1/schema/jobs/{jobName}`` (single job)
+        """
+        logger.debug("entry: getSchemaChangeJobs")
+
+        gname = graphName or self.graphname
+
+        url = self.gsUrl + "/gsql/v1/schema/jobs"
+        if jobName:
+            url += "/" + jobName
+
+        params = {}
+        if gname:
+            params["graph"] = gname
+        if jsonFormat:
+            params["json"] = "true"
+
+        res = self._get(url, params=params, authMode="pwd", resKey=None)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: getSchemaChangeJobs")
+
+        return res
+
+    def runSchemaChangeJob(self, jobName: str, graphName: str = None,
+                           force: bool = False) -> dict:
+        """Runs an existing (already created) schema change job.
+
+        Args:
+            jobName:
+                Name of the schema change job to run.
+
+            graphName:
+                Graph on which to run the local job.  If ``None`` and the
+                connection has no ``graphname`` set, runs a global job.
+
+            force:
+                If ``True``, abort any loading jobs that conflict with the
+                schema change.
+
+        Returns:
+            The server response dict.
+
+        Endpoint:
+            - ``PUT /gsql/v1/schema/jobs/{jobName}``
+        """
+        logger.debug("entry: runSchemaChangeJob")
+
+        gname = graphName or self.graphname
+
+        params = {}
+        if gname:
+            params["graph"] = gname
+        if force:
+            params["force"] = "true"
+
+        url = self.gsUrl + "/gsql/v1/schema/jobs/" + jobName
+
+        res = self._put(url, authMode="pwd", resKey=None, params=params)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: runSchemaChangeJob")
+
+        return res
+
+    def dropSchemaChangeJobs(self, jobNames: Union[str, list],
+                             graphName: str = None) -> dict:
+        """Drops one or more schema change jobs.
+
+        Args:
+            jobNames:
+                A single job name (str) or a list of job names to drop.
+
+            graphName:
+                Graph whose local jobs to drop.  If ``None`` and the
+                connection has no ``graphname`` set, drops global jobs.
+
+        Returns:
+            The server response dict.
+
+        Endpoint:
+            - ``DELETE /gsql/v1/schema/jobs``
+        """
+        logger.debug("entry: dropSchemaChangeJobs")
+
+        gname = graphName or self.graphname
+
+        if isinstance(jobNames, list):
+            job_param = ",".join(jobNames)
+        else:
+            job_param = jobNames
+
+        params = {"jobName": job_param}
+        if gname:
+            params["graph"] = gname
+
+        res = self._delete(self.gsUrl + "/gsql/v1/schema/jobs",
+                          params=params, authMode="pwd", resKey=None)
+
+        if logger.level == logging.DEBUG:
+            logger.debug("return: " + str(res))
+        logger.debug("exit: dropSchemaChangeJobs")
 
         return res

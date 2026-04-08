@@ -119,8 +119,14 @@ class PyTigerGraphCore(object):
 
         self.jwtToken = jwtToken
         self.apiToken = apiToken
+        self._token_source = "user" if (apiToken or jwtToken) else None
         self.base64_credential = base64.b64encode(
             "{0}:{1}".format(self.username, self.password).encode("utf-8")).decode("utf-8")
+
+        # Pre-build the cached auth header dict immediately after credentials
+        # are set so _prep_req can safely use _cached_auth in any subsequent
+        # _get()/_req() call (e.g. tgCloud ping, JWT verification).
+        self._refresh_auth_headers()
 
         # Detect auth mode automatically by checking if jwtToken or apiToken is provided
         self.authHeader = self._set_auth_header()
@@ -176,15 +182,8 @@ class PyTigerGraphCore(object):
             warnings.warn("The `gcp` parameter is deprecated.",
                           DeprecationWarning)
         self.tgCloud = tgCloud or gcp
-        if "tgcloud" in self.netloc.lower():
-            try:  # If get request succeeds, using TG Cloud instance provisioned after 6/20/2022
-                self._get(self.host + "/api/ping", resKey="message")
-                self.tgCloud = True
-            # If get request fails, using TG Cloud instance provisioned before 6/20/2022, before new firewall config
-            except requests.exceptions.RequestException:
-                self.tgCloud = False
-            except TigerGraphException:
-                raise (TigerGraphException("Incorrect graphname."))
+        if not self.tgCloud and "tgcloud" in self.netloc.lower():
+            self.tgCloud = True
 
         restppPort = str(restppPort)
         sslPort = str(sslPort)
@@ -226,16 +225,72 @@ class PyTigerGraphCore(object):
             self.awsIamHeaders["X-Amz-Security-Token"] = request.headers["X-Amz-Security-Token"]
             self.awsIamHeaders["Authorization"] = request.headers["Authorization"]
 
+        self.asynchronous = False
+
         if self.jwtToken:
             self._verify_jwt_token_support()
 
-        self.asynchronous = False
-
-        # Pre-build per-authMode header dicts so _prep_req avoids repeating
-        # the isinstance/string-comparison chain on every request.
-        self._refresh_auth_headers()
-
         logger.debug("exit: __init__")
+
+    # -- Scope helpers (mirror GSQL's USE GRAPH / USE GLOBAL) ----------
+
+    class _GlobalScope:
+        """Context manager returned by :meth:`useGlobal` for temporary global scope.
+
+        The original graphname is captured at construction time (not at
+        ``__enter__``) so that ``useGlobal()`` can set ``graphname = ""``
+        before the ``with`` block begins, supporting both the bare-call
+        and context-manager use cases.
+        """
+
+        def __init__(self, conn):
+            self._conn = conn
+            self._saved = conn.graphname
+
+        def __enter__(self):
+            # Re-capture if graphname changed since useGlobal() was called
+            if self._conn.graphname != "":
+                self._saved = self._conn.graphname
+            self._conn.graphname = ""
+            return self._conn
+
+        def __exit__(self, *exc):
+            self._conn.graphname = self._saved
+
+    def useGraph(self, graphName: str = ""):
+        """Switch this connection to a specific graph's scope.
+
+        Mirrors GSQL's ``USE GRAPH <graphName>`` command.
+        After this call, all operations that accept an optional graph name
+        will target this graph by default.
+
+        If *graphName* is omitted or empty, behaves the same as
+        :meth:`useGlobal` (switches to global scope).
+
+        Args:
+            graphName:
+                Name of the graph to use.  Empty or omitted for global scope.
+        """
+        if not graphName:
+            return self.useGlobal()
+        self.graphname = graphName
+
+    def useGlobal(self):
+        """Switch this connection to global scope.
+
+        Mirrors GSQL's ``USE GLOBAL`` command.
+        After this call, all operations that accept an optional graph name
+        will target the global scope by default.
+
+        Can also be used as a context manager for temporary global scope::
+
+            with conn.useGlobal():
+                conn.getSchemaChangeJobs()   # global
+            # conn.graphname is restored here
+        """
+        scope = self._GlobalScope(self)
+        self.graphname = ""
+        return scope
 
     def _set_auth_header(self):
         """Set the authentication header based on available tokens or credentials."""
@@ -247,18 +302,16 @@ class PyTigerGraphCore(object):
             return {"Authorization": "Basic {0}".format(self.base64_credential)}
 
     def _refresh_auth_headers(self) -> None:
-        """Pre-build per-authMode header dicts used by every request.
+        """Pre-build the cached auth header dict used by every request.
 
         Called once at __init__ and again after getToken() updates the
         credentials. Eliminates per-request isinstance checks and string
         formatting in _prep_req's hot path.
 
-        Two dicts are kept because authMode can be either "token" or "pwd":
-          - "token": JWT > apiToken (tuple or str) > Basic
-          - "pwd":   JWT > Basic
+        Fallback order: JWT > apiToken (tuple or str) > Basic.
         The "X-User-Agent" header is baked in so _prep_req skips that update too.
         """
-        # ---- token mode ----
+        # JWT > apiToken > Basic auth
         if isinstance(self.jwtToken, str) and self.jwtToken.strip():
             token_val = "Bearer " + self.jwtToken
         elif isinstance(self.apiToken, tuple):
@@ -268,11 +321,7 @@ class PyTigerGraphCore(object):
         else:
             token_val = "Basic " + self.base64_credential
 
-        # ---- pwd mode ----
-        pwd_val = ("Bearer " + self.jwtToken) if self.jwtToken else ("Basic " + self.base64_credential)
-
-        self._cached_token_auth = {"Authorization": token_val, "X-User-Agent": "pyTigerGraph"}
-        self._cached_pwd_auth   = {"Authorization": pwd_val,   "X-User-Agent": "pyTigerGraph"}
+        self._cached_auth = {"Authorization": token_val, "X-User-Agent": "pyTigerGraph"}
 
     def _verify_jwt_token_support(self):
         try:
@@ -334,9 +383,7 @@ class PyTigerGraphCore(object):
 
         # Shallow-copy the pre-built header dict (auth + X-User-Agent already included).
         # _refresh_auth_headers() keeps these current after every getToken() call.
-        _headers = dict(
-            self._cached_token_auth if authMode == "token" else self._cached_pwd_auth
-        )
+        _headers = dict(self._cached_auth)
 
         if headers:
             _headers.update(headers)
@@ -392,20 +439,31 @@ class PyTigerGraphCore(object):
 
         return res[resKey]
 
-    def customizeHeader(self, timeout: int = 16_000, responseSize: int = 3.2e+7):
+    def customizeHeader(self, timeout: int = 16_000, responseSize: int = 3.2e+7,
+                        threadLimit: int = None, memoryLimit: int = None):
         """Method to configure the request header.
 
         Args:
-            tiemout (int, optional):
-                The timeout value desired in milliseconds. Defaults to 16,000 ms (16 sec)
+            timeout (int, optional):
+                The timeout value desired in milliseconds. Defaults to 16,000 ms (16 sec).
             responseSize:
                 The size of the response in bytes. Defaults to 3.2E7 bytes (32 MB).
+            threadLimit (int, optional):
+                Maximum number of threads to use per query. If not set, the server default is used.
+                Ignored by TigerGraph versions that do not support this header.
+            memoryLimit (int, optional):
+                Maximum memory per query in MB. If not set, the server default is used.
+                Ignored by TigerGraph versions that do not support this header.
 
         Returns:
             Nothing. Sets `responseConfigHeader` class attribute.
         """
         self.responseConfigHeader = {
             "GSQL-TIMEOUT": str(timeout), "RESPONSE-LIMIT": str(responseSize)}
+        if threadLimit:
+            self.responseConfigHeader["GSQL-THREAD-LIMIT"] = str(threadLimit)
+        if memoryLimit:
+            self.responseConfigHeader["GSQL-QueryLocalMemLimitMB"] = str(memoryLimit)
 
     def _parse_get_ver(self, version, component, full):
         ret = ""

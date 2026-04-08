@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.2] - 2026-04-07
+
+### New Features
+
+- **Schema Change Job APIs** — `createSchemaChangeJob()`, `getSchemaChangeJobs()`, `runSchemaChangeJob()`, `dropSchemaChangeJobs()` for managing schema change jobs via REST.
+- **`createGraph()` accepts vertex/edge types** — optional `vertexTypes` and `edgeTypes` parameters to include existing global types when creating a graph (e.g. `createGraph("g", vertexTypes=["Person"], edgeTypes=["Knows"])`). Pass `vertexTypes=["*"]` to include all global types.
+- **`force` parameter for `runSchemaChange()`** — allows forcing schema changes even when they would cause data loss. Also accepts `dict` (JSON format) for TigerGraph >= 4.0 and supports global schema changes.
+- **Graph scope control** — `useGraph(graphName)` and `useGlobal()` methods on the connection object, mirroring GSQL's `USE GRAPH` / `USE GLOBAL`. `useGlobal()` doubles as a context manager for temporary global scoping (`with conn.useGlobal(): ...`).
+- **GSQL reserved keyword helpers** — `getReservedKeywords()` and `isReservedKeyword(name)` static methods to query the canonical set of GSQL reserved keywords.
+- **Conda build support** — `build.sh` now supports `--conda-build`, `--conda-upload`, `--conda-all`, and `--conda-forge-test` for building and validating conda packages.
+- **`installQueries()` now supports a `wait` parameter** — controls whether the call blocks until installation completes. Defaults to `True` for sync and `False` for async connections.
+- **`customizeHeader()` now supports `threadLimit` and `memoryLimit`** — sets connection-wide `GSQL-THREAD-LIMIT` and `GSQL-QueryLocalMemLimitMB` headers for query resource control.
+
+### Improved
+
+- **Token-based auth for GSQL endpoints** — GSQL endpoints (e.g. `installQueries`) now use API token or JWT when available, instead of always requiring username/password.
+- **Automatic token refresh on expiration** — tokens obtained via `getToken()` are automatically refreshed when the server returns a 401; user-provided tokens raise an error instead.
+
+### Fixed
+
+- **`installQueries()` polling robustness** — handles missing `message` key in server responses and times out after 1 hour instead of hanging indefinitely.
+- **`useGlobal()` context manager** — now correctly restores the graph name when used as a deferred context manager.
+- **`_refresh_auth_headers()` called earlier in `__init__`** — auth header cache is now built immediately after credentials are set.
+- **tgCloud auto-detection simplified** — removed the HTTP ping to `/api/ping`; detection now relies solely on the hostname containing `"tgcloud"`.
+- **`threading.local()` init ordering** — `self._local` and `self._restpp_failover_lock` are now created before `super().__init__()` in `pyTigerGraphBase`.
+- **Boolean query parameter conversion** — `upsertEdge()`, `upsertEdges()` (`vertexMustExist`), `getVersion()` (`verbose`), and `rebuildGraph()` (`force`) now convert boolean values to lowercase strings.
+- **`dropVertices()`** now correctly falls back to `self.graphname` when the `graph` parameter is `None`.
+- **`dropAllDataSources()`** now correctly uses `self.graphname` fallback for the 4.x REST API path.
+- **`getVectorIndexStatus()`** no longer produces a malformed URL when called without a graph name; now supports global scope (returns status for all graphs).
+- **`previewSampleData()`** now raises `TigerGraphException` when no graph name is available, instead of sending an empty graph name to the server.
+- **Docstring fixes** — corrected `timeout` parameter descriptions across vertex and edge query methods.
+
+---
+
 ## [2.0.1] - 2026-03-23
 
 ### Breaking Changes

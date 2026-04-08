@@ -13,7 +13,9 @@ from urllib.parse import urlparse, quote_plus
 from pyTigerGraph.common.gsql import (
     _parse_gsql,
     _prep_get_udf,
-    _parse_get_udf
+    _parse_get_udf,
+    _get_reserved_keywords,
+    _is_reserved_keyword,
 )
 from pyTigerGraph.common.exception import TigerGraphException
 from pyTigerGraph.pyTigerGraphBase import pyTigerGraphBase
@@ -484,7 +486,7 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
 
         params = {}
         if verbose:
-            params["verbose"] = verbose
+            params["verbose"] = str(verbose).lower()
 
         res = self._get(self.gsUrl+"/gsql/v1/version",
                        params=params, authMode="pwd", resKey=None,
@@ -495,3 +497,24 @@ class pyTigerGraphGSQL(pyTigerGraphBase):
         logger.debug("exit: getGSQLVersion")
 
         return res
+
+    @staticmethod
+    def getReservedKeywords() -> frozenset:
+        """Return the full set of GSQL reserved keywords.
+
+        Returns:
+            A frozenset of uppercase keyword strings.
+        """
+        return _get_reserved_keywords()
+
+    @staticmethod
+    def isReservedKeyword(name: str) -> bool:
+        """Check whether *name* is a GSQL reserved keyword (case-insensitive).
+
+        Args:
+            name: The identifier to check.
+
+        Returns:
+            True if the name is reserved.
+        """
+        return _is_reserved_keyword(name)

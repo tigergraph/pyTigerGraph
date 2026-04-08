@@ -5,6 +5,7 @@ All functions in this module are called as methods on a link:https://docs.tigerg
 """
 import json
 import logging
+import time
 
 from datetime import datetime
 from typing import TYPE_CHECKING, Union, Optional
@@ -318,7 +319,7 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
 
         return ret
 
-    def installQueries(self, queries: Union[str, list], flag: Union[str, list] = None) -> str:
+    def installQueries(self, queries: Union[str, list], flag: Union[str, list] = None, wait: bool = True) -> str:
         """Installs one or more queries.
 
         Args:
@@ -326,11 +327,15 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
                 A single query string or a list of query strings to install. Use '*' or 'all' to install all queries.
             flag:
                 Method to install queries.
-                - '-single' Install the query in single gpr mode. 
+                - '-single' Install the query in single gpr mode.
                 - '-legacy' Install the query in UDF mode.
                 - '-debug' Present results contains debug info.
                 - '-cost' Present results contains performance consumption.
                 - '-force' Install the query even if it already installed.
+            wait:
+                If True, polls the installation status until the job completes before returning.
+                If False, returns immediately with the server response containing the requestId.
+                Defaults to True for sync connections.
 
         Returns:
             The response from the server.
@@ -360,7 +365,29 @@ class pyTigerGraphQuery(pyTigerGraphGSQL, pyTigerGraphSchema):
                 flag = ",".join(flag)
             params["flag"] = flag
 
-        ret = self._req("GET", self.gsUrl + "/gsql/v1/queries/install", params=params, authMode="pwd", resKey=None)
+        res = self._req("GET", self.gsUrl + "/gsql/v1/queries/install", params=params, authMode="pwd", resKey=None)
+
+        if wait:
+            # TG 4.1 may respond synchronously (no requestId) or asynchronously (with requestId).
+            # If a requestId is present, poll until the job completes.
+            request_id = res.get("requestId") if isinstance(res, dict) else None
+            if request_id:
+                max_retries = 360  # 1 hour with 10s sleep
+                ret = None
+                for _ in range(max_retries):
+                    ret = self._req("GET", self.gsUrl + "/gsql/v1/queries/install/" + str(request_id), authMode="pwd", resKey=None)
+                    msg = ret.get("message", "") if isinstance(ret, dict) else ""
+                    if "SUCCESS" in msg or "FAILED" in msg:
+                        break
+                    ret = None
+                    time.sleep(10)
+                else:
+                    raise TigerGraphException(
+                        "Query installation timed out after polling for 1 hour.", 0)
+            else:
+                ret = res
+        else:
+            ret = res
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))
