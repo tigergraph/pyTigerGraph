@@ -850,5 +850,87 @@ class TestCreateSchemaChangeJobContentType(unittest.TestCase):
         self.assertEqual(kwargs["headers"]["Content-Type"], "application/json")
 
 
+class TestHostPortExtraction(unittest.TestCase):
+    """Tests for extracting port from host URL."""
+
+    def test_port_in_url_sets_restpp_and_gs_port(self):
+        """Port in URL should be used as restppPort and gsPort."""
+        conn = _make_conn(host="http://192.168.11.11:14240")
+        self.assertEqual(conn.host, "http://192.168.11.11")
+        self.assertEqual(conn.restppPort, "14240")
+        self.assertEqual(conn.gsPort, "14240")
+        self.assertIn("14240", conn.restppUrl)
+        self.assertNotIn("14240:14240", conn.restppUrl)
+
+    def test_port_in_url_no_double_port(self):
+        """URLs should never contain double ports."""
+        conn = _make_conn(host="http://192.168.11.11:14240")
+        self.assertNotIn(":14240:14240", conn.restppUrl)
+        self.assertNotIn(":14240:14240", conn.gsUrl)
+
+    def test_no_port_in_url_uses_defaults(self):
+        """Without port in URL, default ports should be used."""
+        conn = _make_conn(host="http://192.168.11.11")
+        self.assertEqual(conn.host, "http://192.168.11.11")
+        self.assertEqual(conn.restppPort, "9000")
+        self.assertEqual(conn.gsPort, "14240")
+
+    def test_port_in_url_with_matching_restpp_port(self):
+        """Explicit restppPort matching URL port should work."""
+        conn = _make_conn(host="http://192.168.11.11:14240", restppPort="14240")
+        self.assertEqual(conn.restppPort, "14240")
+
+    def test_port_in_url_conflicts_with_restpp_port(self):
+        """Explicit non-default restppPort differing from URL port should raise."""
+        with self.assertRaises(TigerGraphException) as ctx:
+            _make_conn(host="http://192.168.11.11:14240", restppPort="7000")
+        self.assertIn("conflicts", str(ctx.exception))
+
+    def test_port_in_url_with_only_gs_port_matching(self):
+        """Explicit gsPort matching URL port: OK, URL port also sets restppPort."""
+        conn = _make_conn(host="http://192.168.11.11:10000", gsPort="10000")
+        self.assertEqual(conn.restppPort, "10000")
+        self.assertEqual(conn.gsPort, "10000")
+
+    def test_port_in_url_conflicts_with_gs_port(self):
+        """Explicit gsPort (only) differing from URL port: error."""
+        with self.assertRaises(TigerGraphException) as ctx:
+            _make_conn(host="http://192.168.11.11:7000", gsPort="10000")
+        self.assertIn("conflicts", str(ctx.exception))
+
+    def test_both_ports_explicit_url_matches_restpp(self):
+        """Both explicit, URL port matches restppPort: OK."""
+        conn = _make_conn(host="http://192.168.11.11:7000",
+                          restppPort="7000", gsPort="10000")
+        self.assertEqual(conn.host, "http://192.168.11.11")
+        self.assertEqual(conn.restppPort, "7000")
+        self.assertEqual(conn.gsPort, "10000")
+
+    def test_both_ports_explicit_url_matches_gs(self):
+        """Both explicit, URL port matches gsPort: OK."""
+        conn = _make_conn(host="http://192.168.11.11:10000",
+                          restppPort="7000", gsPort="10000")
+        self.assertEqual(conn.host, "http://192.168.11.11")
+        self.assertEqual(conn.restppPort, "7000")
+        self.assertEqual(conn.gsPort, "10000")
+
+    def test_both_ports_explicit_url_matches_neither(self):
+        """Both explicit, URL port matches neither: error."""
+        with self.assertRaises(TigerGraphException) as ctx:
+            _make_conn(host="http://192.168.11.11:5000",
+                       restppPort="7000", gsPort="10000")
+        self.assertIn("conflicts", str(ctx.exception))
+
+    def test_port_in_url_with_matching_gs_port(self):
+        """Explicit gsPort matching URL port should work."""
+        conn = _make_conn(host="http://192.168.11.11:14240", gsPort="14240")
+        self.assertEqual(conn.gsPort, "14240")
+
+    def test_https_with_port(self):
+        """HTTPS URL with port should work correctly."""
+        conn = _make_conn(host="https://myserver.tgcloud.io:443")
+        self.assertEqual(conn.host, "https://myserver.tgcloud.io")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

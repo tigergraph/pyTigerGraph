@@ -47,8 +47,8 @@ logger = logging.getLogger(__name__)
 class PyTigerGraphCore(object):
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "",
                  gsqlSecret: str = "", username: str = "tigergraph", password: str = "tigergraph",
-                 tgCloud: bool = False, restppPort: Union[int, str] = "9000",
-                 gsPort: Union[int, str] = "14240", gsqlVersion: str = "", version: str = "",
+                 tgCloud: bool = False, restppPort: Union[int, str] = None,
+                 gsPort: Union[int, str] = None, gsqlVersion: str = "", version: str = "",
                  apiToken: str = "", useCert: bool = None, certPath: str = None, debug: bool = None,
                  sslPort: Union[int, str] = "443", gcp: bool = False, jwtToken: str = ""):
         """Initiate a connection object.
@@ -105,8 +105,43 @@ class PyTigerGraphCore(object):
         if inputHost.scheme not in ["http", "https"]:
             raise TigerGraphException("Invalid URL scheme. Supported schemes are http and https.",
                                       "E-0003")
-        self.netloc = inputHost.netloc
-        self.host = "{0}://{1}".format(inputHost.scheme, self.netloc)
+        # Extract port from URL if present (e.g. http://192.168.11.11:14240)
+        # Use hostname (without port) to avoid double-port URLs later.
+        hostOnly = inputHost.hostname
+        hostPort = inputHost.port  # int or None
+        if hostPort is not None:
+            _hp = str(hostPort)
+            _restpp_explicit = restppPort is not None
+            _gs_explicit = gsPort is not None
+            if _restpp_explicit and _gs_explicit:
+                # Both ports explicitly provided — URL port must match one.
+                if str(restppPort) != _hp and str(gsPort) != _hp:
+                    raise TigerGraphException(
+                        "Port {0} in host URL conflicts with restppPort={1} and gsPort={2}. "
+                        "The URL port must match restppPort or gsPort when both are specified."
+                        .format(hostPort, restppPort, gsPort), "E-0003")
+            elif _restpp_explicit and str(restppPort) != _hp:
+                raise TigerGraphException(
+                    "Port {0} in host URL conflicts with restppPort={1}. "
+                    "Specify the port in the URL or via restppPort, not both."
+                    .format(hostPort, restppPort), "E-0003")
+            elif _gs_explicit and str(gsPort) != _hp:
+                raise TigerGraphException(
+                    "Port {0} in host URL conflicts with gsPort={1}. "
+                    "Specify the port in the URL or via gsPort, not both."
+                    .format(hostPort, gsPort), "E-0003")
+            # Fill in non-explicit ports from URL port
+            if not _restpp_explicit:
+                restppPort = _hp
+            if not _gs_explicit:
+                gsPort = _hp
+        # Apply defaults for any ports still unset
+        if restppPort is None:
+            restppPort = "9000"
+        if gsPort is None:
+            gsPort = "14240"
+        self.netloc = hostOnly
+        self.host = "{0}://{1}".format(inputHost.scheme, hostOnly)
         if gsqlSecret != "":
             self.username = "__GSQL__secret"
             self.password = gsqlSecret

@@ -43,8 +43,8 @@ logger = logging.getLogger(__name__)
 class AsyncPyTigerGraphBase(PyTigerGraphCore):
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "",
                  gsqlSecret: str = "", username: str = "tigergraph", password: str = "tigergraph",
-                 tgCloud: bool = False, restppPort: Union[int, str] = "9000",
-                 gsPort: Union[int, str] = "14240", gsqlVersion: str = "", version: str = "",
+                 tgCloud: bool = False, restppPort: Union[int, str] = None,
+                 gsPort: Union[int, str] = None, gsqlVersion: str = "", version: str = "",
                  apiToken: str = "", useCert: bool = None, certPath: str = None, debug: bool = None,
                  sslPort: Union[int, str] = "443", gcp: bool = False, jwtToken: str = ""):
         """Initiate a connection object (doc string copied from synchronous __init__).

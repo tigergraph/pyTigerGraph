@@ -7,7 +7,7 @@ name = "pyTigerGraph"
 version = "2.0.2"
 description = "Library to connect to TigerGraph databases"
 readme = "README.md"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
 authors = [{ name = "TigerGraph Inc.", email = "support@tigergraph.com" }]
 requires-python = ">=3.8"
 keywords = ["TigerGraph", "Graph Database", "Data Science", "Machine Learning"]
