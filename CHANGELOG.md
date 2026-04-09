@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.3] - 2026-04-09
+
+### Fixed
+
+- **Host URL port extraction** — when the host URL contains a port (e.g. `http://192.168.11.11:14240`), it is now correctly extracted and used instead of producing malformed double-port URLs. Conflicts with explicitly provided `restppPort`/`gsPort` are detected and reported.
+- **PEP 639 license compliance** — removed the deprecated `License ::` classifier that conflicts with the `license = "Apache-2.0"` expression, fixing build failures with newer setuptools.
+
+---
+
 ## [2.0.2] - 2026-04-07
 
 ### New Features
@@ -35,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`dropAllDataSources()`** now correctly uses `self.graphname` fallback for the 4.x REST API path.
 - **`getVectorIndexStatus()`** no longer produces a malformed URL when called without a graph name; now supports global scope (returns status for all graphs).
 - **`previewSampleData()`** now raises `TigerGraphException` when no graph name is available, instead of sending an empty graph name to the server.
+- **Host URL port extraction** — when the host URL contains a port (e.g. `http://192.168.11.11:14240`), it is now correctly extracted and used instead of producing malformed double-port URLs. Conflicts with explicitly provided `restppPort`/`gsPort` are detected and reported.
 - **Docstring fixes** — corrected `timeout` parameter descriptions across vertex and edge query methods.
 
 ---

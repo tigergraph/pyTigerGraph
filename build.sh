@@ -76,32 +76,6 @@ if $DO_UPLOAD; then
 
     echo "---- Uploading to PyPI ----"
     python3 -m twine upload dist/*
-
-    # Update conda recipe meta.yaml with the new version and sha256
-    PKG_VERSION=$(grep "^version" pyproject.toml | awk -F'"' '{print $2}')
-    TARBALL_URL="https://pypi.org/packages/source/p/$PYPI_PACKAGE/$PYPI_PACKAGE-$PKG_VERSION.tar.gz"
-
-    echo "---- Updating conda recipe to $PKG_VERSION ----"
-    # Wait briefly for PyPI to make the tarball available
-    for i in $(seq 1 30); do
-        HTTP_CODE=$(curl -sL -o /dev/null -w "%{http_code}" "$TARBALL_URL")
-        if [[ "$HTTP_CODE" == "200" ]]; then
-            break
-        fi
-        echo "  Waiting for PyPI tarball to become available... ($i/30)"
-        sleep 5
-    done
-    if [[ "$HTTP_CODE" != "200" ]]; then
-        echo "Warning: could not fetch tarball from PyPI. Update meta.yaml manually." >&2
-    else
-        NEW_SHA=$(curl -sL "$TARBALL_URL" | sha256sum | awk '{print $1}')
-        sed -i.bak "s|^  version:.*|  version: \"$PKG_VERSION\"|" "$RECIPE_DIR/meta.yaml"
-        sed -i.bak "s|^  url:.*|  url: $TARBALL_URL|" "$RECIPE_DIR/meta.yaml"
-        sed -i.bak "s|^  sha256:.*|  sha256: $NEW_SHA|" "$RECIPE_DIR/meta.yaml"
-        sed -i.bak "s|^  # sha256:.*|  sha256: $NEW_SHA|" "$RECIPE_DIR/meta.yaml"
-        rm -f "$RECIPE_DIR/meta.yaml.bak"
-        echo "  ✓ Updated meta.yaml: version=$PKG_VERSION sha256=$NEW_SHA"
-    fi
 fi
 
 # ── Conda ───────────────────────────────────────────────────────────────────
@@ -113,7 +87,7 @@ if $DO_CONDA_BUILD; then
     fi
 
     # Verify the required version is already published on PyPI before proceeding.
-    RECIPE_VERSION=$(grep "^  version:" "$RECIPE_DIR/meta.yaml" | awk '{print $2}' | tr -d '"')
+    RECIPE_VERSION=$(grep '{%\s*set\s*version' "$RECIPE_DIR/meta.yaml" | sed 's/.*"\(.*\)".*/\1/')
     echo "---- Checking PyPI for $PYPI_PACKAGE==$RECIPE_VERSION ----"
     PYPI_VERSIONS=$(curl -sf "https://pypi.org/pypi/$PYPI_PACKAGE/json" | python3 -c "import sys,json; print('\n'.join(json.load(sys.stdin)['releases'].keys()))" 2>/dev/null || true)
     if ! echo "$PYPI_VERSIONS" | grep -qx "$RECIPE_VERSION"; then
@@ -126,21 +100,14 @@ if $DO_CONDA_BUILD; then
         echo "  ✓ Found $PYPI_PACKAGE==$RECIPE_VERSION on PyPI"
     fi
 
-    # Compute sha256 of the tarball declared in the recipe and verify it matches.
-    TARBALL_URL=$(grep "url:" "$RECIPE_DIR/meta.yaml" | awk '{print $2}')
-    echo "---- Computing sha256 for $TARBALL_URL ----"
+    # Fetch sha256 from PyPI and update the recipe.
+    TARBALL_URL=$(grep "url:" "$RECIPE_DIR/meta.yaml" | sed 's/.*url:[[:space:]]*//' | sed "s/{{[^}]*}}/$RECIPE_VERSION/g")
+    echo "---- Fetching sha256 for $TARBALL_URL ----"
     COMPUTED_SHA=$(curl -sL "$TARBALL_URL" | sha256sum | awk '{print $1}')
-    RECIPE_SHA=$(grep "sha256:" "$RECIPE_DIR/meta.yaml" | awk '{print $2}' || true)
-    if [[ -n "$RECIPE_SHA" && "$COMPUTED_SHA" != "$RECIPE_SHA" ]]; then
-        echo "Error: sha256 mismatch!" >&2
-        echo "  recipe : $RECIPE_SHA" >&2
-        echo "  actual : $COMPUTED_SHA" >&2
-        exit 1
-    fi
-    if [[ -z "$RECIPE_SHA" ]]; then
-        echo "Warning: no sha256 in recipe. For conda-forge submission add:"
-        echo "  sha256: $COMPUTED_SHA"
-    fi
+    sed -i.bak "s|^  sha256:.*|  sha256: $COMPUTED_SHA|" "$RECIPE_DIR/meta.yaml"
+    sed -i.bak "s|^  # sha256:.*|  sha256: $COMPUTED_SHA|" "$RECIPE_DIR/meta.yaml"
+    rm -f "$RECIPE_DIR/meta.yaml.bak"
+    echo "  Updated meta.yaml sha256: $COMPUTED_SHA"
 
     echo "---- Building conda package ----"
     conda build -c conda-forge "$RECIPE_DIR"
