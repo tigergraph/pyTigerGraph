@@ -541,12 +541,16 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
 
         return res
 
-    async def dropGraph(self, graphName: str) -> dict:
+    async def dropGraph(self, graphName: str, cascade: bool = False) -> dict:
         """Drops a graph and all its data.
 
         Args:
             graphName:
                 Name of the graph to drop.
+            cascade:
+                When True, automatically removes associated queries and loading jobs.
+                When False (default), the operation fails if related queries or loading
+                jobs exist. Only supported on TigerGraph >= 4.0.
 
         Returns:
             A dict with at least a ``"message"`` key describing the outcome.
@@ -558,12 +562,15 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
         logger.debug("entry: dropGraph")
 
         if await self._version_greater_than_4_0():
+            params = {"cascade": str(cascade).lower()} if cascade else None
             res = await self._req("DELETE", self.gsUrl + "/gsql/v1/schema/graphs/" + graphName,
-                                 authMode="pwd", resKey=None,
+                                 authMode="pwd", resKey=None, params=params,
                                  headers={'Content-Type': 'application/json'})
         else:
-            res = _wrap_gsql_result(
-                await self.gsql(f"DROP GRAPH {graphName}"))
+            cmd = f"DROP GRAPH {graphName}"
+            if cascade:
+                cmd += " CASCADE"
+            res = _wrap_gsql_result(await self.gsql(cmd))
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(res))

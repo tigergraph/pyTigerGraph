@@ -209,10 +209,10 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         """
         _headers, _data, _ = self._prep_req(authMode, headers, url, method, data)
 
-        if "GSQL-TIMEOUT" in _headers:
-            http_timeout = (30, int(int(_headers["GSQL-TIMEOUT"])/1000) + 30)
+        if "GSQL-TIMEOUT" in _headers and int(_headers["GSQL-TIMEOUT"]) > 0:
+            http_timeout = int(int(_headers["GSQL-TIMEOUT"])/1000) + 30
         else:
-            http_timeout = (30, None)
+            http_timeout = None
 
         conn_err = None
         try:

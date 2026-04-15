@@ -932,5 +932,120 @@ class TestHostPortExtraction(unittest.TestCase):
         self.assertEqual(conn.host, "https://myserver.tgcloud.io")
 
 
+class TestHttpTimeoutFromGsqlTimeout(unittest.TestCase):
+    """Tests for HTTP timeout derivation from GSQL-TIMEOUT header.
+
+    Verifies that:
+    - GSQL-TIMEOUT > 0 sets both connect and read timeouts to the same value
+      (so large uploads don't hit a 30s socket timeout during sendall).
+    - GSQL-TIMEOUT = 0 uses no client-side timeout (server-wide timeout).
+    - Per-request headers override responseConfigHeader.
+    """
+
+    def _capture_timeout(self, conn, gsql_timeout):
+        """Call _req with a given GSQL-TIMEOUT and return the timeout passed to _do_request."""
+        captured = {}
+
+        def fake_do_request(method, url, headers, data, jsonData, params, timeout):
+            captured["timeout"] = timeout
+            resp = MagicMock()
+            resp.status_code = 200
+            resp.content = b'{"results": []}'
+            resp.json.return_value = {"results": []}
+            return resp
+
+        with patch.object(conn, "_do_request", side_effect=fake_do_request):
+            conn._req("POST", conn.restppUrl + "/ddl/testgraph",
+                       headers={"GSQL-TIMEOUT": str(gsql_timeout),
+                                "RESPONSE-LIMIT": "128000000"})
+        return captured["timeout"]
+
+    def test_gsql_timeout_positive_sets_timeout(self):
+        """GSQL-TIMEOUT=600000 should give 630."""
+        conn = _make_conn()
+        timeout = self._capture_timeout(conn, 600000)
+        self.assertEqual(timeout, 630)
+
+    def test_gsql_timeout_zero_gives_no_timeout(self):
+        """GSQL-TIMEOUT=0 should give None (no client-side limit)."""
+        conn = _make_conn()
+        timeout = self._capture_timeout(conn, 0)
+        self.assertIsNone(timeout)
+
+    def test_gsql_timeout_small_value(self):
+        """GSQL-TIMEOUT=16000 should give 46."""
+        conn = _make_conn()
+        timeout = self._capture_timeout(conn, 16000)
+        self.assertEqual(timeout, 46)
+
+    def test_per_request_header_overrides_response_config(self):
+        """Per-request GSQL-TIMEOUT should override responseConfigHeader."""
+        conn = _make_conn()
+        conn.customizeHeader(timeout=300000)  # responseConfigHeader: 300000
+        # Per-request header: 600000 should win
+        timeout = self._capture_timeout(conn, 600000)
+        self.assertEqual(timeout, 630)
+
+    def test_response_config_header_used_when_no_per_request(self):
+        """responseConfigHeader GSQL-TIMEOUT used when no per-request header."""
+        conn = _make_conn()
+        conn.customizeHeader(timeout=300000)
+
+        captured = {}
+        def fake_do_request(method, url, headers, data, jsonData, params, timeout):
+            captured["timeout"] = timeout
+            resp = MagicMock()
+            resp.status_code = 200
+            resp.content = b'{"results": []}'
+            resp.json.return_value = {"results": []}
+            return resp
+
+        with patch.object(conn, "_do_request", side_effect=fake_do_request):
+            conn._req("GET", conn.restppUrl + "/some/endpoint")
+        # responseConfigHeader sets GSQL-TIMEOUT=300000 → 330
+        self.assertEqual(captured["timeout"], 330)
+
+    def test_loading_job_timeout_passed_correctly(self):
+        """runLoadingJobWithData with timeout=600000 should use 630."""
+        conn = _make_conn()
+        conn.customizeHeader(timeout=300000)
+
+        captured = {}
+        def fake_do_request(method, url, headers, data, jsonData, params, timeout):
+            captured["timeout"] = timeout
+            captured["headers"] = headers
+            resp = MagicMock()
+            resp.status_code = 200
+            resp.content = b'{"results": []}'
+            resp.json.return_value = {"results": []}
+            return resp
+
+        with patch.object(conn, "_do_request", side_effect=fake_do_request):
+            conn.runLoadingJobWithData("line1\nline2\n", "f1", "job1",
+                                       timeout=600000)
+        # Per-request GSQL-TIMEOUT=600000 overrides responseConfigHeader=300000
+        self.assertEqual(captured["headers"]["GSQL-TIMEOUT"], "600000")
+        self.assertEqual(captured["timeout"], 630)
+
+    def test_loading_job_default_timeout_zero(self):
+        """runLoadingJobWithData default timeout=0 should use no client limit."""
+        conn = _make_conn()
+
+        captured = {}
+        def fake_do_request(method, url, headers, data, jsonData, params, timeout):
+            captured["timeout"] = timeout
+            captured["headers"] = headers
+            resp = MagicMock()
+            resp.status_code = 200
+            resp.content = b'{"results": []}'
+            resp.json.return_value = {"results": []}
+            return resp
+
+        with patch.object(conn, "_do_request", side_effect=fake_do_request):
+            conn.runLoadingJobWithData("line1\nline2\n", "f1", "job1")
+        self.assertEqual(captured["headers"]["GSQL-TIMEOUT"], "0")
+        self.assertIsNone(captured["timeout"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

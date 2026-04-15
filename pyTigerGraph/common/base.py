@@ -420,14 +420,14 @@ class PyTigerGraphCore(object):
         # _refresh_auth_headers() keeps these current after every getToken() call.
         _headers = dict(self._cached_auth)
 
+        if self.responseConfigHeader:
+            _headers.update(self.responseConfigHeader)
         if headers:
             _headers.update(headers)
         if self.awsIamHeaders:
             # version >=4.1 has removed /gsqlserver/
             if url.startswith(self.gsUrl + "/gsqlserver/") or (self._versionGreaterThan4_0() and url.startswith(self.gsUrl)):
                 _headers.update(self.awsIamHeaders)
-        if self.responseConfigHeader:
-            _headers.update(self.responseConfigHeader)
         if method == "POST" or method == "PUT" or method == "DELETE":
             _data = data
         else:

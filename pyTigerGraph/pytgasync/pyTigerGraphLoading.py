@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
 
     async def runLoadingJobWithDataFrame(self, df: 'pd.DataFrame', fileTag: str, jobName: str, sep: str = None,
-                                         eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000, columns: list = None) -> Union[dict, None]:
+                                         eol: str = None, timeout: int = 0, sizeLimit: int = 128000000, columns: list = None) -> Union[dict, None]:
         """Execute a loading job with the given pandas DataFrame with optional column list.
 
         The data string will be posted to the TigerGraph server and the value of the appropriate
@@ -86,7 +86,7 @@ class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
         return res
 
     async def runLoadingJobWithFile(self, filePath: str, fileTag: str, jobName: str, sep: str = None,
-                                    eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000) -> Union[dict, None]:
+                                    eol: str = None, timeout: int = 0, sizeLimit: int = 128000000) -> Union[dict, None]:
         """Execute a loading job with the referenced file.
 
         The file will first be uploaded to the TigerGraph server and the value of the appropriate
@@ -129,7 +129,7 @@ class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
         return res
 
     async def runLoadingJobWithData(self, data: str, fileTag: str, jobName: str, sep: str = None,
-                                    eol: str = None, timeout: int = 16000, sizeLimit: int = 128000000) -> Union[dict, None]:
+                                    eol: str = None, timeout: int = 0, sizeLimit: int = 128000000) -> Union[dict, None]:
         """Execute a loading job with the given data string.
 
         The data string will be posted to the TigerGraph server and the value of the appropriate
@@ -193,7 +193,7 @@ class AsyncPyTigerGraphLoading(AsyncPyTigerGraphBase):
 
         return res
 
-    async def uploadFile(self, filePath, fileTag, jobName="", sep=None, eol=None, timeout=16000,
+    async def uploadFile(self, filePath, fileTag, jobName="", sep=None, eol=None, timeout=0,
                          sizeLimit=128000000) -> dict:
         """DEPRECATED
 

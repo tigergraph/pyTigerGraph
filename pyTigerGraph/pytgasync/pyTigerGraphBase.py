@@ -148,13 +148,11 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
 
         _headers, _data, _ = self._prep_req(authMode, headers, url, method, data)
 
-        if "GSQL-TIMEOUT" in _headers:
-            http_timeout = aiohttp.ClientTimeout(
-                sock_connect=30,
-                total=int(int(_headers["GSQL-TIMEOUT"]) / 1000) + 30,
-            )
+        if "GSQL-TIMEOUT" in _headers and int(_headers["GSQL-TIMEOUT"]) > 0:
+            _total = int(int(_headers["GSQL-TIMEOUT"]) / 1000) + 30
+            http_timeout = aiohttp.ClientTimeout(total=_total)
         else:
-            http_timeout = aiohttp.ClientTimeout(sock_connect=30, total=None)
+            http_timeout = aiohttp.ClientTimeout(total=None)
 
         conn_err = None
         try:
