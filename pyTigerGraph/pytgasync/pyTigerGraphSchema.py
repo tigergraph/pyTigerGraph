@@ -550,7 +550,7 @@ class AsyncPyTigerGraphSchema(AsyncPyTigerGraphBase):
             cascade:
                 When True, automatically removes associated queries and loading jobs.
                 When False (default), the operation fails if related queries or loading
-                jobs exist. Only supported on TigerGraph >= 4.0.
+                jobs exist.
 
         Returns:
             A dict with at least a ``"message"`` key describing the outcome.

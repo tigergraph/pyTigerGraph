@@ -108,7 +108,14 @@ class PyTigerGraphCore(object):
         # Extract port from URL if present (e.g. http://192.168.11.11:14240)
         # Use hostname (without port) to avoid double-port URLs later.
         hostOnly = inputHost.hostname
-        hostPort = inputHost.port  # int or None
+        if not hostOnly:
+            raise TigerGraphException(
+                "Invalid or empty hostname in host URL: " + host)
+        try:
+            hostPort = inputHost.port  # int or None
+        except ValueError:
+            raise TigerGraphException(
+                "Invalid port in host URL: " + host)
         if hostPort is not None:
             _hp = str(hostPort)
             _restpp_explicit = restppPort is not None
