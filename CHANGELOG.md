@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.3] - 2026-04-09
+
+### New Features
+
+- **`dropGraph()` cascade parameter** — `dropGraph(graphName, cascade=True)` automatically removes associated queries and loading jobs. Uses the REST API on TigerGraph >= 4.0 and GSQL `DROP GRAPH ... CASCADE` on older versions.
+
+### Fixed
+
+- **Host URL port extraction** — when the host URL contains a port (e.g. `http://127.0.0.1:14240`), it is now correctly extracted and used instead of producing malformed double-port URLs. Conflicts with explicitly provided `restppPort`/`gsPort` are detected and reported.
+- **Host URL validation** — malformed or empty hostnames and out-of-range ports now raise `TigerGraphException` instead of crashing with an uncaught error.
+- **HTTP timeout during large file uploads** — the connect timeout no longer stays on the socket during POST body transmission; both connect and read now use a single timeout value derived from `GSQL-TIMEOUT`.
+- **Header merge order** — per-request headers (e.g. `timeout` passed to `runLoadingJobWithFile()`) now correctly override `responseConfigHeader` set by `customizeHeader()`.
+- **Loading job default timeout** — changed from 16000ms to 0 (use server-wide timeout) for `runLoadingJobWithFile()`, `runLoadingJobWithData()`, `runLoadingJobWithDataFrame()`, and `uploadFile()`.
+- **PEP 639 license compliance** — removed the deprecated `License ::` classifier that conflicts with the `license = "Apache-2.0"` expression, fixing build failures with newer setuptools.
+
+---
+
 ## [2.0.2] - 2026-04-07
 
 ### New Features
@@ -35,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`dropAllDataSources()`** now correctly uses `self.graphname` fallback for the 4.x REST API path.
 - **`getVectorIndexStatus()`** no longer produces a malformed URL when called without a graph name; now supports global scope (returns status for all graphs).
 - **`previewSampleData()`** now raises `TigerGraphException` when no graph name is available, instead of sending an empty graph name to the server.
+- **Host URL port extraction** — when the host URL contains a port (e.g. `http://127.0.0.1:14240`), it is now correctly extracted and used instead of producing malformed double-port URLs. Conflicts with explicitly provided `restppPort`/`gsPort` are detected and reported.
 - **Docstring fixes** — corrected `timeout` parameter descriptions across vertex and edge query methods.
 
 ---

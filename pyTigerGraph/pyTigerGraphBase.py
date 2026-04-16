@@ -54,8 +54,8 @@ logger = logging.getLogger(__name__)
 class pyTigerGraphBase(PyTigerGraphCore, object):
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "MyGraph",
                  gsqlSecret: str = "", username: str = "tigergraph", password: str = "tigergraph",
-                 tgCloud: bool = False, restppPort: Union[int, str] = "9000",
-                 gsPort: Union[int, str] = "14240", gsqlVersion: str = "", version: str = "",
+                 tgCloud: bool = False, restppPort: Union[int, str] = None,
+                 gsPort: Union[int, str] = None, gsqlVersion: str = "", version: str = "",
                  apiToken: str = "", useCert: bool = None, certPath: str = None, debug: bool = None,
                  sslPort: Union[int, str] = "443", gcp: bool = False, jwtToken: str = ""):
         """Initiate a connection object.
@@ -209,10 +209,10 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         """
         _headers, _data, _ = self._prep_req(authMode, headers, url, method, data)
 
-        if "GSQL-TIMEOUT" in _headers:
-            http_timeout = (30, int(int(_headers["GSQL-TIMEOUT"])/1000) + 30)
+        if "GSQL-TIMEOUT" in _headers and int(_headers["GSQL-TIMEOUT"]) > 0:
+            http_timeout = int(int(_headers["GSQL-TIMEOUT"])/1000) + 30
         else:
-            http_timeout = (30, None)
+            http_timeout = None
 
         conn_err = None
         try:
