@@ -8,6 +8,52 @@ from pyTigerGraph.common.exception import TigerGraphException
 
 logger = logging.getLogger(__name__)
 
+
+def _is_auth_failure_response(body) -> bool:
+    """True if `body` (a parsed JSON dict, or anything else) is a TigerGraph
+    error response signaling that the request lacks valid authentication.
+    Multiple shapes are accepted, since REST++ and GSQL surface auth failures
+    differently:
+
+      * REST++ `code == "REST-10016"` ("Access Denied because the input
+        token = '' is empty or too short").
+      * Plain ``{"error": true, "message": "Authentication failed."}`` —
+        returned by GSQL endpoints with no `code` field when the request
+        carries no credentials.
+    """
+    if not isinstance(body, dict) or not body.get("error"):
+        return False
+    if body.get("code") == "REST-10016":
+        return True
+    msg = body.get("message")
+    return isinstance(msg, str) and "Authentication failed" in msg
+
+
+def _is_endpoint_not_found(exc: Exception) -> bool:
+    """True if `exc` looks like the server reporting that the requested URL
+    isn't served. Two shapes are accepted:
+
+      * HTTP 404. Surfaced as ``requests.exceptions.HTTPError`` on the sync
+        path and ``aiohttp.ClientResponseError`` on the async path. We
+        duck-type on the status attribute to avoid importing either lib here.
+      * ``TigerGraphException`` carrying REST++ code ``REST-1000`` with the
+        canonical "Endpoint is not found" message in its first argument.
+    """
+    status = None
+    response = getattr(exc, "response", None)
+    if response is not None:
+        status = getattr(response, "status_code", None)
+    if status is None:
+        status = getattr(exc, "status", None)
+    if status == 404:
+        return True
+    if isinstance(exc, TigerGraphException):
+        if getattr(exc, "code", None) != "REST-1000":
+            return False
+        msg = exc.args[0] if exc.args else ""
+        return isinstance(msg, str) and "Endpoint is not found" in msg
+    return False
+
 def _parse_get_secrets(response: str) -> Dict[str, str]:
     secrets_dict = {}
     lines = response.split("\n")

@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.4] - 2026-05-18
+
+### Fixed
+
+- **Authentication with username/password on instances with REST++ authentication enabled** — connections constructed with only `username` and `password` (no `apiToken`) now work against any TigerGraph instance that has REST++ authentication enabled. The library automatically mints a token and retries the request when the server signals that a token is required.
+- **`getToken()` correctly applies the token to the connection** — the connection's `apiToken` is now the token string. Previously it was stored as an internal tuple `(token, expiration)`, leaving every subsequent request unauthenticated.
+- **`refreshToken()` correctly applies the refreshed token** — the connection is now updated to use the refreshed token. Previously the call returned successfully but the connection silently continued using the old token.
+- **Token mint prefers the modern endpoint** — token requests try the TigerGraph 4.x endpoint (`POST /gsql/v1/tokens`) first and fall back to the legacy endpoint (`POST /restpp/requesttoken`) on failure, matching the order already used by the async client.
+
+---
+
 ## [2.0.3] - 2026-04-09
 
 ### New Features

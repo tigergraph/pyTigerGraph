@@ -13,7 +13,8 @@ from pyTigerGraph.common.auth import (
     _parse_get_secrets,
     _parse_create_secret,
     _prep_token_request,
-    _parse_token_response
+    _parse_token_response,
+    _is_endpoint_not_found,
 )
 from pyTigerGraph.common.exception import TigerGraphException
 from pyTigerGraph.pyTigerGraphGSQL import pyTigerGraphGSQL
@@ -348,24 +349,29 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             if _method:
                 method = _method
 
-            # Try using TG 3.x endpoint first, if url not found then try <4.1 endpoint
+            # Try TG 4.x endpoint first (POST /gsql/v1/tokens); fall back to the
+            # legacy TG 3.x endpoint (POST /restpp/requesttoken) only when the
+            # modern endpoint is genuinely absent on this server. "Endpoint not
+            # found" can surface either as an HTTP 404 or as a 2xx response with
+            # REST-1000 in the JSON body — _is_endpoint_not_found handles both.
             try:
-                res = self._req(
-                        method, alt_url, authMode=authMode, data=alt_data, resKey=None)
-                mainVer = 3
-            except:
-                try:
-                    res = self._req(method, url, authMode=authMode,
+                res = self._req(method, url, authMode=authMode,
                                 data=data, resKey=None, jsonData=True)
-                    mainVer = 4
-                except requests.exceptions.HTTPError as e:
-                    if e.response.status_code == 404:
+                mainVer = 4
+            except Exception as e:
+                if not _is_endpoint_not_found(e):
+                    raise
+                try:
+                    res = self._req(
+                            method, alt_url, authMode=authMode, data=alt_data, resKey=None)
+                    mainVer = 3
+                except Exception as e2:
+                    if _is_endpoint_not_found(e2):
                         raise TigerGraphException(
                             "Error requesting token. Check if the connection's graphname is correct and that REST authentication is enabled.",
                             404
                         )
-                    else:
-                        raise e
+                    raise
 
         # uses mainVer instead of _versionGreaterThan4_0 since you need a token for verson checking
         return res, mainVer
@@ -420,10 +426,11 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                                                    mainVer,
                                                    self.base64_credential
                                                 )
-        self.apiToken = token
+        self.apiToken = token[0] if isinstance(token, tuple) else token
         self.authHeader = auth_header
         self.authMode = "token"
         self._token_source = "generated"
+        self._refresh_auth_headers()
 
         logger.debug("exit: getToken")
         return token
@@ -480,7 +487,10 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             token = self.apiToken
         res, mainVer = self._token(secret, lifetime, token, "PUT")
 
-        newToken = _parse_token_response(res, setToken, mainVer, self.base64_credential)
+        newToken, auth_header = _parse_token_response(res, setToken, mainVer, self.base64_credential)
+        self.apiToken = newToken[0] if isinstance(newToken, tuple) else newToken
+        self.authHeader = auth_header
+        self._refresh_auth_headers()
 
         logger.debug("exit: refreshToken")
 
