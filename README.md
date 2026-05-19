@@ -12,8 +12,16 @@ Downloads: [![Total Downloads](https://static.pepy.tech/badge/pyTigergraph)](htt
 
 ### Base package
 
+Install via pip:
+
 ```sh
 pip install pyTigerGraph
+```
+
+Or via conda from the `tigergraph` channel:
+
+```sh
+conda install -c tigergraph pytigergraph
 ```
 
 ### Optional extras
