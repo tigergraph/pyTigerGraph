@@ -368,10 +368,11 @@ class AsyncPyTigerGraphAuth(AsyncPyTigerGraphGSQL):
                                                    self.base64_credential
                                                   )
 
-        self.apiToken = token
+        self.apiToken = token[0] if isinstance(token, tuple) else token
         self.authHeader = auth_header
         self.authMode = "token"
         self._token_source = "generated"
+        self._refresh_auth_headers()
 
         logger.debug("exit: getToken")
         return token
@@ -389,7 +390,10 @@ class AsyncPyTigerGraphAuth(AsyncPyTigerGraphGSQL):
         if not token:
             token = self.apiToken
         res, mainVer = await self._token(secret=secret, lifetime=lifetime, token=token, _method="PUT")
-        newToken = _parse_token_response(res, setToken, mainVer)
+        newToken, auth_header = _parse_token_response(res, setToken, mainVer, self.base64_credential)
+        self.apiToken = newToken[0] if isinstance(newToken, tuple) else newToken
+        self.authHeader = auth_header
+        self._refresh_auth_headers()
 
         logger.debug("exit: refreshToken")
         return newToken

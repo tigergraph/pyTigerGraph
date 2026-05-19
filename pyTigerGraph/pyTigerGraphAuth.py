@@ -348,16 +348,17 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             if _method:
                 method = _method
 
-            # Try using TG 3.x endpoint first, if url not found then try <4.1 endpoint
+            # Try TG 4.x endpoint first (POST /gsql/v1/tokens); fall back to
+            # the legacy TG 3.x endpoint (POST /restpp/requesttoken) on failure.
             try:
-                res = self._req(
-                        method, alt_url, authMode=authMode, data=alt_data, resKey=None)
-                mainVer = 3
+                res = self._req(method, url, authMode=authMode,
+                                data=data, resKey=None, jsonData=True)
+                mainVer = 4
             except:
                 try:
-                    res = self._req(method, url, authMode=authMode,
-                                data=data, resKey=None, jsonData=True)
-                    mainVer = 4
+                    res = self._req(
+                            method, alt_url, authMode=authMode, data=alt_data, resKey=None)
+                    mainVer = 3
                 except requests.exceptions.HTTPError as e:
                     if e.response.status_code == 404:
                         raise TigerGraphException(
@@ -420,10 +421,11 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
                                                    mainVer,
                                                    self.base64_credential
                                                 )
-        self.apiToken = token
+        self.apiToken = token[0] if isinstance(token, tuple) else token
         self.authHeader = auth_header
         self.authMode = "token"
         self._token_source = "generated"
+        self._refresh_auth_headers()
 
         logger.debug("exit: getToken")
         return token
@@ -480,7 +482,10 @@ class pyTigerGraphAuth(pyTigerGraphGSQL):
             token = self.apiToken
         res, mainVer = self._token(secret, lifetime, token, "PUT")
 
-        newToken = _parse_token_response(res, setToken, mainVer, self.base64_credential)
+        newToken, auth_header = _parse_token_response(res, setToken, mainVer, self.base64_credential)
+        self.apiToken = newToken[0] if isinstance(newToken, tuple) else newToken
+        self.authHeader = auth_header
+        self._refresh_auth_headers()
 
         logger.debug("exit: refreshToken")
 
