@@ -7,7 +7,7 @@ from pyTigerGraph.common.exception import TigerGraphException
 try:
     __version__ = _pkg_version("pyTigerGraph")
 except PackageNotFoundError:
-    __version__ = "2.0.2"
+    __version__ = "2.0.4"
 
 __license__ = "Apache 2"
 
