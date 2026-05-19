@@ -11,7 +11,8 @@ from pyTigerGraph.common.auth import (
     _parse_get_secrets,
     _parse_create_secret,
     _prep_token_request,
-    _parse_token_response
+    _parse_token_response,
+    _is_endpoint_not_found,
 )
 from pyTigerGraph.pytgasync.pyTigerGraphGSQL import AsyncPyTigerGraphGSQL
 
@@ -342,16 +343,25 @@ class AsyncPyTigerGraphAuth(AsyncPyTigerGraphGSQL):
             if _method:
                 method = _method
 
-            # Try using TG 4.1 endpoint first, if url not found then try <4.1 endpoint
+            # Try TG 4.x endpoint first; fall back to the legacy TG 3.x endpoint
+            # only when the modern endpoint is genuinely absent on this server.
+            # See sync _token for the rationale and the helper's contract.
             try:
                 res = await self._req(method, url, authMode=authMode, data=data, resKey=None, jsonData=True)
                 mainVer = 4
-            except:
+            except Exception as e:
+                if not _is_endpoint_not_found(e):
+                    raise
                 try:
                     res = await self._req(method, alt_url, authMode=authMode, data=alt_data, resKey=None)
                     mainVer = 3
-                except:
-                    raise TigerGraphException("Error requesting token. Check if the connection's graphname is correct.", 400)
+                except Exception as e2:
+                    if _is_endpoint_not_found(e2):
+                        raise TigerGraphException(
+                            "Error requesting token. Check if the connection's graphname is correct and that REST authentication is enabled.",
+                            404
+                        )
+                    raise
 
         # uses mainVer instead of _versionGreaterThan4_0 since you need a token for verson checking
         return res, mainVer

@@ -34,6 +34,7 @@ import aiohttp
 from typing import Optional, Union
 from urllib.parse import urlparse
 
+from pyTigerGraph.common.auth import _is_auth_failure_response
 from pyTigerGraph.common.base import PyTigerGraphCore
 from pyTigerGraph.common.exception import TigerGraphException
 
@@ -166,15 +167,16 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
             # Auto-mint/refresh token and retry once when the server signals the request
             # needs a Bearer token. See sync _req for full rationale.
             needs_token_retry = False
-            if not getattr(self, "_refreshing_token", False):
-                if status == 401 and getattr(self, "_token_source", None) == "generated":
+            if (not getattr(self, "_refreshing_token", False)
+                    and getattr(self, "_token_source", None) != "user"):
+                if status == 401:
                     needs_token_retry = True
                 elif body:
                     try:
                         _body = json.loads(body)
                     except (json.decoder.JSONDecodeError, ValueError):
                         _body = None
-                    if isinstance(_body, dict) and _body.get("error") and _body.get("code") == "REST-10016":
+                    if _is_auth_failure_response(_body):
                         needs_token_retry = True
             if needs_token_retry:
                 async with self._token_refresh_lock:

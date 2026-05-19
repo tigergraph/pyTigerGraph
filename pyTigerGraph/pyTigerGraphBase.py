@@ -33,6 +33,7 @@ from requests.adapters import HTTPAdapter
 from typing import Union
 from urllib.parse import urlparse
 
+from pyTigerGraph.common.auth import _is_auth_failure_response
 from pyTigerGraph.common.exception import TigerGraphException
 from pyTigerGraph.common.base import PyTigerGraphCore
 
@@ -224,22 +225,24 @@ class pyTigerGraphBase(PyTigerGraphCore, object):
         if res is not None:
             # Auto-mint/refresh token and retry once when the server signals the request
             # needs a Bearer token. Two trigger shapes:
-            #   * HTTP 401 (only when we previously generated a token — preserves the
-            #     historical behavior of not silently replacing a user-supplied token).
-            #   * REST-10016 in the JSON body — REST++ application-level "token missing
-            #     or empty" returned on a non-2xx status (e.g. by TigerGraph Cloud). Always
-            #     retry; the server is unambiguously asking for a token and a successful
-            #     mint resolves it.
+            #   * HTTP 401
+            #   * an auth-failure JSON body — REST++ REST-10016 or a GSQL
+            #     `{"error":true,"message":"Authentication failed."}` shape.
+            # In both cases, only retry when the connection's credentials are ours to
+            # manage (no user-supplied apiToken/jwtToken). A user-supplied token is
+            # treated as deliberate: we surface the auth error rather than silently
+            # replacing the user's token with a freshly-minted one.
             needs_token_retry = False
-            if not getattr(self, "_refreshing_token", False):
-                if res.status_code == 401 and getattr(self, "_token_source", None) == "generated":
+            if (not getattr(self, "_refreshing_token", False)
+                    and getattr(self, "_token_source", None) != "user"):
+                if res.status_code == 401:
                     needs_token_retry = True
                 elif res.content:
                     try:
                         _body = json.loads(res.content)
                     except (json.decoder.JSONDecodeError, ValueError):
                         _body = None
-                    if isinstance(_body, dict) and _body.get("error") and _body.get("code") == "REST-10016":
+                    if _is_auth_failure_response(_body):
                         needs_token_retry = True
             if needs_token_retry:
                 with self._token_refresh_lock:
