@@ -164,8 +164,9 @@ with TigerGraphConnection(...) as conn:
 
 ### Asynchronous mode (`AsyncTigerGraphConnection`)
 
-- Uses a single `aiohttp.ClientSession` with an unbounded connection pool shared across all concurrent coroutines — no GIL, no thread-scheduling overhead.
+- Uses a single `aiohttp.ClientSession` per event loop, with an unbounded connection pool shared across all concurrent coroutines — no GIL, no thread-scheduling overhead.
 - Typically achieves higher QPS and lower tail latency than the threaded sync mode for I/O-bound workloads.
+- A connection may be used from more than one event loop: reused across separate `asyncio.run()` calls, or shared by threads that each run their own loop. Each loop gets its own session and pool. Use `async with` (or `await conn.aclose()`) to release sockets when finished.
 
 ```python
 import asyncio
