@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.5] - 2026-09-25
+
+### Improved
+
+- **`installQueries()` no longer holds the connection open while queries compile** — installation is submitted asynchronously, so the call returns as soon as the server accepts it instead of blocking for the whole compile and risking a gateway timeout. `wait=True` (the default for sync connections) still returns only once installation has finished; `wait=False` (the default for async connections) now returns the ID of the submitted request rather than a completion message.
+- **`AI.query()` chat engine selection** — `query()` now accepts `mode` (`"agentic"` | `"classic"`), `rag_method` (agent style or retriever name), and `include_fields` to choose the GraphRAG chat engine and control what the response returns. Called with only a question it behaves exactly as before, deferring to the graph's configured default engine.
+
+### Fixed
+
+- **Declared minimum Python version corrected to 3.9** — installing on Python 3.8 previously succeeded and then failed at import. The package has in fact required 3.9 since it began using built-in generic type annotations; the conda recipe already required 3.9.
+- **`AsyncTigerGraphConnection` use across event loops** — a connection is no longer tied to the first event loop it ran on. Reusing it after a loop has closed, which is what `asyncio.run()` leaves behind on every call, no longer fails with `RuntimeError: Event loop is closed`; and sharing one connection between threads that each run their own loop no longer lets one thread close the session another is still using. The HTTP session and connection pool are now kept per event loop, and those belonging to a closed loop are released rather than reported as leaked.
+- **Untyped vertex IDs in `runInstalledQuery()` GET mode** — passing a vertex as `(id, "type")` no longer fails when the ID contains `&` or `#`; the ID is now escaped in the query string as it already was for every other vertex form.
+- **Vertex IDs containing `%` in `runInstalledQuery()`** — a vertex whose primary ID contains a percent sign (e.g. `"50% done.pdf"`) could not be retrieved via POST. The ID is URL-decoded by the server, so the `%` was read as the start of an escape sequence; it is now escaped like every other string in the request body. Applies to both the sync and async clients.
+
+---
+
 ## [2.0.4] - 2026-05-18
 
 ### Fixed

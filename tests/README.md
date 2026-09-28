@@ -8,8 +8,9 @@ Most unit tests need an accessible TigerGraph database with a specific graph. No
 
 If you need to manually prepare a DB for testing, run the `testserver.gsql` script to create the graph for testing core functions (via the `gsql` command line tool; GraphStudio cannot be used.) The script will create a graph called "tests" and will populate it with various object types and some data.
 
-⚠️ **NOTE**: The script drops all existing graphs and objects, so use it with a TigerGraph instance
-that does not have operational or otherwise important data, schema design or code.
+⚠️ **NOTE**: The script drops and recreates the "tests" graph, so do not run it against an instance
+where a graph of that name holds anything worth keeping. Other graphs on the instance are left alone.
+The script also creates the secrets `secret1`-`secret3` for the connecting user.
 
 About testing data for the GDS functions, please contact one of the maintainers. 
 
