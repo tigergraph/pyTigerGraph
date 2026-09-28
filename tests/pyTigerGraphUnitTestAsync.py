@@ -30,6 +30,17 @@ async def make_connection(graphname: str = None):
             config = json.load(config_file)
         server_config.update(config)
 
+    # Environment variables override the file, so a live test instance can be
+    # pointed at without writing its address or credentials into a tracked file.
+    # Each key takes TG_TEST_<KEY>, e.g. TG_TEST_HOST, TG_TEST_PASSWORD.
+    for key, default in list(server_config.items()) + [("getToken", False)]:
+        value = os.environ.get("TG_TEST_" + key.upper())
+        if value is None:
+            continue
+        if isinstance(default, bool):
+            value = value.strip().lower() in ("1", "true", "yes", "on")
+        server_config[key] = value
+
     conn = AsyncTigerGraphConnection(
         host=server_config["host"],
         graphname=graphname if graphname else server_config["graphname"],
