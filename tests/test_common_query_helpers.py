@@ -130,6 +130,36 @@ class TestPrepQueryParametersJson(unittest.TestCase):
         result = _prep_query_parameters_json({"v": (42, "Order")})
         self.assertEqual(result, {"v": {"id": 42, "type": "Order"}})
 
+    # ------------------------------------------------------------------
+    # Vertex ID encoding — string IDs get the same % escaping as every other
+    # string in the POST body, because the server URL-decodes them too.
+    # ------------------------------------------------------------------
+
+    def test_tuple_vertex_id_percent_encoded(self):
+        # A bare % in a STRING id would otherwise be read as a percent-escape.
+        result = _prep_query_parameters_json({"doc": ("50% done.pdf",)})
+        self.assertEqual(result, {"doc": {"id": "50%25 done.pdf"}})
+
+    def test_tuple_vertex_id_reserved_chars_untouched(self):
+        # Spaces, /, :, @, + and non-ASCII need no escaping — encoding them
+        # would be a no-op at best and is not what the server expects.
+        vid = "summer release_115605840 a/b:c@d+e \u65e5\u672c\u8a9e"
+        result = _prep_query_parameters_json({"v": (vid,)})
+        self.assertEqual(result, {"v": {"id": vid}})
+
+    def test_tuple_vertex_id_int_not_encoded(self):
+        # INT primary IDs must keep their JSON type, not become a string.
+        result = _prep_query_parameters_json({"v": (42,)})
+        self.assertEqual(result, {"v": {"id": 42}})
+
+    def test_untyped_vertex_id_percent_encoded(self):
+        result = _prep_query_parameters_json({"v": ("50% off", "Person")})
+        self.assertEqual(result, {"v": {"id": "50%25 off", "type": "Person"}})
+
+    def test_set_vertex_ids_percent_encoded(self):
+        result = _prep_query_parameters_json({"vs": [("a%b",), ("c d",)]})
+        self.assertEqual(result, {"vs": [{"id": "a%25b"}, {"id": "c d"}]})
+
     def test_tuple_invalid_3tuple_raises(self):
         with self.assertRaises(TigerGraphException):
             _prep_query_parameters_json({"v": ("id", "type", "extra")})
@@ -293,6 +323,23 @@ class TestParseQueryParameters(unittest.TestCase):
         result = _parse_query_parameters({"vs": [("Tom", "Person"), ("Mary", "Person")]})
         self.assertEqual(result, "vs[0]=Tom&vs[0].type=Person&vs[1]=Mary&vs[1].type=Person")
 
+    # ------------------------------------------------------------------
+    # Vertex ID escaping — an unescaped & or # in an ID terminates the
+    # parameter (or starts a fragment) and the query string is truncated.
+    # ------------------------------------------------------------------
+
+    def test_untyped_vertex_2tuple_id_escaped(self):
+        result = _parse_query_parameters({"v": ("a&b#c d", "Person")})
+        self.assertEqual(result, "v=a%26b%23c%20d&v.type=Person")
+
+    def test_typed_vertex_1tuple_id_escaped(self):
+        result = _parse_query_parameters({"v": ("a&b#c d",)})
+        self.assertEqual(result, "v=a%26b%23c%20d")
+
+    def test_untyped_vertex_set_ids_and_types_escaped(self):
+        result = _parse_query_parameters({"vs": [("a&b", "Person")]})
+        self.assertEqual(result, "vs[0]=a%26b&vs[0].type=Person")
+
     def test_invalid_tuple_raises(self):
         with self.assertRaises(TigerGraphException):
             _parse_query_parameters({"v": ("id", "type", "extra")})
@@ -454,6 +501,22 @@ class TestPostParamRoundTrip(unittest.TestCase):
         """Tuple (id, type) for a typed vertex; DB echoes back the primary ID."""
         res = self._run({"p08_vertex_vertex4": (3, "vertex4")})
         self.assertEqual(str(res[7]["p08_vertex_vertex4"]), "3")
+
+    def test_db_vertex_string_id_with_percent_roundtrip(self):
+        """A VERTEX whose STRING primary ID contains % must round-trip via POST.
+        The server URL-decodes vertex IDs, so an unescaped % makes the ID
+        unresolvable ('Failed to convert user vertex id')."""
+        vid = "50% done"
+        self.conn.upsertVertex("vertex1_all_types", vid, {})
+        res = self._run({"p07_vertex": (vid, "vertex1_all_types")})
+        self.assertEqual(str(res[6]["p07_vertex"]), vid)
+
+    def test_db_vertex_string_id_reserved_chars_roundtrip(self):
+        """Spaces and other reserved characters are accepted as-is by POST."""
+        vid = "summer release_115605840 a/b:c@d+e"
+        self.conn.upsertVertex("vertex1_all_types", vid, {})
+        res = self._run({"p07_vertex": (vid, "vertex1_all_types")})
+        self.assertEqual(str(res[6]["p07_vertex"]), vid)
 
     # ------------------------------------------------------------------
     # SET / BAG of scalars

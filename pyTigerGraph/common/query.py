@@ -69,7 +69,7 @@ def _parse_query_parameters(params: dict) -> str:
                         f"Invalid vertex parameter '{k}': vertex type string must not be empty. "
                         "Use (id,) for VERTEX<T> or (id, 'type') for untyped VERTEX.")
                 # VERTEX (untyped): (id, "type")  →  k=id&k.type=type
-                parts.append(k + "=" + str(v[0]))
+                parts.append(k + "=" + _safe_char(v[0]))
                 parts.append(k + ".type=" + _safe_char(v[1]))
             else:
                 raise TigerGraphException(
@@ -88,7 +88,7 @@ def _parse_query_parameters(params: dict) -> str:
                                 "Use (id,) for VERTEX<T> or (id, 'type') for untyped VERTEX.")
                         # SET<VERTEX>: (id, "type")  →  k[i]=id&k[i].type=type
                         parts.append(k + "[" + str(i) + "]=" + _safe_char(vv[0]))
-                        parts.append(k + "[" + str(i) + "].type=" + vv[1])
+                        parts.append(k + "[" + str(i) + "].type=" + _safe_char(vv[1]))
                     else:
                         raise TigerGraphException(
                             f"Invalid vertex parameter '{k}[{i}]': expected (id,) for VERTEX<T> "
@@ -118,6 +118,20 @@ def _encode_str_for_post(value: str) -> str:
     ``%`` transparently.
     """
     return value.replace("%", "%25")
+
+
+def _encode_vertex_id_for_post(value):
+    """Apply the same ``%`` escaping to a string vertex ID as to every other
+    string in the POST ``/query`` body.
+
+    Vertex IDs go through the same URL-decoding as plain string parameters, so
+    a bare ``%`` in an ID is read as the start of a percent-escape and the ID
+    fails to resolve. Other reserved characters — spaces, ``/``, ``:``, ``@``,
+    ``+`` — and non-ASCII need no escaping and are left alone.
+
+    Non-string IDs are returned unchanged so INT primary IDs keep their JSON type.
+    """
+    return _encode_str_for_post(value) if isinstance(value, str) else value
 
 
 def _prep_query_parameters_json(params: dict) -> dict:
@@ -160,14 +174,14 @@ def _prep_query_parameters_json(params: dict) -> dict:
         if isinstance(v, tuple):
             if len(v) == 1:
                 # VERTEX<T> (typed): (id,)  →  {"id": id}
-                converted[k] = {"id": v[0]}
+                converted[k] = {"id": _encode_vertex_id_for_post(v[0])}
             elif len(v) == 2 and isinstance(v[1], str):
                 if not v[1]:
                     raise TigerGraphException(
                         f"Invalid vertex parameter '{k}': vertex type string must not be empty. "
                         "Use (id,) for VERTEX<T> or (id, 'type') for untyped VERTEX.")
                 # VERTEX (untyped): (id, "type")  →  {"id": id, "type": "type"}
-                converted[k] = {"id": v[0], "type": v[1]}
+                converted[k] = {"id": _encode_vertex_id_for_post(v[0]), "type": v[1]}
             else:
                 raise TigerGraphException(
                     f"Invalid vertex parameter '{k}': expected (id,) for VERTEX<T> "
@@ -188,14 +202,14 @@ def _prep_query_parameters_json(params: dict) -> dict:
                 if isinstance(vv, tuple):
                     if len(vv) == 1:
                         # SET<VERTEX<T>>: (id,)  →  {"id": id}
-                        new_list.append({"id": vv[0]})
+                        new_list.append({"id": _encode_vertex_id_for_post(vv[0])})
                     elif len(vv) == 2 and isinstance(vv[1], str):
                         if not vv[1]:
                             raise TigerGraphException(
                                 f"Invalid vertex parameter '{k}': vertex type string must not be empty. "
                                 "Use (id,) for VERTEX<T> or (id, 'type') for untyped VERTEX.")
                         # SET<VERTEX>: (id, "type")  →  {"id": id, "type": "type"}
-                        new_list.append({"id": vv[0], "type": vv[1]})
+                        new_list.append({"id": _encode_vertex_id_for_post(vv[0]), "type": vv[1]})
                     else:
                         raise TigerGraphException(
                             f"Invalid vertex parameter '{k}': expected (id,) for VERTEX<T> "
