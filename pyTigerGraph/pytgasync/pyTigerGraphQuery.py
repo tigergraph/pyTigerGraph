@@ -362,6 +362,10 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
                 flag = ",".join(flag)
             params["flag"] = flag
 
+        # Install asynchronously so the server returns a requestId immediately
+        # instead of holding the request open for the whole compile.
+        params["async"] = "true"
+
         res = await self._req("GET", self.gsUrl + "/gsql/v1/queries/install", params=params, authMode="pwd", resKey=None)
 
         if wait:
