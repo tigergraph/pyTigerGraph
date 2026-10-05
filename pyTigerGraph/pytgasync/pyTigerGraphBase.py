@@ -31,7 +31,7 @@ import json
 import logging
 import aiohttp
 
-from typing import Optional, Union
+from typing import Dict, Optional, Union
 from urllib.parse import urlparse
 
 from pyTigerGraph.common.auth import _is_auth_failure_response
@@ -40,6 +40,25 @@ from pyTigerGraph.common.exception import TigerGraphException
 
 logger = logging.getLogger(__name__)
 
+
+
+class _LoopBinding:
+    """The HTTP session and locks bound to one event loop.
+
+    aiohttp's ClientSession and asyncio.Lock both attach to the event loop that
+    is running when they are first used and cannot be moved to another, so they
+    are grouped here and looked up per loop.
+    """
+
+    __slots__ = ("client", "restpp_failover_lock", "token_refresh_lock")
+
+    def __init__(self, client: aiohttp.ClientSession) -> None:
+        self.client = client
+        # Guards the one-time port failover (TG 3.x port 9000 → 4.x port 14240).
+        # Without it every concurrent task fails and enters the failover block at
+        # once, doubling requests and racing to overwrite restppUrl/restppPort.
+        self.restpp_failover_lock = asyncio.Lock()
+        self.token_refresh_lock = asyncio.Lock()
 
 class AsyncPyTigerGraphBase(PyTigerGraphCore):
     def __init__(self, host: str = "http://127.0.0.1", graphname: str = "",
@@ -101,15 +120,14 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
                          version=version, apiToken=apiToken, useCert=useCert, certPath=certPath,
                          debug=debug, sslPort=sslPort, gcp=gcp, jwtToken=jwtToken)
 
-        # Lazily initialized on first request (inside an async context) to avoid
-        # creating aiohttp.ClientSession outside an event loop in __init__.
-        self._async_client: Optional[aiohttp.ClientSession] = None
-
-        # asyncio.Lock for the one-time port failover (TG 3.x port 9000 → 4.x port 14240).
-        # Without a lock all concurrent tasks simultaneously fail and all enter the failover
-        # block, doubling requests and racing to overwrite self.restppUrl/self.restppPort.
-        self._restpp_failover_lock = asyncio.Lock()
-        self._token_refresh_lock = asyncio.Lock()
+        # HTTP session and locks, one set per event loop, created on first use
+        # inside that loop. Both kinds of object are loop-bound and neither can
+        # move: aiohttp binds a ClientSession to the loop running when it is
+        # created, and an asyncio.Lock binds to the loop of its first await.
+        # Keying them by loop lets one connection serve sequential loops (the
+        # asyncio.run() pattern) and concurrent loops in separate threads
+        # without either interfering with the other. See _binding().
+        self._loop_bindings: Dict[asyncio.AbstractEventLoop, _LoopBinding] = {}
 
     async def _req(self, method: str, url: str, authMode: str = "token", headers: dict = None,
                    data: Union[dict, list, str] = None, resKey: str = "results", skipCheck: bool = False,
@@ -144,8 +162,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
             The (relevant part of the) response from the request (as a dictionary).
         """
         # Lazy init: session must be created inside an async context (event loop running).
-        if self._async_client is None or self._async_client.closed:
-            self._async_client = self._make_async_client()
+        binding = self._binding()
 
         _headers, _data, _ = self._prep_req(authMode, headers, url, method, data)
 
@@ -179,7 +196,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
                     if _is_auth_failure_response(_body):
                         needs_token_retry = True
             if needs_token_retry:
-                async with self._token_refresh_lock:
+                async with binding.token_refresh_lock:
                     if not getattr(self, "_refreshing_token", False):
                         try:
                             self._refreshing_token = True
@@ -208,7 +225,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
             # ----
             # Changes port to gsql port, adds /restpp to end to url, tries again, saves changes if successful
             if self.restppPort in url and "/gsql" not in url and ("/restpp" not in url or self.tgCloud):
-                async with self._restpp_failover_lock:
+                async with binding.restpp_failover_lock:
                     if self.restppPort in url:
                         newRestppUrl = self.host + ":" + self.gsPort + "/restpp"
                         if "/restpp" in url:
@@ -385,6 +402,74 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
 
         return res
 
+    def _binding(self) -> "_LoopBinding":
+        """Return the HTTP session and locks belonging to the running event loop.
+
+        Must be called from inside a coroutine. The binding is created on first
+        use in a loop and reused for that loop's lifetime, so concurrency within
+        one loop still shares a single connection pool.
+
+        A connection outliving its loop is the normal result of driving it with
+        ``asyncio.run()``, which closes the loop when it returns. aiohttp does
+        not notice: ``session.closed`` stays False while the sockets underneath
+        are dead, and the next request fails with "RuntimeError: Event loop is
+        closed". Keying the session by loop avoids that, and — because two live
+        loops in separate threads get separate bindings — stops either thread
+        from tearing down the session the other is using.
+
+        This method performs no ``await``, so it runs to completion without the
+        loop switching tasks. That is what makes first use safe for concurrent
+        callers on the same loop; do not introduce an await here.
+        """
+        running = asyncio.get_running_loop()
+
+        binding = self._loop_bindings.get(running)
+        if binding is not None and not binding.client.closed:
+            return binding
+
+        self._prune_loop_bindings(running)
+
+        binding = _LoopBinding(self._make_async_client())
+        self._loop_bindings[running] = binding
+        return binding
+
+    def _prune_loop_bindings(self, keep: Optional[asyncio.AbstractEventLoop] = None) -> None:
+        """Drop bindings whose event loop has been closed, releasing their sessions.
+
+        Without this the registry would grow by one entry per ``asyncio.run()``
+        call. The running loop is never pruned.
+        """
+        for loop in [l for l in self._loop_bindings if l is not keep and l.is_closed()]:
+            binding = self._loop_bindings.pop(loop)
+            self._release_stale_client(binding.client, loop)
+
+    @staticmethod
+    def _release_stale_client(client: Optional[aiohttp.ClientSession],
+                              loop: Optional[asyncio.AbstractEventLoop]) -> None:
+        """Dispose of a session belonging to a loop that is no longer being used.
+
+        When that loop is still running the session is closed on it properly.
+        When it is gone its sockets went with it, so the connector is only
+        marked closed — enough to keep aiohttp from reporting the session as
+        leaked at garbage-collection time.
+        """
+        if client is None or client.closed:
+            return
+
+        if loop is not None and not loop.is_closed() and loop.is_running():
+            try:
+                loop.call_soon_threadsafe(loop.create_task, client.close())
+                return
+            except RuntimeError:
+                pass  # loop stopped between the check and the call
+
+        connector = client.connector
+        if connector is not None:
+            try:
+                connector._close()
+            except Exception:  # pragma: no cover - aiohttp internals moved
+                logger.debug("could not release stale HTTP connector", exc_info=True)
+
     def _make_async_client(self) -> aiohttp.ClientSession:
         """Create a persistent aiohttp.ClientSession.
 
@@ -426,7 +511,7 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
             kwargs["json"] = _data
         else:
             kwargs["data"] = _data
-        async with self._async_client.request(method, url, **kwargs) as resp:
+        async with self._binding().client.request(method, url, **kwargs) as resp:
             # read() returns raw bytes — avoids charset detection overhead and lets
             # orjson/json.loads consume bytes directly without a decode step.
             body = await resp.read()
@@ -443,28 +528,35 @@ class AsyncPyTigerGraphBase(PyTigerGraphCore):
             await conn.runInstalledQuery(...)
         ```
         """
-        if self._async_client is not None and not self._async_client.closed:
-            await self._async_client.close()
-        self._async_client = None
+        bindings, self._loop_bindings = self._loop_bindings, {}
+
+        try:
+            running = asyncio.get_running_loop()
+        except RuntimeError:  # pragma: no cover - aclose is a coroutine
+            running = None
+
+        for loop, binding in bindings.items():
+            # Awaiting close() is only valid on the loop that owns the session;
+            # sessions belonging to any other loop go to the disposal path.
+            if loop is running and not binding.client.closed:
+                await binding.client.close()
+            else:
+                self._release_stale_client(binding.client, loop)
 
     def __del__(self) -> None:
         """Best-effort cleanup when the object is garbage-collected.
 
-        If the event loop is still running at GC time (e.g. during asyncio.run()
-        shutdown), schedules aclose() as a task so sockets are drained gracefully.
-        If the loop has already stopped, the OS reclaims the sockets and there is
-        nothing more we can do — this is not an error.
+        If the loop that owns the session is still running at GC time (e.g. during
+        asyncio.run() shutdown), the close is scheduled on it so sockets are
+        drained gracefully. If that loop has already stopped, the OS reclaims the
+        sockets and there is nothing more we can do — this is not an error.
 
         This does NOT replace explicit aclose() / async-with usage: GC timing is
         unpredictable and create_task() is fire-and-forget with no error handling.
         Use `async with AsyncTigerGraphConnection(...) as conn:` for reliable cleanup.
         """
-        if self._async_client is not None and not self._async_client.closed:
-            try:
-                loop = asyncio.get_running_loop()
-                loop.create_task(self._async_client.close())
-            except RuntimeError:
-                pass  # no running loop; OS reclaims sockets on process exit
+        for loop, binding in (getattr(self, "_loop_bindings", None) or {}).items():
+            self._release_stale_client(binding.client, loop)
 
     async def __aenter__(self):
         return self

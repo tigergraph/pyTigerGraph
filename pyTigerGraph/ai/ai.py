@@ -201,17 +201,36 @@ class AI:
             "/retrieve_docs?top_k="+str(top_k)
         return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None, skipCheck=True)
 
-    def query(self, query):
+    def query(self, query, mode: str = None, rag_method: str = None, include_fields: list = None):
         """ Query the database with natural language.
             Args:
                 query (str):
                     Natural language query to ask about the database.
+                mode (str):
+                    Chat engine to use: "agentic", "classic", or None to defer
+                    to the graph's configured default.
+                rag_method (str):
+                    Engine variant. When agentic: "auto", "planned", or
+                    "reactive". When classic: "auto" or a retriever name
+                    (e.g. "hybrid", "similarity", "contextual",
+                    "entityrelationship", "community"). None defers to the
+                    configured default.
+                include_fields (list):
+                    Extra response fields beyond the answer. None returns the
+                    answer only; pass field names (e.g. ["query_sources"]) or
+                    ["all"] to include the supporting sources / trace.
             Returns:
                 JSON including the natural language response, a answered_question flag, and answer sources.
         """
         data = {
             "query": query
         }
+        if mode is not None:
+            data["mode"] = mode
+        if rag_method is not None:
+            data["rag_method"] = rag_method
+        if include_fields is not None:
+            data["include_fields"] = include_fields
 
         url = self.nlqs_host+"/"+self.conn.graphname+"/query"
         return self.conn._req("POST", url, authMode="pwd", data=data, jsonData=True, resKey=None)

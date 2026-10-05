@@ -362,6 +362,10 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
                 flag = ",".join(flag)
             params["flag"] = flag
 
+        # Install asynchronously so the server returns a requestId immediately
+        # instead of holding the request open for the whole compile.
+        params["async"] = "true"
+
         res = await self._req("GET", self.gsUrl + "/gsql/v1/queries/install", params=params, authMode="pwd", resKey=None)
 
         if wait:
@@ -665,14 +669,18 @@ class AsyncPyTigerGraphQuery(AsyncPyTigerGraphGSQL):
         #   - SET<VERTEX> (no type): k[0]=id&k[0].type=vtype&k[1]=...
         if isinstance(params, dict):
             params = _parse_query_parameters(params)
+        # The query string is already percent-encoded, and aiohttp would encode
+        # it again if passed as params=, so append it to the URL ourselves (as
+        # _run_installed_query_get does).
+        query_string = "?" + str(params) if params else ""
 
         if await self._version_greater_than_4_0():
-            ret = await self._req("POST", self.gsUrl + "/gsql/v1/queries/interpret",
-                                  params=params, data=queryText, authMode="pwd",
+            ret = await self._req("POST", self.gsUrl + "/gsql/v1/queries/interpret" + query_string,
+                                  data=queryText, authMode="pwd",
                                   headers={'Content-Type': 'text/plain'})
         else:
-            ret = await self._req("POST", self.gsUrl + "/gsqlserver/interpreted_query", data=queryText,
-                                  params=params, authMode="pwd")
+            ret = await self._req("POST", self.gsUrl + "/gsqlserver/interpreted_query" + query_string,
+                                  data=queryText, authMode="pwd")
 
         if logger.level == logging.DEBUG:
             logger.debug("return: " + str(ret))

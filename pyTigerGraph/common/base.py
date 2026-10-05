@@ -105,7 +105,7 @@ class PyTigerGraphCore(object):
         if inputHost.scheme not in ["http", "https"]:
             raise TigerGraphException("Invalid URL scheme. Supported schemes are http and https.",
                                       "E-0003")
-        # Extract port from URL if present (e.g. http://192.168.11.11:14240)
+        # Extract port from URL if present (e.g. http://127.0.0.1:14240)
         # Use hostname (without port) to avoid double-port URLs later.
         hostOnly = inputHost.hostname
         if not hostOnly:
