@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.5] - 2026-09-25
+## [2.0.5] - 2026-10-05
 
 ### Improved
 
@@ -91,7 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`showSecrets()` removed.** Use `getSecrets()` instead.
 - **`runInstalledQuery()` now auto-selects GET or POST** based on `params` type (`dict` → POST, `str` → GET). Passing a raw query string with `usePost=True` raises `TigerGraphException`.
-- **MCP tools moved to [`pytigergraph-mcp`](https://github.com/tigergraph/pytigergraph-mcp).** Do not import from `pyTigerGraph.mcp` directly.
+- **MCP tools moved to [`tigergraph-mcp`](https://github.com/tigergraph/tigergraph-mcp).** Do not import from `pyTigerGraph.mcp` directly.
 
 ### New Features
 
